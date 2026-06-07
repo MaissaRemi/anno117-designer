@@ -369,9 +369,19 @@ input[type="number"] {
   line-height: 1.2;
 }
 
-/* Optimiseur */
+/* Optimiseur / Planificateur */
 .modal.opt {
   width: 460px;
+}
+.bilan {
+  margin: 4px 0 10px;
+  padding-left: 18px;
+  font-size: 12px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.bilan li {
+  margin: 1px 0;
 }
 .modal.opt h4 {
   margin: 14px 0 6px;

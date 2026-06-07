@@ -29,6 +29,21 @@ python tools/extract_icons.py     # -> public/icons/*.png
 - **Exact** : routes, rayons, champs, production, noms FR. **Approx ±1** : tailles (BoundingBox `.ifo`),
   corrigeables via l'éditeur de catalogue.
 
+## Planificateur de population (objectif d'habitants)
+
+Bouton **👥 Population** : fixer une population cible par classe (tier) ; le modèle calcule
+automatiquement le plan.
+
+- **Besoins** : chaque résidence a une `NeedsList` (biens consommés avec taux + services).
+- **Cascade main-d'œuvre** : la main-d'œuvre est un « bien » par tier (`ConnectedWorkforce`,
+  `PopulationToWorkforceFactor`) consommé par les bâtiments → solveur **point-fixe** (population →
+  besoins → production → main-d'œuvre → population supplémentaire → …).
+- **Bilan** : population/résidences par tier, bâtiments de production (chaînes complètes) et
+  d'influence (services). Bouton **Placer sur l'île** → réutilise l'optimiseur.
+- Données : `tools/build_economy.py` → `src/data/economy.generated.json`. Solveur `src/economy/`.
+- Limite : si la cascade ne converge pas (calibration des coefficients du jeu), repli sur les
+  **besoins directs** (population = cible) avec avertissement. Capacité/maison par tier = défaut éditable.
+
 ## Îles du jeu (formes réelles)
 
 Bouton **🏝 Île** : charger une des **55 îles** d'Anno 117 comme grille (taille + forme exactes).
