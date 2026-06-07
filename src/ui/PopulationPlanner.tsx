@@ -144,6 +144,17 @@ export function PopulationPlanner({ onClose }: Props) {
                 ⚠ Cascade main-d'œuvre instable — bilan des besoins directs affiché (population = cible).
               </div>
             )}
+            <div style={{ marginBottom: 6 }}>
+              <b>💰 Économie</b> : net{" "}
+              <span style={{ color: result.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>
+                {result.money.net >= 0 ? "+" : ""}
+                {result.money.net.toLocaleString("fr")}/min
+              </span>{" "}
+              <span className="muted">
+                (taxe {result.money.gross.toLocaleString("fr")} − entretien{" "}
+                {result.money.upkeep.toLocaleString("fr")})
+              </span>
+            </div>
             <b>Population</b>
             <ul className="bilan">
               {tiers

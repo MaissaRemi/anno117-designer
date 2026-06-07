@@ -1,4 +1,4 @@
-import { economy, tierByGuid, type BProd } from "./economy";
+import { economy, tierByGuid, upkeepOf, type BProd } from "./economy";
 
 export interface PopTarget {
   tier: string; // GUID
@@ -21,6 +21,7 @@ export interface SolveResult {
   items: { defId: string; qty: number }[]; // pour l'optimiseur
   iterations: number;
   converged: boolean; // false => cascade main-d'œuvre instable, résultat = besoins directs
+  money: { gross: number; upkeep: number; net: number }; // argent/min (taxe - entretien)
 }
 
 // Débits homogènes en "par minute".
@@ -161,6 +162,17 @@ export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
   for (const [defId, c] of Object.entries(productionCounts)) items.push({ defId, qty: c });
   for (const [defId, c] of Object.entries(serviceCounts)) items.push({ defId, qty: c });
 
+  // argent/min : taxe des résidences − entretien des bâtiments
+  let gross = 0;
+  let upkeep = 0;
+  for (const tier of economy.tiers) {
+    const res = residencesByTier[tier.guid] || 0;
+    gross += res * (tier.perHouse?.Money || 0);
+    if (tier.residenceId) upkeep += res * upkeepOf(tier.residenceId);
+  }
+  for (const [defId, c] of Object.entries(productionCounts)) upkeep += c * upkeepOf(defId);
+  for (const [defId, c] of Object.entries(serviceCounts)) upkeep += c * upkeepOf(defId);
+
   return {
     populationByTier: pop,
     residencesByTier,
@@ -170,5 +182,6 @@ export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
     items,
     iterations,
     converged,
+    money: { gross: Math.round(gross), upkeep: Math.round(upkeep), net: Math.round(gross - upkeep) },
   };
 }

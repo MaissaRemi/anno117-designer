@@ -32,12 +32,14 @@ interface EconomyData {
   producers: Record<string, string[]>; // goodGuid -> [defId]
   buildingProd: Record<string, BProd>;
   buildingWorkforce: Record<string, { tier: string; amount: number }[]>;
+  buildingUpkeep: Record<string, number>; // defId -> entretien argent/min
   goodNames: Record<string, string>;
 }
 
 export const economy = data as unknown as EconomyData;
 
 export const tiers = economy.tiers;
+export const upkeepOf = (defId: string): number => economy.buildingUpkeep[defId] || 0;
 export const tierByGuid = (g: string): Tier | undefined => tiers.find((t) => t.guid === g);
 export const goodName = (g: string | null): string =>
   (g && economy.goodNames[g]) || g || "?";
