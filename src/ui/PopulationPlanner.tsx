@@ -66,6 +66,27 @@ export function PopulationPlanner({ onClose }: Props) {
   const tierName = (g: string) => tiers.find((t) => t.guid === g)?.name ?? g;
   const totalItems = result ? result.items.reduce((s, i) => s + i.qty, 0) : 0;
 
+  // bonus cumulés (attribut/maison × nb de maisons), maison pleine
+  const attrTotals: Record<string, number> = {};
+  if (result) {
+    for (const t of tiers) {
+      const res = result.residencesByTier[t.guid] || 0;
+      if (!res) continue;
+      for (const [k, v] of Object.entries(t.perHouse || {})) {
+        attrTotals[k] = (attrTotals[k] || 0) + v * res;
+      }
+    }
+  }
+  const ATTR_FR: Record<string, string> = {
+    Money: "💰 Argent",
+    Happiness: "🙂 Bonheur",
+    Prestige: "🏛 Prestige",
+    Knowledge: "📚 Connaissance",
+    Belief: "🙏 Croyance",
+    Health: "❤ Santé",
+    FireSafety: "🔥 Sécurité incendie",
+  };
+
   return (
     <div className="modal-backdrop" onClick={running ? undefined : onClose}>
       <div className="modal opt" onClick={(e) => e.stopPropagation()}>
@@ -134,6 +155,21 @@ export function PopulationPlanner({ onClose }: Props) {
                   </li>
                 ))}
             </ul>
+            {Object.keys(attrTotals).length > 0 && (
+              <>
+                <b>Bonus (maisons pleines)</b>
+                <ul className="bilan">
+                  {Object.entries(ATTR_FR).map(([k, label]) =>
+                    attrTotals[k] ? (
+                      <li key={k}>
+                        {label} : {Math.round(attrTotals[k]).toLocaleString("fr")}
+                        {k === "Money" ? "/min" : ""}
+                      </li>
+                    ) : null,
+                  )}
+                </ul>
+              </>
+            )}
             <b>Bâtiments ({totalItems})</b>
             <ul className="bilan">
               {result.items

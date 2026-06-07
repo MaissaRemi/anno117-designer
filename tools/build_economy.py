@@ -83,9 +83,18 @@ def main():
             el.clear(); continue
 
         if tpl == "Need":
+            na = el.find("./Values/Need/NeedAttributes")
+            attrs = {}
+            if na is not None:
+                for c in na:
+                    try:
+                        attrs[c.tag] = float(c.findtext("Value") or 0)
+                    except ValueError:
+                        pass
             needs[guid] = {
                 "product": t(el, "./Values/Need/NeedProduct"),
                 "icon": os.path.basename(t(el, "./Values/Standard/IconFilename") or ""),
+                "attrs": attrs,
             }
             el.clear(); continue
 
@@ -159,17 +168,28 @@ def main():
         res = residences.get(g)
         goods = []
         services = []
+        per_house = defaultdict(float)  # somme des attributs accordés (maison pleine)
+        capacity = 0.0
         if res:
             for gd in res["goods"]:
                 nd = needs.get(gd["need"])
                 prod = nd["product"] if nd else None
                 goods.append({"good": prod, "rate": gd["rate"], "needName": products.get(prod)})
+                if nd:
+                    for k, v in nd["attrs"].items():
+                        per_house[k] += v
+                    capacity += nd["attrs"].get("Population", 0)
             for sneed in res["services"]:
                 nd = needs.get(sneed)
                 sdef = icon_to_def.get(nd["icon"]) if nd else None
                 services.append({"need": sneed, "building": sdef})
+                if nd:
+                    for k, v in nd["attrs"].items():
+                        per_house[k] += v
+                    capacity += nd["attrs"].get("Population", 0)
         idx = region_index[reg]
         region_index[reg] += 1
+        cap = int(round(capacity)) if capacity > 0 else CAP_DEFAULT[min(idx, len(CAP_DEFAULT) - 1)]
         tiers.append({
             "guid": g,
             "name": pl["name"],
@@ -177,7 +197,8 @@ def main():
             "workforce": pl["workforce"],
             "factor": pl["factor"],
             "residenceId": res["defId"] if res else None,
-            "capacityDefault": CAP_DEFAULT[min(idx, len(CAP_DEFAULT) - 1)],
+            "capacityDefault": cap,
+            "perHouse": dict(per_house),
             "goods": goods,
             "services": services,
         })
@@ -193,8 +214,9 @@ def main():
     # résumé
     print(f"tiers: {len(tiers)}", file=sys.stderr)
     for ti in tiers:
-        print(f"  {ti['region']:6} {ti['name']:30} res={ti['residenceId']} "
-              f"goods={len(ti['goods'])} services={len(ti['services'])} wf={ti['workforce']} f={ti['factor']}",
+        print(f"  {ti['region']:6} {ti['name']:30} cap={ti['capacityDefault']:>3} "
+              f"goods={len(ti['goods'])} services={len(ti['services'])} f={ti['factor']} "
+              f"perHouse={ {k: round(v) for k,v in ti['perHouse'].items()} }",
               file=sys.stderr)
     print(f"producers:{len(producers)} buildingProd:{len(bprod)} workforceBuildings:{len(building_workforce)}",
           file=sys.stderr)

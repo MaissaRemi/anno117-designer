@@ -16,7 +16,8 @@ export interface Tier {
   workforce: string | null; // GUID bien-workforce fourni
   factor: number; // workforce par résident
   residenceId: string | null;
-  capacityDefault: number;
+  capacityDefault: number; // habitants max/maison = Σ Population des besoins
+  perHouse: Record<string, number>; // attributs/maison pleine (Money, Happiness, …)
   goods: TierGood[];
   services: TierService[];
 }
