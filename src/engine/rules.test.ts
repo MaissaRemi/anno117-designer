@@ -6,6 +6,7 @@ import {
   computeRadiusCoverage,
   makeLookup,
   roadConnected,
+  rootedRoadSet,
   validateFields,
   validateLayout,
 } from "./rules";
@@ -141,6 +142,40 @@ describe("computeRadiusCoverage", () => {
     expect(set.size).toBeGreaterThan(0);
     expect(set.has("6,6")).toBe(true); // proche du centre
     expect(set.has("19,19")).toBe(false); // hors portée
+  });
+});
+
+describe("connexité au comptoir (rootedRoadSet)", () => {
+  const kontor = makeBuildingDef({ id: "kontor", name: "Comptoir", size: { w: 2, h: 2 }, needsRoad: false, roadRoot: true });
+  const lk = makeLookup([farm, kontor]);
+
+  it("ne garde que les routes reliées au comptoir", () => {
+    const l = base();
+    l.buildings.push(placeBuilding("kontor", 0, 0, 0)); // emprise 0..1
+    // réseau relié : routes (2,0)->(3,0)
+    l.roads.push({ x: 2, y: 0 });
+    l.roads.push({ x: 3, y: 0 });
+    // route isolée loin
+    l.roads.push({ x: 10, y: 10 });
+    const { set, hasRoot } = rootedRoadSet(l, lk);
+    expect(hasRoot).toBe(true);
+    expect(set.has("2,0")).toBe(true);
+    expect(set.has("3,0")).toBe(true);
+    expect(set.has("10,10")).toBe(false); // isolée => exclue
+  });
+
+  it("validateLayout: route non reliée au comptoir = problème", () => {
+    const l = base();
+    l.buildings.push(placeBuilding("kontor", 0, 0, 0));
+    l.roads.push({ x: 2, y: 0 }); // reliée au comptoir
+    const farmDef = makeBuildingDef({ id: "f2", name: "F", size: { w: 3, h: 3 }, needsRoad: true });
+    const lk2 = makeLookup([kontor, farmDef]);
+    // ferme touchant une route ISOLÉE (5,5) non reliée
+    const bIso = placeBuilding("f2", 6, 5, 0); // emprise x6..8 ; route (5,5) adjacente
+    l.buildings.push(bIso);
+    l.roads.push({ x: 5, y: 5 });
+    const issues = validateLayout(l, lk2);
+    expect(issues.get(bIso.uid)!.road).toBe(true); // route pas reliée au comptoir
   });
 });
 
