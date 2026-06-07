@@ -1,4 +1,4 @@
-import { economy, tierByGuid, type BProd } from "./economy";
+import { economy, tierByGuid, upkeepOf, type BProd } from "./economy";
 
 export interface PopTarget {
   tier: string; // GUID
@@ -6,11 +6,23 @@ export interface PopTarget {
 }
 
 export interface SolveOptions {
-  includeProduction: boolean; // placer aussi la production (cascade main-d'œuvre)
+  includeProduction: boolean; // explose les chaînes de production
   includeServices: boolean; // besoins biens+services (true) ou biens seuls (false)
   capacities: Record<string, number>; // tier -> capacité/maison
   housesPerService?: number; // maisons couvertes par un bâtiment de service
+  includeWorkforce?: boolean; // cascade main-d'œuvre -> résidents (défaut true)
+  optimizeNeeds?: boolean; // ne remplir que les besoins rentables (max économie)
 }
+
+interface TierProfile {
+  goods: { good: string | null; rate: number }[];
+  services: { building: string | null }[];
+  cap: number; // habitants/maison (Σ Population des besoins retenus)
+  money: number; // argent/maison (Σ Money des besoins retenus)
+}
+
+/** Demande exogène de biens (GUID -> unités/min), ex: objectif de production. */
+export type ExtraDemand = Record<string, number>;
 
 export interface SolveResult {
   populationByTier: Record<string, number>;
@@ -21,6 +33,7 @@ export interface SolveResult {
   items: { defId: string; qty: number }[]; // pour l'optimiseur
   iterations: number;
   converged: boolean; // false => cascade main-d'œuvre instable, résultat = besoins directs
+  money: { gross: number; upkeep: number; net: number }; // argent/min (taxe - entretien)
 }
 
 // Débits homogènes en "par minute".
@@ -38,23 +51,69 @@ const inputRatePerMin = (p: BProd, amount: number): number =>
  * production -> main-d'œuvre requise -> population supplémentaire -> ... jusqu'à
  * convergence. Renvoie les comptes de bâtiments + le bilan.
  */
-export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
-  const cap = (tier: string) => opts.capacities[tier] || tierByGuid(tier)?.capacityDefault || 10;
+export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: ExtraDemand = {}): SolveResult {
   const housesPerService = opts.housesPerService ?? 30;
+  const includeWorkforce = opts.includeWorkforce !== false;
   const targetMap: Record<string, number> = {};
   for (const t of targets) targetMap[t.tier] = (targetMap[t.tier] || 0) + t.pop;
 
+  // Entretien (argent/min) pour produire 1 unité/min d'un bien, chaîne incluse.
+  const upkeepMemo = new Map<string, number>();
+  const upkeepPerUnit = (good: string, stack = new Set<string>()): number => {
+    if (upkeepMemo.has(good)) return upkeepMemo.get(good)!;
+    if (stack.has(good)) return 0;
+    const producers = economy.producers[good];
+    if (!producers?.length) return 0; // matière brute
+    const d = producers[0];
+    const p = economy.buildingProd[d];
+    if (!p) return 0;
+    const r = prodRatePerMin(p, good);
+    if (r <= 0) return 0;
+    let u = (1 / r) * upkeepOf(d);
+    stack.add(good);
+    for (const inp of p.inputs) {
+      u += ((1 / r) * inputRatePerMin(p, inp.amount)) * upkeepPerUnit(inp.good, stack);
+    }
+    stack.delete(good);
+    upkeepMemo.set(good, u);
+    return u;
+  };
+
+  // Profil par tier : besoins retenus (tous, ou seulement les rentables si optimizeNeeds).
+  const profiles = new Map<string, TierProfile>();
+  for (const tier of economy.tiers) {
+    const goods: { good: string | null; rate: number }[] = [];
+    const services: { building: string | null }[] = [];
+    let cap = 0;
+    let money = 0;
+    const keepGood = (g: typeof tier.goods[number]) =>
+      !opts.optimizeNeeds || !g.good || g.money - g.rate * upkeepPerUnit(g.good) >= 0;
+    const keepSvc = (s: typeof tier.services[number]) =>
+      !opts.optimizeNeeds || s.money - (s.building ? upkeepOf(s.building) : 0) / housesPerService >= 0;
+    for (const g of tier.goods) if (keepGood(g)) { goods.push({ good: g.good, rate: g.rate }); cap += g.pop; money += g.money; }
+    for (const s of tier.services) if (keepSvc(s)) { services.push({ building: s.building }); cap += s.pop; money += s.money; }
+    // garde-fou : capacité minimale -> sinon retombe sur tous les besoins
+    if (cap < 1) {
+      goods.length = 0; services.length = 0; cap = 0; money = 0;
+      for (const g of tier.goods) { goods.push({ good: g.good, rate: g.rate }); cap += g.pop; money += g.money; }
+      for (const s of tier.services) { services.push({ building: s.building }); cap += s.pop; money += s.money; }
+    }
+    if (!opts.optimizeNeeds) cap = opts.capacities[tier.guid] || cap || tierByGuid(tier.guid)?.capacityDefault || 10;
+    profiles.set(tier.guid, { goods, services, cap: Math.max(1, cap), money });
+  }
+  const prof = (tier: string) => profiles.get(tier)!;
+
   // Production (fractionnaire) + demande de biens (par minute) pour une population donnée.
   const computeProduction = (popMap: Record<string, number>) => {
-    const demand: Record<string, number> = {};
+    const demand: Record<string, number> = { ...extraDemand }; // objectif de production exogène
     for (const tier of economy.tiers) {
       const p = popMap[tier.guid];
       if (!p) continue;
-      // NeedConsumptionRate est par MAISON (résidence), pas par habitant.
-      const houses = p / cap(tier.guid);
-      for (const g of tier.goods) {
+      const pr = prof(tier.guid);
+      const houses = p / pr.cap; // NeedConsumptionRate est par MAISON
+      for (const g of pr.goods) {
         if (!g.good) continue;
-        demand[g.good] = (demand[g.good] || 0) + houses * g.rate; // par minute
+        demand[g.good] = (demand[g.good] || 0) + houses * g.rate;
       }
     }
     const counts: Record<string, number> = {};
@@ -91,6 +150,8 @@ export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
     const { demand, counts } = computeProduction(pop);
     goodsDemand = demand;
     production = counts;
+
+    if (!includeWorkforce) break; // pas de cascade : pop = cibles seulement
 
     // main-d'œuvre consommée par tier -> population requise
     const wfConsumed: Record<string, number> = {};
@@ -129,17 +190,17 @@ export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
   const residencesByTier: Record<string, number> = {};
   for (const tier of economy.tiers) {
     const p = pop[tier.guid] || 0;
-    if (p > 0 && tier.residenceId) residencesByTier[tier.guid] = Math.ceil(p / cap(tier.guid));
+    if (p > 0 && tier.residenceId) residencesByTier[tier.guid] = Math.ceil(p / prof(tier.guid).cap);
   }
 
-  // services : bâtiments d'influence par besoin de service
+  // services : bâtiments d'influence par besoin de service (retenus)
   const serviceCounts: Record<string, number> = {};
   if (opts.includeServices) {
     const resUsing: Record<string, number> = {};
     for (const tier of economy.tiers) {
       const res = residencesByTier[tier.guid] || 0;
       if (!res) continue;
-      for (const s of tier.services) {
+      for (const s of prof(tier.guid).services) {
         if (s.building) resUsing[s.building] = (resUsing[s.building] || 0) + res;
       }
     }
@@ -161,6 +222,17 @@ export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
   for (const [defId, c] of Object.entries(productionCounts)) items.push({ defId, qty: c });
   for (const [defId, c] of Object.entries(serviceCounts)) items.push({ defId, qty: c });
 
+  // argent/min : taxe des résidences − entretien des bâtiments
+  let gross = 0;
+  let upkeep = 0;
+  for (const tier of economy.tiers) {
+    const res = residencesByTier[tier.guid] || 0;
+    gross += res * prof(tier.guid).money; // taxe = Money des besoins retenus
+    if (tier.residenceId) upkeep += res * upkeepOf(tier.residenceId);
+  }
+  for (const [defId, c] of Object.entries(productionCounts)) upkeep += c * upkeepOf(defId);
+  for (const [defId, c] of Object.entries(serviceCounts)) upkeep += c * upkeepOf(defId);
+
   return {
     populationByTier: pop,
     residencesByTier,
@@ -170,5 +242,6 @@ export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
     items,
     iterations,
     converged,
+    money: { gross: Math.round(gross), upkeep: Math.round(upkeep), net: Math.round(gross - upkeep) },
   };
 }

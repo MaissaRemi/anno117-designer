@@ -2,12 +2,16 @@ import data from "../data/economy.generated.json";
 
 export interface TierGood {
   good: string | null; // GUID produit
-  rate: number; // par résident par seconde
+  rate: number; // par maison par minute
   needName: string | null;
+  pop: number; // habitants accordés (Population)
+  money: number; // argent accordé (Money)
 }
 export interface TierService {
   need: string;
   building: string | null; // defId du bâtiment de service (g<guid>)
+  pop: number;
+  money: number;
 }
 export interface Tier {
   guid: string;
@@ -32,12 +36,14 @@ interface EconomyData {
   producers: Record<string, string[]>; // goodGuid -> [defId]
   buildingProd: Record<string, BProd>;
   buildingWorkforce: Record<string, { tier: string; amount: number }[]>;
+  buildingUpkeep: Record<string, number>; // defId -> entretien argent/min
   goodNames: Record<string, string>;
 }
 
 export const economy = data as unknown as EconomyData;
 
 export const tiers = economy.tiers;
+export const upkeepOf = (defId: string): number => economy.buildingUpkeep[defId] || 0;
 export const tierByGuid = (g: string): Tier | undefined => tiers.find((t) => t.guid === g);
 export const goodName = (g: string | null): string =>
   (g && economy.goodNames[g]) || g || "?";

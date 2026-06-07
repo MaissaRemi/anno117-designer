@@ -57,6 +57,7 @@ def main():
     producers = defaultdict(list)  # productGuid -> [defId]
     bprod = {}           # defId -> {cycleTime, inputs, outputs, maintenanceProducts:[{product,amount}], icon, public}
     icon_to_def = {}     # icon basename -> defId (bâtiments publics surtout)
+    building_upkeep = {} # defId -> entretien argent/min
     public_effects = {}  # defId -> functional effect guids (pour services)
 
     for _, el in ET.iterparse(ASSETS, events=("end",)):
@@ -105,6 +106,14 @@ def main():
         icon = os.path.basename(t(el, "./Values/Standard/IconFilename") or "")
         if icon:
             icon_to_def.setdefault(icon, defId)
+
+        # entretien en argent (Product credits 1010017), par minute
+        money = 0.0
+        for it in vals.findall("./Maintenance/Maintenances/Item"):
+            if it.findtext("Product") == "1010017":
+                money += float(it.findtext("Amount") or 0)
+        if money:
+            building_upkeep[defId] = money
 
         # production
         fb = vals.find("FactoryBase")
@@ -174,19 +183,25 @@ def main():
             for gd in res["goods"]:
                 nd = needs.get(gd["need"])
                 prod = nd["product"] if nd else None
-                goods.append({"good": prod, "rate": gd["rate"], "needName": products.get(prod)})
-                if nd:
-                    for k, v in nd["attrs"].items():
-                        per_house[k] += v
-                    capacity += nd["attrs"].get("Population", 0)
+                attrs = nd["attrs"] if nd else {}
+                goods.append({
+                    "good": prod, "rate": gd["rate"], "needName": products.get(prod),
+                    "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                })
+                for k, v in attrs.items():
+                    per_house[k] += v
+                capacity += attrs.get("Population", 0)
             for sneed in res["services"]:
                 nd = needs.get(sneed)
                 sdef = icon_to_def.get(nd["icon"]) if nd else None
-                services.append({"need": sneed, "building": sdef})
-                if nd:
-                    for k, v in nd["attrs"].items():
-                        per_house[k] += v
-                    capacity += nd["attrs"].get("Population", 0)
+                attrs = nd["attrs"] if nd else {}
+                services.append({
+                    "need": sneed, "building": sdef,
+                    "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                })
+                for k, v in attrs.items():
+                    per_house[k] += v
+                capacity += attrs.get("Population", 0)
         idx = region_index[reg]
         region_index[reg] += 1
         cap = int(round(capacity)) if capacity > 0 else CAP_DEFAULT[min(idx, len(CAP_DEFAULT) - 1)]
@@ -208,6 +223,7 @@ def main():
         "producers": producers,
         "buildingProd": bprod,
         "buildingWorkforce": building_workforce,
+        "buildingUpkeep": building_upkeep,
         "goodNames": products,
     }
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False)
