@@ -12,6 +12,7 @@ import { makeLookup } from "../engine/rules";
 import { seedCatalog } from "../data/seed";
 import { loadState, saveState } from "../persist/local";
 import type { OptimizeResult } from "../optimizer/types";
+import { decodeMask, islandById } from "../data/islands";
 
 export type Tool =
   | "select"
@@ -68,6 +69,7 @@ interface State {
   redo: () => void;
   newLayout: () => void;
   loadAll: (catalog: Catalog, layout: Layout) => void;
+  loadIsland: (id: string) => void;
   applyOptimization: (result: OptimizeResult) => void;
 
   lookup: () => (id: string) => BuildingDef | undefined;
@@ -239,6 +241,19 @@ export const useStore = create<State>((set, get) => {
 
     loadAll: (catalog, layout) => {
       set({ catalog, layout, past: [], future: [], selectedUid: null });
+      persist();
+    },
+
+    loadIsland: (id) => {
+      const isl = islandById(id);
+      if (!isl) return;
+      const usable = decodeMask(isl.mask, isl.size.w, isl.size.h);
+      set({
+        layout: { grid: { w: isl.size.w, h: isl.size.h, usable }, buildings: [], fields: [], roads: [] },
+        past: [],
+        future: [],
+        selectedUid: null,
+      });
       persist();
     },
 

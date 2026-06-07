@@ -330,6 +330,45 @@ input[type="number"] {
   margin-top: 8px;
 }
 
+/* Îles */
+.modal.islands {
+  width: 720px;
+  max-width: 92vw;
+}
+.island-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin: 10px 0;
+}
+.island-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.island-card:hover {
+  border-color: var(--accent);
+}
+.island-thumb {
+  width: 64px;
+  height: 64px;
+  background: #11151a;
+  border-radius: 4px;
+}
+.island-name {
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.2;
+}
+
 /* Optimiseur */
 .modal.opt {
   width: 460px;

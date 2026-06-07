@@ -3,6 +3,7 @@ import { useStore } from "../state/store";
 import { exportJson, importJson } from "../persist/json";
 import { exportPng } from "../persist/png";
 import { OptimizerPanel } from "./OptimizerPanel";
+import { IslandPicker } from "./IslandPicker";
 
 export function TopBar() {
   const catalog = useStore((s) => s.catalog);
@@ -15,6 +16,7 @@ export function TopBar() {
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
   const [optOpen, setOptOpen] = useState(false);
+  const [islOpen, setIslOpen] = useState(false);
 
   const onImport = async () => {
     try {
@@ -64,6 +66,7 @@ export function TopBar() {
 
       <span className="spacer" />
 
+      <button onClick={() => setIslOpen(true)}>🏝 Île</button>
       <button className="primary" onClick={() => setOptOpen(true)}>
         ⚙ Optimiser
       </button>
@@ -73,6 +76,7 @@ export function TopBar() {
       <button onClick={onPng}>🖼 PNG</button>
 
       {optOpen && <OptimizerPanel onClose={() => setOptOpen(false)} />}
+      {islOpen && <IslandPicker onClose={() => setIslOpen(false)} />}
     </div>
   );
 }

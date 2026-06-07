@@ -29,6 +29,15 @@ python tools/extract_icons.py     # -> public/icons/*.png
 - **Exact** : routes, rayons, champs, production, noms FR. **Approx ±1** : tailles (BoundingBox `.ifo`),
   corrigeables via l'éditeur de catalogue.
 
+## Îles du jeu (formes réelles)
+
+Bouton **🏝 Île** : charger une des **55 îles** d'Anno 117 comme grille (taille + forme exactes).
+
+- Taille en cases lue dans le `.a7minfo` de chaque île (offset 8 : largeur, hauteur).
+- Forme = masque terre/mer extrait du rendu `mapimage.png`, redimensionné à la taille réelle.
+- Génération : `python tools/build_islands.py` → `src/data/islands.generated.json` (masque RLE).
+- Aperçus miniatures dans le sélecteur ; charger une île remplace la grille courante.
+
 ## Fonctionnalités (MVP — éditeur manuel)
 
 - **Catalogue de bâtiments** réel + éditable (dimensions, rotation, route requise, rayon, champ,
