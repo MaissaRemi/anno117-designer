@@ -13,8 +13,9 @@ describe("solve (économie)", () => {
     });
     expect(r.populationByTier[liberti.guid]).toBeGreaterThanOrEqual(1000);
     expect(r.residencesByTier[liberti.guid]).toBeGreaterThan(0);
-    expect(r.iterations).toBeLessThan(200); // a convergé
-    expect(r.populationByTier[liberti.guid]).toBeLessThan(5_000_000); // pas de divergence
+    expect(r.converged).toBe(true); // cascade stable (taux par maison)
+    expect(r.iterations).toBeLessThan(50);
+    expect(r.populationByTier[liberti.guid]).toBeLessThan(1_000_000);
     expect(r.items.length).toBeGreaterThan(0);
   });
 

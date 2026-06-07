@@ -50,9 +50,11 @@ export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
     for (const tier of economy.tiers) {
       const p = popMap[tier.guid];
       if (!p) continue;
+      // NeedConsumptionRate est par MAISON (résidence), pas par habitant.
+      const houses = p / cap(tier.guid);
       for (const g of tier.goods) {
         if (!g.good) continue;
-        demand[g.good] = (demand[g.good] || 0) + p * g.rate; // par minute
+        demand[g.good] = (demand[g.good] || 0) + houses * g.rate; // par minute
       }
     }
     const counts: Record<string, number> = {};

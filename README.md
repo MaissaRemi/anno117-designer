@@ -41,8 +41,9 @@ automatiquement le plan.
 - **Bilan** : population/résidences par tier, bâtiments de production (chaînes complètes) et
   d'influence (services). Bouton **Placer sur l'île** → réutilise l'optimiseur.
 - Données : `tools/build_economy.py` → `src/data/economy.generated.json`. Solveur `src/economy/`.
-- Limite : si la cascade ne converge pas (calibration des coefficients du jeu), repli sur les
-  **besoins directs** (population = cible) avec avertissement. Capacité/maison par tier = défaut éditable.
+- Calibration : `NeedConsumptionRate` est **par maison** (résidence), pas par habitant → la cascade
+  converge (ratio < 1). Repli automatique sur les besoins directs + avertissement si jamais instable.
+  Capacité/maison par tier = défaut éditable.
 
 ## Îles du jeu (formes réelles)
 
