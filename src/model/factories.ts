@@ -33,6 +33,7 @@ export function makeBuildingDef(partial: Partial<BuildingDef> = {}): BuildingDef
     icon: partial.icon,
     streetRange: partial.streetRange,
     production: partial.production,
+    roadRoot: partial.roadRoot,
   };
 }
 

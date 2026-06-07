@@ -44,6 +44,7 @@ export interface BuildingDef {
   icon?: string; // chemin relatif vers l'icône (ex: icons/xxx.png)
   streetRange?: number; // portée le long des rues (rayons publics)
   production?: ProductionSpec;
+  roadRoot?: boolean; // comptoir/entrepôt : racine du réseau de routes
 }
 
 /** Instance d'un bâtiment posé sur la grille. */

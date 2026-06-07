@@ -62,6 +62,9 @@ TEMPLATE_CATEGORY = {
     "SimpleBuilding": "ornement",
 }
 
+# Comptoirs / entrepôts : racine du réseau de routes (le réseau doit y être relié).
+ROOT_TEMPLATES = {"Warehouse", "Warehouse_Marsh", "HarborWarehouse", "TradeBuilding", "HarborDepot"}
+
 CATEGORY_COLOR = {
     "production": "#c9a227",
     "public": "#7cb342",
@@ -290,6 +293,8 @@ def to_app_catalog(buildings, product_name):
             "needsRoad": bool(b.get("needsRoad")),
             "color": CATEGORY_COLOR.get(b["category"], "#8d6e63"),
         }
+        if b.get("template") in ROOT_TEMPLATES:
+            entry["roadRoot"] = True  # comptoir/entrepôt = racine du réseau de routes
         if b.get("icon"):
             entry["icon"] = "icons/" + os.path.basename(b["icon"])
         if b.get("radius"):

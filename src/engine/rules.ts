@@ -64,12 +64,62 @@ export function canPlace(
   return true;
 }
 
-/** Le bâtiment touche-t-il une route ? (toujours vrai si needsRoad === false) */
-export function roadConnected(layout: Layout, lookup: DefLookup, b: PlacedBuilding): boolean {
+/**
+ * Ensemble des cases de route reliées à un comptoir (roadRoot), via BFS sur le
+ * réseau (4-connexité). Si aucun comptoir n'est posé, renvoie toutes les routes
+ * (impossible de déterminer la racine) avec hasRoot=false.
+ */
+export function rootedRoadSet(
+  layout: Layout,
+  lookup: DefLookup,
+): { set: Set<string>; hasRoot: boolean } {
+  const roads = new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
+  // graines : routes adjacentes à un bâtiment racine
+  const seeds: string[] = [];
+  for (const b of layout.buildings) {
+    const def = lookup(b.defId);
+    if (!def?.roadRoot) continue;
+    for (const c of footprintCells(def, b.x, b.y, b.rotation)) {
+      for (const n of orthoNeighbors(c.x, c.y)) {
+        const k = cellKey(n.x, n.y);
+        if (roads.has(k)) seeds.push(k);
+      }
+    }
+  }
+  if (seeds.length === 0) return { set: roads, hasRoot: false };
+  // BFS sur le réseau de routes
+  const reachable = new Set<string>();
+  const queue = [...seeds];
+  for (const s of seeds) reachable.add(s);
+  while (queue.length) {
+    const k = queue.pop()!;
+    const [x, y] = k.split(",").map(Number);
+    for (const n of orthoNeighbors(x, y)) {
+      const nk = cellKey(n.x, n.y);
+      if (roads.has(nk) && !reachable.has(nk)) {
+        reachable.add(nk);
+        queue.push(nk);
+      }
+    }
+  }
+  return { set: reachable, hasRoot: true };
+}
+
+/**
+ * Le bâtiment touche-t-il une route reliée au comptoir ?
+ * - needsRoad === false ou roadRoot === true => toujours vrai.
+ * - `rootSet` fourni : exige une route de ce réseau ; sinon toute route.
+ */
+export function roadConnected(
+  layout: Layout,
+  lookup: DefLookup,
+  b: PlacedBuilding,
+  rootSet?: Set<string>,
+): boolean {
   const def = lookup(b.defId);
   if (!def) return false;
-  if (!def.needsRoad) return true;
-  const roads = new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
+  if (!def.needsRoad || def.roadRoot) return true;
+  const roads = rootSet ?? new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
   if (roads.size === 0) return false;
   for (const c of footprintCells(def, b.x, b.y, b.rotation)) {
     for (const n of orthoNeighbors(c.x, c.y)) {
@@ -177,11 +227,12 @@ export interface BuildingIssues {
 /** Valide toute la disposition, renvoie les problèmes par bâtiment. */
 export function validateLayout(layout: Layout, lookup: DefLookup): Map<string, BuildingIssues> {
   const issues = new Map<string, BuildingIssues>();
+  const { set: rootSet } = rootedRoadSet(layout, lookup);
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
     if (!def) continue;
     const overlap = !canPlace(layout, lookup, def, b.x, b.y, b.rotation, b.uid);
-    const road = def.needsRoad && !roadConnected(layout, lookup, b);
+    const road = def.needsRoad && !def.roadRoot && !roadConnected(layout, lookup, b, rootSet);
     const field = validateFields(layout, lookup, b);
     const ok = !overlap && !road && (!field || field.ok);
     issues.set(b.uid, { uid: b.uid, road, field, overlap, ok });

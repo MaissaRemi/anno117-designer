@@ -1,4 +1,5 @@
 import { uid } from "../model/factories";
+import { orthoNeighbors } from "../engine/geometry";
 import type { BuildingDef, FieldTile, PlacedBuilding, Rotation, RoadTile } from "../model/types";
 import type { OptimizeRequest } from "./types";
 
@@ -136,6 +137,49 @@ export function decode(
   for (let ry = y0 + (bandOffset % (band + 1)); ry <= y1; ry += band + 1) {
     roadRows.push(ry);
     for (let x = x0; x <= x1; x++) addRoad(occ, W, H, x, ry, roads);
+  }
+
+  // raccordement au comptoir / aux routes existantes (réseau relié à la racine)
+  const bridge = (tx: number, ty: number) => {
+    if (ty < 0 || ty >= H) return;
+    const a = Math.min(x0, tx);
+    const bx = Math.max(x0, tx);
+    for (let x = a; x <= bx; x++) {
+      if (occ[ty * W + x] === BLOCKED) continue; // ne traverse pas un verrouillé/non-usable
+      addRoad(occ, W, H, x, ty, roads);
+    }
+  };
+  // comptoir(s) verrouillé(s) -> route adjacente + pont vers l'épine
+  for (const b of req.lockedBuildings) {
+    const def = dec.defMap.get(b.defId);
+    if (!def?.roadRoot) continue;
+    const { w, h } = rotatedSize(def, b.rotation);
+    let done = false;
+    for (let j = 0; j < h && !done; j++) {
+      for (let i = 0; i < w && !done; i++) {
+        for (const n of orthoNeighbors(b.x + i, b.y + j)) {
+          if (n.x >= 0 && n.y >= 0 && n.x < W && n.y < H && occ[n.y * W + n.x] === FREE) {
+            addRoad(occ, W, H, n.x, n.y, roads);
+            bridge(n.x, n.y);
+            done = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+  // routes existantes -> 1 pont depuis la plus proche
+  if (req.existingRoads.length) {
+    let best: { x: number; y: number } | null = null;
+    let bd = Infinity;
+    for (const r of req.existingRoads) {
+      const d = Math.abs(r.x - x0) + Math.abs(r.y - y0);
+      if (d < bd) {
+        bd = d;
+        best = r;
+      }
+    }
+    if (best) bridge(best.x, best.y);
   }
 
   // packing bande par bande

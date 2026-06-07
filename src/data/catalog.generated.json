@@ -6899,6 +6899,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
@@ -6915,6 +6916,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
@@ -6931,6 +6933,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
@@ -7010,6 +7013,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
   },
   {
@@ -7026,6 +7030,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
   },
   {
@@ -7042,6 +7047,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
   },
   {
@@ -7058,6 +7064,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
   },
   {
@@ -7074,6 +7081,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
   },
   {
@@ -7090,6 +7098,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
   },
   {
@@ -7180,6 +7189,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
   },
   {
@@ -7196,6 +7206,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_trading_pier.png"
   },
   {
@@ -7212,6 +7223,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_trading_pier.png"
   },
   {
@@ -7354,6 +7366,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
@@ -7412,6 +7425,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
@@ -7428,6 +7442,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
@@ -7444,6 +7459,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
@@ -7460,6 +7476,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
