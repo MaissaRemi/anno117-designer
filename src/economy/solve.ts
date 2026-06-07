@@ -6,11 +6,15 @@ export interface PopTarget {
 }
 
 export interface SolveOptions {
-  includeProduction: boolean; // placer aussi la production (cascade main-d'œuvre)
+  includeProduction: boolean; // explose les chaînes de production
   includeServices: boolean; // besoins biens+services (true) ou biens seuls (false)
   capacities: Record<string, number>; // tier -> capacité/maison
   housesPerService?: number; // maisons couvertes par un bâtiment de service
+  includeWorkforce?: boolean; // cascade main-d'œuvre -> résidents (défaut true)
 }
+
+/** Demande exogène de biens (GUID -> unités/min), ex: objectif de production. */
+export type ExtraDemand = Record<string, number>;
 
 export interface SolveResult {
   populationByTier: Record<string, number>;
@@ -39,15 +43,16 @@ const inputRatePerMin = (p: BProd, amount: number): number =>
  * production -> main-d'œuvre requise -> population supplémentaire -> ... jusqu'à
  * convergence. Renvoie les comptes de bâtiments + le bilan.
  */
-export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
+export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: ExtraDemand = {}): SolveResult {
   const cap = (tier: string) => opts.capacities[tier] || tierByGuid(tier)?.capacityDefault || 10;
   const housesPerService = opts.housesPerService ?? 30;
+  const includeWorkforce = opts.includeWorkforce !== false;
   const targetMap: Record<string, number> = {};
   for (const t of targets) targetMap[t.tier] = (targetMap[t.tier] || 0) + t.pop;
 
   // Production (fractionnaire) + demande de biens (par minute) pour une population donnée.
   const computeProduction = (popMap: Record<string, number>) => {
-    const demand: Record<string, number> = {};
+    const demand: Record<string, number> = { ...extraDemand }; // objectif de production exogène
     for (const tier of economy.tiers) {
       const p = popMap[tier.guid];
       if (!p) continue;
@@ -92,6 +97,8 @@ export function solve(targets: PopTarget[], opts: SolveOptions): SolveResult {
     const { demand, counts } = computeProduction(pop);
     goodsDemand = demand;
     production = counts;
+
+    if (!includeWorkforce) break; // pas de cascade : pop = cibles seulement
 
     // main-d'œuvre consommée par tier -> population requise
     const wfConsumed: Record<string, number> = {};

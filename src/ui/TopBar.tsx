@@ -5,6 +5,7 @@ import { exportPng } from "../persist/png";
 import { OptimizerPanel } from "./OptimizerPanel";
 import { IslandPicker } from "./IslandPicker";
 import { PopulationPlanner } from "./PopulationPlanner";
+import { ProductionPlanner } from "./ProductionPlanner";
 
 export function TopBar() {
   const catalog = useStore((s) => s.catalog);
@@ -19,6 +20,7 @@ export function TopBar() {
   const [optOpen, setOptOpen] = useState(false);
   const [islOpen, setIslOpen] = useState(false);
   const [popOpen, setPopOpen] = useState(false);
+  const [prodOpen, setProdOpen] = useState(false);
 
   const onImport = async () => {
     try {
@@ -72,6 +74,9 @@ export function TopBar() {
       <button className="primary" onClick={() => setPopOpen(true)}>
         👥 Population
       </button>
+      <button className="primary" onClick={() => setProdOpen(true)}>
+        🏭 Production
+      </button>
       <button className="primary" onClick={() => setOptOpen(true)}>
         ⚙ Optimiser
       </button>
@@ -83,6 +88,7 @@ export function TopBar() {
       {optOpen && <OptimizerPanel onClose={() => setOptOpen(false)} />}
       {islOpen && <IslandPicker onClose={() => setIslOpen(false)} />}
       {popOpen && <PopulationPlanner onClose={() => setPopOpen(false)} />}
+      {prodOpen && <ProductionPlanner onClose={() => setProdOpen(false)} />}
     </div>
   );
 }
