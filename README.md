@@ -29,6 +29,31 @@ python tools/extract_icons.py     # -> public/icons/*.png
 - **Exact** : routes, rayons, champs, production, noms FR. **Approx ±1** : tailles (BoundingBox `.ifo`),
   corrigeables via l'éditeur de catalogue.
 
+## Planificateur de population (objectif d'habitants)
+
+Bouton **👥 Population** : fixer une population cible par classe (tier) ; le modèle calcule
+automatiquement le plan.
+
+- **Besoins** : chaque résidence a une `NeedsList` (biens consommés avec taux + services).
+- **Cascade main-d'œuvre** : la main-d'œuvre est un « bien » par tier (`ConnectedWorkforce`,
+  `PopulationToWorkforceFactor`) consommé par les bâtiments → solveur **point-fixe** (population →
+  besoins → production → main-d'œuvre → population supplémentaire → …).
+- **Bilan** : population/résidences par tier, bâtiments de production (chaînes complètes) et
+  d'influence (services). Bouton **Placer sur l'île** → réutilise l'optimiseur.
+- Données : `tools/build_economy.py` → `src/data/economy.generated.json`. Solveur `src/economy/`.
+- Calibration : `NeedConsumptionRate` est **par maison** (résidence), pas par habitant → la cascade
+  converge (ratio < 1). Repli automatique sur les besoins directs + avertissement si jamais instable.
+  Capacité/maison par tier = défaut éditable.
+
+## Îles du jeu (formes réelles)
+
+Bouton **🏝 Île** : charger une des **55 îles** d'Anno 117 comme grille (taille + forme exactes).
+
+- Taille en cases lue dans le `.a7minfo` de chaque île (offset 8 : largeur, hauteur).
+- Forme = masque terre/mer extrait du rendu `mapimage.png`, redimensionné à la taille réelle.
+- Génération : `python tools/build_islands.py` → `src/data/islands.generated.json` (masque RLE).
+- Aperçus miniatures dans le sélecteur ; charger une île remplace la grille courante.
+
 ## Fonctionnalités (MVP — éditeur manuel)
 
 - **Catalogue de bâtiments** réel + éditable (dimensions, rotation, route requise, rayon, champ,
