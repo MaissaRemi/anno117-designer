@@ -1,0 +1,8172 @@
+[
+  {
+    "id": "g15834",
+    "guid": 15834,
+    "name": "Atelier de siège",
+    "nameInternal": "Military Roman Siege Workshop",
+    "category": "militaire",
+    "region": "Roman",
+    "size": {
+      "w": 8,
+      "h": 11
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c0564b",
+    "icon": "icons/icon_3d_military_siege_workshop.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30
+  },
+  {
+    "id": "g15948",
+    "guid": 15948,
+    "name": "Atelier de siège",
+    "nameInternal": "Military Roman Celtic Siege Workshop",
+    "category": "militaire",
+    "region": "Celtic",
+    "size": {
+      "w": 7,
+      "h": 10
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c0564b",
+    "icon": "icons/icon_3d_military_siege_workshop.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30
+  },
+  {
+    "id": "g15519",
+    "guid": 15519,
+    "name": "Caserne",
+    "nameInternal": "Military Roman Barracks",
+    "category": "militaire",
+    "region": "Roman",
+    "size": {
+      "w": 9,
+      "h": 9
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c0564b",
+    "icon": "icons/icon_3d_military_barracks.png"
+  },
+  {
+    "id": "g15946",
+    "guid": 15946,
+    "name": "Caserne",
+    "nameInternal": "Military Roman Celtic Barracks",
+    "category": "militaire",
+    "region": "Celtic",
+    "size": {
+      "w": 9,
+      "h": 9
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c0564b",
+    "icon": "icons/icon_3d_military_barracks.png"
+  },
+  {
+    "id": "g6054",
+    "guid": 6054,
+    "name": "Chantier naval",
+    "nameInternal": "Harbor Shipyard Roman",
+    "category": "militaire",
+    "region": "Roman",
+    "size": {
+      "w": 11,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c0564b",
+    "icon": "icons/icon_3d_harbour_shipyard.png"
+  },
+  {
+    "id": "g29340",
+    "guid": 29340,
+    "name": "Chantier naval",
+    "nameInternal": "Harbor Shipyard Roman Celtic",
+    "category": "militaire",
+    "region": "Celtic",
+    "size": {
+      "w": 11,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c0564b",
+    "icon": "icons/icon_3d_harbour_shipyard.png"
+  },
+  {
+    "id": "g15833",
+    "guid": 15833,
+    "name": "Equitum Campus",
+    "nameInternal": "Military Roman Training Grounds",
+    "category": "militaire",
+    "region": "Roman",
+    "size": {
+      "w": 11,
+      "h": 9
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c0564b",
+    "icon": "icons/icon_3d_military_training_grounds.png",
+    "radius": {
+      "kind": "service",
+      "range": 30
+    },
+    "streetRange": 34
+  },
+  {
+    "id": "g15947",
+    "guid": 15947,
+    "name": "Equitum Campus",
+    "nameInternal": "Military Roman Celtic Training Grounds",
+    "category": "militaire",
+    "region": "Celtic",
+    "size": {
+      "w": 11,
+      "h": 9
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c0564b",
+    "icon": "icons/icon_3d_military_training_grounds.png",
+    "radius": {
+      "kind": "service",
+      "range": 30
+    },
+    "streetRange": 34
+  },
+  {
+    "id": "g80631",
+    "guid": 80631,
+    "name": "Aquarius de Numa",
+    "nameInternal": "Ornament Roman Statue 1x1 04",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_waterpourer.png"
+  },
+  {
+    "id": "g91234",
+    "guid": 91234,
+    "name": "Arbre creux",
+    "nameInternal": "HoF Ornament Celtic 3x3 Ritual Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_hollow_tree.png"
+  },
+  {
+    "id": "g149870",
+    "guid": 149870,
+    "name": "Arbre mort",
+    "nameInternal": "HoF Ornament Celtic 1x1 Dead Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_dead_tree_01b.png"
+  },
+  {
+    "id": "g80602",
+    "guid": 80602,
+    "name": "Arbre robuste",
+    "nameInternal": "Ornament Roman Tree 1x1 Stout",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_roman_stout.png"
+  },
+  {
+    "id": "g81334",
+    "guid": 81334,
+    "name": "Arbre taillé (planté)",
+    "nameInternal": "Ornament Roman Planter 1x1 Trimmed Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_treeplanter_roman_trimmed.png"
+  },
+  {
+    "id": "g80603",
+    "guid": 80603,
+    "name": "Arbre trapu",
+    "nameInternal": "Ornament Roman Tree 1x1 Lush",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_roman_lush.png"
+  },
+  {
+    "id": "g81332",
+    "guid": 81332,
+    "name": "Arbre trapu (planté)",
+    "nameInternal": "Ornament Roman Planter 1x1 Lush Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_treeplanter_roman_lush.png"
+  },
+  {
+    "id": "g81331",
+    "guid": 81331,
+    "name": "Arbre vigoureux (planté)",
+    "nameInternal": "Ornament Roman Planter 1x1 Stout Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_treeplanter_roman_stout.png"
+  },
+  {
+    "id": "g80605",
+    "guid": 80605,
+    "name": "Arbre élagué",
+    "nameInternal": "Ornament Roman Tree 1x1 Trimmed",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_roman_trimmed.png"
+  },
+  {
+    "id": "g80614",
+    "guid": 80614,
+    "name": "Arbuste luxuriant",
+    "nameInternal": "Ornament Roman Shrub 1x1 02",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_shrub_lush.png"
+  },
+  {
+    "id": "g88249",
+    "guid": 88249,
+    "name": "Arc de triomphe",
+    "nameInternal": "HoF Ornament Roman Highlight Triumphant Arch",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 5,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_arch_triumphal.png"
+  },
+  {
+    "id": "g80830",
+    "guid": 80830,
+    "name": "Arche commémorative",
+    "nameInternal": "Ornament Roman Structure 1x3 Arch 01",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_arch_column.png"
+  },
+  {
+    "id": "g93614",
+    "guid": 93614,
+    "name": "Arche opulente",
+    "nameInternal": "Ornament Roman Structure 1x3 Arch 02",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_arch_roof.png"
+  },
+  {
+    "id": "g149836",
+    "guid": 149836,
+    "name": "Bancs de marbre",
+    "nameInternal": "HoF Ornament Roman 1x1 Benches",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_benches_01.png"
+  },
+  {
+    "id": "g95595",
+    "guid": 95595,
+    "name": "Bannière des trois tribus",
+    "nameInternal": "Connect Ornament 1x1 Banner Plus",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_banner_proud.png"
+  },
+  {
+    "id": "g95594",
+    "guid": 95594,
+    "name": "Bannière ornée",
+    "nameInternal": "Connect Ornament 1x1 Banner",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_banner_ornate.png"
+  },
+  {
+    "id": "g93381",
+    "guid": 93381,
+    "name": "Bassin de sérénité",
+    "nameInternal": "DayOne Ornament Latium Small Bathouse",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 4,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_bathhouse_preorder.png"
+  },
+  {
+    "id": "g80828",
+    "guid": 80828,
+    "name": "Brasero sur colonne",
+    "nameInternal": "Ornament Roman Brazier 1x1 04",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_column_brazier.png"
+  },
+  {
+    "id": "g80826",
+    "guid": 80826,
+    "name": "Brasero élevé",
+    "nameInternal": "Ornament Roman Brazier 1x1 02",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_brazier_large.png"
+  },
+  {
+    "id": "g149869",
+    "guid": 149869,
+    "name": "Bûcher celtique",
+    "nameInternal": "HoF Ornament Celtic 1x1 Bonfire",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_fireplace_03.png"
+  },
+  {
+    "id": "g92735",
+    "guid": 92735,
+    "name": "Chêne albionien",
+    "nameInternal": "Ornament Celtic Tree 1x1 Lush",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_celtic_lush.png"
+  },
+  {
+    "id": "g92747",
+    "guid": 92747,
+    "name": "Chêne albionien (planté)",
+    "nameInternal": "Ornament Celtic Planter 1x1 Lush",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_treeplanter_celtic_lush.png"
+  },
+  {
+    "id": "g1000038",
+    "guid": 1000038,
+    "name": "CoastlinePreviewBuilding",
+    "nameInternal": "CoastlinePreviewBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5"
+  },
+  {
+    "id": "g80628",
+    "guid": 80628,
+    "name": "Colonne impressionnante",
+    "nameInternal": "HoF Ornament Roman 1x1 Column Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_column_statue.png"
+  },
+  {
+    "id": "g90960",
+    "guid": 90960,
+    "name": "Columna Annorum",
+    "nameInternal": "HoF Ornament Roman 3x3 Anno Pillar",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_column_anno.png"
+  },
+  {
+    "id": "g80604",
+    "guid": 80604,
+    "name": "Conifère",
+    "nameInternal": "Ornament Roman Tree 1x1 Coniferous",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_roman_coniferous.png"
+  },
+  {
+    "id": "g81333",
+    "guid": 81333,
+    "name": "Conifère (planté)",
+    "nameInternal": "Ornament Roman Planter 1x1 Coniferous Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_treeplanter_roman_coniferous.png"
+  },
+  {
+    "id": "g110127",
+    "guid": 110127,
+    "name": "Cringer",
+    "nameInternal": "Twitch Ornament 1x1 Banner US",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_banner_twitch_usa.png"
+  },
+  {
+    "id": "g81337",
+    "guid": 81337,
+    "name": "Cyprès (planté)",
+    "nameInternal": "Ornament Roman Planter 1x1 Cypress Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_treeplanter_roman_cypress.png"
+  },
+  {
+    "id": "g80573",
+    "guid": 80573,
+    "name": "Cyprès solitaire",
+    "nameInternal": "Ornament Roman Tree 1x1 Cypress",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_roman_cypress.png"
+  },
+  {
+    "id": "g82704",
+    "guid": 82704,
+    "name": "Embellissement",
+    "nameInternal": "Ornament Roman Plaza 1x1 (Deprecated)",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g83763",
+    "guid": 83763,
+    "name": "Embellissement",
+    "nameInternal": "Ornament Roman Plaza 2x2 (Deprecated)",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g83772",
+    "guid": 83772,
+    "name": "Embellissement",
+    "nameInternal": "Ornament Roman Plaza 2x2 Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g83774",
+    "guid": 83774,
+    "name": "Embellissement",
+    "nameInternal": "Ornament Roman Plaza 2x2 Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g83764",
+    "guid": 83764,
+    "name": "Embellissement",
+    "nameInternal": "Ornament Roman Plaza 3x3 (Deprecated)",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g83773",
+    "guid": 83773,
+    "name": "Embellissement",
+    "nameInternal": "Ornament Roman Plaza 3x3 Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g83775",
+    "guid": 83775,
+    "name": "Embellissement",
+    "nameInternal": "Ornament Roman Plaza 3x3 Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g80819",
+    "guid": 80819,
+    "name": "Femme du roi Numa",
+    "nameInternal": "Ornament Roman Statue 1x1 06",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_woman.png"
+  },
+  {
+    "id": "g80629",
+    "guid": 80629,
+    "name": "Fille du roi Numa",
+    "nameInternal": "Ornament Roman Statue 1x1 02",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_woman_young.png"
+  },
+  {
+    "id": "g80630",
+    "guid": 80630,
+    "name": "Fils du roi Numa",
+    "nameInternal": "Ornament Roman Statue 1x1 03",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_man_young.png"
+  },
+  {
+    "id": "g80574",
+    "guid": 80574,
+    "name": "Fleurs sauvages",
+    "nameInternal": "Ornament Roman Shrub 1x1 Flowers",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_wildflowers_white.png"
+  },
+  {
+    "id": "g80600",
+    "guid": 80600,
+    "name": "Fleurs sauvages (bleues)",
+    "nameInternal": "Ornament Roman Shrub 1x1 Flowers Blue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g80598",
+    "guid": 80598,
+    "name": "Fleurs sauvages (jaunes)",
+    "nameInternal": "Ornament Roman Shrub 1x1 Flowers Yellow",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g80599",
+    "guid": 80599,
+    "name": "Fleurs sauvages (rouges)",
+    "nameInternal": "Ornament Roman Shrub 1x1 Flowers Red",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g80601",
+    "guid": 80601,
+    "name": "Fleurs sauvages (violettes)",
+    "nameInternal": "Ornament Roman Shrub 1x1 Flowers Violet",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g80621",
+    "guid": 80621,
+    "name": "Fontaine nautile",
+    "nameInternal": "Ornament Roman Structure 2x2 Fountain 01",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_fountain_basin.png"
+  },
+  {
+    "id": "g93613",
+    "guid": 93613,
+    "name": "Fontaine statuaire",
+    "nameInternal": "HoF Ornament Roman 2x2 Fountain Woman",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_fountain_statue.png"
+  },
+  {
+    "id": "g80620",
+    "guid": 80620,
+    "name": "Fontaine éternelle",
+    "nameInternal": "HoF Ornament Roman 3x4 Grand Fountain",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_fountain_resplendent.png"
+  },
+  {
+    "id": "g80827",
+    "guid": 80827,
+    "name": "Foyer",
+    "nameInternal": "Ornament Roman Brazier 1x1 03",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_brazier_small.png"
+  },
+  {
+    "id": "g82706",
+    "guid": 82706,
+    "name": "Gazon court",
+    "nameInternal": "Ornament Roman Grass 1x1 (Deprecated)",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g83770",
+    "guid": 83770,
+    "name": "Gazon court",
+    "nameInternal": "Ornament Roman Grass 2x2 (Deprecated)",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g83771",
+    "guid": 83771,
+    "name": "Gazon court",
+    "nameInternal": "Ornament Roman Grass 3x3 (Deprecated)",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g80576",
+    "guid": 80576,
+    "name": "Grand lithophyte",
+    "nameInternal": "HoF Ornament Roman 2x2 Large Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_pedestal.png"
+  },
+  {
+    "id": "g149861",
+    "guid": 149861,
+    "name": "Grand étal de marché",
+    "nameInternal": "HoF Ornament Roman 3x3 Market Stall Large",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_market_stand_11.png"
+  },
+  {
+    "id": "g110126",
+    "guid": 110126,
+    "name": "Gronkh",
+    "nameInternal": "Twitch Ornament 1x1 Banner German",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_banner_twitch_germany.png"
+  },
+  {
+    "id": "g42198",
+    "guid": 42198,
+    "name": "Harmonia",
+    "nameInternal": "Connect Ornament 1x1 Harmony Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_lyrist.png"
+  },
+  {
+    "id": "g88303",
+    "guid": 88303,
+    "name": "Homme romano-celte",
+    "nameInternal": "Ornament Celtic Statue 1x1 Young Man",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_romanceltic.png"
+  },
+  {
+    "id": "g88305",
+    "guid": 88305,
+    "name": "Idole celte",
+    "nameInternal": "HoF Ornament Celtic 1x1 Big Head Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_celtic_idol.png"
+  },
+  {
+    "id": "g135321",
+    "guid": 135321,
+    "name": "Kiosque aquatique",
+    "nameInternal": "HoF Ornament Roman 6x6 Pavilion",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_pavilion_water.png"
+  },
+  {
+    "id": "g95153",
+    "guid": 95153,
+    "name": "Lion d'or",
+    "nameInternal": "Connect Ornament Statue 1x1 Lion Plus",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_lion_gold.png"
+  },
+  {
+    "id": "g88308",
+    "guid": 88308,
+    "name": "Lithe rituel",
+    "nameInternal": "HoF Ornament Celtic 2x2 Ritual Site",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_ritual_site.png"
+  },
+  {
+    "id": "g93358",
+    "guid": 93358,
+    "name": "Louve capitoline",
+    "nameInternal": "BuildersEdition Ornament 1x1 Wolf Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_capitoline_wolf.png"
+  },
+  {
+    "id": "g149831",
+    "guid": 149831,
+    "name": "Mausolée sylvestre",
+    "nameInternal": "HoF Ornament Roman 7x8 Mausoleum",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_mausoleum.png"
+  },
+  {
+    "id": "g14191",
+    "guid": 14191,
+    "name": "Menhir moyen",
+    "nameInternal": "Ornament Celtic Statue 1x1 Menhir",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_menhir_medium.png"
+  },
+  {
+    "id": "g144967",
+    "guid": 144967,
+    "name": "Mosaïque de Sol Magnificus",
+    "nameInternal": "cDLC01 Ornament Large Mosaic 3x3 A Celtic",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc01_celtic_mosaic_3x3_01.png"
+  },
+  {
+    "id": "g144931",
+    "guid": 144931,
+    "name": "Mosaïque de l'Arbre sacré",
+    "nameInternal": "cDLC01 Ornament Large Mosaic 3x3 B Celtic",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc01_celtic_mosaic_3x3_02.png"
+  },
+  {
+    "id": "g144820",
+    "guid": 144820,
+    "name": "Mosaïque du Jardin somptueux",
+    "nameInternal": "cDLC01 Ornament Large Mosaic 3x3 A Roman",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc01_roman_mosaic_3x3_01.png"
+  },
+  {
+    "id": "g144965",
+    "guid": 144965,
+    "name": "Mosaïque du Latium",
+    "nameInternal": "cDLC01 Ornament Large Mosaic 3x3 B Roman",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc01_roman_mosaic_3x3_02.png"
+  },
+  {
+    "id": "g88306",
+    "guid": 88306,
+    "name": "Obélisque celte",
+    "nameInternal": "Ornament Celtic Statue 1x1 Obelisk",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_celtic_obelisk.png"
+  },
+  {
+    "id": "g88285",
+    "guid": 88285,
+    "name": "Officier de la Pax",
+    "nameInternal": "HoF Ornament Roman 1x1 Warrior Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_warrior.png"
+  },
+  {
+    "id": "g80610",
+    "guid": 80610,
+    "name": "Olivier",
+    "nameInternal": "Ornament Roman Tree 1x1 Olive",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_roman_olive.png"
+  },
+  {
+    "id": "g81330",
+    "guid": 81330,
+    "name": "Olivier (planté)",
+    "nameInternal": "Ornament Roman Planter 1x1 Olive Tree",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_treeplanter_roman_olive.png"
+  },
+  {
+    "id": "g14193",
+    "guid": 14193,
+    "name": "Ornament Celtic Culture 0.5x0.5 01 TODELETE",
+    "nameInternal": "Ornament Celtic Culture 0.5x0.5 01 TODELETE",
+    "category": "ornement",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_attractivenessbtn.png"
+  },
+  {
+    "id": "g14190",
+    "guid": 14190,
+    "name": "Ornament Celtic Statue 1x1 Obelisk",
+    "nameInternal": "Ornament Celtic Statue 1x1 Obelisk",
+    "category": "ornement",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_attractivenessbtn.png"
+  },
+  {
+    "id": "g14189",
+    "guid": 14189,
+    "name": "Ornament Celtic Statue 1x1 Romanized",
+    "nameInternal": "Ornament Celtic Statue 1x1 Romanized",
+    "category": "ornement",
+    "region": "Celtic",
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_attractivenessbtn.png"
+  },
+  {
+    "id": "g80579",
+    "guid": 80579,
+    "name": "Parterre de fleurs (blanches)",
+    "nameInternal": "Ornament Roman Planter 1x1 Flowers",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_flowerplanter_white.png"
+  },
+  {
+    "id": "g81328",
+    "guid": 81328,
+    "name": "Parterre de fleurs (bleues)",
+    "nameInternal": "Ornament Roman Planter 1x1 Flowers Blue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g81326",
+    "guid": 81326,
+    "name": "Parterre de fleurs (jaunes)",
+    "nameInternal": "Ornament Roman Planter 1x1 Flowers Yellow",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g81327",
+    "guid": 81327,
+    "name": "Parterre de fleurs (rouges)",
+    "nameInternal": "Ornament Roman Planter 1x1 Flowers Red",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g81329",
+    "guid": 81329,
+    "name": "Parterre de fleurs (violettes)",
+    "nameInternal": "Ornament Roman Planter 1x1 Flowers Violet",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_construction_main_group_ornaments.png"
+  },
+  {
+    "id": "g80575",
+    "guid": 80575,
+    "name": "Petit arbuste",
+    "nameInternal": "Ornament Roman Shrub 1x1 01",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_shrub_small.png"
+  },
+  {
+    "id": "g80625",
+    "guid": 80625,
+    "name": "Petit brasero",
+    "nameInternal": "Ornament Roman Brazier 1x1 01",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_brazier_medium.png"
+  },
+  {
+    "id": "g149859",
+    "guid": 149859,
+    "name": "Petit étal de marché",
+    "nameInternal": "HoF Ornament Roman 1x1 Market Stall Small",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_market_stand_01.png"
+  },
+  {
+    "id": "g92744",
+    "guid": 92744,
+    "name": "Pin albionien",
+    "nameInternal": "Ornament Celtic Tree 1x1 Tall",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_celtic_tall.png"
+  },
+  {
+    "id": "g92748",
+    "guid": 92748,
+    "name": "Pin albionien (planté)",
+    "nameInternal": "Ornament Celtic Planter 1x1 Tall",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_treeplanter_celtic_tall.png"
+  },
+  {
+    "id": "g92734",
+    "guid": 92734,
+    "name": "Pin teutonique",
+    "nameInternal": "Ornament Celtic Tree 1x1 Coniferous",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_tree_celtic_coniferous.png"
+  },
+  {
+    "id": "g92746",
+    "guid": 92746,
+    "name": "Pin teutonique (planté)",
+    "nameInternal": "Ornament Celtic Planter 1x1 Coniferous",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_treeplanter_celtic_coniferous.png"
+  },
+  {
+    "id": "g80633",
+    "guid": 80633,
+    "name": "Porte-flambeau proverbial",
+    "nameInternal": "HoF Ornament Roman 1x1 Torch Bearer Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_torchbearer.png"
+  },
+  {
+    "id": "g80632",
+    "guid": 80632,
+    "name": "Roi Numa",
+    "nameInternal": "Ornament Roman Statue 1x1 05",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_man.png"
+  },
+  {
+    "id": "g88309",
+    "guid": 88309,
+    "name": "Sauvage en osier",
+    "nameInternal": "HoF Ornament Celtic Highlight Wicker Man",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_vestige.png"
+  },
+  {
+    "id": "g110125",
+    "guid": 110125,
+    "name": "Sceau 稚嫩的魔法师",
+    "nameInternal": "Twitch Ornament 1x1 Banner China",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_banner_twitch_china.png"
+  },
+  {
+    "id": "g80820",
+    "guid": 80820,
+    "name": "Statue d'un lion",
+    "nameInternal": "HoF Ornament Roman 1x1 Lion Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_lion.png"
+  },
+  {
+    "id": "g87384",
+    "guid": 87384,
+    "name": "Statue de Town Crier",
+    "nameInternal": "BuildersEdition Ornament 1x1 Town Crier Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_towncrier.png"
+  },
+  {
+    "id": "g149829",
+    "guid": 149829,
+    "name": "Statue de l'empereur Servius",
+    "nameInternal": "HoF Ornament Roman 1x1 Emperor Statue",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_emperor_01.png"
+  },
+  {
+    "id": "g80619",
+    "guid": 80619,
+    "name": "Statue de la communauté",
+    "nameInternal": "Ornament Roman Statue 1x1 01 Community",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_community.png"
+  },
+  {
+    "id": "g149837",
+    "guid": 149837,
+    "name": "Table de jeu",
+    "nameInternal": "HoF Ornament Roman 2x1 Benches",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_benches_02.png"
+  },
+  {
+    "id": "g42197",
+    "guid": 42197,
+    "name": "Tholos",
+    "nameInternal": "Connect Ornament 3x3 Pavilon Plus",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_pavilion_small.png"
+  },
+  {
+    "id": "g151958",
+    "guid": 151958,
+    "name": "Town Crier",
+    "nameInternal": "Twitch Ornament Town Crier",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_towncrier.png"
+  },
+  {
+    "id": "g88307",
+    "guid": 88307,
+    "name": "Tumulus scellé",
+    "nameInternal": "HoF Ornament Celtic 4x4 Barrow",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_burialmound_entrance.png"
+  },
+  {
+    "id": "g95645",
+    "guid": 95645,
+    "name": "Vexillum lupin",
+    "nameInternal": "BuildersEdition Ornament 1x1 Battle Standard",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_banner_builder.png"
+  },
+  {
+    "id": "g149860",
+    "guid": 149860,
+    "name": "Étal de marché commun",
+    "nameInternal": "HoF Ornament Roman 2x1 Market Stall Medium",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_market_stand_08.png"
+  },
+  {
+    "id": "g13808",
+    "guid": 13808,
+    "name": "Armurerie",
+    "nameInternal": "Production Military Roman Armor",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_armory_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Armures",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Fer",
+          "amount": 1.0
+        },
+        {
+          "good": "Cuir",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g55945",
+    "guid": 55945,
+    "name": "Armurerie",
+    "nameInternal": "Production Military Roman Celtic Armor",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_armory_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Armures",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Fer",
+          "amount": 1.0
+        },
+        {
+          "good": "Cuir",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5477",
+    "guid": 5477,
+    "name": "Arracheur de langue",
+    "nameInternal": "Production Ingredient Roman Celtic Bird Tongues",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_bird_tongue_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Langues d'oiseau",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Petits oiseaux",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g145230",
+    "guid": 145230,
+    "name": "Atelier de Latrunculi",
+    "nameInternal": "Production Culture Roman Boardgames",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_boardgame_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Plateaux de Latrunculi",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Obsidienne",
+          "amount": 1.0
+        },
+        {
+          "good": "Bois ouvragé",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5616",
+    "guid": 5616,
+    "name": "Atelier de chars",
+    "nameInternal": "Production Culture Celtic Chariots",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 7,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_chariot_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Chars",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Poneys",
+          "amount": 1.0
+        },
+        {
+          "good": "Châssis",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3187",
+    "guid": 3187,
+    "name": "Atelier de filage",
+    "nameInternal": "Production Fashion Roman Tunics",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_tunics_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Tuniques",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Chanvre",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5958",
+    "guid": 5958,
+    "name": "Atelier de filage",
+    "nameInternal": "Production Fashion Roman Celtic Tunics",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_tunics_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Tuniques",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Chanvre",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3185",
+    "guid": 3185,
+    "name": "Atelier de garum",
+    "nameInternal": "Production Food Roman Garum",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_garum_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Garum",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Maquereaux",
+          "amount": 1.0
+        },
+        {
+          "good": "Sel",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3203",
+    "guid": 3203,
+    "name": "Atelier de tesselles",
+    "nameInternal": "Production Construction Roman Mosaics",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 8,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_mosaics_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 30
+    },
+    "streetRange": 34,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Mosaïques",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Argile",
+          "amount": 1.0
+        },
+        {
+          "good": "Pigments",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3191",
+    "guid": 3191,
+    "name": "Atelier de tissage",
+    "nameInternal": "Production Fashion Roman Togas",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_togas_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Toges",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Tissu",
+          "amount": 1.0
+        },
+        {
+          "good": "Rose tyrien",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5975",
+    "guid": 5975,
+    "name": "Attrapeur de chevaux",
+    "nameInternal": "Production Meadow Celtic Dartmoor Ponies",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_ponies_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Poneys",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g8586",
+    "guid": 8586,
+    "name": "Banc d'huîtres",
+    "nameInternal": "Production Coast Roman Oysters",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 12,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_oysters_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Huîtres",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g3174",
+    "guid": 3174,
+    "name": "Boulangerie",
+    "nameInternal": "Production Food Roman Bread",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_bread_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Pain",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Farine",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5960",
+    "guid": 5960,
+    "name": "Boulangerie",
+    "nameInternal": "Production Food Roman Celtic Bread",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_bread_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Pain",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Farine",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5570",
+    "guid": 5570,
+    "name": "Brasserie",
+    "nameInternal": "Production Food Celtic Beer",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_beer_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Bière",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Malt",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3082",
+    "guid": 3082,
+    "name": "Broyeur minéral",
+    "nameInternal": "Production Heavy Roman Pigments",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 9
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_pigments_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Pigments",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Minéraux",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g31772",
+    "guid": 31772,
+    "name": "Brûleur de salicorne",
+    "nameInternal": "Production Chemical Celtic Lye",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_lye_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Sels décapants",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Salicorne",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g2878",
+    "guid": 2878,
+    "name": "Bûcheron",
+    "nameInternal": "Production Forest Roman Wood",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wood_goods.png",
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Bois",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5976",
+    "guid": 5976,
+    "name": "Bûcheron",
+    "nameInternal": "Production Forest Roman Celtic Wood",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wood_goods.png",
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Bois",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2955",
+    "guid": 2955,
+    "name": "Cabane de pêcheur",
+    "nameInternal": "Production Coast Roman Sardines",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 8,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_sardines_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Sardines",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2956",
+    "guid": 2956,
+    "name": "Cabane à maquereaux",
+    "nameInternal": "Production Coast Roman Mackerels",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 8,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_mackerels_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Maquereaux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g145229",
+    "guid": 145229,
+    "name": "Caelator",
+    "nameInternal": "Production Household Roman Idols",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_idol_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30,
+    "production": {
+      "cycleTime": 180,
+      "outputs": [
+        {
+          "good": "Statuettes",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Obsidienne",
+          "amount": 1.0
+        },
+        {
+          "good": "Marbre brut",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3091",
+    "guid": 3091,
+    "name": "Carreleur",
+    "nameInternal": "Production Construction Roman Tiles",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_tiles_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Tuiles",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Argile",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5947",
+    "guid": 5947,
+    "name": "Carreleur",
+    "nameInternal": "Production Construction Roman Celtic Tiles",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_tiles_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Tuiles",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Boue",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g2970",
+    "guid": 2970,
+    "name": "Carrière d'argile",
+    "nameInternal": "Production River Roman Clay",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_clay_goods.png",
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Argile",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2916",
+    "guid": 2916,
+    "name": "Carrière de calcaire",
+    "nameInternal": "Production Mountain Roman Limestone Blocks",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_limestone_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Calcaire",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5978",
+    "guid": 5978,
+    "name": "Carrière de calcaire",
+    "nameInternal": "Production Mountain Roman Celtic Limestone Blocks",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_limestone_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Calcaire",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5295",
+    "guid": 5295,
+    "name": "Carrière de granite",
+    "nameInternal": "Production Mountain Celtic Granite Blocks",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_granite_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Bloc de granite",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2954",
+    "guid": 2954,
+    "name": "Carrière de marbre",
+    "nameInternal": "Production Mountain Roman Marble Blocks",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_marble_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Marbre brut",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2920",
+    "guid": 2920,
+    "name": "Carrière de minéraux",
+    "nameInternal": "Production Mountain Roman Minerals",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_minerals_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Minéraux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2800",
+    "guid": 2800,
+    "name": "Champ de garance",
+    "nameInternal": "Production Field Celtic Dye Plants",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_dye_plants_goods.png",
+    "field": {
+      "tiles": 100,
+      "fieldType": "plantes_tinctoriales"
+    },
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Plantes tinctoriales",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g31770",
+    "guid": 31770,
+    "name": "Chapelier en peau de castor",
+    "nameInternal": "Production Fashion Celtic Pelt Hats",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_pelt_hat_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Chapeaux en fourrures",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Castors",
+          "amount": 1.0
+        },
+        {
+          "good": "Sels décapants",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g2880",
+    "guid": 2880,
+    "name": "Charbonnière",
+    "nameInternal": "Production Forest Roman Charcoal",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_coal_ore_forest_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Charbon",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5977",
+    "guid": 5977,
+    "name": "Charbonnière",
+    "nameInternal": "Production Forest Roman Celtic Charcoal",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_coal_ore_forest_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Charbon",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5851",
+    "guid": 5851,
+    "name": "Charmeur d'oiseaux",
+    "nameInternal": "Production Marsh Roman Celtic Birds",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_marsh_birds_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Petits oiseaux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g31773",
+    "guid": 31773,
+    "name": "Cogne-bouclier",
+    "nameInternal": "Production Culture Celtic Clan Shield",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_clan_shields_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Boucliers claniques",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Plantes tinctoriales",
+          "amount": 1.0
+        },
+        {
+          "good": "Bronze",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g31752",
+    "guid": 31752,
+    "name": "Collecteur de résine",
+    "nameInternal": "Production Forest Roman Resin",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_resin_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Résine",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g31761",
+    "guid": 31761,
+    "name": "Collecteur de résine",
+    "nameInternal": "Production Forest Roman Celtic Resin",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_resin_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Résine",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5608",
+    "guid": 5608,
+    "name": "Confectionneur de bas",
+    "nameInternal": "Production Fashion Celtic Trousers",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_trouser_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Pantalons",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Moutons",
+          "amount": 1.0
+        },
+        {
+          "good": "Plantes tinctoriales",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5611",
+    "guid": 5611,
+    "name": "Constructeur de châssis",
+    "nameInternal": "Production Craft Celtic Chassis",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_chassis_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Châssis",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Bois",
+          "amount": 1.0
+        },
+        {
+          "good": "Roseaux",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3168",
+    "guid": 3168,
+    "name": "Cordier",
+    "nameInternal": "Production Military Roman Ropes",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 9
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_ropes_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Corde",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Chanvre",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5956",
+    "guid": 5956,
+    "name": "Cordier",
+    "nameInternal": "Production Military Roman Celtic Ropes",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_ropes_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Corde",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Chanvre",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5935",
+    "guid": 5935,
+    "name": "Cour des manœuvres",
+    "nameInternal": "Production Construction Celtic Wattle and Daub",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wattle_daub_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Clayonnage",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Roseaux",
+          "amount": 1.0
+        },
+        {
+          "good": "Boue",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5849",
+    "guid": 5849,
+    "name": "Cueilleur de roseaux",
+    "nameInternal": "Production Marsh Celtic Reed",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_reed_goods.png",
+    "field": {
+      "tiles": 140,
+      "fieldType": "roseaux"
+    },
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Roseaux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2796",
+    "guid": 2796,
+    "name": "Cueilleur de salicorne",
+    "nameInternal": "Production Coast Celtic Samphire",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 9,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_samphire_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Salicorne",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2699",
+    "guid": 2699,
+    "name": "Cultivateur d'olives",
+    "nameInternal": "Production Field Roman Olives",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_olives_goods.png",
+    "field": {
+      "tiles": 160,
+      "fieldType": "olives"
+    },
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Olives",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2698",
+    "guid": 2698,
+    "name": "Cultivateur de lavande",
+    "nameInternal": "Production Field Roman Lavender",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_lavender_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "field": {
+      "tiles": 180,
+      "fieldType": "lavande"
+    },
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Lavande",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g3081",
+    "guid": 3081,
+    "name": "Doreur",
+    "nameInternal": "Production Crafts Roman Ornate Wood",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_ornamented_wood_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Bois ouvragé",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Sandaraque",
+          "amount": 1.0
+        },
+        {
+          "good": "Or",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g41811",
+    "guid": 41811,
+    "name": "Découpeur de granite",
+    "nameInternal": "Production Construction Celtic Granite",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_granite_block_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Granite",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Bloc de granite",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g8580",
+    "guid": 8580,
+    "name": "Escargotière",
+    "nameInternal": "Production Coast Roman Sea Snails",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 12,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_murex_snails_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Murex",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g31756",
+    "guid": 31756,
+    "name": "Extracteur",
+    "nameInternal": "Production Chemical Roman Fat",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_pig_lard_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Saindoux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Porcs",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5475",
+    "guid": 5475,
+    "name": "Extracteur",
+    "nameInternal": "Production Chemical Roman Celtic Fat",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_pig_lard_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Saindoux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Porcs",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3198",
+    "guid": 3198,
+    "name": "Fabricant de chaises",
+    "nameInternal": "Production Household Roman Loungers",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 9,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_lounger_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Chaises longues",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Sandaraque",
+          "amount": 1.0
+        },
+        {
+          "good": "Coussins",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5609",
+    "guid": 5609,
+    "name": "Fabricant de chaussures",
+    "nameInternal": "Production Fashion Celtic Reed Shoes",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_reed_shoes_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Chausses en roseaux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Roseaux",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g31766",
+    "guid": 31766,
+    "name": "Fabricant de couvre-chefs",
+    "nameInternal": "Production Craft Roman Celtic Wig Base",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 7,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wig_base_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Couvre-chef",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Lin",
+          "amount": 1.0
+        },
+        {
+          "good": "Résine",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g31769",
+    "guid": 31769,
+    "name": "Fabricant de perruques",
+    "nameInternal": "Production Fashion Roman Celtic Wigs",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wig_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Perruques",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Chevaux",
+          "amount": 1.0
+        },
+        {
+          "good": "Couvre-chef",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3190",
+    "guid": 3190,
+    "name": "Fabricant de sandales",
+    "nameInternal": "Production Fashion Roman Sandals",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_sandals_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Sandales",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Cuir",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3189",
+    "guid": 3189,
+    "name": "Fabricant de savon",
+    "nameInternal": "Production Fashion Roman Soap",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_lavender_soap_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Savon",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Lavande",
+          "amount": 1.0
+        },
+        {
+          "good": "Saindoux",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3169",
+    "guid": 3169,
+    "name": "Fabricant de voiles",
+    "nameInternal": "Production Military Roman Sails",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_sails_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Voiles",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Moutons",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5955",
+    "guid": 5955,
+    "name": "Fabricant de voiles",
+    "nameInternal": "Production Military Roman Celtic Sails",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_sails_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Voiles",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Moutons",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g2200",
+    "guid": 2200,
+    "name": "Ferme d'avoine",
+    "nameInternal": "Production Field Roman Oats",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_oats_goods.png",
+    "field": {
+      "tiles": 80,
+      "fieldType": "avoine"
+    },
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Avoine",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2799",
+    "guid": 2799,
+    "name": "Ferme d'orge",
+    "nameInternal": "Production Field Celtic Barley",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_barley_goods.png",
+    "field": {
+      "tiles": 120,
+      "fieldType": "orge"
+    },
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Orge",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g31750",
+    "guid": 31750,
+    "name": "Ferme de chanvre",
+    "nameInternal": "Production Field Roman Hemp",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_hemp_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Chanvre",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g31762",
+    "guid": 31762,
+    "name": "Ferme de chanvre",
+    "nameInternal": "Production Field Roman Celtic Hemp",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_hemp_goods.png",
+    "field": {
+      "tiles": 80,
+      "fieldType": "chanvre"
+    },
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Chanvre",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2693",
+    "guid": 2693,
+    "name": "Ferme de céréales",
+    "nameInternal": "Production Field Roman Wheat",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wheat_goods.png",
+    "field": {
+      "tiles": 140,
+      "fieldType": "bl"
+    },
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Blé",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5972",
+    "guid": 5972,
+    "name": "Ferme de céréales",
+    "nameInternal": "Production Field Roman Celtic Wheat",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wheat_goods.png",
+    "field": {
+      "tiles": 140,
+      "fieldType": "bl"
+    },
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Blé",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2669",
+    "guid": 2669,
+    "name": "Ferme de lin",
+    "nameInternal": "Production Field Roman Flax",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_flax_goods.png",
+    "field": {
+      "tiles": 140,
+      "fieldType": "lin"
+    },
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Lin",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5971",
+    "guid": 5971,
+    "name": "Ferme de lin",
+    "nameInternal": "Production Field Roman Celtic Flax",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_flax_goods.png",
+    "field": {
+      "tiles": 120,
+      "fieldType": "lin"
+    },
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Lin",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5847",
+    "guid": 5847,
+    "name": "Ferme à bœufs",
+    "nameInternal": "Production Marsh Celtic Aurochs",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_auroch_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "field": {
+      "tiles": 5,
+      "fieldType": "b_ufs"
+    },
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Bœufs",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5605",
+    "guid": 5605,
+    "name": "Fibularium",
+    "nameInternal": "Production Fashion Roman Celtic Brooches",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_brooch_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Broches",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Argent",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5481",
+    "guid": 5481,
+    "name": "Fileur",
+    "nameInternal": "Production Craft Roman Strings",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_strings_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Ficelle",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Moutons",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5470",
+    "guid": 5470,
+    "name": "Fondeur de bronze",
+    "nameInternal": "Production Heavy Celtic Bronze",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_bronze_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Bronze",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Minerai d'étain",
+          "amount": 1.0
+        },
+        {
+          "good": "Minerai de cuivre",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3074",
+    "guid": 3074,
+    "name": "Fondeur de verre",
+    "nameInternal": "Production Heavy Roman Glass",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_glass_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Verre",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Silice",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5472",
+    "guid": 5472,
+    "name": "Forge d'argent",
+    "nameInternal": "Production Heavy Roman Celtic Silver",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_silver_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Argent",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Minerai d'argent",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3170",
+    "guid": 3170,
+    "name": "Forgeron d'armes",
+    "nameInternal": "Production Military Roman Weapons",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_weapons_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Armes",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Fer",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5954",
+    "guid": 5954,
+    "name": "Forgeron d'armes",
+    "nameInternal": "Production Military Roman Celtic Weapons",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_weapons_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Armes",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Fer",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3188",
+    "guid": 3188,
+    "name": "Foulonneur de pileus",
+    "nameInternal": "Production Fashion Roman Hats",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_farmer_hat_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Pileus",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Moutons",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g31767",
+    "guid": 31767,
+    "name": "Four enterré",
+    "nameInternal": "Production Food Celtic Roast Beef",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_roast_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Bœuf rôti",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Salicorne",
+          "amount": 1.0
+        },
+        {
+          "good": "Bœufs",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3070",
+    "guid": 3070,
+    "name": "Fourneau",
+    "nameInternal": "Production Heavy Roman Iron",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_iron_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Fer",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Minerai de fer",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5969",
+    "guid": 5969,
+    "name": "Fourneau",
+    "nameInternal": "Production Heavy Roman Celtic Iron",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_iron_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Fer",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Minerai de fer",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g8887",
+    "guid": 8887,
+    "name": "Garnisseur de coussins",
+    "nameInternal": "Production Crafts Roman Cushions",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_cushion_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Coussins",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Lin",
+          "amount": 1.0
+        },
+        {
+          "good": "Rose tyrien",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g31764",
+    "guid": 31764,
+    "name": "Jardin des plantes",
+    "nameInternal": "Production Field Roman Celtic Herbs",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_herbs_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Herbes",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g3192",
+    "guid": 3192,
+    "name": "Joaillier",
+    "nameInternal": "Production Fashion Roman Necklace",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_necklaces_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Colliers",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Minéraux",
+          "amount": 1.0
+        },
+        {
+          "good": "Or",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g6586",
+    "guid": 6586,
+    "name": "Laiterie",
+    "nameInternal": "Production Food Celtic Cheese",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_cheese_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Fromage",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Bœufs",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g31753",
+    "guid": 31753,
+    "name": "Laveur d'or",
+    "nameInternal": "Production River Roman Gold Ore",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_gold_ore_river_goods.png",
+    "production": {
+      "cycleTime": 240,
+      "outputs": [
+        {
+          "good": "Minerai d'or",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g4832",
+    "guid": 4832,
+    "name": "Lyrier",
+    "nameInternal": "Production Culture Roman Lyres",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_string_instrument_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Lyres sur pied",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Ficelle",
+          "amount": 1.0
+        },
+        {
+          "good": "Bois ouvragé",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5469",
+    "guid": 5469,
+    "name": "Mains vertes",
+    "nameInternal": "Production Chemical Celtic Green",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_celtic_green_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Vert celte",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Plantes tinctoriales",
+          "amount": 1.0
+        },
+        {
+          "good": "Minerai de cuivre",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3129",
+    "guid": 3129,
+    "name": "Malaxeur à béton",
+    "nameInternal": "Production Construction Roman Concrete",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_concrete_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Béton",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Calcaire",
+          "amount": 1.0
+        },
+        {
+          "good": "Silice",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5946",
+    "guid": 5946,
+    "name": "Malaxeur à béton",
+    "nameInternal": "Production Construction Roman Celtic Concrete",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_concrete_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Béton",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Calcaire",
+          "amount": 1.0
+        },
+        {
+          "good": "Silice",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5474",
+    "guid": 5474,
+    "name": "Malterie",
+    "nameInternal": "Production Ingredient Celtic Malt",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_malt_goods.png",
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Malt",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Orge",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g2957",
+    "guid": 2957,
+    "name": "Marais salants",
+    "nameInternal": "Production Coast Roman Salt",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 12,
+      "h": 16
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_salt_goods.png",
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Sel",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5980",
+    "guid": 5980,
+    "name": "Mine d'argent",
+    "nameInternal": "Production Mountain Roman Celtic Silver Ore",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_silver_ore_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Minerai d'argent",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g50280",
+    "guid": 50280,
+    "name": "Mine d'or",
+    "nameInternal": "Production Mountain Roman Gold Ore",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_gold_ore_mine_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": 150,
+      "outputs": [
+        {
+          "good": "Minerai d'or",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5291",
+    "guid": 5291,
+    "name": "Mine d'étain",
+    "nameInternal": "Production Mountain Celtic Tin Ore",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_tin_ore_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Minerai d'étain",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g144810",
+    "guid": 144810,
+    "name": "Mine de charbon",
+    "nameInternal": "Production Mountain Roman Coal",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_coal_ore_mine_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Charbon",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g144811",
+    "guid": 144811,
+    "name": "Mine de charbon",
+    "nameInternal": "Production Mountain Roman Celtic Coal",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_coal_ore_mine_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Charbon",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5290",
+    "guid": 5290,
+    "name": "Mine de cuivre",
+    "nameInternal": "Production Mountain Celtic Copper Ore",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_copper_ore_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Minerai de cuivre",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2918",
+    "guid": 2918,
+    "name": "Mine de fer",
+    "nameInternal": "Production Mountain Roman Iron Ore",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_iron_ore_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Minerai de fer",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5982",
+    "guid": 5982,
+    "name": "Mine de fer",
+    "nameInternal": "Production Mountain Roman Celtic Iron Ore",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_iron_ore_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Minerai de fer",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g3075",
+    "guid": 3075,
+    "name": "Moulin à grains",
+    "nameInternal": "Production Ingredient Roman Flour",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_flour_goods.png",
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Farine",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Blé",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5967",
+    "guid": 5967,
+    "name": "Moulin à âne",
+    "nameInternal": "Production Ingredient Roman Celtic Flour",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_flour_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Farine",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Blé",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5615",
+    "guid": 5615,
+    "name": "Narcissium",
+    "nameInternal": "Production Household Roman Celtic Mirrors",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_handmirros_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Miroirs à main",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Nacre",
+          "amount": 1.0
+        },
+        {
+          "good": "Argent",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g31755",
+    "guid": 31755,
+    "name": "Orfèvre",
+    "nameInternal": "Production Heavy Roman Gold",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_gold_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Or",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Minerai d'or",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3199",
+    "guid": 3199,
+    "name": "Potier",
+    "nameInternal": "Production Household Roman Amphorae",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_amphorae_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Amphores",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Argile",
+          "amount": 1.0
+        },
+        {
+          "good": "Résine",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g55962",
+    "guid": 55962,
+    "name": "Potier",
+    "nameInternal": "Production Household Roman Celtic Amphorae",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_amphorae_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Amphores",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Boue",
+          "amount": 1.0
+        },
+        {
+          "good": "Résine",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g4831",
+    "guid": 4831,
+    "name": "Pressoir à olives",
+    "nameInternal": "Production Household Roman Olive Oil",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_olive_oil_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Huile d'olive",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Olives",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g8579",
+    "guid": 8579,
+    "name": "Pépinière de sandaraque",
+    "nameInternal": "Production Field Roman Sandarac Wood",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_cypress_wood_goods.png",
+    "field": {
+      "tiles": 120,
+      "fieldType": "sandaraque"
+    },
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Sandaraque",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5299",
+    "guid": 5299,
+    "name": "Pêcheur d'anguilles",
+    "nameInternal": "Production Marsh Roman Celtic Eels",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_eels_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Anguilles",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2958",
+    "guid": 2958,
+    "name": "Raffinerie de sable",
+    "nameInternal": "Production Coast Roman Silica",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 10,
+      "h": 11
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_silica_goods.png",
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Silice",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g10929",
+    "guid": 10929,
+    "name": "Raffinerie de sable",
+    "nameInternal": "Production Coast Roman Celtic Silica",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 10,
+      "h": 11
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_silica_goods.png",
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Silice",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5278",
+    "guid": 5278,
+    "name": "Ramasseur de coques",
+    "nameInternal": "Production Coast Celtic Cockles",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_cockles_goods.png",
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Coques",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g8431",
+    "guid": 8431,
+    "name": "Ramasseur de coquillages",
+    "nameInternal": "Production Coast Roman Celtic Sea Shells",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_seashells_goods.png",
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Nacre",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2795",
+    "guid": 2795,
+    "name": "Rucher",
+    "nameInternal": "Production Meadow Roman Honycombs",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 11,
+      "h": 14
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_honeycombs_goods.png",
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Rayons de miel",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g8427",
+    "guid": 8427,
+    "name": "Rucher",
+    "nameInternal": "Production Meadow Roman Celtic Honycombs",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 11,
+      "h": 14
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_honeycombs_goods.png",
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Rayons de miel",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5959",
+    "guid": 5959,
+    "name": "Salsicium",
+    "nameInternal": "Production Food Roman Celtic Sausages",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_sausages_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Saucisses",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Porcs",
+          "amount": 1.0
+        },
+        {
+          "good": "Herbes",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3089",
+    "guid": 3089,
+    "name": "Scierie",
+    "nameInternal": "Production Construction Roman Timber",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_timber_goods.png",
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Planches",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Bois",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5945",
+    "guid": 5945,
+    "name": "Scierie",
+    "nameInternal": "Production Construction Roman Celtic Timber",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_timber_goods.png",
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Planches",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Bois",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g77954",
+    "guid": 77954,
+    "name": "Silo",
+    "nameInternal": "Module Silo Roman",
+    "category": "production",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_silos.png",
+    "production": {
+      "cycleTime": 300,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Blé",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g77955",
+    "guid": 77955,
+    "name": "Silo",
+    "nameInternal": "Module Silo Roman Celtic",
+    "category": "production",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_silos.png",
+    "production": {
+      "cycleTime": 300,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Blé",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g55963",
+    "guid": 55963,
+    "name": "Sonneur",
+    "nameInternal": "Production Culture Celtic Drinking Horns",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_drinkhorns_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Cornes à boire",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Bœufs",
+          "amount": 1.0
+        },
+        {
+          "good": "Minerai d'étain",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3202",
+    "guid": 3202,
+    "name": "Souffleur de verre",
+    "nameInternal": "Production Household Roman Fine Glass",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_fine_glass_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Verres précieux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Pigments",
+          "amount": 1.0
+        },
+        {
+          "good": "Verre",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5848",
+    "guid": 5848,
+    "name": "Sécheur de boue",
+    "nameInternal": "Production Marsh Celtic Mud",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_mud_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Boue",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g3201",
+    "guid": 3201,
+    "name": "Tabulus",
+    "nameInternal": "Production Household Roman Wax Tablets",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wax_tablets_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30,
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Tablettes d'écriture",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Sandaraque",
+          "amount": 1.0
+        },
+        {
+          "good": "Rayons de miel",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5614",
+    "guid": 5614,
+    "name": "Tailleur de birrus",
+    "nameInternal": "Production Fashion Celtic Cloak",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 7,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_cloak_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Capes",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Moutons",
+          "amount": 1.0
+        },
+        {
+          "good": "Vert celte",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3138",
+    "guid": 3138,
+    "name": "Tailleur de marbre",
+    "nameInternal": "Production Construction Roman Marble",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_marble_blocks_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Marbre",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Marbre brut",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g2994",
+    "guid": 2994,
+    "name": "Tannerie",
+    "nameInternal": "Production Chemical Roman Leather",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_leather_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Cuir",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Porcs",
+          "amount": 1.0
+        },
+        {
+          "good": "Sel",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g80612",
+    "guid": 80612,
+    "name": "Tannerie",
+    "nameInternal": "Production Chemical Roman Celtic Leather",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_leather_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Cuir",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Porcs",
+          "amount": 1.0
+        },
+        {
+          "good": "Bois",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g2999",
+    "guid": 2999,
+    "name": "Teinturerie",
+    "nameInternal": "Production Chemical Roman Tyrian Purple",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_tyrian_purple_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Rose tyrien",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Murex",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3079",
+    "guid": 3079,
+    "name": "Tisserand",
+    "nameInternal": "Production Crafts Roman Cloth",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_cloth_goods.png",
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Tissu",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Lin",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g5606",
+    "guid": 5606,
+    "name": "Torsionneur de fils",
+    "nameInternal": "Production Fashion Celtic Torcs",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_torcs_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Torques",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Minerai de cuivre",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g31759",
+    "guid": 31759,
+    "name": "Trappeur de castors",
+    "nameInternal": "Production Marsh Celtic Beaver",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_beaver_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Castors",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g8893",
+    "guid": 8893,
+    "name": "Videur de poissons",
+    "nameInternal": "Production Ingredient Roman Caviar",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_caviar_goods.png",
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Caviar",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Esturgeon",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3177",
+    "guid": 3177,
+    "name": "Vigneron",
+    "nameInternal": "Production Food Roman Wine",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 10,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wine_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 30
+    },
+    "streetRange": 34,
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Vin",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Raisin",
+          "amount": 1.0
+        },
+        {
+          "good": "Rayons de miel",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g23753",
+    "guid": 23753,
+    "name": "Vigneron",
+    "nameInternal": "Production Food Roman Celtic Wine",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 10,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_wine_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 30
+    },
+    "streetRange": 34,
+    "production": {
+      "cycleTime": 45,
+      "outputs": [
+        {
+          "good": "Vin",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Raisin",
+          "amount": 1.0
+        },
+        {
+          "good": "Rayons de miel",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g2694",
+    "guid": 2694,
+    "name": "Vignoble",
+    "nameInternal": "Production Field Roman Grapes",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_grapes_goods.png",
+    "field": {
+      "tiles": 100,
+      "fieldType": "raisin"
+    },
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Raisin",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g23723",
+    "guid": 23723,
+    "name": "Vignoble",
+    "nameInternal": "Production Field Roman Celtic Grapes",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_grapes_goods.png",
+    "field": {
+      "tiles": 100,
+      "fieldType": "raisin"
+    },
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Raisin",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2971",
+    "guid": 2971,
+    "name": "Élevage d'esturgeons",
+    "nameInternal": "Production River Roman Sturgeon",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_sturgeons_goods.png",
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Esturgeon",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2786",
+    "guid": 2786,
+    "name": "Élevage ovin",
+    "nameInternal": "Production Pasture Roman Sheep",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_sheep_goods.png",
+    "field": {
+      "tiles": 3,
+      "fieldType": "moutons"
+    },
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Moutons",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5973",
+    "guid": 5973,
+    "name": "Élevage ovin",
+    "nameInternal": "Production Pasture Celtic Sheep",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_sheep_goods.png",
+    "field": {
+      "tiles": 3,
+      "fieldType": "moutons"
+    },
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Moutons",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2793",
+    "guid": 2793,
+    "name": "Élevage porcin",
+    "nameInternal": "Production Pasture Roman Pigs",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_pigs_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "field": {
+      "tiles": 5,
+      "fieldType": "porcs"
+    },
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Porcs",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5974",
+    "guid": 5974,
+    "name": "Élevage porcin",
+    "nameInternal": "Production Pasture Roman Celtic Pigs",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_pigs_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "field": {
+      "tiles": 5,
+      "fieldType": "porcs"
+    },
+    "production": {
+      "cycleTime": null,
+      "outputs": [
+        {
+          "good": "Porcs",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g2794",
+    "guid": 2794,
+    "name": "Éleveur de chevaux",
+    "nameInternal": "Production Pasture Roman Horses",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_horses_goods.png",
+    "field": {
+      "tiles": 5,
+      "fieldType": "chevaux"
+    },
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Chevaux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g15514",
+    "guid": 15514,
+    "name": "Éleveur de chevaux",
+    "nameInternal": "Production Pasture Roman Celtic Horses",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_horses_goods.png",
+    "field": {
+      "tiles": 5,
+      "fieldType": "chevaux"
+    },
+    "production": {
+      "cycleTime": 120,
+      "outputs": [
+        {
+          "good": "Chevaux",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    }
+  },
+  {
+    "id": "g5604",
+    "guid": 5604,
+    "name": "Épicurien de l'air",
+    "nameInternal": "Production Food Roman Celtic Bird Tongues in Aspic",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_tongue_in_aspic_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30,
+    "production": {
+      "cycleTime": 90,
+      "outputs": [
+        {
+          "good": "Langues d'oiseau en aspic",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Langues d'oiseau",
+          "amount": 1.0
+        },
+        {
+          "good": "Saindoux",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3186",
+    "guid": 3186,
+    "name": "Épicurien de l'eau",
+    "nameInternal": "Production Food Roman Oysters with Caviar",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_oysters_and_caviar_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 28
+    },
+    "streetRange": 32,
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Huîtres et caviar",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Huîtres",
+          "amount": 1.0
+        },
+        {
+          "good": "Caviar",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3171",
+    "guid": 3171,
+    "name": "Étal de gruau",
+    "nameInternal": "Production Food Roman Porridge",
+    "category": "production",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_porridge_goods.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Gruau",
+          "amount": 1.0
+        }
+      ],
+      "inputs": [
+        {
+          "good": "Avoine",
+          "amount": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g6725",
+    "guid": 6725,
+    "name": "Aire récréative",
+    "nameInternal": "Public Celtic Sporting Grounds",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 10
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_celtic_sportsfield.png",
+    "radius": {
+      "kind": "service",
+      "range": 34
+    },
+    "streetRange": 38
+  },
+  {
+    "id": "g36912",
+    "guid": 36912,
+    "name": "Amphithéâtre : arène",
+    "nameInternal": "Monument Colosseum Phase 2",
+    "category": "public",
+    "region": null,
+    "size": {
+      "w": 32,
+      "h": 30
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_colosseum.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Tuiles",
+          "amount": 10.0
+        },
+        {
+          "good": "Marbre",
+          "amount": 10.0
+        },
+        {
+          "good": "Mosaïques",
+          "amount": 10.0
+        },
+        {
+          "good": "Béton",
+          "amount": 10.0
+        },
+        {
+          "good": "Or",
+          "amount": 2.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g97849",
+    "guid": 97849,
+    "name": "Amphithéâtre : arène",
+    "nameInternal": "Campaign Monument Colosseum Phase 2",
+    "category": "public",
+    "region": null,
+    "size": {
+      "w": 32,
+      "h": 30
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_colosseum.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Tuiles",
+          "amount": 10.0
+        },
+        {
+          "good": "Marbre",
+          "amount": 10.0
+        },
+        {
+          "good": "Mosaïques",
+          "amount": 10.0
+        },
+        {
+          "good": "Béton",
+          "amount": 10.0
+        },
+        {
+          "good": "Or",
+          "amount": 2.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g36908",
+    "guid": 36908,
+    "name": "Amphithéâtre : fondations",
+    "nameInternal": "Monument Colosseum Phase 0",
+    "category": "public",
+    "region": null,
+    "size": {
+      "w": 33,
+      "h": 30
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_colosseum.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Planches",
+          "amount": 5.0
+        },
+        {
+          "good": "Béton",
+          "amount": 10.0
+        },
+        {
+          "good": "Corde",
+          "amount": 5.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g97847",
+    "guid": 97847,
+    "name": "Amphithéâtre : fondations",
+    "nameInternal": "Campaign Monument Colosseum Phase 0",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 33,
+      "h": 30
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_colosseum.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Planches",
+          "amount": 5.0
+        },
+        {
+          "good": "Béton",
+          "amount": 10.0
+        },
+        {
+          "good": "Corde",
+          "amount": 5.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g36911",
+    "guid": 36911,
+    "name": "Amphithéâtre : murs d'enceinte",
+    "nameInternal": "Monument Colosseum Phase 1",
+    "category": "public",
+    "region": null,
+    "size": {
+      "w": 32,
+      "h": 30
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_colosseum.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Béton",
+          "amount": 5.0
+        },
+        {
+          "good": "Tuiles",
+          "amount": 10.0
+        },
+        {
+          "good": "Marbre",
+          "amount": 10.0
+        },
+        {
+          "good": "Corde",
+          "amount": 5.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g97848",
+    "guid": 97848,
+    "name": "Amphithéâtre : murs d'enceinte",
+    "nameInternal": "Campaign Monument Colosseum Phase 1",
+    "category": "public",
+    "region": null,
+    "size": {
+      "w": 32,
+      "h": 30
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_colosseum.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Béton",
+          "amount": 5.0
+        },
+        {
+          "good": "Tuiles",
+          "amount": 10.0
+        },
+        {
+          "good": "Marbre",
+          "amount": 10.0
+        },
+        {
+          "good": "Corde",
+          "amount": 5.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g144812",
+    "guid": 144812,
+    "name": "Autel de Vulcain",
+    "nameInternal": "Public Roman Shrine Vulcanus",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_vulcanus.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g144813",
+    "guid": 144813,
+    "name": "Autel de Vulcain",
+    "nameInternal": "Public Roman Celtic Shrine Vulcanus",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_vulcanus.png"
+  },
+  {
+    "id": "g3620",
+    "guid": 3620,
+    "name": "Bains",
+    "nameInternal": "Wonder Roman Baths",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 12,
+      "h": 21
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_wonder_roman_bathhouse.png",
+    "radius": {
+      "kind": "service",
+      "range": 62
+    },
+    "streetRange": 66
+  },
+  {
+    "id": "g8062",
+    "guid": 8062,
+    "name": "Bains",
+    "nameInternal": "Wonder Roman Celtic Baths",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 12,
+      "h": 21
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_wonder_celtic_bathhouse.png",
+    "radius": {
+      "kind": "service",
+      "range": 62
+    },
+    "streetRange": 66
+  },
+  {
+    "id": "g31368",
+    "guid": 31368,
+    "name": "Bibliothèque",
+    "nameInternal": "Public Roman Library",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 12,
+      "h": 12
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_library.png",
+    "radius": {
+      "kind": "service",
+      "range": 58
+    },
+    "streetRange": 62
+  },
+  {
+    "id": "g55981",
+    "guid": 55981,
+    "name": "Bosquet sacré",
+    "nameInternal": "Wonder Celtic Sacred Grove",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_celtic_sacred_grove.png",
+    "radius": {
+      "kind": "service",
+      "range": 64
+    },
+    "streetRange": 68
+  },
+  {
+    "id": "g97850",
+    "guid": 97850,
+    "name": "Campaign Monument Colosseum Phase 1.5 Collapsed",
+    "nameInternal": "Campaign Monument Colosseum Phase 1.5 Collapsed",
+    "category": "public",
+    "region": null,
+    "size": {
+      "w": 32,
+      "h": 30
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_colosseum.png",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Béton",
+          "amount": 5.0
+        },
+        {
+          "good": "Tuiles",
+          "amount": 10.0
+        },
+        {
+          "good": "Marbre",
+          "amount": 10.0
+        },
+        {
+          "good": "Corde",
+          "amount": 5.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g3402",
+    "guid": 3402,
+    "name": "Comptoir",
+    "nameInternal": "Harbor Warehouse Roman 01",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
+    "id": "g3403",
+    "guid": 3403,
+    "name": "Comptoir amélioré",
+    "nameInternal": "Harbor Warehouse Roman 02",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
+    "id": "g3406",
+    "guid": 3406,
+    "name": "Comptoir grandiose",
+    "nameInternal": "Harbor Warehouse Roman 03",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 10,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
+    "id": "g6726",
+    "guid": 6726,
+    "name": "Conseil des anciens",
+    "nameInternal": "Public Celtic Town Hall",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 13
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_celtic_town_hall.png",
+    "radius": {
+      "kind": "service",
+      "range": 42
+    },
+    "streetRange": 46
+  },
+  {
+    "id": "g30770",
+    "guid": 30770,
+    "name": "Custodes",
+    "nameInternal": "Institution Roman Celtic Riot",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_roman_cohortes.png",
+    "radius": {
+      "kind": "service",
+      "range": 30
+    },
+    "streetRange": 34
+  },
+  {
+    "id": "g30762",
+    "guid": 30762,
+    "name": "Custodia",
+    "nameInternal": "Institution Roman Riot",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_roman_cohortes.png",
+    "radius": {
+      "kind": "service",
+      "range": 30
+    },
+    "streetRange": 34
+  },
+  {
+    "id": "g3310",
+    "guid": 3310,
+    "name": "Entrepôt",
+    "nameInternal": "Warehouse Roman 01",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_base_warehouse.png"
+  },
+  {
+    "id": "g7055",
+    "guid": 7055,
+    "name": "Entrepôt",
+    "nameInternal": "Warehouse Roman Celtic 01",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_base_warehouse.png"
+  },
+  {
+    "id": "g3311",
+    "guid": 3311,
+    "name": "Entrepôt amélioré",
+    "nameInternal": "Warehouse Roman 02",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_base_warehouse.png"
+  },
+  {
+    "id": "g7056",
+    "guid": 7056,
+    "name": "Entrepôt amélioré",
+    "nameInternal": "Warehouse Roman Celtic 02",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_base_warehouse.png"
+  },
+  {
+    "id": "g3313",
+    "guid": 3313,
+    "name": "Entrepôt colossal",
+    "nameInternal": "Warehouse Roman 04 DEPRECATED",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_base_warehouse.png"
+  },
+  {
+    "id": "g3312",
+    "guid": 3312,
+    "name": "Entrepôt grandiose",
+    "nameInternal": "Warehouse Roman 03",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_base_warehouse.png"
+  },
+  {
+    "id": "g6728",
+    "guid": 6728,
+    "name": "Fanum",
+    "nameInternal": "Public Roman Celtic Fanum",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_celtic_fanum.png",
+    "radius": {
+      "kind": "service",
+      "range": 32
+    },
+    "streetRange": 36
+  },
+  {
+    "id": "g3617",
+    "guid": 3617,
+    "name": "Forum",
+    "nameInternal": "Wonder Roman Forum",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 18,
+      "h": 12
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_wonder_celtic_forum.png",
+    "radius": {
+      "kind": "service",
+      "range": 66
+    },
+    "streetRange": 70
+  },
+  {
+    "id": "g3616",
+    "guid": 3616,
+    "name": "Grammaticus",
+    "nameInternal": "Public Roman Grammaticus",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 9
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_grammaticus.png"
+  },
+  {
+    "id": "g6730",
+    "guid": 6730,
+    "name": "Grammaticus",
+    "nameInternal": "Public Roman Celtic Grammaticus",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 9
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_celtic_grammaticus.png"
+  },
+  {
+    "id": "g7057",
+    "guid": 7057,
+    "name": "Grand entrepôt",
+    "nameInternal": "Warehouse Roman Celtic 03",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_base_warehouse.png"
+  },
+  {
+    "id": "g31608",
+    "guid": 31608,
+    "name": "Jetée marchande",
+    "nameInternal": "Harbor Pier Roman",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_trading_pier.png"
+  },
+  {
+    "id": "g31611",
+    "guid": 31611,
+    "name": "Jetée marchande",
+    "nameInternal": "Harbor Pier Roman Celtic",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_trading_pier.png"
+  },
+  {
+    "id": "g71266",
+    "guid": 71266,
+    "name": "Latrine",
+    "nameInternal": "Institution Roman Illness Mini",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_latrine.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24
+  },
+  {
+    "id": "g71269",
+    "guid": 71269,
+    "name": "Latrine",
+    "nameInternal": "Institution Roman Celtic Illness Mini",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_latrine.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24
+  },
+  {
+    "id": "g31367",
+    "guid": 31367,
+    "name": "Maison de jeu",
+    "nameInternal": "Public Roman Gambling House",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 11,
+      "h": 11
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_gambling_house.png",
+    "radius": {
+      "kind": "service",
+      "range": 38
+    },
+    "streetRange": 42
+  },
+  {
+    "id": "g37177",
+    "guid": 37177,
+    "name": "Maison de jeu",
+    "nameInternal": "Public Roman Celtic Gambling House",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 11,
+      "h": 11
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_gambling_house.png",
+    "radius": {
+      "kind": "service",
+      "range": 38
+    },
+    "streetRange": 42
+  },
+  {
+    "id": "g3527",
+    "guid": 3527,
+    "name": "Marché",
+    "nameInternal": "Public Roman Market",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_marketplace.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28
+  },
+  {
+    "id": "g6724",
+    "guid": 6724,
+    "name": "Marché",
+    "nameInternal": "Public Roman Celtic Market",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 7,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_celtic_marketplace.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28
+  },
+  {
+    "id": "g33048",
+    "guid": 33048,
+    "name": "Marina de Valéria",
+    "nameInternal": "Harbor Heartlands Trader02 (Cumae Rep)",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 10,
+      "h": 9
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
+    "id": "g30765",
+    "guid": 30765,
+    "name": "Medici",
+    "nameInternal": "Institution Roman Illness",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_roman_medici.png",
+    "radius": {
+      "kind": "service",
+      "range": 34
+    },
+    "streetRange": 38
+  },
+  {
+    "id": "g30771",
+    "guid": 30771,
+    "name": "Medici",
+    "nameInternal": "Institution Roman Celtic Illness",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_roman_medici.png",
+    "radius": {
+      "kind": "service",
+      "range": 34
+    },
+    "streetRange": 38
+  },
+  {
+    "id": "g145104",
+    "guid": 145104,
+    "name": "Port de Caecilia",
+    "nameInternal": "Harbor DLC01 Volcano Warehouse (Caecilia)",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
+    "id": "g33047",
+    "guid": 33047,
+    "name": "Port de Diana",
+    "nameInternal": "Harbor Heartlands Trader01 (Diana)",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 14,
+      "h": 11
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
+    "id": "g37204",
+    "guid": 37204,
+    "name": "Port de Manx",
+    "nameInternal": "Harbor Wettlands Trader01 (Manx)",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 11
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
+    "id": "g37203",
+    "guid": 37203,
+    "name": "Port du procurateur",
+    "nameInternal": "Harbor Wettlands Trader02 (Procurator)",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
+    "id": "g71264",
+    "guid": 71264,
+    "name": "Puits",
+    "nameInternal": "Institution Roman Fire Mini",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_well.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g71267",
+    "guid": 71267,
+    "name": "Puits",
+    "nameInternal": "Institution Roman Celtic Fire Mini",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_well.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g3615",
+    "guid": 3615,
+    "name": "Sanctuaire",
+    "nameInternal": "Public Roman Sanctuary",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 6,
+      "h": 10
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_sanctuary.png",
+    "radius": {
+      "kind": "service",
+      "range": 34
+    },
+    "streetRange": 38
+  },
+  {
+    "id": "g81071",
+    "guid": 81071,
+    "name": "Sanctuaire d'Epona",
+    "nameInternal": "Public Roman Shrine Epona",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_epona.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g82491",
+    "guid": 82491,
+    "name": "Sanctuaire d'Epona",
+    "nameInternal": "Public Roman Celtic Shrine Epona",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_epona.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g81072",
+    "guid": 81072,
+    "name": "Sanctuaire de Cernunnos",
+    "nameInternal": "Public Roman Shrine Cernunnos",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_cernunnos.png"
+  },
+  {
+    "id": "g82492",
+    "guid": 82492,
+    "name": "Sanctuaire de Cernunnos",
+    "nameInternal": "Public Roman Celtic Shrine Cernunnos",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_cernunnos.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24
+  },
+  {
+    "id": "g81021",
+    "guid": 81021,
+    "name": "Sanctuaire de Cérès",
+    "nameInternal": "Public Roman Shrine Ceres",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_ceres.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g82487",
+    "guid": 82487,
+    "name": "Sanctuaire de Cérès",
+    "nameInternal": "Public Roman Celtic Shrine Ceres",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_ceres.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g80710",
+    "guid": 80710,
+    "name": "Sanctuaire de Mars",
+    "nameInternal": "Public Roman Shrine Mars",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 8,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_mars.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g82486",
+    "guid": 82486,
+    "name": "Sanctuaire de Mars",
+    "nameInternal": "Public Roman Celtic Shrine Mars",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_mars.png"
+  },
+  {
+    "id": "g81070",
+    "guid": 81070,
+    "name": "Sanctuaire de Mercure-Lug",
+    "nameInternal": "Public Roman Shrine Mercuy-Lugus",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_mercury.png",
+    "radius": {
+      "kind": "service",
+      "range": 14
+    },
+    "streetRange": 18
+  },
+  {
+    "id": "g82490",
+    "guid": 82490,
+    "name": "Sanctuaire de Mercure-Lug",
+    "nameInternal": "Public Roman Celtic Shrine Mercuy-Lugus",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_mercury.png",
+    "radius": {
+      "kind": "service",
+      "range": 12
+    },
+    "streetRange": 16
+  },
+  {
+    "id": "g81069",
+    "guid": 81069,
+    "name": "Sanctuaire de Minerve",
+    "nameInternal": "Public Roman Shrine Minerva",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_minerva.png"
+  },
+  {
+    "id": "g82489",
+    "guid": 82489,
+    "name": "Sanctuaire de Minerve",
+    "nameInternal": "Public Roman Celtic Shrine Minerva",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_minerva.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g81068",
+    "guid": 81068,
+    "name": "Sanctuaire de Neptune",
+    "nameInternal": "Public Roman Shrine Neptune",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_neptune.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g82488",
+    "guid": 82488,
+    "name": "Sanctuaire de Neptune",
+    "nameInternal": "Public Roman Celtic Shrine Neptune",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_neptune.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g3528",
+    "guid": 3528,
+    "name": "Taverne",
+    "nameInternal": "Public Roman Tavern",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_tavern.png"
+  },
+  {
+    "id": "g3619",
+    "guid": 3619,
+    "name": "Temple",
+    "nameInternal": "Public Roman Temple",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 21,
+      "h": 12
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_temple.png",
+    "radius": {
+      "kind": "service",
+      "range": 64
+    },
+    "streetRange": 68
+  },
+  {
+    "id": "g6729",
+    "guid": 6729,
+    "name": "Temple",
+    "nameInternal": "Wonder Roman Celtic Temple",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 21,
+      "h": 12
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_temple.png",
+    "radius": {
+      "kind": "service",
+      "range": 64
+    },
+    "streetRange": 68
+  },
+  {
+    "id": "g3618",
+    "guid": 3618,
+    "name": "Théâtre",
+    "nameInternal": "Public Roman Theater",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 16,
+      "h": 12
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_theatre.png",
+    "radius": {
+      "kind": "service",
+      "range": 46
+    },
+    "streetRange": 50
+  },
+  {
+    "id": "g37178",
+    "guid": 37178,
+    "name": "Théâtre",
+    "nameInternal": "Public Roman Celtic Theater",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 16,
+      "h": 12
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_roman_theatre.png",
+    "radius": {
+      "kind": "service",
+      "range": 46
+    },
+    "streetRange": 50
+  },
+  {
+    "id": "g6727",
+    "guid": 6727,
+    "name": "Théâtre bardique",
+    "nameInternal": "Public Celtic Bardic Hall",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 6,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_celtic_bardic_hall.png"
+  },
+  {
+    "id": "g71265",
+    "guid": 71265,
+    "name": "Tour de guet",
+    "nameInternal": "Institution Roman Riot Mini",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_watch_tower.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g71268",
+    "guid": 71268,
+    "name": "Tour de guet",
+    "nameInternal": "Institution Roman Celtic Riot Mini",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_watch_tower.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20
+  },
+  {
+    "id": "g55980",
+    "guid": 55980,
+    "name": "Tumulus",
+    "nameInternal": "Wonder Celtic Barrow",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 15,
+      "h": 15
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_public_celtic_barrows.png",
+    "radius": {
+      "kind": "service",
+      "range": 62
+    },
+    "streetRange": 66
+  },
+  {
+    "id": "g30754",
+    "guid": 30754,
+    "name": "Vigiles",
+    "nameInternal": "Institution Roman Fire",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 5,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_roman_vigiles.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30
+  },
+  {
+    "id": "g30769",
+    "guid": 30769,
+    "name": "Vigiles",
+    "nameInternal": "Institution Roman Celtic Fire",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 5,
+      "h": 6
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_institution_roman_vigiles.png",
+    "radius": {
+      "kind": "service",
+      "range": 26
+    },
+    "streetRange": 30
+  },
+  {
+    "id": "g3142",
+    "guid": 3142,
+    "name": "Résidence d'Equites",
+    "nameInternal": "Residence Roman 03 Equites",
+    "category": "residentiel",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#6d9dc5",
+    "icon": "icons/icon_3d_base_residence.png"
+  },
+  {
+    "id": "g3087",
+    "guid": 3087,
+    "name": "Résidence de Liberti",
+    "nameInternal": "Residence Roman 01 Peasants",
+    "category": "residentiel",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#6d9dc5",
+    "icon": "icons/icon_3d_base_residence.png"
+  },
+  {
+    "id": "g6475",
+    "guid": 6475,
+    "name": "Résidence de Mercators",
+    "nameInternal": "Residence Roman Celtic 02 Merchants",
+    "category": "residentiel",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#6d9dc5",
+    "icon": "icons/icon_3d_base_residence.png"
+  },
+  {
+    "id": "g6514",
+    "guid": 6514,
+    "name": "Résidence de Nobles",
+    "nameInternal": "Residence Roman Celtic 03 Nobles",
+    "category": "residentiel",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#6d9dc5",
+    "icon": "icons/icon_3d_base_residence.png"
+  },
+  {
+    "id": "g3145",
+    "guid": 3145,
+    "name": "Résidence de Patriciens",
+    "nameInternal": "Residence Roman 04 Patricians",
+    "category": "residentiel",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#6d9dc5",
+    "icon": "icons/icon_3d_base_residence.png"
+  },
+  {
+    "id": "g3141",
+    "guid": 3141,
+    "name": "Résidence de Plébéiens",
+    "nameInternal": "Residence Roman 02 Plebeians",
+    "category": "residentiel",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#6d9dc5",
+    "icon": "icons/icon_3d_base_residence.png"
+  },
+  {
+    "id": "g6414",
+    "guid": 6414,
+    "name": "Résidence de Tourbiers",
+    "nameInternal": "Residence Celtic 01 Tribesmen",
+    "category": "residentiel",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#6d9dc5",
+    "icon": "icons/icon_3d_base_residence.png"
+  },
+  {
+    "id": "g6471",
+    "guid": 6471,
+    "name": "Résidence de forgerons",
+    "nameInternal": "Residence Celtic 02 Smiths",
+    "category": "residentiel",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#6d9dc5",
+    "icon": "icons/icon_3d_base_residence.png"
+  },
+  {
+    "id": "g6472",
+    "guid": 6472,
+    "name": "Résidences d'Aldermen",
+    "nameInternal": "Residence Celtic 03 Alderman",
+    "category": "residentiel",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#6d9dc5",
+    "icon": "icons/icon_3d_base_residence.png"
+  }
+]
