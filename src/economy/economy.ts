@@ -2,12 +2,16 @@ import data from "../data/economy.generated.json";
 
 export interface TierGood {
   good: string | null; // GUID produit
-  rate: number; // par résident par seconde
+  rate: number; // par maison par minute
   needName: string | null;
+  pop: number; // habitants accordés (Population)
+  money: number; // argent accordé (Money)
 }
 export interface TierService {
   need: string;
   building: string | null; // defId du bâtiment de service (g<guid>)
+  pop: number;
+  money: number;
 }
 export interface Tier {
   guid: string;

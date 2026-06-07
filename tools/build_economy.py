@@ -183,19 +183,25 @@ def main():
             for gd in res["goods"]:
                 nd = needs.get(gd["need"])
                 prod = nd["product"] if nd else None
-                goods.append({"good": prod, "rate": gd["rate"], "needName": products.get(prod)})
-                if nd:
-                    for k, v in nd["attrs"].items():
-                        per_house[k] += v
-                    capacity += nd["attrs"].get("Population", 0)
+                attrs = nd["attrs"] if nd else {}
+                goods.append({
+                    "good": prod, "rate": gd["rate"], "needName": products.get(prod),
+                    "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                })
+                for k, v in attrs.items():
+                    per_house[k] += v
+                capacity += attrs.get("Population", 0)
             for sneed in res["services"]:
                 nd = needs.get(sneed)
                 sdef = icon_to_def.get(nd["icon"]) if nd else None
-                services.append({"need": sneed, "building": sdef})
-                if nd:
-                    for k, v in nd["attrs"].items():
-                        per_house[k] += v
-                    capacity += nd["attrs"].get("Population", 0)
+                attrs = nd["attrs"] if nd else {}
+                services.append({
+                    "need": sneed, "building": sdef,
+                    "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                })
+                for k, v in attrs.items():
+                    per_house[k] += v
+                capacity += attrs.get("Population", 0)
         idx = region_index[reg]
         region_index[reg] += 1
         cap = int(round(capacity)) if capacity > 0 else CAP_DEFAULT[min(idx, len(CAP_DEFAULT) - 1)]

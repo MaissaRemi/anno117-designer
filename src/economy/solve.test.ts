@@ -38,6 +38,14 @@ describe("solve (économie)", () => {
     expect(r.populationByTier[liberti.guid]).toBe(1000);
   });
 
+  it("optimizeNeeds (max éco) ne dégrade jamais le net", () => {
+    const pat = tiers.find((t) => /atricien/i.test(t.name)) ?? liberti;
+    const base = { includeProduction: true, includeServices: true, capacities: {} };
+    const all = solve([{ tier: pat.guid, pop: 1000 }], { ...base, optimizeNeeds: false });
+    const opt = solve([{ tier: pat.guid, pop: 1000 }], { ...base, optimizeNeeds: true });
+    expect(opt.money.net).toBeGreaterThanOrEqual(all.money.net);
+  });
+
   it("la capacité influe sur le nombre de résidences", () => {
     const a = solve([{ tier: liberti.guid, pop: 1000 }], {
       includeProduction: false,

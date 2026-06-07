@@ -19,6 +19,7 @@ export function PopulationPlanner({ onClose }: Props) {
   const [pop, setPop] = useState(10000);
   const [includeProduction, setIncludeProduction] = useState(true);
   const [includeServices, setIncludeServices] = useState(true);
+  const [optimizeNeeds, setOptimizeNeeds] = useState(false);
   const [result, setResult] = useState<SolveResult | null>(null);
   const [running, setRunning] = useState(false);
   const [placeMsg, setPlaceMsg] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export function PopulationPlanner({ onClose }: Props) {
   };
 
   const compute = () => {
-    setResult(solve(targets, { includeProduction, includeServices, capacities: {} }));
+    setResult(solve(targets, { includeProduction, includeServices, optimizeNeeds, capacities: {} }));
     setPlaceMsg(null);
   };
 
@@ -131,6 +132,10 @@ export function PopulationPlanner({ onClose }: Props) {
         <label className="checkbox">
           <input type="checkbox" checked={includeServices} onChange={(e) => setIncludeServices(e.target.checked)} />
           Inclure les services (besoins biens + services)
+        </label>
+        <label className="checkbox">
+          <input type="checkbox" checked={optimizeNeeds} onChange={(e) => setOptimizeNeeds(e.target.checked)} />
+          Max économie (ne remplir que les besoins rentables)
         </label>
 
         <div className="modal-actions">
