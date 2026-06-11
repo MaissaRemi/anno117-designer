@@ -27,6 +27,7 @@ export interface DrawOpts {
   showRadius: boolean;
   selectedUid: string | null;
   hover: HoverPreview | null;
+  coverageHighlight?: string[] | null; // cellKeys "x,y" à surligner (maisons non couvertes)
 }
 
 export const gridToScreen = (v: View, x: number, y: number): [number, number] => [
@@ -64,7 +65,22 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
     });
   }
 
+  if (o.coverageHighlight?.length) drawCoverageHighlight(ctx, o);
   if (o.hover) drawHover(ctx, o);
+}
+
+/** Surligne en rouge les cases de résidence non couvertes par un service. */
+function drawCoverageHighlight(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
+  const v = o.view;
+  ctx.fillStyle = "rgba(255, 80, 80, 0.45)";
+  ctx.strokeStyle = "rgba(255, 80, 80, 0.9)";
+  ctx.lineWidth = 1;
+  for (const key of o.coverageHighlight!) {
+    const [x, y] = key.split(",").map(Number);
+    const [sx, sy] = gridToScreen(v, x, y);
+    ctx.fillRect(sx, sy, v.cell, v.cell);
+    ctx.strokeRect(sx + 0.5, sy + 0.5, v.cell - 1, v.cell - 1);
+  }
 }
 
 function drawGrid(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
@@ -72,10 +88,37 @@ function drawGrid(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   const v = o.view;
   for (let y = 0; y < grid.h; y++) {
     for (let x = 0; x < grid.w; x++) {
-      const usable = grid.usable[y * grid.w + x];
+      const i = y * grid.w + x;
+      const usable = grid.usable[i];
+      const water = grid.water?.[i];
+      const river = grid.rivers?.[i];
       const [sx, sy] = gridToScreen(v, x, y);
-      ctx.fillStyle = usable ? "#2b333c" : "#171a1d";
+      // rivière (argile/ponts) / terre constructible / eau (mer) / hors-zone
+      ctx.fillStyle = river ? "#2d5a73" : usable ? "#2b333c" : water ? "#1c3a52" : "#171a1d";
       ctx.fillRect(sx, sy, v.cell, v.cell);
+    }
+  }
+  // slots de ressource (mines / argile / marais / source d'aqueduc) : marqueurs
+  if (grid.slots) {
+    for (const s of grid.slots) {
+      const [sx, sy] = gridToScreen(v, s.x, s.y);
+      const cx = sx + v.cell / 2, cy = sy + v.cell / 2;
+      const r = Math.max(4, v.cell * 1.2);
+      ctx.beginPath();
+      if (s.type === "mountain") {
+        ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy + r); ctx.lineTo(cx - r, cy + r); ctx.closePath();
+        ctx.fillStyle = "rgba(170,150,120,0.85)";
+      } else if (s.type === "river") {
+        ctx.arc(cx, cy, r * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(90,170,220,0.85)";
+      } else { // marsh / autre
+        ctx.arc(cx, cy, r * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(110,160,110,0.85)";
+      }
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.6)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
   }
   // lignes de grille

@@ -129,15 +129,15 @@ export function decode(
 
   const { x0, y0, x1, y1, band } = dec;
 
-  // épine verticale (connecte les routes horizontales)
-  for (let y = y0; y <= y1; y++) addRoad(occ, W, H, x0, y, roads);
+  // Y a-t-il au moins un bâtiment à placer qui exige une route ? Sinon (champs/
+  // production sans accès route) on ne génère AUCUNE route : gros gain de densité.
+  const anyRoad = order.some((id) => {
+    const d = dec.defMap.get(id);
+    return !!d && d.needsRoad && !d.roadRoot;
+  });
 
-  // routes horizontales tous les (band+1) rangs
-  const roadRows: number[] = [];
-  for (let ry = y0 + (bandOffset % (band + 1)); ry <= y1; ry += band + 1) {
-    roadRows.push(ry);
-    for (let x = x0; x <= x1; x++) addRoad(occ, W, H, x, ry, roads);
-  }
+  // épine verticale (connecte les rangées de routes des étagères)
+  if (anyRoad) for (let y = y0; y <= y1; y++) addRoad(occ, W, H, x0, y, roads);
 
   // raccordement au comptoir / aux routes existantes (réseau relié à la racine)
   const bridge = (tx: number, ty: number) => {
@@ -150,7 +150,7 @@ export function decode(
     }
   };
   // comptoir(s) verrouillé(s) -> route adjacente + pont vers l'épine
-  for (const b of req.lockedBuildings) {
+  for (const b of anyRoad ? req.lockedBuildings : []) {
     const def = dec.defMap.get(b.defId);
     if (!def?.roadRoot) continue;
     const { w, h } = rotatedSize(def, b.rotation);
@@ -169,7 +169,7 @@ export function decode(
     }
   }
   // routes existantes -> 1 pont depuis la plus proche
-  if (req.existingRoads.length) {
+  if (anyRoad && req.existingRoads.length) {
     let best: { x: number; y: number } | null = null;
     let bd = Infinity;
     for (const r of req.existingRoads) {
@@ -182,41 +182,65 @@ export function decode(
     if (best) bridge(best.x, best.y);
   }
 
-  // packing bande par bande
+  // Packing par ÉTAGÈRES de hauteur variable : chaque étagère prend la hauteur
+  // du 1er bâtiment qui s'y pose (l'ordre étant trié décroissant => peu de perte),
+  // au lieu d'une bande globale figée sur le plus grand bâtiment. Évite le gâchis
+  // quand on mélange petites maisons et grandes fermes.
   const queue = order.slice();
-  for (const ry of roadRows) {
-    const bandTop = ry + 1;
-    if (bandTop > y1) break;
-    let x = x0 + 1;
+  // décalage de départ vertical (perturbé par le recuit) borné à la plus grande hauteur
+  let y = y0 + (bandOffset % (band + 1));
+  while (queue.length && y <= y1) {
+    // si route requise : la rangée de route occupe `y`, le bâtiment commence à y+1.
+    // sinon : les étagères s'empilent directement (pas de gâchis de route).
+    const roadY = anyRoad ? y : -1;
+    const shelfTop = anyRoad ? y + 1 : y;
+    if (shelfTop > y1) break;
+
+    let shelfH = 0; // 0 = pas encore fixée
+    let maxX = x0 - 1; // bord droit du dernier bâtiment posé (pour rogner la route)
+    let x = anyRoad ? x0 + 1 : x0;
     while (x <= x1 && queue.length) {
       let placedHere = false;
       for (let qi = 0; qi < queue.length; qi++) {
         const defId = queue[qi];
         const def = dec.defMap.get(defId);
-        if (!def) {
+        if (!def || def.placement === "water") {
+          // bâtiments côtiers : non plaçables par le packing terrestre → à poser à la main
           queue.splice(qi, 1);
           qi--;
           continue;
         }
         const variants = dec.macroCache.get(defId)!;
-        const v = variants.find(
-          (m) => macroHeight(m) <= band && fits(occ, W, H, x, bandTop, m.w, macroHeight(m), x1, y1),
-        );
+        const v = variants.find((m) => {
+          const mh = macroHeight(m);
+          if (shelfH > 0 && mh > shelfH) return false; // dépasse l'étagère en cours
+          return fits(occ, W, H, x, shelfTop, m.w, mh, x1, y1);
+        });
         if (!v) continue;
-        // place bâtiment
-        placeBuilding(occ, W, buildings, placedByDef, defId, x, bandTop, v);
-        // champs
+        if (shelfH === 0) shelfH = macroHeight(v); // 1er posé fixe la hauteur d'étagère
+        placeBuilding(occ, W, buildings, placedByDef, defId, x, shelfTop, v);
         if (v.fieldTiles > 0 && v.fieldType) {
-          placeFields(occ, W, fields, buildings[buildings.length - 1].uid, x, bandTop + v.h, v);
+          placeFields(occ, W, fields, buildings[buildings.length - 1].uid, x, shelfTop + v.h, v);
         }
         x += v.w;
+        maxX = x - 1;
         queue.splice(qi, 1);
         placedHere = true;
         break;
       }
       if (!placedHere) x += 1; // obstacle / rien ne rentre ici → avance
     }
-    if (!queue.length) break;
+
+    // rangée de route rognée à l'étendue réelle de l'étagère (au-dessus des bâtiments)
+    if (roadY >= 0 && maxX >= x0) {
+      for (let rx = x0; rx <= maxX; rx++) addRoad(occ, W, H, rx, roadY, roads);
+    }
+
+    if (shelfH === 0) {
+      // rien n'a pu être posé sur cette étagère (espace résiduel trop court) → stop
+      break;
+    }
+    y = shelfTop + shelfH; // étagère suivante (sa route sera posée au prochain tour)
   }
 
   return { buildings, roads, fields, placedByDef };

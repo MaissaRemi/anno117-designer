@@ -20,6 +20,7 @@ export function PopulationPlanner({ onClose }: Props) {
   const [includeProduction, setIncludeProduction] = useState(true);
   const [includeServices, setIncludeServices] = useState(true);
   const [optimizeNeeds, setOptimizeNeeds] = useState(false);
+  const [needMode, setNeedMode] = useState<"all" | "thresholds">("all");
   const [result, setResult] = useState<SolveResult | null>(null);
   const [running, setRunning] = useState(false);
   const [placeMsg, setPlaceMsg] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export function PopulationPlanner({ onClose }: Props) {
   };
 
   const compute = () => {
-    setResult(solve(targets, { includeProduction, includeServices, optimizeNeeds, capacities: {} }));
+    setResult(solve(targets, { includeProduction, includeServices, optimizeNeeds, needSelection: needMode, capacities: {} }));
     setPlaceMsg(null);
   };
 
@@ -137,6 +138,10 @@ export function PopulationPlanner({ onClose }: Props) {
           <input type="checkbox" checked={optimizeNeeds} onChange={(e) => setOptimizeNeeds(e.target.checked)} />
           Max économie (ne remplir que les besoins rentables)
         </label>
+        <label className="checkbox" title="Mécanique réelle : chaque besoin rempli ajoute son poids au score de sa catégorie ; l'upgrade exige un score par catégorie. Le mode seuils choisit le sous-ensemble le moins cher qui les atteint.">
+          <input type="checkbox" checked={needMode === "thresholds"} onChange={(e) => setNeedMode(e.target.checked ? "thresholds" : "all")} />
+          Seuils d'upgrade seulement (min besoins, − d'infrastructure)
+        </label>
 
         <div className="modal-actions">
           <button onClick={compute} disabled={targets.length === 0}>Calculer</button>
@@ -159,6 +164,12 @@ export function PopulationPlanner({ onClose }: Props) {
                 (taxe {result.money.gross.toLocaleString("fr")} − entretien{" "}
                 {result.money.upkeep.toLocaleString("fr")})
               </span>
+              {result.marketValue > 0 && (
+                <div className="muted" style={{ fontSize: "0.9em" }}>
+                  Valeur marchande des biens : ~{result.marketValue.toLocaleString("fr")}/min
+                  (potentiel de vente, hors net)
+                </div>
+              )}
             </div>
             <b>Population</b>
             <ul className="bilan">

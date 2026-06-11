@@ -16,6 +16,7 @@ export function GridCanvas() {
   const rotation = useStore((s) => s.rotation);
   const selectedUid = useStore((s) => s.selectedUid);
   const showRadius = useStore((s) => s.showRadius);
+  const coverageHighlight = useStore((s) => s.coverageHighlight);
 
   const [view, setView] = useState<View>({ originX: 20, originY: 20, cell: 22 });
   const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null);
@@ -69,8 +70,8 @@ export function GridCanvas() {
   const redraw = useCallback(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-    drawScene(ctx, { layout, lookup, view, issues, coverage, showRadius, selectedUid, hover });
-  }, [layout, lookup, view, issues, coverage, showRadius, selectedUid, hover]);
+    drawScene(ctx, { layout, lookup, view, issues, coverage, showRadius, selectedUid, hover, coverageHighlight });
+  }, [layout, lookup, view, issues, coverage, showRadius, selectedUid, hover, coverageHighlight]);
 
   useEffect(() => {
     redraw();

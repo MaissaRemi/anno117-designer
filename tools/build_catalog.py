@@ -23,6 +23,7 @@ GAME = r"F:\Anno 117 - Pax Romana\maindata"
 HERE = os.path.dirname(os.path.dirname(__file__))
 ASSETS = os.path.join(HERE, ".gamedata", "assets_base.xml")
 TEXTS = os.path.join(HERE, ".gamedata", "texts_french.xml")
+TEMPLATES = os.path.join(HERE, ".gamedata", "templates.xml")
 OUT_APP = os.path.join(HERE, "src", "data", "catalog.generated.json")
 OUT_RAW = os.path.join(HERE, ".gamedata", "catalog.raw.json")
 
@@ -48,6 +49,10 @@ TEMPLATE_CATEGORY = {
     "SlotFactoryBuilding7": "production",
     "ProductionModuleSilo": "production",
     "PublicServiceBuilding": "public",
+    # citerne d'aqueduc = service public (besoin 68747/68748 des tiers 3-4) ; la
+    # source reste utile au catalogue (slot montagne, posée à la main)
+    "AqueductDistributor": "public",
+    "AqueductProducer": "public",
     "MiniInstitutionBuilding": "public",
     "CityInstitutionBuilding": "public",
     "CityInstitutionBuilding_Marsh": "public",
@@ -72,6 +77,31 @@ CATEGORY_COLOR = {
     "ornement": "#9c8cb5",
     "militaire": "#c0564b",
 }
+
+
+def load_template_effects():
+    """Défauts hérités par template : nom -> {range, street} (EffectSource du template)."""
+    eff = {}
+    if not os.path.exists(TEMPLATES):
+        print("  (templates.xml absent : pas d'héritage de rayon)", file=sys.stderr)
+        return eff
+    for _, el in ET.iterparse(TEMPLATES, events=("end",)):
+        if el.tag != "Template":
+            continue
+        name = el.findtext("Name")
+        es = None
+        for node in el.iter():
+            if node.tag == "EffectSource":
+                es = node
+                break
+        if name and es is not None:
+            rd = (es.findtext("RadiusDistance") or "").strip()
+            sd = (es.findtext("StreetDistance") or "").strip()
+            if rd:
+                eff[name] = {"range": int(rd), "street": int(sd) if sd else int(rd)}
+        el.clear()
+    print(f"  defauts rayon par template : {len(eff)}", file=sys.stderr)
+    return eff
 
 
 def load_texts():
@@ -116,7 +146,7 @@ def parse_products(root_iter_path):
     return products
 
 
-def collect_buildings(texts):
+def collect_buildings(texts, template_effects):
     buildings = []
     product_oasis = {}  # guid -> oasisId
     print("Parcours assets.xml...", file=sys.stderr)
@@ -143,15 +173,27 @@ def collect_buildings(texts):
         region = text_of(el, "./Values/Building/AssociatedRegions")
         cfg = first_cfg(el)
 
-        needs_road = has_node(values, "StreetActivation")
+        # Placement terrain : eau/côte si TerrainType marin ou AllowWaterPlacement.
+        terrain = text_of(el, "./Values/Building/TerrainType")
+        allow_water = has_node(values.find("Building") or values, "AllowWaterPlacement")
+        is_water = (terrain in ("Water_Including_Coast", "Coast", "Water", "Terrain_And_Water")) or allow_water
+        placement = "water" if is_water else "land"
 
+        # Besoin de route : StreetActivation (services) OU LogisticNode (transport des
+        # biens vers l'entrepôt — tous les bâtiments de production). Les bâtiments d'eau
+        # se relient par le port, pas par une route terrestre.
+        needs_road = (has_node(values, "StreetActivation") or has_node(values, "LogisticNode")) and not is_water
+
+        # Rayon : valeur de l'asset, sinon défaut HÉRITÉ du template (EffectSource vide
+        # dans l'asset = ex. Taverne, Grammaticus → 22/26 via PublicServiceBuilding).
         radius = None
         rd = text_of(el, "./Values/EffectSource/RadiusDistance")
+        sd = text_of(el, "./Values/EffectSource/StreetDistance")
+        if not rd and tpl in template_effects:
+            rd = str(template_effects[tpl]["range"])
+            sd = sd or str(template_effects[tpl]["street"])
         if rd:
-            radius = {
-                "range": int(rd),
-                "streetRange": int(text_of(el, "./Values/EffectSource/StreetDistance") or rd),
-            }
+            radius = {"range": int(rd), "streetRange": int(sd) if sd else int(rd)}
 
         # Champ / module (fermes)
         field = None
@@ -187,6 +229,7 @@ def collect_buildings(texts):
             "icon": icon,
             "cfg": cfg,
             "needsRoad": needs_road,
+            "placement": placement,
             "radius": radius,
             "field": field,
             "production": production,
@@ -293,6 +336,8 @@ def to_app_catalog(buildings, product_name):
             "needsRoad": bool(b.get("needsRoad")),
             "color": CATEGORY_COLOR.get(b["category"], "#8d6e63"),
         }
+        if b.get("placement") == "water":
+            entry["placement"] = "water"  # se pose sur l'eau/la côte (port, pêcherie…)
         if b.get("template") in ROOT_TEMPLATES:
             entry["roadRoot"] = True  # comptoir/entrepôt = racine du réseau de routes
         if b.get("icon"):
@@ -321,7 +366,8 @@ def to_app_catalog(buildings, product_name):
 
 def main():
     texts = load_texts()
-    buildings, product_oasis = collect_buildings(texts)
+    template_effects = load_template_effects()
+    buildings, product_oasis = collect_buildings(texts, template_effects)
     product_name = {g: (texts.get(o) if o else None) for g, o in product_oasis.items()}
     resolve_sizes(buildings)
     cat = to_app_catalog(buildings, product_name)

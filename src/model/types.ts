@@ -33,6 +33,7 @@ export interface BuildingDef {
   size: { w: number; h: number };
   rotatable: boolean;
   needsRoad: boolean;
+  placement?: "land" | "water"; // "water" = se pose sur l'eau/la côte (défaut land)
   radius?: RadiusSpec;
   field?: FieldSpec;
   color: string; // couleur de rendu (#rrggbb)
@@ -70,11 +71,21 @@ export interface RoadTile {
   gen?: boolean; // true = route générée par l'optimiseur (remplaçable au re-calcul)
 }
 
+/** Slot de ressource du terrain (montagne/rivière/marais) — extrait du jeu. */
+export interface GridSlot {
+  type: string; // "mountain" | "river" | "marsh"
+  x: number;
+  y: number;
+}
+
 /** Grille de forme libre : masque des cases utilisables. */
 export interface GridShape {
   w: number;
   h: number;
-  usable: boolean[]; // longueur w*h, index = y*w + x
+  usable: boolean[]; // longueur w*h, index = y*w + x — cases TERRE constructibles
+  water?: boolean[]; // optionnel : cases EAU/mer (pour bâtiments côtiers). Îles surtout.
+  rivers?: boolean[]; // optionnel : cases RIVIÈRE (argile, slots river)
+  slots?: GridSlot[]; // optionnel : slots de ressource (mines, argile, source d'aqueduc)
 }
 
 export interface Layout {

@@ -191,3 +191,36 @@ describe("validateLayout", () => {
     expect(i.field!.ok).toBe(false);
   });
 });
+
+describe("computeRadiusCoverage (distance le long des rues)", () => {
+  const service = makeBuildingDef({
+    id: "svc",
+    name: "Service",
+    size: { w: 1, h: 1 },
+    needsRoad: true,
+    radius: { kind: "service", range: 2 }, // euclidien faible
+    streetRange: 5, // mais 5 cases le long des rues
+  });
+  const cov = makeLookup([service]);
+
+  it("suit le réseau de routes, pas le disque euclidien", () => {
+    const l = base();
+    l.buildings.push({ uid: "s1", defId: "svc", x: 2, y: 2, rotation: 0, locked: false });
+    for (let x = 2; x <= 12; x++) l.roads.push({ x, y: 3 }); // rue horizontale sous le bâtiment
+    const map = computeRadiusCoverage(l, cov);
+    const covered = map.get("s1")!;
+    // (6,2) est loin en euclidien (>2) mais à 5 cases de rue → couvert
+    expect(covered.has("6,2")).toBe(true);
+    // (7,2) est à 6 cases de rue (> streetRange) → non couvert
+    expect(covered.has("7,2")).toBe(false);
+  });
+
+  it("repli euclidien quand il n'y a pas de route", () => {
+    const l = base();
+    l.buildings.push({ uid: "s1", defId: "svc", x: 5, y: 5, rotation: 0, locked: false });
+    const map = computeRadiusCoverage(l, cov);
+    const covered = map.get("s1")!;
+    expect(covered.size).toBeGreaterThan(0); // disque autour du bâtiment
+    expect(covered.has("9,5")).toBe(false); // hors rayon euclidien (range 2)
+  });
+});

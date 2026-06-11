@@ -23,6 +23,7 @@ export function makeBuildingDef(partial: Partial<BuildingDef> = {}): BuildingDef
     size: partial.size ?? { w: 3, h: 3 },
     rotatable: partial.rotatable ?? true,
     needsRoad: partial.needsRoad ?? true,
+    placement: partial.placement,
     radius: partial.radius,
     field: partial.field,
     color: partial.color ?? "#8d6e63",

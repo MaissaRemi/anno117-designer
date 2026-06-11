@@ -1,0 +1,64 @@
+import { describe, expect, it } from "vitest";
+import rawCatalog from "../data/catalog.generated.json";
+import { makeLookup } from "../engine/rules";
+import { makeGrid } from "../model/factories";
+import type { BuildingDef, Layout, PlacedBuilding } from "../model/types";
+import { economy } from "./economy";
+import { analyzeCoverage } from "./coverage";
+
+const catalog = rawCatalog as unknown as BuildingDef[];
+const lookup = makeLookup(catalog);
+
+// tier réel ayant une résidence + au moins un service à rayon
+const tier = economy.tiers.find(
+  (t) => t.residenceId && t.services.some((s) => s.building && (lookup(s.building)?.streetRange || lookup(s.building)?.radius?.range)),
+)!;
+const marche = tier.services.find((s) => s.building && (lookup(s.building!)?.streetRange || lookup(s.building!)?.radius?.range))!.building!;
+
+function place(defId: string, x: number, y: number): PlacedBuilding {
+  return { uid: `${defId}_${x}_${y}`, defId, x, y, rotation: 0, locked: false };
+}
+
+describe("analyzeCoverage", () => {
+  it("résidence dans le rayon du service → 100 % couverte pour ce service", () => {
+    const grid = makeGrid(80, 80);
+    const layout: Layout = {
+      grid,
+      buildings: [place(tier.residenceId!, 0, 0), place(marche, 4, 4)], // collés (euclidien, pas de routes)
+      roads: [],
+      fields: [],
+    };
+    const rep = analyzeCoverage(layout, lookup);
+    const s = rep.services.find((x) => x.serviceId === marche)!;
+    expect(s.housesRequiring).toBe(1);
+    expect(s.pct).toBe(100);
+    expect(s.uncovered.length).toBe(0);
+  });
+
+  it("résidence hors rayon → service non couvert, cases listées", () => {
+    const grid = makeGrid(120, 120);
+    const layout: Layout = {
+      grid,
+      buildings: [place(tier.residenceId!, 0, 0), place(marche, 110, 110)], // très loin
+      roads: [],
+      fields: [],
+    };
+    const rep = analyzeCoverage(layout, lookup);
+    const s = rep.services.find((x) => x.serviceId === marche)!;
+    expect(s.pct).toBe(0);
+    expect(s.uncovered.length).toBeGreaterThan(0);
+    expect(rep.housesFullyCovered).toBe(0);
+  });
+
+  it("rapport cohérent : housesTotal = résidences posées", () => {
+    const grid = makeGrid(40, 40);
+    const layout: Layout = {
+      grid,
+      buildings: [place(tier.residenceId!, 0, 0), place(tier.residenceId!, 10, 10)],
+      roads: [],
+      fields: [],
+    };
+    const rep = analyzeCoverage(layout, lookup);
+    expect(rep.housesTotal).toBe(2);
+  });
+});

@@ -1,4 +1,7 @@
-import { economy, tierByGuid, upkeepOf, type BProd } from "./economy";
+import { economy, pickProducer, priceOf, tierByGuid, upkeepOf, type BProd } from "./economy";
+
+/** Maisons couvertes par défaut par un bâtiment de service (rayon d'influence). */
+const DEFAULT_HOUSES_PER_SERVICE = 30;
 
 export interface PopTarget {
   tier: string; // GUID
@@ -12,9 +15,14 @@ export interface SolveOptions {
   housesPerService?: number; // maisons couvertes par un bâtiment de service
   includeWorkforce?: boolean; // cascade main-d'œuvre -> résidents (défaut true)
   optimizeNeeds?: boolean; // ne remplir que les besoins rentables (max économie)
+  /** Sélection des besoins (mécanique d'upgrade réelle, GAME_MECHANICS.md §3) :
+   *  - "all" (défaut) : tous les besoins remplis (max bonus/argent par maison)
+   *  - "thresholds" : sous-ensemble le MOINS CHER atteignant les seuils d'upgrade
+   *    par catégorie (SupplyWeight) — moins d'infrastructure, plus de maisons. */
+  needSelection?: "all" | "thresholds";
 }
 
-interface TierProfile {
+export interface TierProfile {
   goods: { good: string | null; rate: number }[];
   services: { building: string | null }[];
   cap: number; // habitants/maison (Σ Population des besoins retenus)
@@ -34,6 +42,9 @@ export interface SolveResult {
   iterations: number;
   converged: boolean; // false => cascade main-d'œuvre instable, résultat = besoins directs
   money: { gross: number; upkeep: number; net: number }; // argent/min (taxe - entretien)
+  // valeur marchande des biens produits (Σ débit × BasePrice) — potentiel de vente,
+  // NON inclus dans `net` (dépend des décisions de commerce du joueur).
+  marketValue: number;
 }
 
 // Débits homogènes en "par minute".
@@ -46,66 +57,134 @@ const prodRatePerMin = (p: BProd, good: string): number => {
 const inputRatePerMin = (p: BProd, amount: number): number =>
   p.cycleTime ? (amount / p.cycleTime) * 60 : 0;
 
+// Entretien (argent/min) pour produire 1 unité/min d'un bien, chaîne incluse.
+// Memo module-level : ne dépend que des données statiques de l'économie.
+const upkeepMemo = new Map<string, number>();
+const upkeepPerUnit = (good: string, region?: string, stack = new Set<string>()): number => {
+  const key = `${good}|${region ?? ""}`;
+  if (upkeepMemo.has(key)) return upkeepMemo.get(key)!;
+  if (stack.has(good)) return 0;
+  const d = pickProducer(good, region);
+  if (!d) return 0; // matière brute
+  const p = economy.buildingProd[d];
+  if (!p) return 0;
+  const r = prodRatePerMin(p, good);
+  if (r <= 0) return 0;
+  let u = (1 / r) * upkeepOf(d);
+  stack.add(good);
+  for (const inp of p.inputs) {
+    u += ((1 / r) * inputRatePerMin(p, inp.amount)) * upkeepPerUnit(inp.good, region, stack);
+  }
+  stack.delete(good);
+  upkeepMemo.set(key, u);
+  return u;
+};
+
+export interface TierProfileOptions {
+  optimizeNeeds?: boolean;
+  needSelection?: "all" | "thresholds";
+  housesPerService?: number;
+  capacityOverride?: number;
+}
+
+/**
+ * Besoins RETENUS d'un tier (partagé solveur ↔ planificateur d'île) :
+ * - "thresholds" : par catégorie, sous-ensemble coût/poids minimal atteignant le
+ *   seuil d'upgrade (SupplyWeight) — mécanique réelle du jeu (GAME_MECHANICS.md §3).
+ * - sinon : tous les besoins, ou les rentables si optimizeNeeds.
+ */
+export function buildTierProfile(tierGuid: string, o: TierProfileOptions = {}): TierProfile {
+  const tier = tierByGuid(tierGuid);
+  if (!tier) return { goods: [], services: [], cap: 1, money: 0 };
+  const housesPerService = o.housesPerService ?? DEFAULT_HOUSES_PER_SERVICE;
+  const goods: { good: string | null; rate: number }[] = [];
+  const services: { building: string | null }[] = [];
+  let cap = 0;
+  let money = 0;
+  const thresholds = tier.upgradeThresholds || {};
+  if (o.needSelection === "thresholds" && Object.keys(thresholds).length) {
+    // par catégorie : trier coût/poids croissant, prendre jusqu'au seuil
+    type Cand = { kind: "good" | "svc"; idx: number; weight: number; cost: number };
+    const byCat = new Map<string, Cand[]>();
+    tier.goods.forEach((g, idx) => {
+      const cost = g.good ? g.rate * upkeepPerUnit(g.good, tier.region) : 0;
+      const arr = byCat.get(g.category) ?? [];
+      arr.push({ kind: "good", idx, weight: g.weight || 1, cost });
+      byCat.set(g.category, arr);
+    });
+    tier.services.forEach((s, idx) => {
+      const cost = (s.building ? upkeepOf(s.building) : 0) / housesPerService;
+      const arr = byCat.get(s.category) ?? [];
+      arr.push({ kind: "svc", idx, weight: s.weight || 1, cost });
+      byCat.set(s.category, arr);
+    });
+    const keepG = new Set<number>(), keepS = new Set<number>();
+    for (const [cat, target] of Object.entries(thresholds)) {
+      const list = (byCat.get(cat) ?? []).sort((a, b) => a.cost / a.weight - b.cost / b.weight);
+      let score = 0;
+      for (const c of list) {
+        if (score >= target) break;
+        score += c.weight;
+        (c.kind === "good" ? keepG : keepS).add(c.idx);
+      }
+      // score < target possible (catégorie incomplète) → best-effort, tout pris
+    }
+    tier.goods.forEach((g, i) => { if (keepG.has(i)) { goods.push({ good: g.good, rate: g.rate }); cap += g.pop; money += g.money; } });
+    tier.services.forEach((s, i) => { if (keepS.has(i)) { services.push({ building: s.building }); cap += s.pop; money += s.money; } });
+  } else {
+    const keepGood = (g: typeof tier.goods[number]) =>
+      !o.optimizeNeeds || !g.good || g.money - g.rate * upkeepPerUnit(g.good, tier.region) >= 0;
+    const keepSvc = (s: typeof tier.services[number]) =>
+      !o.optimizeNeeds || s.money - (s.building ? upkeepOf(s.building) : 0) / housesPerService >= 0;
+    for (const g of tier.goods) if (keepGood(g)) { goods.push({ good: g.good, rate: g.rate }); cap += g.pop; money += g.money; }
+    for (const s of tier.services) if (keepSvc(s)) { services.push({ building: s.building }); cap += s.pop; money += s.money; }
+  }
+  // garde-fou : capacité minimale -> sinon retombe sur tous les besoins
+  if (cap < 1) {
+    goods.length = 0; services.length = 0; cap = 0; money = 0;
+    for (const g of tier.goods) { goods.push({ good: g.good, rate: g.rate }); cap += g.pop; money += g.money; }
+    for (const s of tier.services) { services.push({ building: s.building }); cap += s.pop; money += s.money; }
+  }
+  if (!o.optimizeNeeds && o.needSelection !== "thresholds")
+    cap = o.capacityOverride || cap || tier.capacityDefault || 10;
+  return { goods, services, cap: Math.max(1, cap), money };
+}
+
 /**
  * Solveur point-fixe : population cible -> besoins (biens) -> bâtiments de
  * production -> main-d'œuvre requise -> population supplémentaire -> ... jusqu'à
  * convergence. Renvoie les comptes de bâtiments + le bilan.
  */
 export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: ExtraDemand = {}): SolveResult {
-  const housesPerService = opts.housesPerService ?? 30;
+  const housesPerService = opts.housesPerService ?? DEFAULT_HOUSES_PER_SERVICE;
   const includeWorkforce = opts.includeWorkforce !== false;
   const targetMap: Record<string, number> = {};
   for (const t of targets) targetMap[t.tier] = (targetMap[t.tier] || 0) + t.pop;
 
-  // Entretien (argent/min) pour produire 1 unité/min d'un bien, chaîne incluse.
-  const upkeepMemo = new Map<string, number>();
-  const upkeepPerUnit = (good: string, stack = new Set<string>()): number => {
-    if (upkeepMemo.has(good)) return upkeepMemo.get(good)!;
-    if (stack.has(good)) return 0;
-    const producers = economy.producers[good];
-    if (!producers?.length) return 0; // matière brute
-    const d = producers[0];
-    const p = economy.buildingProd[d];
-    if (!p) return 0;
-    const r = prodRatePerMin(p, good);
-    if (r <= 0) return 0;
-    let u = (1 / r) * upkeepOf(d);
-    stack.add(good);
-    for (const inp of p.inputs) {
-      u += ((1 / r) * inputRatePerMin(p, inp.amount)) * upkeepPerUnit(inp.good, stack);
-    }
-    stack.delete(good);
-    upkeepMemo.set(good, u);
-    return u;
-  };
-
-  // Profil par tier : besoins retenus (tous, ou seulement les rentables si optimizeNeeds).
+  // Profil par tier : besoins retenus — tous, rentables (optimizeNeeds), ou
+  // sous-ensemble le moins cher atteignant les seuils d'upgrade (needSelection).
+  const needMode = opts.needSelection ?? "all";
   const profiles = new Map<string, TierProfile>();
   for (const tier of economy.tiers) {
-    const goods: { good: string | null; rate: number }[] = [];
-    const services: { building: string | null }[] = [];
-    let cap = 0;
-    let money = 0;
-    const keepGood = (g: typeof tier.goods[number]) =>
-      !opts.optimizeNeeds || !g.good || g.money - g.rate * upkeepPerUnit(g.good) >= 0;
-    const keepSvc = (s: typeof tier.services[number]) =>
-      !opts.optimizeNeeds || s.money - (s.building ? upkeepOf(s.building) : 0) / housesPerService >= 0;
-    for (const g of tier.goods) if (keepGood(g)) { goods.push({ good: g.good, rate: g.rate }); cap += g.pop; money += g.money; }
-    for (const s of tier.services) if (keepSvc(s)) { services.push({ building: s.building }); cap += s.pop; money += s.money; }
-    // garde-fou : capacité minimale -> sinon retombe sur tous les besoins
-    if (cap < 1) {
-      goods.length = 0; services.length = 0; cap = 0; money = 0;
-      for (const g of tier.goods) { goods.push({ good: g.good, rate: g.rate }); cap += g.pop; money += g.money; }
-      for (const s of tier.services) { services.push({ building: s.building }); cap += s.pop; money += s.money; }
-    }
-    if (!opts.optimizeNeeds) cap = opts.capacities[tier.guid] || cap || tierByGuid(tier.guid)?.capacityDefault || 10;
-    profiles.set(tier.guid, { goods, services, cap: Math.max(1, cap), money });
+    profiles.set(tier.guid, buildTierProfile(tier.guid, {
+      optimizeNeeds: opts.optimizeNeeds,
+      needSelection: needMode,
+      housesPerService,
+      capacityOverride: opts.capacities[tier.guid],
+    }));
   }
   const prof = (tier: string) => profiles.get(tier)!;
 
   // Production (fractionnaire) + demande de biens (par minute) pour une population donnée.
   const computeProduction = (popMap: Record<string, number>) => {
     const demand: Record<string, number> = { ...extraDemand }; // objectif de production exogène
+    // préférence régionale par bien (région du tier qui le consomme ; "" si mixte/exogène).
+    const demandRegion: Record<string, string> = {};
+    const noteRegion = (good: string, region: string) => {
+      if (!(good in demandRegion)) demandRegion[good] = region;
+      else if (demandRegion[good] !== region) demandRegion[good] = ""; // consommé par 2 régions
+    };
+    for (const g of Object.keys(extraDemand)) noteRegion(g, "");
     for (const tier of economy.tiers) {
       const p = popMap[tier.guid];
       if (!p) continue;
@@ -114,16 +193,16 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
       for (const g of pr.goods) {
         if (!g.good) continue;
         demand[g.good] = (demand[g.good] || 0) + houses * g.rate;
+        noteRegion(g.good, tier.region);
       }
     }
     const counts: Record<string, number> = {};
     if (opts.includeProduction) {
       const stack = new Set<string>();
-      const requireGood = (good: string, ratePerMin: number) => {
+      const requireGood = (good: string, ratePerMin: number, region?: string) => {
         if (ratePerMin <= 0 || stack.has(good)) return;
-        const producers = economy.producers[good];
-        if (!producers || !producers.length) return; // matière brute
-        const defId = producers[0];
+        const defId = pickProducer(good, region);
+        if (!defId) return; // matière brute
         const p = economy.buildingProd[defId];
         if (!p) return;
         const r = prodRatePerMin(p, good);
@@ -131,10 +210,13 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
         const count = ratePerMin / r;
         counts[defId] = (counts[defId] || 0) + count;
         stack.add(good);
-        for (const inp of p.inputs) requireGood(inp.good, count * inputRatePerMin(p, inp.amount));
+        for (const inp of p.inputs) requireGood(inp.good, count * inputRatePerMin(p, inp.amount), region);
         stack.delete(good);
       };
-      for (const [good, rate] of Object.entries(demand)) requireGood(good, rate);
+      for (const [good, rate] of Object.entries(demand)) {
+        const region = demandRegion[good] || undefined;
+        requireGood(good, rate, region);
+      }
     }
     return { demand, counts };
   };
@@ -233,6 +315,10 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
   for (const [defId, c] of Object.entries(productionCounts)) upkeep += c * upkeepOf(defId);
   for (const [defId, c] of Object.entries(serviceCounts)) upkeep += c * upkeepOf(defId);
 
+  // valeur marchande des biens demandés (potentiel de vente, hors net)
+  let marketValue = 0;
+  for (const [good, rate] of Object.entries(goodsDemand)) marketValue += rate * priceOf(good);
+
   return {
     populationByTier: pop,
     residencesByTier,
@@ -243,5 +329,6 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
     iterations,
     converged,
     money: { gross: Math.round(gross), upkeep: Math.round(upkeep), net: Math.round(gross - upkeep) },
+    marketValue: Math.round(marketValue),
   };
 }

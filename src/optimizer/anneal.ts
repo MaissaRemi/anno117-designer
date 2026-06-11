@@ -35,8 +35,6 @@ export function anneal(req: OptimizeRequest, onProgress?: OnProgress): AnnealOut
   let curOut = decode(req, dec, order, bandOffset);
   let cur = scoreDecode(req, curOut);
 
-  let bestOrder = order.slice();
-  let bestOffset = bandOffset;
   let bestOut = curOut;
   let best = cur;
 
@@ -51,9 +49,29 @@ export function anneal(req: OptimizeRequest, onProgress?: OnProgress): AnnealOut
 
     const nOrder = order.slice();
     let nOffset = bandOffset;
-    if (Math.random() < 0.25) {
+    const move = Math.random();
+    if (move < 0.2) {
+      // décalage vertical de départ
       nOffset = Math.floor(Math.random() * bandMod);
+    } else if (move < 0.5 && nOrder.length >= 3) {
+      // inversion d'un segment : réordonne des groupes entiers (meilleur regroupement
+      // par hauteur d'étagère que de simples échanges)
+      let i = (Math.random() * nOrder.length) | 0;
+      let j = (Math.random() * nOrder.length) | 0;
+      if (i > j) [i, j] = [j, i];
+      while (i < j) {
+        [nOrder[i], nOrder[j]] = [nOrder[j], nOrder[i]];
+        i++;
+        j--;
+      }
+    } else if (move < 0.75 && nOrder.length >= 2) {
+      // déplacement d'un élément (insertion ailleurs)
+      const from = (Math.random() * nOrder.length) | 0;
+      const to = (Math.random() * nOrder.length) | 0;
+      const [it] = nOrder.splice(from, 1);
+      nOrder.splice(to, 0, it);
     } else if (nOrder.length >= 2) {
+      // échange simple de deux éléments
       const i = (Math.random() * nOrder.length) | 0;
       let j = (Math.random() * nOrder.length) | 0;
       if (i === j) j = (j + 1) % nOrder.length;
@@ -71,15 +89,11 @@ export function anneal(req: OptimizeRequest, onProgress?: OnProgress): AnnealOut
       if (ns.score > best.score) {
         best = ns;
         bestOut = nOut;
-        bestOrder = nOrder.slice();
-        bestOffset = nOffset;
       }
     }
 
     if (onProgress && iter % 50 === 0) onProgress(iter, best.score, best.placed, requested);
   }
 
-  void bestOrder;
-  void bestOffset;
   return { out: bestOut, scored: best, iters: iter };
 }

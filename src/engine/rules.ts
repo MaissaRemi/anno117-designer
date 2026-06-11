@@ -9,6 +9,7 @@ import type {
 import {
   cellKey,
   footprintCells,
+  isBuildable,
   isUsable,
   orthoNeighbors,
 } from "./geometry";
@@ -58,7 +59,8 @@ export function canPlace(
 ): boolean {
   const blocked = blockedSet(layout, lookup, exceptUid);
   for (const c of footprintCells(def, x, y, rot)) {
-    if (!isUsable(layout.grid, c.x, c.y)) return false;
+    // terre vs eau selon le terrain de pose du bâtiment
+    if (!isBuildable(layout.grid, c.x, c.y, def.placement)) return false;
     if (blocked.has(cellKey(c.x, c.y))) return false;
   }
   return true;
@@ -189,29 +191,93 @@ function isConnected(cells: Cell[]): boolean {
   return seen.size === set.size;
 }
 
-/** Cases couvertes par le rayon de chaque bâtiment (distance euclidienne au centre). */
+/** Couverture euclidienne (disque centré sur le bâtiment) — utilisée si pas de rues. */
+function euclideanCoverage(layout: Layout, def: BuildingDef, b: PlacedBuilding): Set<string> {
+  const cells = footprintCells(def, b.x, b.y, b.rotation);
+  const cx = cells.reduce((s, c) => s + c.x, 0) / cells.length + 0.5;
+  const cy = cells.reduce((s, c) => s + c.y, 0) / cells.length + 0.5;
+  const r = def.radius!.range;
+  const covered = new Set<string>();
+  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+      if (!isUsable(layout.grid, x, y)) continue;
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      if (dx * dx + dy * dy <= r * r) covered.add(cellKey(x, y));
+    }
+  }
+  return covered;
+}
+
+/**
+ * Couverture par distance le long des rues (mécanique réelle Anno pour les
+ * services) : BFS sur le réseau de routes depuis les routes adjacentes au
+ * bâtiment, jusqu'à `streetRange` cases. Les cases servies = celles adjacentes
+ * à une route atteinte (là où une maison peut se brancher).
+ */
+function streetCoverage(
+  layout: Layout,
+  def: BuildingDef,
+  b: PlacedBuilding,
+  roads: Set<string>,
+): Set<string> {
+  const limit = def.streetRange!;
+  const footprint = new Set(
+    footprintCells(def, b.x, b.y, b.rotation).map((c) => cellKey(c.x, c.y)),
+  );
+  // graines : routes orthogonalement adjacentes à l'emprise (distance 1)
+  const dist = new Map<string, number>();
+  const queue: string[] = [];
+  for (const c of footprintCells(def, b.x, b.y, b.rotation)) {
+    for (const n of orthoNeighbors(c.x, c.y)) {
+      const k = cellKey(n.x, n.y);
+      if (footprint.has(k) || !roads.has(k) || dist.has(k)) continue;
+      dist.set(k, 1);
+      queue.push(k);
+    }
+  }
+  while (queue.length) {
+    const k = queue.shift()!;
+    const d = dist.get(k)!;
+    if (d >= limit) continue;
+    const [x, y] = k.split(",").map(Number);
+    for (const n of orthoNeighbors(x, y)) {
+      const nk = cellKey(n.x, n.y);
+      if (roads.has(nk) && !dist.has(nk)) {
+        dist.set(nk, d + 1);
+        queue.push(nk);
+      }
+    }
+  }
+  // cases servies : cellules utilisables adjacentes à une route atteinte
+  const covered = new Set<string>();
+  for (const k of dist.keys()) {
+    const [x, y] = k.split(",").map(Number);
+    for (const n of orthoNeighbors(x, y)) {
+      if (isUsable(layout.grid, n.x, n.y)) covered.add(cellKey(n.x, n.y));
+    }
+  }
+  return covered;
+}
+
+/**
+ * Cases couvertes par le rayon de chaque bâtiment d'influence. Utilise la
+ * distance le long des rues (`streetRange`) quand le bâtiment en a une et que
+ * des routes existent ; sinon repli sur le disque euclidien (`radius.range`).
+ */
 export function computeRadiusCoverage(
   layout: Layout,
   lookup: DefLookup,
+  opts: { euclidean?: boolean } = {},
 ): Map<string, Set<string>> {
   const result = new Map<string, Set<string>>();
+  const roads = new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
     if (!def || !def.radius) continue;
-    const cells = footprintCells(def, b.x, b.y, b.rotation);
-    const cx = cells.reduce((s, c) => s + c.x, 0) / cells.length + 0.5;
-    const cy = cells.reduce((s, c) => s + c.y, 0) / cells.length + 0.5;
-    const r = def.radius.range;
-    const covered = new Set<string>();
-    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
-      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-        if (!isUsable(layout.grid, x, y)) continue;
-        const dx = x + 0.5 - cx;
-        const dy = y + 0.5 - cy;
-        if (dx * dx + dy * dy <= r * r) covered.add(cellKey(x, y));
-      }
-    }
-    result.set(b.uid, covered);
+    // forcer l'euclidien (borne de planification, indépendante des rues) si demandé
+    const useStreet = !opts.euclidean && def.streetRange && def.streetRange > 0 && roads.size > 0;
+    result.set(b.uid, useStreet ? streetCoverage(layout, def, b, roads) : euclideanCoverage(layout, def, b));
   }
   return result;
 }
@@ -221,6 +287,7 @@ export interface BuildingIssues {
   road: boolean; // true => problème de route
   field: FieldResult | null; // null si pas de champ requis
   overlap: boolean; // hors grille ou chevauchement
+  terrain: boolean; // true => mauvais terrain (eau attendue/terre, ou inverse)
   ok: boolean;
 }
 
@@ -231,11 +298,15 @@ export function validateLayout(layout: Layout, lookup: DefLookup): Map<string, B
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
     if (!def) continue;
+    // terrain : chaque case de l'emprise doit correspondre au terrain de pose
+    const terrain = footprintCells(def, b.x, b.y, b.rotation).some(
+      (c) => !isBuildable(layout.grid, c.x, c.y, def.placement),
+    );
     const overlap = !canPlace(layout, lookup, def, b.x, b.y, b.rotation, b.uid);
     const road = def.needsRoad && !def.roadRoot && !roadConnected(layout, lookup, b, rootSet);
     const field = validateFields(layout, lookup, b);
-    const ok = !overlap && !road && (!field || field.ok);
-    issues.set(b.uid, { uid: b.uid, road, field, overlap, ok });
+    const ok = !overlap && !road && !terrain && (!field || field.ok);
+    issues.set(b.uid, { uid: b.uid, road, field, overlap, terrain, ok });
   }
   return issues;
 }

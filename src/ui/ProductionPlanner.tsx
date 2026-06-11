@@ -131,6 +131,11 @@ export function ProductionPlanner({ onClose }: Props) {
 
         {result && (
           <div className="opt-result">
+            {!result.converged && (
+              <div style={{ color: "#ffcc66", marginBottom: 6 }}>
+                ⚠ Cascade main-d'œuvre instable — bilan des besoins directs affiché.
+              </div>
+            )}
             <div style={{ marginBottom: 6 }}>
               <b>💰 Économie</b> : net{" "}
               <span style={{ color: result.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>
@@ -140,6 +145,12 @@ export function ProductionPlanner({ onClose }: Props) {
               <span className="muted">
                 (taxe {result.money.gross.toLocaleString("fr")} − entretien {result.money.upkeep.toLocaleString("fr")})
               </span>
+              {result.marketValue > 0 && (
+                <div className="muted" style={{ fontSize: "0.9em" }}>
+                  Valeur marchande des biens : ~{result.marketValue.toLocaleString("fr")}/min
+                  (le net ci-dessus = taxe seule ; la vente des biens n'y est pas incluse)
+                </div>
+              )}
             </div>
             {includeWorkforce && (
               <>

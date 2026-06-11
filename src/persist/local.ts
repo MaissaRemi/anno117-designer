@@ -1,7 +1,7 @@
 import type { Catalog, Layout } from "../model/types";
 
-// v2 : nouveau catalogue (données réelles extraites du jeu).
-const KEY = "anno117-designer:state:v2";
+// v5 : citerne/source d'aqueduc au catalogue + mapping besoin-citerne (68747/68748).
+const KEY = "anno117-designer:state:v5";
 
 interface Persisted {
   catalog: Catalog;

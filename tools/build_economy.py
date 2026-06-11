@@ -34,6 +34,17 @@ BUILDING_TEMPLATES = {
 
 CAP_DEFAULT = [10, 20, 30, 40, 50]  # capacité/maison par index de tier (éditable)
 
+# Besoins-service sans match d'icône → bâtiment forcé. La CITERNE d'aqueduc (besoin
+# des tiers 3-4) a l'icône générique de la catégorie aqueduc, jamais matchée :
+# need 68747 (Latium) -> AqueductDistributor 19753 ; need 68748 (romano-celte) -> 29526.
+SERVICE_BUILDING_OVERRIDES = {
+    "68747": "g19753",
+    "68748": "g29526",
+    # Maison de jeu CELTIC (besoin 37176, icône celtic) : le bâtiment 37177 réutilise
+    # l'icône ROMAINE → le match d'icône tombait sur la version romaine déjà prise.
+    "37176": "g37177",
+}
+
 
 def load_texts():
     txt = open(TEXTS, encoding="utf-8").read()
@@ -52,6 +63,7 @@ def main():
     texts = load_texts()
     pop_levels = {}      # guid -> {name, region, workforce, factor}
     products = {}        # guid -> frName
+    good_prices = {}     # productGuid -> BasePrice (valeur marchande de référence)
     needs = {}           # guid -> {product, icon}
     residences = {}      # tierGuid -> {defId, goods:[{need,product,rate}], services:[need]}
     producers = defaultdict(list)  # productGuid -> [defId]
@@ -81,6 +93,12 @@ def main():
 
         if tpl == "Product":
             products[guid] = texts.get(oasis) or t(el, "./Values/Standard/Name")
+            bp = t(el, "./Values/Product/BasePrice") or t(el, ".//BasePrice")
+            if bp:
+                try:
+                    good_prices[guid] = float(bp)
+                except ValueError:
+                    pass
             el.clear(); continue
 
         if tpl == "Need":
@@ -96,6 +114,11 @@ def main():
                 "product": t(el, "./Values/Need/NeedProduct"),
                 "icon": os.path.basename(t(el, "./Values/Standard/IconFilename") or ""),
                 "attrs": attrs,
+                # mécanique d'UPGRADE (cf. GAME_MECHANICS.md §3) : chaque besoin REMPLI
+                # ajoute SupplyWeight au score de sa catégorie ; sans NeedCategoryType
+                # explicite = service Public.
+                "weight": float(t(el, "./Values/Need/SupplyWeight") or 1),
+                "category": t(el, "./Values/Need/NeedCategoryType") or "Public",
             }
             el.clear(); continue
 
@@ -144,8 +167,18 @@ def main():
                     goods.append({"need": need, "rate": float(rate)})
                 else:
                     services.append(need)
+            # seuils d'upgrade par catégorie (score SupplyWeight à atteindre)
+            thresholds = {}
+            th = vals.find("./Residence7/UpgradeThreshold")
+            if th is not None:
+                for c in th:
+                    try:
+                        thresholds[c.tag] = float(c.findtext("Value") or 0)
+                    except ValueError:
+                        pass
             if tier:
-                residences[tier] = {"defId": defId, "goods": goods, "services": services}
+                residences[tier] = {"defId": defId, "goods": goods, "services": services,
+                                    "thresholds": thresholds}
 
         el.clear()
 
@@ -187,17 +220,19 @@ def main():
                 goods.append({
                     "good": prod, "rate": gd["rate"], "needName": products.get(prod),
                     "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                    "weight": (nd or {}).get("weight", 1), "category": (nd or {}).get("category", "Public"),
                 })
                 for k, v in attrs.items():
                     per_house[k] += v
                 capacity += attrs.get("Population", 0)
             for sneed in res["services"]:
                 nd = needs.get(sneed)
-                sdef = icon_to_def.get(nd["icon"]) if nd else None
+                sdef = SERVICE_BUILDING_OVERRIDES.get(sneed) or (icon_to_def.get(nd["icon"]) if nd else None)
                 attrs = nd["attrs"] if nd else {}
                 services.append({
                     "need": sneed, "building": sdef,
                     "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                    "weight": (nd or {}).get("weight", 1), "category": (nd or {}).get("category", "Public"),
                 })
                 for k, v in attrs.items():
                     per_house[k] += v
@@ -216,7 +251,18 @@ def main():
             "perHouse": dict(per_house),
             "goods": goods,
             "services": services,
+            # seuils d'upgrade par catégorie (score SupplyWeight des besoins remplis
+            # requis pour MONTER au tier suivant)
+            "upgradeThresholds": (res or {}).get("thresholds", {}),
         })
+
+    # région des bâtiments : réutilise le catalogue déjà généré (AssociatedRegions décodé)
+    building_region = {}
+    cat_path = os.path.join(HERE, "src", "data", "catalog.generated.json")
+    if os.path.exists(cat_path):
+        for b in json.load(open(cat_path, encoding="utf-8")):
+            if b.get("region"):
+                building_region[b["id"]] = b["region"]
 
     out = {
         "tiers": tiers,
@@ -225,6 +271,8 @@ def main():
         "buildingWorkforce": building_workforce,
         "buildingUpkeep": building_upkeep,
         "goodNames": products,
+        "goodPrices": good_prices,
+        "buildingRegion": building_region,
     }
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False)
     # résumé
@@ -234,7 +282,8 @@ def main():
               f"goods={len(ti['goods'])} services={len(ti['services'])} f={ti['factor']} "
               f"perHouse={ {k: round(v) for k,v in ti['perHouse'].items()} }",
               file=sys.stderr)
-    print(f"producers:{len(producers)} buildingProd:{len(bprod)} workforceBuildings:{len(building_workforce)}",
+    print(f"producers:{len(producers)} buildingProd:{len(bprod)} workforceBuildings:{len(building_workforce)} "
+          f"goodPrices:{len(good_prices)} buildingRegion:{len(building_region)}",
           file=sys.stderr)
     print(f"OK -> {OUT}", file=sys.stderr)
 

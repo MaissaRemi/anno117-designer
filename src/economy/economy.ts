@@ -6,12 +6,16 @@ export interface TierGood {
   needName: string | null;
   pop: number; // habitants accordés (Population)
   money: number; // argent accordé (Money)
+  weight: number; // SupplyWeight : points apportés à la catégorie quand rempli
+  category: string; // NeedCategoryType (Food/Fashion/Household/Wonders/Culture) ou "Public"
 }
 export interface TierService {
   need: string;
   building: string | null; // defId du bâtiment de service (g<guid>)
   pop: number;
   money: number;
+  weight: number;
+  category: string;
 }
 export interface Tier {
   guid: string;
@@ -24,6 +28,9 @@ export interface Tier {
   perHouse: Record<string, number>; // attributs/maison pleine (Money, Happiness, …)
   goods: TierGood[];
   services: TierService[];
+  // score SupplyWeight par catégorie requis pour MONTER au tier suivant
+  // (mécanique d'upgrade réelle, cf. GAME_MECHANICS.md §3)
+  upgradeThresholds: Record<string, number>;
 }
 export interface BProd {
   cycleTime: number | null;
@@ -38,6 +45,8 @@ interface EconomyData {
   buildingWorkforce: Record<string, { tier: string; amount: number }[]>;
   buildingUpkeep: Record<string, number>; // defId -> entretien argent/min
   goodNames: Record<string, string>;
+  goodPrices: Record<string, number>; // GUID -> BasePrice (valeur marchande de réf.)
+  buildingRegion: Record<string, string>; // defId -> région ("Roman"/"Celtic")
 }
 
 export const economy = data as unknown as EconomyData;
@@ -48,13 +57,26 @@ export const tierByGuid = (g: string): Tier | undefined => tiers.find((t) => t.g
 export const goodName = (g: string | null): string =>
   (g && economy.goodNames[g]) || g || "?";
 
-/** Producteur d'un bien (préférence région). */
+/** Valeur marchande de référence d'un bien (BasePrice), 0 si inconnu. */
+export const priceOf = (good: string | null): number =>
+  (good && economy.goodPrices[good]) || 0;
+
+/** Région d'un bâtiment ("Roman"/"Celtic"/undefined). */
+export const regionOf = (defId: string): string | undefined =>
+  economy.buildingRegion[defId];
+
+/**
+ * Producteur d'un bien. Si `region` fournie et qu'un producteur de cette région
+ * existe, il est préféré ; sinon un producteur sans région (commun) ; sinon le 1er.
+ */
 export function pickProducer(good: string, region?: string): string | undefined {
   const list = economy.producers[good];
   if (!list || !list.length) return undefined;
   if (region) {
-    // economy ne stocke pas la région du bâtiment : on prend le 1er (heuristique)
-    return list[0];
+    const sameRegion = list.find((d) => regionOf(d) === region);
+    if (sameRegion) return sameRegion;
+    const common = list.find((d) => !regionOf(d));
+    if (common) return common;
   }
   return list[0];
 }

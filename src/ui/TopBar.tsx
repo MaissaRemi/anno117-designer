@@ -6,6 +6,9 @@ import { OptimizerPanel } from "./OptimizerPanel";
 import { IslandPicker } from "./IslandPicker";
 import { PopulationPlanner } from "./PopulationPlanner";
 import { ProductionPlanner } from "./ProductionPlanner";
+import { RoadAudit } from "./RoadAudit";
+import { CoveragePanel } from "./CoveragePanel";
+import { IslandPlanner } from "./IslandPlanner";
 
 export function TopBar() {
   const catalog = useStore((s) => s.catalog);
@@ -21,6 +24,9 @@ export function TopBar() {
   const [islOpen, setIslOpen] = useState(false);
   const [popOpen, setPopOpen] = useState(false);
   const [prodOpen, setProdOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [covOpen, setCovOpen] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
 
   const onImport = async () => {
     try {
@@ -71,6 +77,9 @@ export function TopBar() {
       <span className="spacer" />
 
       <button onClick={() => setIslOpen(true)}>🏝 Île</button>
+      <button className="primary" onClick={() => setPlanOpen(true)} title="Maximiser un tier sur l'île chargée">
+        🏛 Plan d'île
+      </button>
       <button className="primary" onClick={() => setPopOpen(true)}>
         👥 Population
       </button>
@@ -79,6 +88,12 @@ export function TopBar() {
       </button>
       <button className="primary" onClick={() => setOptOpen(true)}>
         ⚙ Optimiser
+      </button>
+      <button className="primary" onClick={() => setCovOpen(true)}>
+        📡 Couverture
+      </button>
+      <button onClick={() => setAuditOpen(true)} title="Vérifier les bâtiments sans route">
+        🛣 Audit
       </button>
       <button onClick={() => confirm("Nouvelle disposition vide ?") && newLayout()}>Nouveau</button>
       <button onClick={() => exportJson(catalog, layout)}>⬇ JSON</button>
@@ -89,6 +104,9 @@ export function TopBar() {
       {islOpen && <IslandPicker onClose={() => setIslOpen(false)} />}
       {popOpen && <PopulationPlanner onClose={() => setPopOpen(false)} />}
       {prodOpen && <ProductionPlanner onClose={() => setProdOpen(false)} />}
+      {auditOpen && <RoadAudit onClose={() => setAuditOpen(false)} />}
+      {covOpen && <CoveragePanel onClose={() => setCovOpen(false)} />}
+      {planOpen && <IslandPlanner onClose={() => setPlanOpen(false)} />}
     </div>
   );
 }

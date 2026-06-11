@@ -55,7 +55,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#c0564b",
-    "icon": "icons/icon_3d_military_barracks.png"
+    "icon": "icons/icon_3d_military_barracks.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26
   },
   {
     "id": "g15946",
@@ -71,7 +76,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#c0564b",
-    "icon": "icons/icon_3d_military_barracks.png"
+    "icon": "icons/icon_3d_military_barracks.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26
   },
   {
     "id": "g6054",
@@ -85,9 +95,15 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": true,
+    "needsRoad": false,
     "color": "#c0564b",
-    "icon": "icons/icon_3d_harbour_shipyard.png"
+    "placement": "water",
+    "icon": "icons/icon_3d_harbour_shipyard.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26
   },
   {
     "id": "g29340",
@@ -101,9 +117,15 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": true,
+    "needsRoad": false,
     "color": "#c0564b",
-    "icon": "icons/icon_3d_harbour_shipyard.png"
+    "placement": "water",
+    "icon": "icons/icon_3d_harbour_shipyard.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26
   },
   {
     "id": "g15833",
@@ -512,7 +534,8 @@
     },
     "rotatable": true,
     "needsRoad": false,
-    "color": "#9c8cb5"
+    "color": "#9c8cb5",
+    "placement": "water"
   },
   {
     "id": "g80628",
@@ -1774,7 +1797,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_armory_goods.png",
     "radius": {
@@ -1814,7 +1837,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_armory_goods.png",
     "radius": {
@@ -1854,7 +1877,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_bird_tongue_goods.png",
     "radius": {
@@ -1890,7 +1913,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_boardgame_goods.png",
     "radius": {
@@ -1930,7 +1953,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_chariot_goods.png",
     "radius": {
@@ -1970,9 +1993,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_tunics_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2001,9 +2029,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_tunics_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2032,9 +2065,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_garum_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -2067,7 +2105,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_mosaics_goods.png",
     "radius": {
@@ -2107,7 +2145,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_togas_goods.png",
     "radius": {
@@ -2147,9 +2185,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_ponies_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -2175,7 +2218,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_oysters_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -2199,9 +2248,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_bread_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2230,9 +2284,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_bread_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2261,7 +2320,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_beer_goods.png",
     "radius": {
@@ -2297,7 +2356,7 @@
       "h": 9
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_pigments_goods.png",
     "radius": {
@@ -2333,9 +2392,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_lye_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2364,9 +2428,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wood_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": null,
       "outputs": [
@@ -2390,9 +2459,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wood_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": null,
       "outputs": [
@@ -2418,7 +2492,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_sardines_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2444,7 +2524,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_mackerels_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2468,7 +2554,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_idol_goods.png",
     "radius": {
@@ -2508,9 +2594,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_tiles_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2539,9 +2630,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_tiles_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2570,9 +2666,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_clay_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 22,
     "production": {
       "cycleTime": null,
       "outputs": [
@@ -2596,7 +2697,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_limestone_goods.png",
     "radius": {
@@ -2627,7 +2728,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_limestone_goods.png",
     "radius": {
@@ -2658,7 +2759,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_granite_goods.png",
     "radius": {
@@ -2689,7 +2790,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_marble_goods.png",
     "radius": {
@@ -2720,7 +2821,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_minerals_goods.png",
     "radius": {
@@ -2751,9 +2852,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_dye_plants_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 100,
       "fieldType": "plantes_tinctoriales"
@@ -2781,9 +2887,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_pelt_hat_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -2816,7 +2927,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_coal_ore_forest_goods.png",
     "radius": {
@@ -2847,7 +2958,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_coal_ore_forest_goods.png",
     "radius": {
@@ -2878,9 +2989,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_marsh_birds_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -2904,7 +3020,7 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_clan_shields_goods.png",
     "radius": {
@@ -2944,9 +3060,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_resin_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2970,9 +3091,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_resin_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2996,7 +3122,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_trouser_goods.png",
     "radius": {
@@ -3036,9 +3162,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_chassis_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3071,9 +3202,14 @@
       "h": 9
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_ropes_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -3102,9 +3238,14 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_ropes_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -3133,9 +3274,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wattle_daub_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -3168,9 +3314,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_reed_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 140,
       "fieldType": "roseaux"
@@ -3200,7 +3351,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_samphire_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3224,9 +3381,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_olives_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 160,
       "fieldType": "olives"
@@ -3254,7 +3416,7 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_lavender_goods.png",
     "radius": {
@@ -3289,9 +3451,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_ornamented_wood_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -3324,7 +3491,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_granite_block_goods.png",
     "radius": {
@@ -3362,7 +3529,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_murex_snails_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3386,7 +3559,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_pig_lard_goods.png",
     "radius": {
@@ -3422,7 +3595,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_pig_lard_goods.png",
     "radius": {
@@ -3458,7 +3631,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_lounger_goods.png",
     "radius": {
@@ -3498,9 +3671,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_reed_shoes_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -3529,9 +3707,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wig_base_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -3564,9 +3747,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wig_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3599,9 +3787,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_sandals_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -3630,9 +3823,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_lavender_soap_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -3665,9 +3863,14 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_sails_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3696,9 +3899,14 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_sails_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3727,9 +3935,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_oats_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 80,
       "fieldType": "avoine"
@@ -3757,9 +3970,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_barley_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 120,
       "fieldType": "orge"
@@ -3787,9 +4005,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_hemp_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -3813,9 +4036,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_hemp_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 80,
       "fieldType": "chanvre"
@@ -3843,9 +4071,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wheat_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 140,
       "fieldType": "bl"
@@ -3873,9 +4106,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wheat_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 140,
       "fieldType": "bl"
@@ -3903,9 +4141,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_flax_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 140,
       "fieldType": "lin"
@@ -3933,9 +4176,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_flax_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 120,
       "fieldType": "lin"
@@ -3963,7 +4211,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_auroch_goods.png",
     "radius": {
@@ -3998,7 +4246,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_brooch_goods.png",
     "radius": {
@@ -4034,9 +4282,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_strings_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -4065,9 +4318,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_bronze_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -4100,7 +4358,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_glass_goods.png",
     "radius": {
@@ -4136,7 +4394,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_silver_goods.png",
     "radius": {
@@ -4172,9 +4430,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_weapons_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -4203,9 +4466,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_weapons_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -4234,9 +4502,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_farmer_hat_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -4265,9 +4538,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_roast_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -4300,9 +4578,14 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_iron_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -4331,9 +4614,14 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_iron_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -4362,9 +4650,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_cushion_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -4397,7 +4690,7 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_herbs_goods.png",
     "radius": {
@@ -4428,7 +4721,7 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_necklaces_goods.png",
     "radius": {
@@ -4468,7 +4761,7 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_cheese_goods.png",
     "radius": {
@@ -4504,9 +4797,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_gold_ore_river_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 22,
     "production": {
       "cycleTime": 240,
       "outputs": [
@@ -4530,7 +4828,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_string_instrument_goods.png",
     "radius": {
@@ -4570,9 +4868,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_celtic_green_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -4605,9 +4908,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_concrete_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -4640,9 +4948,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_concrete_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -4675,9 +4988,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_malt_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": null,
       "outputs": [
@@ -4708,7 +5026,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_salt_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": null,
       "outputs": [
@@ -4732,7 +5056,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_silver_ore_goods.png",
     "radius": {
@@ -4763,7 +5087,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_gold_ore_mine_goods.png",
     "radius": {
@@ -4794,7 +5118,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_tin_ore_goods.png",
     "radius": {
@@ -4825,7 +5149,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_coal_ore_mine_goods.png",
     "radius": {
@@ -4856,7 +5180,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_coal_ore_mine_goods.png",
     "radius": {
@@ -4887,7 +5211,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_copper_ore_goods.png",
     "radius": {
@@ -4918,7 +5242,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_iron_ore_goods.png",
     "radius": {
@@ -4949,7 +5273,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_iron_ore_goods.png",
     "radius": {
@@ -4980,9 +5304,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_flour_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": null,
       "outputs": [
@@ -5011,9 +5340,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_flour_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -5042,7 +5376,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_handmirros_goods.png",
     "radius": {
@@ -5082,9 +5416,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_gold_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -5113,9 +5452,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_amphorae_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -5148,9 +5492,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_amphorae_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -5183,7 +5532,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_olive_oil_goods.png",
     "radius": {
@@ -5219,9 +5568,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_cypress_wood_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 120,
       "fieldType": "sandaraque"
@@ -5249,9 +5603,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_eels_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -5277,7 +5636,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_silica_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -5303,7 +5668,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_silica_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -5329,7 +5700,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_cockles_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -5355,7 +5732,13 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#c9a227",
+    "placement": "water",
     "icon": "icons/icon_3d_seashells_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -5379,9 +5762,14 @@
       "h": 14
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_honeycombs_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -5405,9 +5793,14 @@
       "h": 14
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_honeycombs_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -5431,9 +5824,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_sausages_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -5466,9 +5864,14 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_timber_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": null,
       "outputs": [
@@ -5497,9 +5900,14 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_timber_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": null,
       "outputs": [
@@ -5580,9 +5988,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_drinkhorns_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -5615,7 +6028,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_fine_glass_goods.png",
     "radius": {
@@ -5655,9 +6068,14 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_mud_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -5681,7 +6099,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wax_tablets_goods.png",
     "radius": {
@@ -5721,9 +6139,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_cloak_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -5756,7 +6179,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_marble_blocks_goods.png",
     "radius": {
@@ -5792,7 +6215,7 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_leather_goods.png",
     "radius": {
@@ -5832,7 +6255,7 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_leather_goods.png",
     "radius": {
@@ -5872,9 +6295,14 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_tyrian_purple_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -5903,9 +6331,14 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_cloth_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 120,
       "outputs": [
@@ -5934,9 +6367,14 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_torcs_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -5965,9 +6403,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_beaver_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -5991,9 +6434,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_caviar_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -6022,7 +6470,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wine_goods.png",
     "radius": {
@@ -6062,7 +6510,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_wine_goods.png",
     "radius": {
@@ -6102,9 +6550,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_grapes_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 100,
       "fieldType": "raisin"
@@ -6132,9 +6585,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_grapes_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 100,
       "fieldType": "raisin"
@@ -6162,9 +6620,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_sturgeons_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 22,
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -6188,9 +6651,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_sheep_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 3,
       "fieldType": "moutons"
@@ -6218,9 +6686,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_sheep_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 3,
       "fieldType": "moutons"
@@ -6248,7 +6721,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_pigs_goods.png",
     "radius": {
@@ -6283,7 +6756,7 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_pigs_goods.png",
     "radius": {
@@ -6318,9 +6791,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_horses_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 5,
       "fieldType": "chevaux"
@@ -6348,9 +6826,14 @@
       "h": 5
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_horses_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "field": {
       "tiles": 5,
       "fieldType": "chevaux"
@@ -6378,7 +6861,7 @@
       "h": 6
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_tongue_in_aspic_goods.png",
     "radius": {
@@ -6418,7 +6901,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_oysters_and_caviar_goods.png",
     "radius": {
@@ -6458,9 +6941,14 @@
       "h": 4
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#c9a227",
     "icon": "icons/icon_3d_porridge_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26,
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -6510,7 +6998,7 @@
       "h": 30
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "production": {
@@ -6552,7 +7040,7 @@
       "h": 30
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "production": {
@@ -6594,7 +7082,7 @@
       "h": 30
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "production": {
@@ -6628,7 +7116,7 @@
       "h": 30
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "production": {
@@ -6662,7 +7150,7 @@
       "h": 30
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "production": {
@@ -6700,7 +7188,7 @@
       "h": 30
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "production": {
@@ -6761,7 +7249,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_vulcanus.png"
+    "icon": "icons/icon_3d_shrine_vulcanus.png",
+    "radius": {
+      "kind": "service",
+      "range": 18
+    },
+    "streetRange": 22
   },
   {
     "id": "g3620",
@@ -6859,7 +7352,7 @@
       "h": 30
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "production": {
@@ -6886,6 +7379,48 @@
     }
   },
   {
+    "id": "g19753",
+    "guid": 19753,
+    "name": "Citerne d'aqueduc",
+    "nameInternal": "Aqueduct Roman Distribution",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_aqueduct_cistern.png",
+    "radius": {
+      "kind": "service",
+      "range": 36
+    },
+    "streetRange": 36
+  },
+  {
+    "id": "g29526",
+    "guid": 29526,
+    "name": "Citerne d'aqueduc",
+    "nameInternal": "Aqueduct Roman Celtic Distribution",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 4,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_aqueduct_cistern.png",
+    "radius": {
+      "kind": "service",
+      "range": 36
+    },
+    "streetRange": 36
+  },
+  {
     "id": "g3402",
     "guid": 3402,
     "name": "Comptoir",
@@ -6897,7 +7432,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
@@ -6914,7 +7449,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
@@ -6931,7 +7466,7 @@
       "h": 8
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
@@ -7011,7 +7546,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
@@ -7028,7 +7563,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
@@ -7045,7 +7580,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
@@ -7062,7 +7597,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
@@ -7079,7 +7614,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
@@ -7096,7 +7631,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
@@ -7157,7 +7692,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#7cb342",
-    "icon": "icons/icon_3d_public_roman_grammaticus.png"
+    "icon": "icons/icon_3d_public_roman_grammaticus.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26
   },
   {
     "id": "g6730",
@@ -7173,7 +7713,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#7cb342",
-    "icon": "icons/icon_3d_public_celtic_grammaticus.png"
+    "icon": "icons/icon_3d_public_celtic_grammaticus.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26
   },
   {
     "id": "g7057",
@@ -7187,7 +7732,7 @@
       "h": 7
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_base_warehouse.png"
@@ -7206,6 +7751,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "placement": "water",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_trading_pier.png"
   },
@@ -7223,6 +7769,7 @@
     "rotatable": true,
     "needsRoad": false,
     "color": "#7cb342",
+    "placement": "water",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_trading_pier.png"
   },
@@ -7364,7 +7911,7 @@
       "h": 9
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
@@ -7423,7 +7970,7 @@
       "h": 3
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
@@ -7440,7 +7987,7 @@
       "h": 11
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
@@ -7457,7 +8004,7 @@
       "h": 11
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
@@ -7474,7 +8021,7 @@
       "h": 3
     },
     "rotatable": true,
-    "needsRoad": false,
+    "needsRoad": true,
     "color": "#7cb342",
     "roadRoot": true,
     "icon": "icons/icon_3d_harbour_kontor.png"
@@ -7598,7 +8145,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_cernunnos.png"
+    "icon": "icons/icon_3d_shrine_cernunnos.png",
+    "radius": {
+      "kind": "service",
+      "range": 18
+    },
+    "streetRange": 22
   },
   {
     "id": "g82492",
@@ -7698,7 +8250,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_mars.png"
+    "icon": "icons/icon_3d_shrine_mars.png",
+    "radius": {
+      "kind": "service",
+      "range": 18
+    },
+    "streetRange": 22
   },
   {
     "id": "g81070",
@@ -7756,7 +8313,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_minerva.png"
+    "icon": "icons/icon_3d_shrine_minerva.png",
+    "radius": {
+      "kind": "service",
+      "range": 18
+    },
+    "streetRange": 22
   },
   {
     "id": "g82489",
@@ -7822,6 +8384,38 @@
     "streetRange": 20
   },
   {
+    "id": "g19691",
+    "guid": 19691,
+    "name": "Source d'aqueduc",
+    "nameInternal": "Aqueduct Roman Basin",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 9,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_aqueduct_source.png"
+  },
+  {
+    "id": "g29524",
+    "guid": 29524,
+    "name": "Source d'aqueduc",
+    "nameInternal": "Aqueduct Roman Celtic Basin",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 9,
+      "h": 4
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_aqueduct_source.png"
+  },
+  {
     "id": "g3528",
     "guid": 3528,
     "name": "Taverne",
@@ -7835,7 +8429,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#7cb342",
-    "icon": "icons/icon_3d_public_roman_tavern.png"
+    "icon": "icons/icon_3d_public_roman_tavern.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26
   },
   {
     "id": "g3619",
@@ -7935,7 +8534,12 @@
     "rotatable": true,
     "needsRoad": true,
     "color": "#7cb342",
-    "icon": "icons/icon_3d_public_celtic_bardic_hall.png"
+    "icon": "icons/icon_3d_public_celtic_bardic_hall.png",
+    "radius": {
+      "kind": "service",
+      "range": 22
+    },
+    "streetRange": 26
   },
   {
     "id": "g71265",

@@ -52,6 +52,8 @@ export function OptimizerPanel({ onClose }: Props) {
   };
 
   const totalRequested = items.reduce((s, i) => s + i.qty, 0);
+  const waterDefs = useMemo(() => new Set(catalog.filter((d) => d.placement === "water").map((d) => d.id)), [catalog]);
+  const waterItems = items.filter((i) => waterDefs.has(i.defId));
 
   const run = () => {
     const s = useStore.getState();
@@ -145,6 +147,13 @@ export function OptimizerPanel({ onClose }: Props) {
             </div>
           ))}
           {items.length > 0 && <div className="muted">Total : {totalRequested}</div>}
+          {waterItems.length > 0 && (
+            <div className="warn">
+              🌊 {waterItems.reduce((s, i) => s + i.qty, 0)} bâtiment(s) côtier(s) (
+              {waterItems.map((i) => defName.get(i.defId)).join(", ")}) — l'optimiseur ne place que
+              sur la terre ; pose-les à la main sur la mer.
+            </div>
+          )}
         </div>
 
         <h4>Objectifs (poids)</h4>
@@ -185,6 +194,12 @@ export function OptimizerPanel({ onClose }: Props) {
           <div className="opt-result">
             ✓ Placés {result.placed}/{result.requested} · routes {result.roads.length} · couverture{" "}
             {(result.breakdown.coverage * 100).toFixed(0)}%
+            {result.placed < result.requested && (
+              <div className="warn">
+                ⚠ {result.requested - result.placed} bâtiment(s) non placé(s) : grille trop petite ou
+                trop fragmentée. Agrandis l'île, réduis la quantité, ou augmente le budget temps.
+              </div>
+            )}
           </div>
         )}
 
