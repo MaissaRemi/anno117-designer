@@ -43,6 +43,10 @@ SERVICE_BUILDING_OVERRIDES = {
     # Maison de jeu CELTIC (besoin 37176, icône celtic) : le bâtiment 37177 réutilise
     # l'icône ROMAINE → le match d'icône tombait sur la version romaine déjà prise.
     "37176": "g37177",
+    # COLISÉE : le match d'icône tombait sur la phase de chantier « fondations »
+    # (36908, Monument, aucune portée). Le bâtiment FINAL est 3621 (MonumentEventBuilding,
+    # street 250, eau 50u Mandatory) — cf. GAME_MECHANICS.md §9.
+    "2783": "g3621",
 }
 
 

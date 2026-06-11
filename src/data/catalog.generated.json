@@ -6987,6 +6987,27 @@
     "streetRange": 38
   },
   {
+    "id": "g3621",
+    "guid": 3621,
+    "name": "Amphithéâtre",
+    "nameInternal": "Wonder Roman Colosseum",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 31,
+      "h": 27
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_colosseum.png",
+    "radius": {
+      "kind": "service",
+      "range": 250
+    },
+    "streetRange": 250
+  },
+  {
     "id": "g36912",
     "guid": 36912,
     "name": "Amphithéâtre : arène",

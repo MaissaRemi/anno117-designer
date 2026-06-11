@@ -326,7 +326,9 @@ export function planLattice(
     // terre pas encore couverte par CE type (élimine copies de coin / sur l'eau).
     // Copies bornées par construction ≈ 2 × aire/2r² (pas d'explosion de réparation).
     const distMap = new Int32Array(N).fill(N);
-    const minGain = Math.max(60, Math.floor(2 * r * r * 0.25));
+    // plafonné à 30 % de la terre : un type à portée >= taille de l'île (Colisée 250)
+    // aurait sinon un minGain inatteignable → jamais posé
+    const minGain = Math.max(60, Math.min(Math.floor(2 * r * r * 0.25), Math.floor(landCount * 0.3)));
     const maxCopies = Math.ceil(landCount / (2 * r * r)) * 2 + 2;
     for (let iter = 0; iter < maxCopies; iter++) {
       let bi = -1, bGain = minGain - 1;

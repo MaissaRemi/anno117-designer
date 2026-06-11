@@ -26,7 +26,7 @@ describe("planWater", () => {
     const buildings = [pb(BAINS, 60, 60), pb(FORUM, 90, 30), pb(CITERNE, 40, 100), pb(CITERNE, 85, 60)];
     const r = planWater(grid, buildings, [], lookup);
     expect(r.sources.length).toBeGreaterThanOrEqual(1);
-    expect(r.used).toBe(25 + 15); // citernes ne consomment pas le budget
+    expect(r.used).toBe(25 + 15 + 10 + 10); // citernes = 10u chacune (WaterConsumption template)
     for (const c of r.consumers) expect(c.connected).toBe(true);
     expect(r.aqueducts.length).toBeGreaterThan(0);
     expect(r.gaps).toEqual([]);
@@ -81,6 +81,21 @@ describe("planWater", () => {
 
   it("capacité exportée cohérente", () => {
     expect(WATER_CAPACITY).toBe(100);
+  });
+
+  it("Colisée (50u) + Bains + Forum = 90u sur une source ; citerne en plus force une 2e source", () => {
+    const grid = gridWithMountain(160, 160, [
+      { type: "mountain", x: 20, y: 20 },
+      { type: "mountain", x: 140, y: 140 },
+    ]);
+    const buildings = [
+      pb("g3621", 50, 50), // Colisée 31×27, 50u Mandatory
+      pb(BAINS, 90, 40), pb(FORUM, 40, 95), pb(CITERNE, 100, 100),
+    ];
+    const r = planWater(grid, buildings, [], lookup);
+    expect(r.used).toBe(50 + 25 + 15 + 10);
+    for (const c of r.consumers) expect(c.connected).toBe(true);
+    expect(r.sources.length).toBe(2); // 100u < 100 requis sur la 1re source seule
   });
 
   it("no-merge : 2 réseaux ne partagent jamais une case (pas de cumul d'eau)", () => {

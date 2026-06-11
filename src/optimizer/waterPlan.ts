@@ -18,14 +18,19 @@ export const WATER_CAPACITY = 100; // WaterVolumeSupply d'une source
 export const MAX_RUN = 140; // longueur max d'une conduite depuis sa source (pente approx.)
 
 const SOURCE_IDS = ["g19691", "g29524"]; // Source d'aqueduc (Roman / Celtic)
-const CISTERN_IDS = new Set(["g19753", "g29526"]); // Citerne (distributeur, raccordement requis)
+const CISTERN_IDS = new Set(["g19753", "g29526"]); // Citerne (distributeur)
 
-// Conso d'eau (AqueductConsumer Mandatory) — non extraite par build_catalog
-// (templates infra) : table par nom, à migrer vers le catalogue plus tard.
-const CONSUMPTION: { match: RegExp; amount: number }[] = [
-  { match: /^bains/i, amount: 25 },
-  { match: /^forum/i, amount: 15 },
-];
+// Conso d'eau [FICHIERS] (AqueductConsumer Mandatory + WaterConsumption template,
+// cf. GAME_MECHANICS.md §4) — par defId du catalogue.
+const CONSUMPTION_BY_ID: Record<string, number> = {
+  g3620: 25, // Bains (Roman) — Mandatory
+  g8062: 25, // Bains (romano-celte) — Mandatory
+  g3617: 15, // Forum — Mandatory
+  g3621: 50, // Colisée — Mandatory (obligatoire T4, unique)
+};
+// Citerne : distributeur qui CONSOMME 10u du budget (WaterConsumption=10, template
+// AqueductDistributor, non overridé) — une source ≈ 10 citernes max sans wonder.
+const CISTERN_CONSUMPTION = 10;
 
 export interface WaterConsumerReport {
   uid: string;
@@ -44,13 +49,12 @@ export interface WaterPlanResult {
 }
 
 const waterAmountOf = (def: BuildingDef): number => {
-  for (const c of CONSUMPTION) if (c.match.test(def.name)) return c.amount;
-  return 0;
+  if (CISTERN_IDS.has(def.id)) return CISTERN_CONSUMPTION;
+  return CONSUMPTION_BY_ID[def.id] ?? 0;
 };
 
-/** Le bâtiment a-t-il besoin du réseau d'eau ? (citerne ou consommateur nommé) */
-export const needsWater = (def: BuildingDef): boolean =>
-  CISTERN_IDS.has(def.id) || waterAmountOf(def) > 0;
+/** Le bâtiment a-t-il besoin du réseau d'eau ? (citerne ou consommateur connu) */
+export const needsWater = (def: BuildingDef): boolean => waterAmountOf(def) > 0;
 
 /**
  * Bloque les zones montagne (disque Chebyshev autour des slots) dans une COPIE du
@@ -324,7 +328,7 @@ export function planWater(
     }
     report.push({ uid: c.b.uid, name: c.def.name, amount: c.amount, connected: ok });
     if (!ok) {
-      gaps.push(`${c.def.name} non raccordé au réseau d'eau${c.amount ? "" : " (citerne inactive)"}`);
+      gaps.push(`${c.def.name} non raccordé au réseau d'eau (inactif)`);
     }
   }
 

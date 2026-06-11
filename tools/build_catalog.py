@@ -57,6 +57,9 @@ TEMPLATE_CATEGORY = {
     "CityInstitutionBuilding": "public",
     "CityInstitutionBuilding_Marsh": "public",
     "Monument": "public",
+    # Colisée FINAL (3621, street 250, eau 50u Mandatory) — les assets Monument
+    # ci-dessus ne sont que les PHASES de chantier (fondations/murs/arène)
+    "MonumentEventBuilding": "public",
     "Warehouse": "public",
     "Warehouse_Marsh": "public",
     "HarborWarehouse": "public",
