@@ -87,7 +87,8 @@ export function planIslandImport(
   // source d'aqueduc en a besoin) ; l'eau est planifiée sur la grille d'origine
   const planGrid = blockMountains(req.grid);
   onProgress?.(1, 3);
-  const candA = planLattice(planGrid, req.tierGuid, lookup, engineOpts);
+  // lattice route l'eau EN COURS de placement (corridors avant les maisons)
+  const candA = planLattice(planGrid, req.tierGuid, lookup, { ...engineOpts, water: true });
   onProgress?.(2, 3);
   const candB = planPacked(planGrid, req.tierGuid, lookup, engineOpts);
   const svcCount = (r: { servicesPlaced: Record<string, number> }) =>
@@ -95,10 +96,14 @@ export function planIslandImport(
   const dist = candA.houses > candB.houses || (candA.houses === candB.houses && svcCount(candA) <= svcCount(candB))
     ? candA : candB;
 
-  // réseau d'eau : sources sur slots montagne + conduites vers Bains/Forum/Citernes
+  // réseau d'eau : intégré au lattice ; sinon (gagnant packPlan, tiers sans
+  // consommateurs d'eau en pratique) routage post-hoc best-effort
   onProgress?.(3, 3);
-  const water = planWater(req.grid, dist.buildings, lookup);
-  const buildings = [...dist.buildings, ...water.sources];
+  const integratedWater = dist === candA ? candA.water : undefined;
+  const water = integratedWater ?? planWater(req.grid, dist.buildings, dist.roads, lookup);
+  const buildings = integratedWater
+    ? dist.buildings // sources déjà intégrées par le lattice
+    : [...dist.buildings, ...water.sources];
   const layout: Layout = { grid: req.grid, buildings, roads: dist.roads, fields: dist.fields, aqueducts: water.aqueducts };
   // couverture DISTANCE-RUE = la vraie mécanique du jeu (et ce que le district garantit)
   const coverage = analyzeCoverage(layout, lookup);

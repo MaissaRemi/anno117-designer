@@ -1,13 +1,17 @@
 import { uid } from "../model/factories";
-import type { AqueductTile, BuildingDef, GridShape, PlacedBuilding } from "../model/types";
+import type { AqueductTile, BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import type { DefLookup } from "../engine/rules";
 
 /**
  * Réseau d'eau (cf. GAME_MECHANICS.md §5) — approximations assumées :
  *  - pas d'élévation dans nos masques → la pente est approximée par une LONGUEUR
  *    MAX de conduite depuis la source (MAX_RUN) ;
- *  - la source se pose près d'un slot montagne (en jeu : slot dédié sur montagne) ;
- *  - les conduites traversent les routes (aqueduc surélevé) mais pas les bâtiments.
+ *  - la source se pose près d'un slot montagne (en jeu : slot dédié sur montagne).
+ *
+ * Règle route (confirmée en jeu) : une conduite peut être ADJACENTE à une route et
+ * peut la CROISER (l'arche enjambe), mais ne partage jamais une case avec elle en
+ * parallèle. Modèle tuiles : une conduite ne franchit une case route qu'EN LIGNE
+ * DROITE (entrée/sortie opposées) — jamais de terminus, virage ou jonction dessus.
  */
 
 export const WATER_CAPACITY = 100; // WaterVolumeSupply d'une source
@@ -84,10 +88,15 @@ const footprintOf = (b: PlacedBuilding, def: BuildingDef): FP => {
 export function planWater(
   grid: GridShape,
   buildings: PlacedBuilding[],
+  roads: RoadTile[],
   lookup: DefLookup,
 ): WaterPlanResult {
   const W = grid.w, H = grid.h, N = W * H;
   const gaps: string[] = [];
+  const roadAt = new Uint8Array(N);
+  for (const r of roads) {
+    if (r.x >= 0 && r.y >= 0 && r.x < W && r.y < H) roadAt[r.y * W + r.x] = 1;
+  }
 
   // consommateurs présents dans la disposition
   const consumers: { b: PlacedBuilding; def: BuildingDef; fp: FP; amount: number }[] = [];
@@ -183,10 +192,11 @@ export function planWater(
           if (!ok) continue;
           const pb: PlacedBuilding = { uid: uid("aqua"), defId: srcDef.id, x, y, rotation: rot, locked: false };
           for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) bldOcc[(y + j) * W + (x + i)] = 1;
-          // graines réseau : périmètre de la source à dist 0
+          // graines réseau : périmètre de la source à dist 0 (jamais sur une route :
+          // une conduite ne peut pas se brancher/terminer sur une case route)
           const srcIdx = sources.length;
           for (const c of perimeter({ x, y, w, h })) {
-            if (!pass(c)) continue;
+            if (!pass(c) || roadAt[c]) continue;
             if (netDist[c] < 0) { netDist[c] = 0; netSrc[c] = srcIdx; }
           }
           sources.push(pb);
@@ -220,49 +230,66 @@ export function planWater(
 
   // raccorde un consommateur au réseau (BFS depuis son périmètre vers la case réseau
   // la plus proche, en respectant budget + longueur). Renvoie true si raccordé.
+  // BFS à ÉTATS (case × direction d'entrée) : sur une case ROUTE, la conduite ne
+  // peut que CONTINUER TOUT DROIT (l'arche enjambe) — jamais virer/terminer/brancher.
+  // Cases libres : direction indifférente (état canonique d=0).
+  const DELTA = [1, -1, W, -W]; // 0:+x  1:-x  2:+y  3:-y
+  const stateOf = (cell: number, d: number): number => (roadAt[cell] ? cell * 4 + d : cell * 4);
   const connect = (c: { fp: FP; amount: number }): boolean => {
-    const starts = perimeter(c.fp).filter((p) => pass(p) || netDist[p] >= 0);
-    // déjà raccordé ? (périmètre touche le réseau)
-    const touching = starts.find((p) => netDist[p] >= 0);
+    // terminus jamais sur route : départs = périmètre libre hors-route
+    const starts = perimeter(c.fp).filter((p) => (pass(p) && !roadAt[p]) || netDist[p] >= 0);
+    // déjà raccordé ? (périmètre touche le réseau hors-route)
+    const touching = starts.find((p) => netDist[p] >= 0 && !roadAt[p]);
     if (touching !== undefined && srcUsed[netSrc[touching]] + c.amount <= WATER_CAPACITY) {
       srcUsed[netSrc[touching]] += c.amount;
       return true;
     }
-    // BFS : cases traversables = pass() ; arrivée = case réseau (budget + longueur OK)
-    const prev = new Int32Array(N).fill(-2);
-    let frontier: number[] = [];
+    const prev = new Int32Array(N * 4).fill(-2); // par état ; -1 = départ
+    let frontier: number[] = []; // états
     for (const p of starts) {
-      if (prev[p] !== -2) continue;
-      prev[p] = -1;
-      frontier.push(p);
+      if (roadAt[p]) continue;
+      const s = stateOf(p, 0);
+      if (prev[s] !== -2) continue;
+      prev[s] = -1;
+      frontier.push(s);
     }
     for (let depth = 0; depth < MAX_RUN && frontier.length; depth++) {
       const next: number[] = [];
-      for (const p of frontier) {
-        if (netDist[p] >= 0) {
-          // case réseau atteinte : budget + longueur depuis la source
+      for (const s of frontier) {
+        const p = (s / 4) | 0;
+        const din = s % 4;
+        // arrivée : case réseau HORS ROUTE (un croisement n'est pas branchable)
+        if (netDist[p] >= 0 && !roadAt[p] && prev[s] !== -1) {
           const sIdx = netSrc[p];
           if (srcUsed[sIdx] + c.amount > WATER_CAPACITY) continue; // source pleine — autre chemin ?
           if (netDist[p] + depth > MAX_RUN) continue; // trop loin de la source
           // tracer le chemin (nouvelles conduites), dist réseau croissante
-          let cur = prev[p], d = netDist[p];
+          let cur = prev[s], d = netDist[p];
           while (cur >= 0) {
             d++;
-            if (netDist[cur] < 0) {
-              netDist[cur] = d; netSrc[cur] = sIdx;
-              aqueducts.push({ x: cur % W, y: (cur / W) | 0, gen: true });
+            const cell = (cur / 4) | 0;
+            if (netDist[cell] < 0) {
+              netDist[cell] = d;
+              // case route croisée : marquée non-branchable via roadAt (netSrc quand même)
+              netSrc[cell] = sIdx;
+              aqueducts.push({ x: cell % W, y: (cell / W) | 0, gen: true });
             }
             cur = prev[cur];
           }
           srcUsed[sIdx] += c.amount;
           return true;
         }
+        // transitions : route → tout droit uniquement ; libre → 4 directions
+        const dirs = roadAt[p] ? [din] : [0, 1, 2, 3];
         const x = p % W, y = (p / W) | 0;
-        for (const nb of [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, y > 0 ? p - W : -1, y < H - 1 ? p + W : -1]) {
-          if (nb < 0 || prev[nb] !== -2) continue;
+        for (const nd of dirs) {
+          if ((nd === 0 && x >= W - 1) || (nd === 1 && x <= 0) || (nd === 2 && y >= H - 1) || (nd === 3 && y <= 0)) continue;
+          const nb = p + DELTA[nd];
           if (!pass(nb) && netDist[nb] < 0) continue; // bâtiment/mer (réseau existant OK)
-          prev[nb] = p;
-          next.push(nb);
+          const ns = stateOf(nb, nd);
+          if (prev[ns] !== -2) continue;
+          prev[ns] = s;
+          next.push(ns);
         }
       }
       frontier = next;

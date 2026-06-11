@@ -2,6 +2,7 @@ import { uid } from "../model/factories";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import { economy } from "../economy/economy";
 import type { DefLookup } from "../engine/rules";
+import { needsWater, planWater, type WaterPlanResult } from "./waterPlan";
 
 // Portée de PLANIFICATION = streetRange (distance le long des rues, cf.
 // GAME_MECHANICS.md §1). radius.range en repli.
@@ -10,6 +11,10 @@ const rangeOf = (d: BuildingDef): number => d.streetRange || d.radius?.range || 
 export interface LatticeOpts {
   coverageFloor?: number; // 0..1, défaut 1
   serviceIds?: string[]; // restreint les services (mode seuils)
+  /** Router le réseau d'eau ENTRE services et maisons (corridors réservés : les
+   *  conduites ne partagent pas les cases route → après les maisons il ne reste
+   *  plus de passage). Défaut false. */
+  water?: boolean;
   debug?: (msg: string) => void; // instrumentation (tests/diag)
 }
 
@@ -19,6 +24,7 @@ export interface LatticeResult {
   fields: FieldTile[];
   houses: number;
   servicesPlaced: Record<string, number>;
+  water?: WaterPlanResult; // présent si opts.water
 }
 
 /**
@@ -74,10 +80,14 @@ export function planLattice(
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
   const STEPH = 2 * rh + 1;
   const STEPV = Math.max(rw + 2, Math.min(2 * rw + 1, 11));
+  // « prises d'eau » : cases réservées SANS route près des consommateurs d'eau —
+  // une conduite ne peut pas terminer sur une route, donc un anneau complet rend
+  // le bâtiment irraccordable (cause du 0/20 raccordés)
+  const waterGate = new Uint8Array(N);
   const layRoad = (x: number, y: number) => {
     if (x < 0 || y < 0 || x >= W || y >= H) return;
     const i = y * W + x;
-    if (occ[i] || roadAt[i]) return;
+    if (occ[i] || roadAt[i] || waterGate[i]) return;
     roadAt[i] = 1;
   };
   for (let y = y0; y <= y1; y += STEPH) for (let x = x0; x <= x1; x++) layRoad(x, y);
@@ -136,12 +146,26 @@ export function planLattice(
       if (px < 0 || py < 0 || px >= W || py >= H) return;
       const i = py * W + px;
       if (roadAt[i]) { ring.push(i); return; }
-      if (occ[i] || !grid.usable[i]) return;
+      if (occ[i] || !grid.usable[i] || waterGate[i]) return; // prise d'eau : pas de route
       roadAt[i] = 1; ring.push(i);
     };
     for (let i = -1; i <= w; i++) { tryLay(x + i, y - 1); tryLay(x + i, y + h); }
     for (let j = 0; j < h; j++) { tryLay(x - 1, y + j); tryLay(x + w, y + j); }
     return ring;
+  };
+  // réserve 2 cases libres SANS route au milieu d'un côté (prise d'eau pour la
+  // conduite). Essaie bas → haut → droite → gauche ; renvoie true si réservé.
+  const reserveWaterGate = (x: number, y: number, w: number, h: number): boolean => {
+    const mx = x + (w >> 1), my = y + (h >> 1);
+    const trySide = (cells: [number, number][]): boolean => {
+      const ok = cells.filter(([px, py]) => px >= 0 && py >= 0 && px < W && py < H
+        && grid.usable[py * W + px] && !occ[py * W + px] && !roadAt[py * W + px]);
+      if (!ok.length) return false;
+      for (const [px, py] of ok) waterGate[py * W + px] = 1;
+      return true;
+    };
+    return trySide([[mx, y + h], [mx + 1, y + h]]) || trySide([[mx, y - 1], [mx + 1, y - 1]])
+      || trySide([[x + w, my], [x + w, my + 1]]) || trySide([[x - 1, my], [x - 1, my + 1]]);
   };
   const connectRing = (ring: number[]) => {
     if (!ring.length) return;
@@ -238,6 +262,8 @@ export function planLattice(
     arr.push({ x, y, w, h });
     placements.set(def.id, arr);
     markAdj(x, y, w, h);
+    // consommateur d'eau : réserver la prise AVANT l'anneau (sinon il l'enferme)
+    if (needsWater(def)) reserveWaterGate(x, y, w, h);
     const ring = layRing(x, y, w, h);
     if (ring.length) connectRing(ring);
   };
@@ -497,6 +523,31 @@ export function planLattice(
     refreshType(worst);
   }
 
+  // --- EAU (avant les maisons !) : services posés = consommateurs connus ; les
+  // conduites ne partagent pas les cases route → si on posait les maisons d'abord,
+  // les poches seraient pleines et il ne resterait AUCUN passage. Routées ici, les
+  // maisons contournent les corridors (cases conduite occupées).
+  let water: WaterPlanResult | undefined;
+  if (opts.water) {
+    const roadsNow: RoadTile[] = [];
+    for (let i = 0; i < N; i++) if (roadAt[i]) roadsNow.push({ x: i % W, y: (i / W) | 0 });
+    water = planWater(grid, buildings, roadsNow, lookup);
+    for (const s of water.sources) {
+      const d = lookup(s.defId)!;
+      const w = s.rotation === 90 || s.rotation === 270 ? d.size.h : d.size.w;
+      const h = s.rotation === 90 || s.rotation === 270 ? d.size.w : d.size.h;
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+        const c = (s.y + j) * W + (s.x + i);
+        if (c >= 0 && c < N) { occ[c] = 1; if (roadAt[c]) roadAt[c] = 0; }
+      }
+      buildings.push(s);
+    }
+    for (const a of water.aqueducts) {
+      const c = a.y * W + a.x;
+      if (!roadAt[c]) occ[c] = 1; // croisement : la route reste, la conduite enjambe
+    }
+  }
+
   // refresh FINAL de tous les types : les stamps tardifs ont pu invalider les BFS
   // précédents (routes écrasées) — le filtre maisons doit voir l'état exact.
   rebuildDemand();
@@ -571,5 +622,5 @@ export function planLattice(
   const roads: RoadTile[] = [];
   for (let i = 0; i < N; i++) if (keep[i]) roads.push({ x: i % W, y: (i / W) | 0 });
 
-  return { buildings, roads, fields: [], houses, servicesPlaced };
+  return { buildings, roads, fields: [], houses, servicesPlaced, water };
 }

@@ -93,6 +93,13 @@ Système (fichiers + web) :
 - **Citerne** (« Aqueduct Roman Distribution » 19753, celtic 29526) : `AqueductDistributor`,
   agit comme un SERVICE PUBLIC : `EffectSource` street **36**, effet 99330 scope StreetDistance.
   Entretien 26/min. Plusieurs citernes par source possibles.
+- **Conduites vs routes (confirmé par l'utilisateur en jeu, 2026-06-11)** : une conduite peut
+  être ADJACENTE à une route et peut la CROISER (l'arche enjambe), mais ne partage JAMAIS une
+  case avec une route. Modèle tuiles : franchissement de case route EN LIGNE DROITE uniquement
+  (entrée/sortie opposées), pas de terminus/virage/jonction sur route. Conséquence planner :
+  un bâtiment au périmètre 100 % route est IRRACCORDABLE → laisser une « prise d'eau »
+  (cases sans route) sur les consommateurs d'eau, et router les conduites AVANT les maisons
+  (sinon plus aucun passage dans les poches pleines).
 - **Citerne = BESOIN public** (need 68747 « Public Cistern », w=4, Health+3 FireSafety+3) exigé par
   les tiers **1497 Equites et 1498 Patriciens** (+ équivalent celtic 80116-zone). Dans notre
   `economy.generated.json` le besoin existe mais `building: None` → c'est le « Service sans
