@@ -59,6 +59,7 @@ export function IslandPlanner({ onClose }: Props) {
       buildings: result.buildings,
       roads: result.roads,
       fields: result.fields,
+      aqueducts: result.aqueducts,
       placed: result.buildings.length,
       requested: result.buildings.length,
       placedByDef: {},
@@ -138,6 +139,17 @@ export function IslandPlanner({ onClose }: Props) {
               </span>{" "}
               <span className="muted">(taxe {result.money.gross.toLocaleString("fr")} − entretien {result.money.upkeep.toLocaleString("fr")})</span>
             </div>
+
+            {result.water && (
+              <div style={{ marginBottom: 6 }}>
+                💧 Eau : {result.water.sources} source{result.water.sources > 1 ? "s" : ""} ·{" "}
+                {result.water.used}/{result.water.capacity} u ·{" "}
+                {result.water.consumers.filter((c) => c.connected).length}/{result.water.consumers.length} raccordés
+                {result.aqueducts.length > 0 && (
+                  <span className="muted"> · {result.aqueducts.length} cases de conduite</span>
+                )}
+              </div>
+            )}
 
             <b>📦 À acheminer ({result.importGoods.length} biens)</b>
             <ul className="bilan">

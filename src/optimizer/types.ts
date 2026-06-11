@@ -1,4 +1,4 @@
-import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
+import type { AqueductTile, BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 
 /** Objectif pondéré (sliders UI, 0..1 chacun). */
 export interface Weights {
@@ -29,6 +29,7 @@ export interface OptimizeResult {
   buildings: PlacedBuilding[]; // bâtiments placés par l'optimiseur (hors verrouillés)
   roads: RoadTile[]; // routes générées (hors existantes)
   fields: FieldTile[]; // champs générés
+  aqueducts?: AqueductTile[]; // conduites d'eau générées (plan d'île)
   placed: number; // nb de bâtiments placés
   requested: number; // nb total demandé
   placedByDef: Record<string, number>;

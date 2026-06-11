@@ -1,10 +1,11 @@
 import { makeLookup } from "../engine/rules";
-import type { BuildingDef, FieldTile, GridShape, Layout, PlacedBuilding, RoadTile } from "../model/types";
+import type { AqueductTile, BuildingDef, FieldTile, GridShape, Layout, PlacedBuilding, RoadTile } from "../model/types";
 import { economy } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { planLattice } from "./planLattice";
 import { planPacked } from "./packPlan";
+import { blockMountains, planWater, type WaterConsumerReport } from "./waterPlan";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -29,9 +30,16 @@ export interface IslandPlanResult {
   cap: number;
   houses: number;
   residents: number;
-  buildings: PlacedBuilding[]; // résidences + services
+  buildings: PlacedBuilding[]; // résidences + services + sources d'eau
   roads: RoadTile[];
   fields: FieldTile[];
+  aqueducts: AqueductTile[]; // conduites d'eau (réseau source → consommateurs)
+  water: {
+    sources: number;
+    capacity: number;
+    used: number;
+    consumers: WaterConsumerReport[];
+  } | null; // null = aucun consommateur d'eau dans le plan
   importGoods: ImportGood[];
   coverage: CoverageReport;
   coverageMin: number; // min % parmi les services à rayon (métrique de faisabilité)
@@ -75,15 +83,23 @@ export function planIslandImport(
     coverageFloor: req.coverageFloor ?? 1,
     serviceIds: needMode === "thresholds" ? retainedServices : undefined,
   };
-  onProgress?.(1, 2);
-  const candA = planLattice(req.grid, req.tierGuid, lookup, engineOpts);
-  onProgress?.(2, 2);
-  const candB = planPacked(req.grid, req.tierGuid, lookup, engineOpts);
+  // moteurs sur grille SANS les zones montagne (non constructibles en vrai, et la
+  // source d'aqueduc en a besoin) ; l'eau est planifiée sur la grille d'origine
+  const planGrid = blockMountains(req.grid);
+  onProgress?.(1, 3);
+  const candA = planLattice(planGrid, req.tierGuid, lookup, engineOpts);
+  onProgress?.(2, 3);
+  const candB = planPacked(planGrid, req.tierGuid, lookup, engineOpts);
   const svcCount = (r: { servicesPlaced: Record<string, number> }) =>
     Object.values(r.servicesPlaced).reduce((a, b) => a + b, 0);
   const dist = candA.houses > candB.houses || (candA.houses === candB.houses && svcCount(candA) <= svcCount(candB))
     ? candA : candB;
-  const layout: Layout = { grid: req.grid, buildings: dist.buildings, roads: dist.roads, fields: dist.fields };
+
+  // réseau d'eau : sources sur slots montagne + conduites vers Bains/Forum/Citernes
+  onProgress?.(3, 3);
+  const water = planWater(req.grid, dist.buildings, lookup);
+  const buildings = [...dist.buildings, ...water.sources];
+  const layout: Layout = { grid: req.grid, buildings, roads: dist.roads, fields: dist.fields, aqueducts: water.aqueducts };
   // couverture DISTANCE-RUE = la vraie mécanique du jeu (et ce que le district garantit)
   const coverage = analyzeCoverage(layout, lookup);
   // en mode seuils, seuls les services RETENUS comptent pour la faisabilité
@@ -124,7 +140,9 @@ export function planIslandImport(
   for (const s of analyzable) {
     if (s.pct < 100) gaps.push(`${s.name} : ${s.pct}% des maisons couvertes (distance-rue)`);
   }
+  gaps.push(...water.gaps);
 
+  const hasWaterConsumers = water.consumers.length > 0;
   return {
     mode: "import",
     tierGuid: req.tierGuid,
@@ -135,6 +153,10 @@ export function planIslandImport(
     buildings: layout.buildings,
     roads: layout.roads,
     fields: layout.fields,
+    aqueducts: water.aqueducts,
+    water: hasWaterConsumers
+      ? { sources: water.sources.length, capacity: water.capacity, used: water.used, consumers: water.consumers }
+      : null,
     importGoods,
     coverage,
     coverageMin,

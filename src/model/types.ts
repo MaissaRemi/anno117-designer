@@ -71,6 +71,13 @@ export interface RoadTile {
   gen?: boolean; // true = route générée par l'optimiseur (remplaçable au re-calcul)
 }
 
+/** Tuile de conduite d'aqueduc (réseau d'eau, distinct des routes). */
+export interface AqueductTile {
+  x: number;
+  y: number;
+  gen?: boolean; // true = générée par le planificateur (remplaçable au re-calcul)
+}
+
 /** Slot de ressource du terrain (montagne/rivière/marais) — extrait du jeu. */
 export interface GridSlot {
   type: string; // "mountain" | "river" | "marsh"
@@ -93,6 +100,7 @@ export interface Layout {
   buildings: PlacedBuilding[];
   fields: FieldTile[];
   roads: RoadTile[];
+  aqueducts?: AqueductTile[]; // optionnel (compat persistance) : conduites d'eau
 }
 
 /** Catalogue persistant des définitions de bâtiments. */

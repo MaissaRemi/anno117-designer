@@ -284,6 +284,9 @@ export const useStore = create<State>((set, get) => {
         l.buildings = [...lockedBuildings, ...result.buildings];
         l.fields = [...lockedFields, ...result.fields];
         l.roads = Array.from(roadSet.values());
+        // aqueducs : même politique que les routes (les dessinés à la main restent)
+        const kept = (l.aqueducts ?? []).filter((a) => !a.gen);
+        l.aqueducts = [...kept, ...(result.aqueducts ?? []).map((a) => ({ ...a, gen: true }))];
       }),
 
     addBuildings: (buildings) =>

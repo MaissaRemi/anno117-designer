@@ -157,6 +157,14 @@ function drawRoads(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
     const [sx, sy] = gridToScreen(v, r.x, r.y);
     ctx.fillRect(sx + 1, sy + 1, v.cell - 2, v.cell - 2);
   }
+  // conduites d'aqueduc : par-dessus les routes (aqueduc surélevé), teinte eau
+  for (const a of o.layout.aqueducts ?? []) {
+    const [sx, sy] = gridToScreen(v, a.x, a.y);
+    ctx.fillStyle = "rgba(77,208,225,0.8)";
+    ctx.fillRect(sx + 1, sy + 1, v.cell - 2, v.cell - 2);
+    ctx.strokeStyle = "rgba(38,166,184,0.9)";
+    ctx.strokeRect(sx + 1.5, sy + 1.5, v.cell - 3, v.cell - 3);
+  }
 }
 
 function drawFields(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
