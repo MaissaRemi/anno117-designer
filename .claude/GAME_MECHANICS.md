@@ -93,6 +93,11 @@ Système (fichiers + web) :
 - **Citerne** (« Aqueduct Roman Distribution » 19753, celtic 29526) : `AqueductDistributor`,
   agit comme un SERVICE PUBLIC : `EffectSource` street **36**, effet 99330 scope StreetDistance.
   Entretien 26/min. Plusieurs citernes par source possibles.
+- **No-merge (confirmé par l'utilisateur en jeu, 2026-06-11)** : on ne peut PAS raccorder deux
+  réseaux d'aqueduc pour cumuler l'eau. Chaque réseau = exactement une source. Côté planner :
+  une conduite neuve ne traverse jamais une case du réseau existant (cul-de-sac), elle ne peut
+  que s'y BRANCHER (jonction sur SA source) — deux réseaux ne partagent jamais une case.
+  Question ouverte (H4.20) : une conduite peut-elle en CROISER une autre perpendiculairement ?
 - **Conduites vs routes (confirmé par l'utilisateur en jeu, 2026-06-11)** : une conduite peut
   être ADJACENTE à une route et peut la CROISER (l'arche enjambe), mais ne partage JAMAIS une
   case avec une route. Modèle tuiles : franchissement de case route EN LIGNE DROITE uniquement

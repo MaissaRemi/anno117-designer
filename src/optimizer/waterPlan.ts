@@ -247,7 +247,7 @@ export function planWater(
     const prev = new Int32Array(N * 4).fill(-2); // par état ; -1 = départ
     let frontier: number[] = []; // états
     for (const p of starts) {
-      if (roadAt[p]) continue;
+      if (roadAt[p] || netDist[p] >= 0) continue; // jamais partir DU réseau (no-merge)
       const s = stateOf(p, 0);
       if (prev[s] !== -2) continue;
       prev[s] = -1;
@@ -279,13 +279,20 @@ export function planWater(
           srcUsed[sIdx] += c.amount;
           return true;
         }
+        // NO-MERGE : une case réseau qui n'a pas pu servir de jonction (budget
+        // plein, trop loin, croisement-route) est un CUL-DE-SAC — on ne la
+        // traverse jamais (sinon le chemin fusionnerait physiquement 2 réseaux).
+        if (netDist[p] >= 0) continue;
         // transitions : route → tout droit uniquement ; libre → 4 directions
         const dirs = roadAt[p] ? [din] : [0, 1, 2, 3];
         const x = p % W, y = (p / W) | 0;
         for (const nd of dirs) {
           if ((nd === 0 && x >= W - 1) || (nd === 1 && x <= 0) || (nd === 2 && y >= H - 1) || (nd === 3 && y <= 0)) continue;
           const nb = p + DELTA[nd];
-          if (!pass(nb) && netDist[nb] < 0) continue; // bâtiment/mer (réseau existant OK)
+          // NO-MERGE (règle jeu) : 2 réseaux ne se raccordent jamais pour cumuler
+          // l'eau → une conduite neuve ne TRAVERSE jamais le réseau existant. Une
+          // case réseau ne peut être que l'ARRIVÉE (jonction sur SA source).
+          if (!pass(nb)) continue;
           const ns = stateOf(nb, nd);
           if (prev[ns] !== -2) continue;
           prev[ns] = s;

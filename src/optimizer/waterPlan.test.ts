@@ -83,6 +83,57 @@ describe("planWater", () => {
     expect(WATER_CAPACITY).toBe(100);
   });
 
+  it("no-merge : 2 réseaux ne partagent jamais une case (pas de cumul d'eau)", () => {
+    // 2 sources et 8 Bains entremêlés (200u total > 100/source) → les 2 réseaux
+    // doivent rester physiquement disjoints
+    const grid = gridWithMountain(200, 200, [
+      { type: "mountain", x: 30, y: 100 },
+      { type: "mountain", x: 170, y: 100 },
+    ]);
+    const buildings = [
+      pb(BAINS, 60, 40), pb(BAINS, 90, 40), pb(BAINS, 120, 40), pb(BAINS, 150, 40),
+      pb(BAINS, 60, 130), pb(BAINS, 90, 130), pb(BAINS, 120, 130), pb(BAINS, 150, 130),
+    ];
+    const r = planWater(grid, buildings, [], lookup);
+    expect(r.sources.length).toBe(2);
+    // best-effort : ≥ 6 Bains raccordés (les conduites d'un réseau sont des
+    // obstacles pour l'autre — conséquence directe du no-merge)
+    expect(r.used).toBeGreaterThanOrEqual(150);
+    // chaque case de conduite appartient à UN réseau : reconstituer les réseaux par
+    // flood-fill 4-adj des tuiles (+sources) → chaque composante touche 1 SEULE source
+    const tiles = new Set(r.aqueducts.map((a) => `${a.x},${a.y}`));
+    const srcCells = r.sources.map((s) => {
+      const d = lookup(s.defId)!;
+      const w = s.rotation === 90 ? d.size.h : d.size.w, h = s.rotation === 90 ? d.size.w : d.size.h;
+      const set = new Set<string>();
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) set.add(`${s.x + i},${s.y + j}`);
+      return set;
+    });
+    const seen = new Set<string>();
+    for (const start of tiles) {
+      if (seen.has(start)) continue;
+      // flood-fill d'une composante de conduites
+      const comp: string[] = [start];
+      seen.add(start);
+      for (let i = 0; i < comp.length; i++) {
+        const [x, y] = comp[i].split(",").map(Number);
+        for (const k of [`${x - 1},${y}`, `${x + 1},${y}`, `${x},${y - 1}`, `${x},${y + 1}`]) {
+          if (tiles.has(k) && !seen.has(k)) { seen.add(k); comp.push(k); }
+        }
+      }
+      // sources adjacentes à cette composante
+      let touched = 0;
+      for (const si of srcCells) {
+        const adj = comp.some((c) => {
+          const [x, y] = c.split(",").map(Number);
+          return si.has(`${x - 1},${y}`) || si.has(`${x + 1},${y}`) || si.has(`${x},${y - 1}`) || si.has(`${x},${y + 1}`);
+        });
+        if (adj) touched++;
+      }
+      expect(touched).toBeLessThanOrEqual(1); // jamais 2 sources sur la même composante
+    }
+  });
+
   it("routes : croisement en ligne droite uniquement, jamais le long, terminus hors route", () => {
     const grid = gridWithMountain(140, 140, [{ type: "mountain", x: 20, y: 70 }]);
     // mur de routes vertical x=60 séparant source (gauche) et Bains (droite),
