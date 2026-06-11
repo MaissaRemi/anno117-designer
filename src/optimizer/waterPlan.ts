@@ -16,6 +16,11 @@ import type { DefLookup } from "../engine/rules";
 
 export const WATER_CAPACITY = 100; // WaterVolumeSupply d'une source
 export const MAX_RUN = 140; // longueur max d'une conduite depuis sa source (pente approx.)
+/** Marge de MONTÉE tolérée (en unités de hauteur quantifiée, 1 q = 16 unités jeu) :
+ *  l'eau ne coule pas vers plus haut que sa source — une conduite ne traverse pas
+ *  une case plus haute que (source la plus haute + marge). Constante à calibrer
+ *  in-game (test #1 de GAME_MECHANICS §13) ; v1 qualitative. */
+export const CLIMB_MARGIN_Q = 2;
 
 const SOURCE_IDS = ["g19691", "g29524"]; // Source d'aqueduc (Roman / Celtic)
 const CISTERN_IDS = new Set(["g19753", "g29526"]); // Citerne (distributeur)
@@ -94,6 +99,7 @@ export function planWater(
   buildings: PlacedBuilding[],
   roads: RoadTile[],
   lookup: DefLookup,
+  heights?: Int8Array | null,
 ): WaterPlanResult {
   const W = grid.w, H = grid.h, N = W * H;
   const gaps: string[] = [];
@@ -152,6 +158,10 @@ export function planWater(
   }
   // case franchissable par une conduite (mer interdite, bâtiments interdits)
   const pass = (c: number): boolean => !bldOcc[c] && (grid.usable[c] || mzone[c] === 1);
+  // « l'eau ne monte pas » : une conduite ne traverse pas une case plus haute que la
+  // source la plus haute + marge (approximation de la pente, cf. CLIMB_MARGIN_Q)
+  let maxSrcQ = -128;
+  const heightOK = (c: number): boolean => !heights || heights[c] <= maxSrcQ + CLIMB_MARGIN_Q;
 
   // --- réseau : dist depuis la source par case de conduite, -1 = pas de réseau ---
   const netDist = new Int32Array(N).fill(-1);
@@ -205,6 +215,12 @@ export function planWater(
           }
           sources.push(pb);
           srcUsed.push(0);
+          if (heights) {
+            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+              const q = heights[(y + j) * W + (x + i)];
+              if (q > maxSrcQ) maxSrcQ = q;
+            }
+          }
           return pb;
         }
       }
@@ -296,7 +312,7 @@ export function planWater(
           // NO-MERGE (règle jeu) : 2 réseaux ne se raccordent jamais pour cumuler
           // l'eau → une conduite neuve ne TRAVERSE jamais le réseau existant. Une
           // case réseau ne peut être que l'ARRIVÉE (jonction sur SA source).
-          if (!pass(nb)) continue;
+          if (!pass(nb) || !heightOK(nb)) continue;
           const ns = stateOf(nb, nd);
           if (prev[ns] !== -2) continue;
           prev[ns] = s;

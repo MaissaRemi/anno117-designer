@@ -15,6 +15,8 @@ export interface LatticeOpts {
    *  conduites ne partagent pas les cases route → après les maisons il ne reste
    *  plus de passage). Défaut false. */
   water?: boolean;
+  /** Hauteurs quantifiées (q = h/16) — pente des aqueducs (waterPlan). */
+  heights?: Int8Array | null;
   debug?: (msg: string) => void; // instrumentation (tests/diag)
 }
 
@@ -533,7 +535,7 @@ export function planLattice(
   if (opts.water) {
     const roadsNow: RoadTile[] = [];
     for (let i = 0; i < N; i++) if (roadAt[i]) roadsNow.push({ x: i % W, y: (i / W) | 0 });
-    water = planWater(grid, buildings, roadsNow, lookup);
+    water = planWater(grid, buildings, roadsNow, lookup, opts.heights);
     for (const s of water.sources) {
       const d = lookup(s.defId)!;
       const w = s.rotation === 90 || s.rotation === 270 ? d.size.h : d.size.w;

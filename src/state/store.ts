@@ -261,7 +261,7 @@ export const useStore = create<State>((set, get) => {
       const slots = slotsOf(id).map((s) => ({ type: s.type, x: Math.round(s.x), y: Math.round(s.y) }));
       set({
         layout: {
-          grid: { w: isl.size.w, h: isl.size.h, usable, water, rivers, slots: slots.length ? slots : undefined },
+          grid: { w: isl.size.w, h: isl.size.h, usable, water, rivers, slots: slots.length ? slots : undefined, islandId: id },
           buildings: [], fields: [], roads: [],
         },
         past: [],

@@ -15,6 +15,9 @@ export interface IslandPlanRequest {
   /** "all" = tous les besoins (max bonus/maison) ; "thresholds" = sous-ensemble le
    *  moins cher atteignant les seuils d'upgrade (moins de services → plus de maisons). */
   needMode?: "all" | "thresholds";
+  /** Hauteurs quantifiées de l'île (q = h/16, mer < 0) — pente des aqueducs.
+   *  Décodées par le worker depuis terrain.generated (grid.islandId). */
+  heights?: Int8Array;
 }
 
 export interface ImportGood {
@@ -88,7 +91,7 @@ export function planIslandImport(
   const planGrid = blockMountains(req.grid);
   onProgress?.(1, 3);
   // lattice route l'eau EN COURS de placement (corridors avant les maisons)
-  const candA = planLattice(planGrid, req.tierGuid, lookup, { ...engineOpts, water: true });
+  const candA = planLattice(planGrid, req.tierGuid, lookup, { ...engineOpts, water: true, heights: req.heights });
   onProgress?.(2, 3);
   const candB = planPacked(planGrid, req.tierGuid, lookup, engineOpts);
   const svcCount = (r: { servicesPlaced: Record<string, number> }) =>
@@ -100,7 +103,7 @@ export function planIslandImport(
   // consommateurs d'eau en pratique) routage post-hoc best-effort
   onProgress?.(3, 3);
   const integratedWater = dist === candA ? candA.water : undefined;
-  const water = integratedWater ?? planWater(req.grid, dist.buildings, dist.roads, lookup);
+  const water = integratedWater ?? planWater(req.grid, dist.buildings, dist.roads, lookup, req.heights);
   const buildings = integratedWater
     ? dist.buildings // sources déjà intégrées par le lattice
     : [...dist.buildings, ...water.sources];

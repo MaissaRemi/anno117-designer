@@ -93,6 +93,7 @@ export interface GridShape {
   water?: boolean[]; // optionnel : cases EAU/mer (pour bâtiments côtiers). Îles surtout.
   rivers?: boolean[]; // optionnel : cases RIVIÈRE (argile, slots river)
   slots?: GridSlot[]; // optionnel : slots de ressource (mines, argile, source d'aqueduc)
+  islandId?: string; // optionnel : île d'origine (accès aux données terrain — hauteurs)
 }
 
 export interface Layout {

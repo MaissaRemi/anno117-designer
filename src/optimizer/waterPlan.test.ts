@@ -83,6 +83,24 @@ describe("planWater", () => {
     expect(WATER_CAPACITY).toBe(100);
   });
 
+  it("hauteurs : l'eau ne monte pas — une crête plus haute que la source bloque la conduite", () => {
+    const W = 100;
+    const grid = gridWithMountain(W, W, [{ type: "mountain", x: 15, y: 50 }]);
+    // source en plaine (q=10 partout), crête verticale q=50 en x=50..53, Bains derrière
+    const heights = new Int8Array(W * W).fill(10);
+    for (let y = 0; y < W; y++) for (let x = 50; x <= 53; x++) heights[y * W + x] = 50;
+    const blocked = planWater(grid, [pb(BAINS, 70, 40)], [], lookup, heights);
+    expect(blocked.consumers[0].connected).toBe(false);
+    // même config SANS hauteurs : passe
+    const flat = planWater(grid, [pb(BAINS, 70, 40)], [], lookup, null);
+    expect(flat.consumers[0].connected).toBe(true);
+    // source HAUTE (q=60 autour du slot) : la crête (50) devient franchissable
+    const high = new Int8Array(heights);
+    for (let y = 40; y < 60; y++) for (let x = 5; x < 25; x++) high[y * W + x] = 60;
+    const ok = planWater(grid, [pb(BAINS, 70, 40)], [], lookup, high);
+    expect(ok.consumers[0].connected).toBe(true);
+  });
+
   it("Colisée (50u) + Bains + Forum = 90u sur une source ; citerne en plus force une 2e source", () => {
     const grid = gridWithMountain(160, 160, [
       { type: "mountain", x: 20, y: 20 },
