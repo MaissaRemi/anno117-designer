@@ -3,7 +3,8 @@ import type { BuildingDef, FieldTile, GridShape, Layout, PlacedBuilding, RoadTil
 import { economy } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
-import { planDistricts } from "./districtPlan";
+import { planLattice } from "./planLattice";
+import { planPacked } from "./packPlan";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -67,13 +68,21 @@ export function planIslandImport(
   const cap = needMode === "thresholds" ? profile.cap : tier.capacityDefault || 10;
   const retainedServices = [...new Set(profile.services.map((s) => s.building).filter((b): b is string => !!b))];
 
-  // Disposition par DISTRICTS : couverture DISTANCE-RUE garantie par construction
-  // (une maison n'est posée que si chaque type de service l'atteint par la route).
-  onProgress?.(1, 1);
-  const dist = planDistricts(req.grid, req.tierGuid, lookup, {
+  // PORTFOLIO de moteurs (cf. session refonte placement) : lattice co-localisé
+  // (gagne sur tiers riches en services, 11 types T4) vs houses-first min-cover
+  // (gagne sur tiers à peu de types). On garde le meilleur résultat réel.
+  const engineOpts = {
     coverageFloor: req.coverageFloor ?? 1,
     serviceIds: needMode === "thresholds" ? retainedServices : undefined,
-  });
+  };
+  onProgress?.(1, 2);
+  const candA = planLattice(req.grid, req.tierGuid, lookup, engineOpts);
+  onProgress?.(2, 2);
+  const candB = planPacked(req.grid, req.tierGuid, lookup, engineOpts);
+  const svcCount = (r: { servicesPlaced: Record<string, number> }) =>
+    Object.values(r.servicesPlaced).reduce((a, b) => a + b, 0);
+  const dist = candA.houses > candB.houses || (candA.houses === candB.houses && svcCount(candA) <= svcCount(candB))
+    ? candA : candB;
   const layout: Layout = { grid: req.grid, buildings: dist.buildings, roads: dist.roads, fields: dist.fields };
   // couverture DISTANCE-RUE = la vraie mécanique du jeu (et ce que le district garantit)
   const coverage = analyzeCoverage(layout, lookup);

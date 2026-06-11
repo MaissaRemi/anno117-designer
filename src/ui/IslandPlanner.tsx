@@ -27,7 +27,9 @@ export function IslandPlanner({ onClose }: Props) {
   const [tierGuid, setTierGuid] = useState(targetTiers[targetTiers.length - 1]?.guid ?? "");
   const [mode, setMode] = useState<"import" | "local">("import");
   const [needMode, setNeedMode] = useState<"all" | "thresholds">("all");
-  const [floor, setFloor] = useState(100);
+  // 80 % par défaut : sur les vrais contours d'île, exiger 100 % des 11 services
+  // T4 partout coûte ~3× moins de maisons (le rim n'a pas la place pour les wonders)
+  const [floor, setFloor] = useState(80);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ step: number; total: number } | null>(null);
   const [result, setResult] = useState<IslandPlanResult | null>(null);
