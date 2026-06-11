@@ -10,11 +10,16 @@ import { blockMountains, planWater, type WaterConsumerReport } from "./waterPlan
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
   grid: GridShape;
-  tierGuid: string; // tier-cible (ex Patriciens)
+  /** Archetype d'île : population (défaut, mode import) ou production (export). */
+  mode?: "population" | "production";
+  tierGuid: string; // tier-cible (ex Patriciens) — mode population
   coverageFloor?: number; // 0..1, défaut 1 (seuil pour le flag feasible)
   /** "all" = tous les besoins (max bonus/maison) ; "thresholds" = sous-ensemble le
    *  moins cher atteignant les seuils d'upgrade (moins de services → plus de maisons). */
   needMode?: "all" | "thresholds";
+  /** Mode production : bien cible (GUID) + débit u/min. */
+  productionGood?: string;
+  productionRate?: number;
   /** Hauteurs quantifiées de l'île (q = h/16, mer < 0) — pente des aqueducs.
    *  Décodées par le worker depuis terrain.generated (grid.islandId). */
   heights?: Int8Array;

@@ -213,13 +213,17 @@ def collect_buildings(texts, template_effects):
                 outs.append({"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 1)})
             for it in fb.findall("./FactoryInputs/Item"):
                 ins.append({"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 1)})
-            cycle = fb.findtext("CycleTime")
+            # CycleTime absent = défaut MOTEUR 30 s (cf. GAME_MECHANICS.md §5)
+            cycle = fb.findtext("CycleTime") or "30"
             if outs or ins:
                 production = {
                     "cycleTime": int(cycle) if cycle else None,
                     "outputs": outs,
                     "inputs": ins,
                 }
+
+        # Portée transporteur (distance-rue prod <-> entrepôt, défaut moteur 30)
+        mtr = text_of(el, "./Values/FactoryBase/MaxTransporterRange")
 
         buildings.append({
             "guid": guid,
@@ -236,6 +240,7 @@ def collect_buildings(texts, template_effects):
             "radius": radius,
             "field": field,
             "production": production,
+            "transporterRange": int(mtr) if mtr else None,
         })
         el.clear()
     print(f"  {len(buildings)} batiments, {len(product_oasis)} produits", file=sys.stderr)
@@ -332,6 +337,7 @@ def to_app_catalog(buildings, product_name):
             "guid": int(b["guid"]),
             "name": name,
             "nameInternal": b.get("nameInternal"),
+            "template": b.get("template"),
             "category": b["category"],
             "region": b.get("region"),
             "size": size,
@@ -361,6 +367,8 @@ def to_app_catalog(buildings, product_name):
                 "outputs": [{"good": product_name.get(o["product"], o["product"]), "amount": o["amount"]} for o in p["outputs"]],
                 "inputs": [{"good": product_name.get(i["product"], i["product"]), "amount": i["amount"]} for i in p["inputs"]],
             }
+            # portée transporteur (défaut moteur 30 si absente)
+            entry["transporterRange"] = b.get("transporterRange") or 30
         cat.append(entry)
     # tri : par categorie puis nom
     cat.sort(key=lambda e: (e["category"], e["name"]))

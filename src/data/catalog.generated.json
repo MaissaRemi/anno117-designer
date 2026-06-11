@@ -4,6 +4,7 @@
     "guid": 15834,
     "name": "Atelier de siège",
     "nameInternal": "Military Roman Siege Workshop",
+    "template": "RecruitmentBuilding",
     "category": "militaire",
     "region": "Roman",
     "size": {
@@ -25,6 +26,7 @@
     "guid": 15948,
     "name": "Atelier de siège",
     "nameInternal": "Military Roman Celtic Siege Workshop",
+    "template": "RecruitmentBuilding",
     "category": "militaire",
     "region": "Celtic",
     "size": {
@@ -46,6 +48,7 @@
     "guid": 15519,
     "name": "Caserne",
     "nameInternal": "Military Roman Barracks",
+    "template": "RecruitmentBuilding",
     "category": "militaire",
     "region": "Roman",
     "size": {
@@ -67,6 +70,7 @@
     "guid": 15946,
     "name": "Caserne",
     "nameInternal": "Military Roman Celtic Barracks",
+    "template": "RecruitmentBuilding",
     "category": "militaire",
     "region": "Celtic",
     "size": {
@@ -88,6 +92,7 @@
     "guid": 6054,
     "name": "Chantier naval",
     "nameInternal": "Harbor Shipyard Roman",
+    "template": "RecruitmentBuilding",
     "category": "militaire",
     "region": "Roman",
     "size": {
@@ -110,6 +115,7 @@
     "guid": 29340,
     "name": "Chantier naval",
     "nameInternal": "Harbor Shipyard Roman Celtic",
+    "template": "RecruitmentBuilding",
     "category": "militaire",
     "region": "Celtic",
     "size": {
@@ -132,6 +138,7 @@
     "guid": 15833,
     "name": "Equitum Campus",
     "nameInternal": "Military Roman Training Grounds",
+    "template": "RecruitmentBuilding",
     "category": "militaire",
     "region": "Roman",
     "size": {
@@ -153,6 +160,7 @@
     "guid": 15947,
     "name": "Equitum Campus",
     "nameInternal": "Military Roman Celtic Training Grounds",
+    "template": "RecruitmentBuilding",
     "category": "militaire",
     "region": "Celtic",
     "size": {
@@ -174,6 +182,7 @@
     "guid": 80631,
     "name": "Aquarius de Numa",
     "nameInternal": "Ornament Roman Statue 1x1 04",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -190,6 +199,7 @@
     "guid": 91234,
     "name": "Arbre creux",
     "nameInternal": "HoF Ornament Celtic 3x3 Ritual Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -206,6 +216,7 @@
     "guid": 149870,
     "name": "Arbre mort",
     "nameInternal": "HoF Ornament Celtic 1x1 Dead Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -222,6 +233,7 @@
     "guid": 80602,
     "name": "Arbre robuste",
     "nameInternal": "Ornament Roman Tree 1x1 Stout",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -238,6 +250,7 @@
     "guid": 81334,
     "name": "Arbre taillé (planté)",
     "nameInternal": "Ornament Roman Planter 1x1 Trimmed Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -254,6 +267,7 @@
     "guid": 80603,
     "name": "Arbre trapu",
     "nameInternal": "Ornament Roman Tree 1x1 Lush",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -270,6 +284,7 @@
     "guid": 81332,
     "name": "Arbre trapu (planté)",
     "nameInternal": "Ornament Roman Planter 1x1 Lush Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -286,6 +301,7 @@
     "guid": 81331,
     "name": "Arbre vigoureux (planté)",
     "nameInternal": "Ornament Roman Planter 1x1 Stout Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -302,6 +318,7 @@
     "guid": 80605,
     "name": "Arbre élagué",
     "nameInternal": "Ornament Roman Tree 1x1 Trimmed",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -318,6 +335,7 @@
     "guid": 80614,
     "name": "Arbuste luxuriant",
     "nameInternal": "Ornament Roman Shrub 1x1 02",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -334,6 +352,7 @@
     "guid": 88249,
     "name": "Arc de triomphe",
     "nameInternal": "HoF Ornament Roman Highlight Triumphant Arch",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -350,6 +369,7 @@
     "guid": 80830,
     "name": "Arche commémorative",
     "nameInternal": "Ornament Roman Structure 1x3 Arch 01",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -366,6 +386,7 @@
     "guid": 93614,
     "name": "Arche opulente",
     "nameInternal": "Ornament Roman Structure 1x3 Arch 02",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -382,6 +403,7 @@
     "guid": 149836,
     "name": "Bancs de marbre",
     "nameInternal": "HoF Ornament Roman 1x1 Benches",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -398,6 +420,7 @@
     "guid": 95595,
     "name": "Bannière des trois tribus",
     "nameInternal": "Connect Ornament 1x1 Banner Plus",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -414,6 +437,7 @@
     "guid": 95594,
     "name": "Bannière ornée",
     "nameInternal": "Connect Ornament 1x1 Banner",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -430,6 +454,7 @@
     "guid": 93381,
     "name": "Bassin de sérénité",
     "nameInternal": "DayOne Ornament Latium Small Bathouse",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -446,6 +471,7 @@
     "guid": 80828,
     "name": "Brasero sur colonne",
     "nameInternal": "Ornament Roman Brazier 1x1 04",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -462,6 +488,7 @@
     "guid": 80826,
     "name": "Brasero élevé",
     "nameInternal": "Ornament Roman Brazier 1x1 02",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -478,6 +505,7 @@
     "guid": 149869,
     "name": "Bûcher celtique",
     "nameInternal": "HoF Ornament Celtic 1x1 Bonfire",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -494,6 +522,7 @@
     "guid": 92735,
     "name": "Chêne albionien",
     "nameInternal": "Ornament Celtic Tree 1x1 Lush",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -510,6 +539,7 @@
     "guid": 92747,
     "name": "Chêne albionien (planté)",
     "nameInternal": "Ornament Celtic Planter 1x1 Lush",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -526,6 +556,7 @@
     "guid": 1000038,
     "name": "CoastlinePreviewBuilding",
     "nameInternal": "CoastlinePreviewBuilding",
+    "template": "SimpleBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -542,6 +573,7 @@
     "guid": 80628,
     "name": "Colonne impressionnante",
     "nameInternal": "HoF Ornament Roman 1x1 Column Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -558,6 +590,7 @@
     "guid": 90960,
     "name": "Columna Annorum",
     "nameInternal": "HoF Ornament Roman 3x3 Anno Pillar",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -574,6 +607,7 @@
     "guid": 80604,
     "name": "Conifère",
     "nameInternal": "Ornament Roman Tree 1x1 Coniferous",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -590,6 +624,7 @@
     "guid": 81333,
     "name": "Conifère (planté)",
     "nameInternal": "Ornament Roman Planter 1x1 Coniferous Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -606,6 +641,7 @@
     "guid": 110127,
     "name": "Cringer",
     "nameInternal": "Twitch Ornament 1x1 Banner US",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -622,6 +658,7 @@
     "guid": 81337,
     "name": "Cyprès (planté)",
     "nameInternal": "Ornament Roman Planter 1x1 Cypress Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -638,6 +675,7 @@
     "guid": 80573,
     "name": "Cyprès solitaire",
     "nameInternal": "Ornament Roman Tree 1x1 Cypress",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -654,6 +692,7 @@
     "guid": 82704,
     "name": "Embellissement",
     "nameInternal": "Ornament Roman Plaza 1x1 (Deprecated)",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -670,6 +709,7 @@
     "guid": 83763,
     "name": "Embellissement",
     "nameInternal": "Ornament Roman Plaza 2x2 (Deprecated)",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -686,6 +726,7 @@
     "guid": 83772,
     "name": "Embellissement",
     "nameInternal": "Ornament Roman Plaza 2x2 Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -702,6 +743,7 @@
     "guid": 83774,
     "name": "Embellissement",
     "nameInternal": "Ornament Roman Plaza 2x2 Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -718,6 +760,7 @@
     "guid": 83764,
     "name": "Embellissement",
     "nameInternal": "Ornament Roman Plaza 3x3 (Deprecated)",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -734,6 +777,7 @@
     "guid": 83773,
     "name": "Embellissement",
     "nameInternal": "Ornament Roman Plaza 3x3 Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -750,6 +794,7 @@
     "guid": 83775,
     "name": "Embellissement",
     "nameInternal": "Ornament Roman Plaza 3x3 Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -766,6 +811,7 @@
     "guid": 80819,
     "name": "Femme du roi Numa",
     "nameInternal": "Ornament Roman Statue 1x1 06",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -782,6 +828,7 @@
     "guid": 80629,
     "name": "Fille du roi Numa",
     "nameInternal": "Ornament Roman Statue 1x1 02",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -798,6 +845,7 @@
     "guid": 80630,
     "name": "Fils du roi Numa",
     "nameInternal": "Ornament Roman Statue 1x1 03",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -814,6 +862,7 @@
     "guid": 80574,
     "name": "Fleurs sauvages",
     "nameInternal": "Ornament Roman Shrub 1x1 Flowers",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -830,6 +879,7 @@
     "guid": 80600,
     "name": "Fleurs sauvages (bleues)",
     "nameInternal": "Ornament Roman Shrub 1x1 Flowers Blue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -846,6 +896,7 @@
     "guid": 80598,
     "name": "Fleurs sauvages (jaunes)",
     "nameInternal": "Ornament Roman Shrub 1x1 Flowers Yellow",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -862,6 +913,7 @@
     "guid": 80599,
     "name": "Fleurs sauvages (rouges)",
     "nameInternal": "Ornament Roman Shrub 1x1 Flowers Red",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -878,6 +930,7 @@
     "guid": 80601,
     "name": "Fleurs sauvages (violettes)",
     "nameInternal": "Ornament Roman Shrub 1x1 Flowers Violet",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -894,6 +947,7 @@
     "guid": 80621,
     "name": "Fontaine nautile",
     "nameInternal": "Ornament Roman Structure 2x2 Fountain 01",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -910,6 +964,7 @@
     "guid": 93613,
     "name": "Fontaine statuaire",
     "nameInternal": "HoF Ornament Roman 2x2 Fountain Woman",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -926,6 +981,7 @@
     "guid": 80620,
     "name": "Fontaine éternelle",
     "nameInternal": "HoF Ornament Roman 3x4 Grand Fountain",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -942,6 +998,7 @@
     "guid": 80827,
     "name": "Foyer",
     "nameInternal": "Ornament Roman Brazier 1x1 03",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -958,6 +1015,7 @@
     "guid": 82706,
     "name": "Gazon court",
     "nameInternal": "Ornament Roman Grass 1x1 (Deprecated)",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -974,6 +1032,7 @@
     "guid": 83770,
     "name": "Gazon court",
     "nameInternal": "Ornament Roman Grass 2x2 (Deprecated)",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -990,6 +1049,7 @@
     "guid": 83771,
     "name": "Gazon court",
     "nameInternal": "Ornament Roman Grass 3x3 (Deprecated)",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1006,6 +1066,7 @@
     "guid": 80576,
     "name": "Grand lithophyte",
     "nameInternal": "HoF Ornament Roman 2x2 Large Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1022,6 +1083,7 @@
     "guid": 149861,
     "name": "Grand étal de marché",
     "nameInternal": "HoF Ornament Roman 3x3 Market Stall Large",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1038,6 +1100,7 @@
     "guid": 110126,
     "name": "Gronkh",
     "nameInternal": "Twitch Ornament 1x1 Banner German",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1054,6 +1117,7 @@
     "guid": 42198,
     "name": "Harmonia",
     "nameInternal": "Connect Ornament 1x1 Harmony Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1070,6 +1134,7 @@
     "guid": 88303,
     "name": "Homme romano-celte",
     "nameInternal": "Ornament Celtic Statue 1x1 Young Man",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1086,6 +1151,7 @@
     "guid": 88305,
     "name": "Idole celte",
     "nameInternal": "HoF Ornament Celtic 1x1 Big Head Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1102,6 +1168,7 @@
     "guid": 135321,
     "name": "Kiosque aquatique",
     "nameInternal": "HoF Ornament Roman 6x6 Pavilion",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1118,6 +1185,7 @@
     "guid": 95153,
     "name": "Lion d'or",
     "nameInternal": "Connect Ornament Statue 1x1 Lion Plus",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1134,6 +1202,7 @@
     "guid": 88308,
     "name": "Lithe rituel",
     "nameInternal": "HoF Ornament Celtic 2x2 Ritual Site",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1150,6 +1219,7 @@
     "guid": 93358,
     "name": "Louve capitoline",
     "nameInternal": "BuildersEdition Ornament 1x1 Wolf Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1166,6 +1236,7 @@
     "guid": 149831,
     "name": "Mausolée sylvestre",
     "nameInternal": "HoF Ornament Roman 7x8 Mausoleum",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1182,6 +1253,7 @@
     "guid": 14191,
     "name": "Menhir moyen",
     "nameInternal": "Ornament Celtic Statue 1x1 Menhir",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1198,6 +1270,7 @@
     "guid": 144967,
     "name": "Mosaïque de Sol Magnificus",
     "nameInternal": "cDLC01 Ornament Large Mosaic 3x3 A Celtic",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1214,6 +1287,7 @@
     "guid": 144931,
     "name": "Mosaïque de l'Arbre sacré",
     "nameInternal": "cDLC01 Ornament Large Mosaic 3x3 B Celtic",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1230,6 +1304,7 @@
     "guid": 144820,
     "name": "Mosaïque du Jardin somptueux",
     "nameInternal": "cDLC01 Ornament Large Mosaic 3x3 A Roman",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1246,6 +1321,7 @@
     "guid": 144965,
     "name": "Mosaïque du Latium",
     "nameInternal": "cDLC01 Ornament Large Mosaic 3x3 B Roman",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1262,6 +1338,7 @@
     "guid": 88306,
     "name": "Obélisque celte",
     "nameInternal": "Ornament Celtic Statue 1x1 Obelisk",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1278,6 +1355,7 @@
     "guid": 88285,
     "name": "Officier de la Pax",
     "nameInternal": "HoF Ornament Roman 1x1 Warrior Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1294,6 +1372,7 @@
     "guid": 80610,
     "name": "Olivier",
     "nameInternal": "Ornament Roman Tree 1x1 Olive",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1310,6 +1389,7 @@
     "guid": 81330,
     "name": "Olivier (planté)",
     "nameInternal": "Ornament Roman Planter 1x1 Olive Tree",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1326,6 +1406,7 @@
     "guid": 14193,
     "name": "Ornament Celtic Culture 0.5x0.5 01 TODELETE",
     "nameInternal": "Ornament Celtic Culture 0.5x0.5 01 TODELETE",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": "Celtic",
     "size": {
@@ -1342,6 +1423,7 @@
     "guid": 14190,
     "name": "Ornament Celtic Statue 1x1 Obelisk",
     "nameInternal": "Ornament Celtic Statue 1x1 Obelisk",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": "Celtic",
     "size": {
@@ -1358,6 +1440,7 @@
     "guid": 14189,
     "name": "Ornament Celtic Statue 1x1 Romanized",
     "nameInternal": "Ornament Celtic Statue 1x1 Romanized",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": "Celtic",
     "size": {
@@ -1374,6 +1457,7 @@
     "guid": 80579,
     "name": "Parterre de fleurs (blanches)",
     "nameInternal": "Ornament Roman Planter 1x1 Flowers",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1390,6 +1474,7 @@
     "guid": 81328,
     "name": "Parterre de fleurs (bleues)",
     "nameInternal": "Ornament Roman Planter 1x1 Flowers Blue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1406,6 +1491,7 @@
     "guid": 81326,
     "name": "Parterre de fleurs (jaunes)",
     "nameInternal": "Ornament Roman Planter 1x1 Flowers Yellow",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1422,6 +1508,7 @@
     "guid": 81327,
     "name": "Parterre de fleurs (rouges)",
     "nameInternal": "Ornament Roman Planter 1x1 Flowers Red",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1438,6 +1525,7 @@
     "guid": 81329,
     "name": "Parterre de fleurs (violettes)",
     "nameInternal": "Ornament Roman Planter 1x1 Flowers Violet",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1454,6 +1542,7 @@
     "guid": 80575,
     "name": "Petit arbuste",
     "nameInternal": "Ornament Roman Shrub 1x1 01",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1470,6 +1559,7 @@
     "guid": 80625,
     "name": "Petit brasero",
     "nameInternal": "Ornament Roman Brazier 1x1 01",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1486,6 +1576,7 @@
     "guid": 149859,
     "name": "Petit étal de marché",
     "nameInternal": "HoF Ornament Roman 1x1 Market Stall Small",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1502,6 +1593,7 @@
     "guid": 92744,
     "name": "Pin albionien",
     "nameInternal": "Ornament Celtic Tree 1x1 Tall",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1518,6 +1610,7 @@
     "guid": 92748,
     "name": "Pin albionien (planté)",
     "nameInternal": "Ornament Celtic Planter 1x1 Tall",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1534,6 +1627,7 @@
     "guid": 92734,
     "name": "Pin teutonique",
     "nameInternal": "Ornament Celtic Tree 1x1 Coniferous",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1550,6 +1644,7 @@
     "guid": 92746,
     "name": "Pin teutonique (planté)",
     "nameInternal": "Ornament Celtic Planter 1x1 Coniferous",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1566,6 +1661,7 @@
     "guid": 80633,
     "name": "Porte-flambeau proverbial",
     "nameInternal": "HoF Ornament Roman 1x1 Torch Bearer Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1582,6 +1678,7 @@
     "guid": 80632,
     "name": "Roi Numa",
     "nameInternal": "Ornament Roman Statue 1x1 05",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1598,6 +1695,7 @@
     "guid": 88309,
     "name": "Sauvage en osier",
     "nameInternal": "HoF Ornament Celtic Highlight Wicker Man",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1614,6 +1712,7 @@
     "guid": 110125,
     "name": "Sceau 稚嫩的魔法师",
     "nameInternal": "Twitch Ornament 1x1 Banner China",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1630,6 +1729,7 @@
     "guid": 80820,
     "name": "Statue d'un lion",
     "nameInternal": "HoF Ornament Roman 1x1 Lion Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1646,6 +1746,7 @@
     "guid": 87384,
     "name": "Statue de Town Crier",
     "nameInternal": "BuildersEdition Ornament 1x1 Town Crier Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1662,6 +1763,7 @@
     "guid": 149829,
     "name": "Statue de l'empereur Servius",
     "nameInternal": "HoF Ornament Roman 1x1 Emperor Statue",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1678,6 +1780,7 @@
     "guid": 80619,
     "name": "Statue de la communauté",
     "nameInternal": "Ornament Roman Statue 1x1 01 Community",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1694,6 +1797,7 @@
     "guid": 149837,
     "name": "Table de jeu",
     "nameInternal": "HoF Ornament Roman 2x1 Benches",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1710,6 +1814,7 @@
     "guid": 42197,
     "name": "Tholos",
     "nameInternal": "Connect Ornament 3x3 Pavilon Plus",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1726,6 +1831,7 @@
     "guid": 151958,
     "name": "Town Crier",
     "nameInternal": "Twitch Ornament Town Crier",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1742,6 +1848,7 @@
     "guid": 88307,
     "name": "Tumulus scellé",
     "nameInternal": "HoF Ornament Celtic 4x4 Barrow",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1758,6 +1865,7 @@
     "guid": 95645,
     "name": "Vexillum lupin",
     "nameInternal": "BuildersEdition Ornament 1x1 Battle Standard",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1774,6 +1882,7 @@
     "guid": 149860,
     "name": "Étal de marché commun",
     "nameInternal": "HoF Ornament Roman 2x1 Market Stall Medium",
+    "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
     "size": {
@@ -1790,6 +1899,7 @@
     "guid": 13808,
     "name": "Armurerie",
     "nameInternal": "Production Military Roman Armor",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -1823,13 +1933,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g55945",
     "guid": 55945,
     "name": "Armurerie",
     "nameInternal": "Production Military Roman Celtic Armor",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -1863,13 +1975,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5477",
     "guid": 5477,
     "name": "Arracheur de langue",
     "nameInternal": "Production Ingredient Roman Celtic Bird Tongues",
+    "template": "Production Marsh",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -1899,13 +2013,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g145230",
     "guid": 145230,
     "name": "Atelier de Latrunculi",
     "nameInternal": "Production Culture Roman Boardgames",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -1939,13 +2055,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5616",
     "guid": 5616,
     "name": "Atelier de chars",
     "nameInternal": "Production Culture Celtic Chariots",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -1979,13 +2097,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3187",
     "guid": 3187,
     "name": "Atelier de filage",
     "nameInternal": "Production Fashion Roman Tunics",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2015,13 +2135,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5958",
     "guid": 5958,
     "name": "Atelier de filage",
     "nameInternal": "Production Fashion Roman Celtic Tunics",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2051,13 +2173,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3185",
     "guid": 3185,
     "name": "Atelier de garum",
     "nameInternal": "Production Food Roman Garum",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2091,13 +2215,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3203",
     "guid": 3203,
     "name": "Atelier de tesselles",
     "nameInternal": "Production Construction Roman Mosaics",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2131,13 +2257,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3191",
     "guid": 3191,
     "name": "Atelier de tissage",
     "nameInternal": "Production Fashion Roman Togas",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2171,13 +2299,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5975",
     "guid": 5975,
     "name": "Attrapeur de chevaux",
     "nameInternal": "Production Meadow Celtic Dartmoor Ponies",
+    "template": "Production Area",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2202,13 +2332,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g8586",
     "guid": 8586,
     "name": "Banc d'huîtres",
     "nameInternal": "Production Coast Roman Oysters",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2234,13 +2366,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g3174",
     "guid": 3174,
     "name": "Boulangerie",
     "nameInternal": "Production Food Roman Bread",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2270,13 +2404,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5960",
     "guid": 5960,
     "name": "Boulangerie",
     "nameInternal": "Production Food Roman Celtic Bread",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2306,13 +2442,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5570",
     "guid": 5570,
     "name": "Brasserie",
     "nameInternal": "Production Food Celtic Beer",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2342,13 +2480,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3082",
     "guid": 3082,
     "name": "Broyeur minéral",
     "nameInternal": "Production Heavy Roman Pigments",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2378,13 +2518,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31772",
     "guid": 31772,
     "name": "Brûleur de salicorne",
     "nameInternal": "Production Chemical Celtic Lye",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2414,13 +2556,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2878",
     "guid": 2878,
     "name": "Bûcheron",
     "nameInternal": "Production Forest Roman Wood",
+    "template": "Production Area",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2437,7 +2581,7 @@
     },
     "streetRange": 26,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Bois",
@@ -2445,13 +2589,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5976",
     "guid": 5976,
     "name": "Bûcheron",
     "nameInternal": "Production Forest Roman Celtic Wood",
+    "template": "Production Area",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2468,7 +2614,7 @@
     },
     "streetRange": 26,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Bois",
@@ -2476,13 +2622,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2955",
     "guid": 2955,
     "name": "Cabane de pêcheur",
     "nameInternal": "Production Coast Roman Sardines",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2508,13 +2656,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g2956",
     "guid": 2956,
     "name": "Cabane à maquereaux",
     "nameInternal": "Production Coast Roman Mackerels",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2540,13 +2690,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g145229",
     "guid": 145229,
     "name": "Caelator",
     "nameInternal": "Production Household Roman Idols",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2580,13 +2732,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3091",
     "guid": 3091,
     "name": "Carreleur",
     "nameInternal": "Production Construction Roman Tiles",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2616,13 +2770,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5947",
     "guid": 5947,
     "name": "Carreleur",
     "nameInternal": "Production Construction Roman Celtic Tiles",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2652,13 +2808,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2970",
     "guid": 2970,
     "name": "Carrière d'argile",
     "nameInternal": "Production River Roman Clay",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2675,7 +2833,7 @@
     },
     "streetRange": 22,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Argile",
@@ -2683,13 +2841,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2916",
     "guid": 2916,
     "name": "Carrière de calcaire",
     "nameInternal": "Production Mountain Roman Limestone Blocks",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2706,7 +2866,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Calcaire",
@@ -2714,13 +2874,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5978",
     "guid": 5978,
     "name": "Carrière de calcaire",
     "nameInternal": "Production Mountain Roman Celtic Limestone Blocks",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2737,7 +2899,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Calcaire",
@@ -2745,13 +2907,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5295",
     "guid": 5295,
     "name": "Carrière de granite",
     "nameInternal": "Production Mountain Celtic Granite Blocks",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2776,13 +2940,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2954",
     "guid": 2954,
     "name": "Carrière de marbre",
     "nameInternal": "Production Mountain Roman Marble Blocks",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2807,13 +2973,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2920",
     "guid": 2920,
     "name": "Carrière de minéraux",
     "nameInternal": "Production Mountain Roman Minerals",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2838,13 +3006,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2800",
     "guid": 2800,
     "name": "Champ de garance",
     "nameInternal": "Production Field Celtic Dye Plants",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2873,13 +3043,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31770",
     "guid": 31770,
     "name": "Chapelier en peau de castor",
     "nameInternal": "Production Fashion Celtic Pelt Hats",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2913,13 +3085,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2880",
     "guid": 2880,
     "name": "Charbonnière",
     "nameInternal": "Production Forest Roman Charcoal",
+    "template": "Production Area",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -2936,7 +3110,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Charbon",
@@ -2944,13 +3118,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5977",
     "guid": 5977,
     "name": "Charbonnière",
     "nameInternal": "Production Forest Roman Celtic Charcoal",
+    "template": "Production Area",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -2967,7 +3143,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Charbon",
@@ -2975,13 +3151,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5851",
     "guid": 5851,
     "name": "Charmeur d'oiseaux",
     "nameInternal": "Production Marsh Roman Celtic Birds",
+    "template": "Production Marsh Area",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3006,13 +3184,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31773",
     "guid": 31773,
     "name": "Cogne-bouclier",
     "nameInternal": "Production Culture Celtic Clan Shield",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3046,13 +3226,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31752",
     "guid": 31752,
     "name": "Collecteur de résine",
     "nameInternal": "Production Forest Roman Resin",
+    "template": "Production Area",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3077,13 +3259,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31761",
     "guid": 31761,
     "name": "Collecteur de résine",
     "nameInternal": "Production Forest Roman Celtic Resin",
+    "template": "Production Area",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3108,13 +3292,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5608",
     "guid": 5608,
     "name": "Confectionneur de bas",
     "nameInternal": "Production Fashion Celtic Trousers",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3148,13 +3334,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5611",
     "guid": 5611,
     "name": "Constructeur de châssis",
     "nameInternal": "Production Craft Celtic Chassis",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3188,13 +3376,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3168",
     "guid": 3168,
     "name": "Cordier",
     "nameInternal": "Production Military Roman Ropes",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3224,13 +3414,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g5956",
     "guid": 5956,
     "name": "Cordier",
     "nameInternal": "Production Military Roman Celtic Ropes",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3260,13 +3452,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5935",
     "guid": 5935,
     "name": "Cour des manœuvres",
     "nameInternal": "Production Construction Celtic Wattle and Daub",
+    "template": "Production Marsh",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3300,13 +3494,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5849",
     "guid": 5849,
     "name": "Cueilleur de roseaux",
     "nameInternal": "Production Marsh Celtic Reed",
+    "template": "Production Marsh Pasture",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3335,13 +3531,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2796",
     "guid": 2796,
     "name": "Cueilleur de salicorne",
     "nameInternal": "Production Coast Celtic Samphire",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3367,13 +3565,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2699",
     "guid": 2699,
     "name": "Cultivateur d'olives",
     "nameInternal": "Production Field Roman Olives",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3402,13 +3602,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 45
   },
   {
     "id": "g2698",
     "guid": 2698,
     "name": "Cultivateur de lavande",
     "nameInternal": "Production Field Roman Lavender",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3437,13 +3639,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3081",
     "guid": 3081,
     "name": "Doreur",
     "nameInternal": "Production Crafts Roman Ornate Wood",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3477,13 +3681,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g41811",
     "guid": 41811,
     "name": "Découpeur de granite",
     "nameInternal": "Production Construction Celtic Granite",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3513,13 +3719,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g8580",
     "guid": 8580,
     "name": "Escargotière",
     "nameInternal": "Production Coast Roman Sea Snails",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3545,13 +3753,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g31756",
     "guid": 31756,
     "name": "Extracteur",
     "nameInternal": "Production Chemical Roman Fat",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3581,13 +3791,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5475",
     "guid": 5475,
     "name": "Extracteur",
     "nameInternal": "Production Chemical Roman Celtic Fat",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3617,13 +3829,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3198",
     "guid": 3198,
     "name": "Fabricant de chaises",
     "nameInternal": "Production Household Roman Loungers",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3657,13 +3871,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5609",
     "guid": 5609,
     "name": "Fabricant de chaussures",
     "nameInternal": "Production Fashion Celtic Reed Shoes",
+    "template": "Production Marsh",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3693,13 +3909,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31766",
     "guid": 31766,
     "name": "Fabricant de couvre-chefs",
     "nameInternal": "Production Craft Roman Celtic Wig Base",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3733,13 +3951,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31769",
     "guid": 31769,
     "name": "Fabricant de perruques",
     "nameInternal": "Production Fashion Roman Celtic Wigs",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3773,13 +3993,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3190",
     "guid": 3190,
     "name": "Fabricant de sandales",
     "nameInternal": "Production Fashion Roman Sandals",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3809,13 +4031,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3189",
     "guid": 3189,
     "name": "Fabricant de savon",
     "nameInternal": "Production Fashion Roman Soap",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3849,13 +4073,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3169",
     "guid": 3169,
     "name": "Fabricant de voiles",
     "nameInternal": "Production Military Roman Sails",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3885,13 +4111,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g5955",
     "guid": 5955,
     "name": "Fabricant de voiles",
     "nameInternal": "Production Military Roman Celtic Sails",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3921,13 +4149,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2200",
     "guid": 2200,
     "name": "Ferme d'avoine",
     "nameInternal": "Production Field Roman Oats",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -3956,13 +4186,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g2799",
     "guid": 2799,
     "name": "Ferme d'orge",
     "nameInternal": "Production Field Celtic Barley",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -3991,13 +4223,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31750",
     "guid": 31750,
     "name": "Ferme de chanvre",
     "nameInternal": "Production Field Roman Hemp",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4022,13 +4256,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g31762",
     "guid": 31762,
     "name": "Ferme de chanvre",
     "nameInternal": "Production Field Roman Celtic Hemp",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4057,13 +4293,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g2693",
     "guid": 2693,
     "name": "Ferme de céréales",
     "nameInternal": "Production Field Roman Wheat",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4092,13 +4330,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g5972",
     "guid": 5972,
     "name": "Ferme de céréales",
     "nameInternal": "Production Field Roman Celtic Wheat",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4127,13 +4367,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2669",
     "guid": 2669,
     "name": "Ferme de lin",
     "nameInternal": "Production Field Roman Flax",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4162,13 +4404,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 70
   },
   {
     "id": "g5971",
     "guid": 5971,
     "name": "Ferme de lin",
     "nameInternal": "Production Field Roman Celtic Flax",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4197,13 +4441,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5847",
     "guid": 5847,
     "name": "Ferme à bœufs",
     "nameInternal": "Production Marsh Celtic Aurochs",
+    "template": "Production Marsh Pasture",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4232,13 +4478,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5605",
     "guid": 5605,
     "name": "Fibularium",
     "nameInternal": "Production Fashion Roman Celtic Brooches",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4268,13 +4516,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5481",
     "guid": 5481,
     "name": "Fileur",
     "nameInternal": "Production Craft Roman Strings",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4304,13 +4554,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5470",
     "guid": 5470,
     "name": "Fondeur de bronze",
     "nameInternal": "Production Heavy Celtic Bronze",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4344,13 +4596,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3074",
     "guid": 3074,
     "name": "Fondeur de verre",
     "nameInternal": "Production Heavy Roman Glass",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4380,13 +4634,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5472",
     "guid": 5472,
     "name": "Forge d'argent",
     "nameInternal": "Production Heavy Roman Celtic Silver",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4416,13 +4672,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3170",
     "guid": 3170,
     "name": "Forgeron d'armes",
     "nameInternal": "Production Military Roman Weapons",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4452,13 +4710,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5954",
     "guid": 5954,
     "name": "Forgeron d'armes",
     "nameInternal": "Production Military Roman Celtic Weapons",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4488,13 +4748,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3188",
     "guid": 3188,
     "name": "Foulonneur de pileus",
     "nameInternal": "Production Fashion Roman Hats",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4524,13 +4786,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31767",
     "guid": 31767,
     "name": "Four enterré",
     "nameInternal": "Production Food Celtic Roast Beef",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4564,13 +4828,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3070",
     "guid": 3070,
     "name": "Fourneau",
     "nameInternal": "Production Heavy Roman Iron",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4600,13 +4866,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5969",
     "guid": 5969,
     "name": "Fourneau",
     "nameInternal": "Production Heavy Roman Celtic Iron",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4636,13 +4904,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g8887",
     "guid": 8887,
     "name": "Garnisseur de coussins",
     "nameInternal": "Production Crafts Roman Cushions",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4676,13 +4946,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g31764",
     "guid": 31764,
     "name": "Jardin des plantes",
     "nameInternal": "Production Field Roman Celtic Herbs",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4707,13 +4979,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3192",
     "guid": 3192,
     "name": "Joaillier",
     "nameInternal": "Production Fashion Roman Necklace",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4747,13 +5021,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g6586",
     "guid": 6586,
     "name": "Laiterie",
     "nameInternal": "Production Food Celtic Cheese",
+    "template": "Production Marsh",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4783,13 +5059,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31753",
     "guid": 31753,
     "name": "Laveur d'or",
     "nameInternal": "Production River Roman Gold Ore",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4814,13 +5092,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g4832",
     "guid": 4832,
     "name": "Lyrier",
     "nameInternal": "Production Culture Roman Lyres",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4854,13 +5134,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5469",
     "guid": 5469,
     "name": "Mains vertes",
     "nameInternal": "Production Chemical Celtic Green",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4894,13 +5176,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3129",
     "guid": 3129,
     "name": "Malaxeur à béton",
     "nameInternal": "Production Construction Roman Concrete",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -4934,13 +5218,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g5946",
     "guid": 5946,
     "name": "Malaxeur à béton",
     "nameInternal": "Production Construction Roman Celtic Concrete",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4974,13 +5260,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5474",
     "guid": 5474,
     "name": "Malterie",
     "nameInternal": "Production Ingredient Celtic Malt",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -4997,7 +5285,7 @@
     },
     "streetRange": 26,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Malt",
@@ -5010,13 +5298,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2957",
     "guid": 2957,
     "name": "Marais salants",
     "nameInternal": "Production Coast Roman Salt",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5034,7 +5324,7 @@
     },
     "streetRange": 26,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Sel",
@@ -5042,13 +5332,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 80
   },
   {
     "id": "g5980",
     "guid": 5980,
     "name": "Mine d'argent",
     "nameInternal": "Production Mountain Roman Celtic Silver Ore",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5065,7 +5357,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Minerai d'argent",
@@ -5073,13 +5365,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g50280",
     "guid": 50280,
     "name": "Mine d'or",
     "nameInternal": "Production Mountain Roman Gold Ore",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5104,13 +5398,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5291",
     "guid": 5291,
     "name": "Mine d'étain",
     "nameInternal": "Production Mountain Celtic Tin Ore",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5127,7 +5423,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Minerai d'étain",
@@ -5135,13 +5431,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g144810",
     "guid": 144810,
     "name": "Mine de charbon",
     "nameInternal": "Production Mountain Roman Coal",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5158,7 +5456,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Charbon",
@@ -5166,13 +5464,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g144811",
     "guid": 144811,
     "name": "Mine de charbon",
     "nameInternal": "Production Mountain Roman Celtic Coal",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5189,7 +5489,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Charbon",
@@ -5197,13 +5497,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5290",
     "guid": 5290,
     "name": "Mine de cuivre",
     "nameInternal": "Production Mountain Celtic Copper Ore",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5220,7 +5522,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Minerai de cuivre",
@@ -5228,13 +5530,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2918",
     "guid": 2918,
     "name": "Mine de fer",
     "nameInternal": "Production Mountain Roman Iron Ore",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5251,7 +5555,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Minerai de fer",
@@ -5259,13 +5563,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5982",
     "guid": 5982,
     "name": "Mine de fer",
     "nameInternal": "Production Mountain Roman Celtic Iron Ore",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5282,7 +5588,7 @@
     },
     "streetRange": 24,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Minerai de fer",
@@ -5290,13 +5596,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3075",
     "guid": 3075,
     "name": "Moulin à grains",
     "nameInternal": "Production Ingredient Roman Flour",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5313,7 +5621,7 @@
     },
     "streetRange": 26,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Farine",
@@ -5326,13 +5634,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5967",
     "guid": 5967,
     "name": "Moulin à âne",
     "nameInternal": "Production Ingredient Roman Celtic Flour",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5362,13 +5672,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5615",
     "guid": 5615,
     "name": "Narcissium",
     "nameInternal": "Production Household Roman Celtic Mirrors",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5402,13 +5714,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31755",
     "guid": 31755,
     "name": "Orfèvre",
     "nameInternal": "Production Heavy Roman Gold",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5438,13 +5752,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3199",
     "guid": 3199,
     "name": "Potier",
     "nameInternal": "Production Household Roman Amphorae",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5478,13 +5794,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g55962",
     "guid": 55962,
     "name": "Potier",
     "nameInternal": "Production Household Roman Celtic Amphorae",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5518,13 +5836,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g4831",
     "guid": 4831,
     "name": "Pressoir à olives",
     "nameInternal": "Production Household Roman Olive Oil",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5554,13 +5874,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g8579",
     "guid": 8579,
     "name": "Pépinière de sandaraque",
     "nameInternal": "Production Field Roman Sandarac Wood",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5589,13 +5911,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5299",
     "guid": 5299,
     "name": "Pêcheur d'anguilles",
     "nameInternal": "Production Marsh Roman Celtic Eels",
+    "template": "Production Marsh Area",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5620,13 +5944,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g2958",
     "guid": 2958,
     "name": "Raffinerie de sable",
     "nameInternal": "Production Coast Roman Silica",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5652,13 +5978,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 80
   },
   {
     "id": "g10929",
     "guid": 10929,
     "name": "Raffinerie de sable",
     "nameInternal": "Production Coast Roman Celtic Silica",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5684,13 +6012,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5278",
     "guid": 5278,
     "name": "Ramasseur de coques",
     "nameInternal": "Production Coast Celtic Cockles",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5716,13 +6046,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g8431",
     "guid": 8431,
     "name": "Ramasseur de coquillages",
     "nameInternal": "Production Coast Roman Celtic Sea Shells",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5748,13 +6080,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2795",
     "guid": 2795,
     "name": "Rucher",
     "nameInternal": "Production Meadow Roman Honycombs",
+    "template": "Production Area",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5779,13 +6113,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g8427",
     "guid": 8427,
     "name": "Rucher",
     "nameInternal": "Production Meadow Roman Celtic Honycombs",
+    "template": "Production Area",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5810,13 +6146,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5959",
     "guid": 5959,
     "name": "Salsicium",
     "nameInternal": "Production Food Roman Celtic Sausages",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5850,13 +6188,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3089",
     "guid": 3089,
     "name": "Scierie",
     "nameInternal": "Production Construction Roman Timber",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -5873,7 +6213,7 @@
     },
     "streetRange": 26,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Planches",
@@ -5886,13 +6226,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5945",
     "guid": 5945,
     "name": "Scierie",
     "nameInternal": "Production Construction Roman Celtic Timber",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -5909,7 +6251,7 @@
     },
     "streetRange": 26,
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Planches",
@@ -5922,13 +6264,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g77954",
     "guid": 77954,
     "name": "Silo",
     "nameInternal": "Module Silo Roman",
+    "template": "ProductionModuleSilo",
     "category": "production",
     "region": null,
     "size": {
@@ -5948,13 +6292,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g77955",
     "guid": 77955,
     "name": "Silo",
     "nameInternal": "Module Silo Roman Celtic",
+    "template": "ProductionModuleSilo",
     "category": "production",
     "region": null,
     "size": {
@@ -5974,13 +6320,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g55963",
     "guid": 55963,
     "name": "Sonneur",
     "nameInternal": "Production Culture Celtic Drinking Horns",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6014,13 +6362,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3202",
     "guid": 3202,
     "name": "Souffleur de verre",
     "nameInternal": "Production Household Roman Fine Glass",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6054,13 +6404,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5848",
     "guid": 5848,
     "name": "Sécheur de boue",
     "nameInternal": "Production Marsh Celtic Mud",
+    "template": "Production Marsh",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6085,13 +6437,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3201",
     "guid": 3201,
     "name": "Tabulus",
     "nameInternal": "Production Household Roman Wax Tablets",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6125,13 +6479,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5614",
     "guid": 5614,
     "name": "Tailleur de birrus",
     "nameInternal": "Production Fashion Celtic Cloak",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6165,13 +6521,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3138",
     "guid": 3138,
     "name": "Tailleur de marbre",
     "nameInternal": "Production Construction Roman Marble",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6201,13 +6559,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2994",
     "guid": 2994,
     "name": "Tannerie",
     "nameInternal": "Production Chemical Roman Leather",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6241,13 +6601,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g80612",
     "guid": 80612,
     "name": "Tannerie",
     "nameInternal": "Production Chemical Roman Celtic Leather",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6281,13 +6643,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2999",
     "guid": 2999,
     "name": "Teinturerie",
     "nameInternal": "Production Chemical Roman Tyrian Purple",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6317,13 +6681,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3079",
     "guid": 3079,
     "name": "Tisserand",
     "nameInternal": "Production Crafts Roman Cloth",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6353,13 +6719,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g5606",
     "guid": 5606,
     "name": "Torsionneur de fils",
     "nameInternal": "Production Fashion Celtic Torcs",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6389,13 +6757,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g31759",
     "guid": 31759,
     "name": "Trappeur de castors",
     "nameInternal": "Production Marsh Celtic Beaver",
+    "template": "Production Marsh Area",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6420,13 +6790,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g8893",
     "guid": 8893,
     "name": "Videur de poissons",
     "nameInternal": "Production Ingredient Roman Caviar",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6456,13 +6828,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 70
   },
   {
     "id": "g3177",
     "guid": 3177,
     "name": "Vigneron",
     "nameInternal": "Production Food Roman Wine",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6496,13 +6870,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g23753",
     "guid": 23753,
     "name": "Vigneron",
     "nameInternal": "Production Food Roman Celtic Wine",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6536,13 +6912,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2694",
     "guid": 2694,
     "name": "Vignoble",
     "nameInternal": "Production Field Roman Grapes",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6571,13 +6949,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 70
   },
   {
     "id": "g23723",
     "guid": 23723,
     "name": "Vignoble",
     "nameInternal": "Production Field Roman Celtic Grapes",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6606,13 +6986,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2971",
     "guid": 2971,
     "name": "Élevage d'esturgeons",
     "nameInternal": "Production River Roman Sturgeon",
+    "template": "SlotFactoryBuilding7",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6637,13 +7019,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2786",
     "guid": 2786,
     "name": "Élevage ovin",
     "nameInternal": "Production Pasture Roman Sheep",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6664,7 +7048,7 @@
       "fieldType": "moutons"
     },
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Moutons",
@@ -6672,13 +7056,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5973",
     "guid": 5973,
     "name": "Élevage ovin",
     "nameInternal": "Production Pasture Celtic Sheep",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6699,7 +7085,7 @@
       "fieldType": "moutons"
     },
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Moutons",
@@ -6707,13 +7093,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2793",
     "guid": 2793,
     "name": "Élevage porcin",
     "nameInternal": "Production Pasture Roman Pigs",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6734,7 +7122,7 @@
       "fieldType": "porcs"
     },
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Porcs",
@@ -6742,13 +7130,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5974",
     "guid": 5974,
     "name": "Élevage porcin",
     "nameInternal": "Production Pasture Roman Celtic Pigs",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6769,7 +7159,7 @@
       "fieldType": "porcs"
     },
     "production": {
-      "cycleTime": null,
+      "cycleTime": 30,
       "outputs": [
         {
           "good": "Porcs",
@@ -6777,13 +7167,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g2794",
     "guid": 2794,
     "name": "Éleveur de chevaux",
     "nameInternal": "Production Pasture Roman Horses",
+    "template": "Production Field",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6812,13 +7204,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g15514",
     "guid": 15514,
     "name": "Éleveur de chevaux",
     "nameInternal": "Production Pasture Roman Celtic Horses",
+    "template": "Production Field",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6847,13 +7241,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g5604",
     "guid": 5604,
     "name": "Épicurien de l'air",
     "nameInternal": "Production Food Roman Celtic Bird Tongues in Aspic",
+    "template": "Production",
     "category": "production",
     "region": "Celtic",
     "size": {
@@ -6887,13 +7283,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3186",
     "guid": 3186,
     "name": "Épicurien de l'eau",
     "nameInternal": "Production Food Roman Oysters with Caviar",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6927,13 +7325,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g3171",
     "guid": 3171,
     "name": "Étal de gruau",
     "nameInternal": "Production Food Roman Porridge",
+    "template": "Production",
     "category": "production",
     "region": "Roman",
     "size": {
@@ -6963,13 +7363,15 @@
           "amount": 1.0
         }
       ]
-    }
+    },
+    "transporterRange": 40
   },
   {
     "id": "g6725",
     "guid": 6725,
     "name": "Aire récréative",
     "nameInternal": "Public Celtic Sporting Grounds",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -6991,6 +7393,7 @@
     "guid": 3621,
     "name": "Amphithéâtre",
     "nameInternal": "Wonder Roman Colosseum",
+    "template": "MonumentEventBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7012,6 +7415,7 @@
     "guid": 36912,
     "name": "Amphithéâtre : arène",
     "nameInternal": "Monument Colosseum Phase 2",
+    "template": "Monument",
     "category": "public",
     "region": null,
     "size": {
@@ -7047,13 +7451,15 @@
           "amount": 2.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g97849",
     "guid": 97849,
     "name": "Amphithéâtre : arène",
     "nameInternal": "Campaign Monument Colosseum Phase 2",
+    "template": "Monument",
     "category": "public",
     "region": null,
     "size": {
@@ -7089,13 +7495,15 @@
           "amount": 2.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g36908",
     "guid": 36908,
     "name": "Amphithéâtre : fondations",
     "nameInternal": "Monument Colosseum Phase 0",
+    "template": "Monument",
     "category": "public",
     "region": null,
     "size": {
@@ -7123,13 +7531,15 @@
           "amount": 5.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g97847",
     "guid": 97847,
     "name": "Amphithéâtre : fondations",
     "nameInternal": "Campaign Monument Colosseum Phase 0",
+    "template": "Monument",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7157,13 +7567,15 @@
           "amount": 5.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g36911",
     "guid": 36911,
     "name": "Amphithéâtre : murs d'enceinte",
     "nameInternal": "Monument Colosseum Phase 1",
+    "template": "Monument",
     "category": "public",
     "region": null,
     "size": {
@@ -7195,13 +7607,15 @@
           "amount": 5.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g97848",
     "guid": 97848,
     "name": "Amphithéâtre : murs d'enceinte",
     "nameInternal": "Campaign Monument Colosseum Phase 1",
+    "template": "Monument",
     "category": "public",
     "region": null,
     "size": {
@@ -7233,13 +7647,15 @@
           "amount": 5.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g144812",
     "guid": 144812,
     "name": "Autel de Vulcain",
     "nameInternal": "Public Roman Shrine Vulcanus",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7261,6 +7677,7 @@
     "guid": 144813,
     "name": "Autel de Vulcain",
     "nameInternal": "Public Roman Celtic Shrine Vulcanus",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7282,6 +7699,7 @@
     "guid": 3620,
     "name": "Bains",
     "nameInternal": "Wonder Roman Baths",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7303,6 +7721,7 @@
     "guid": 8062,
     "name": "Bains",
     "nameInternal": "Wonder Roman Celtic Baths",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7324,6 +7743,7 @@
     "guid": 31368,
     "name": "Bibliothèque",
     "nameInternal": "Public Roman Library",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7345,6 +7765,7 @@
     "guid": 55981,
     "name": "Bosquet sacré",
     "nameInternal": "Wonder Celtic Sacred Grove",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7366,6 +7787,7 @@
     "guid": 97850,
     "name": "Campaign Monument Colosseum Phase 1.5 Collapsed",
     "nameInternal": "Campaign Monument Colosseum Phase 1.5 Collapsed",
+    "template": "Monument",
     "category": "public",
     "region": null,
     "size": {
@@ -7397,13 +7819,15 @@
           "amount": 5.0
         }
       ]
-    }
+    },
+    "transporterRange": 30
   },
   {
     "id": "g19753",
     "guid": 19753,
     "name": "Citerne d'aqueduc",
     "nameInternal": "Aqueduct Roman Distribution",
+    "template": "AqueductDistributor",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7425,6 +7849,7 @@
     "guid": 29526,
     "name": "Citerne d'aqueduc",
     "nameInternal": "Aqueduct Roman Celtic Distribution",
+    "template": "AqueductDistributor",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7446,6 +7871,7 @@
     "guid": 3402,
     "name": "Comptoir",
     "nameInternal": "Harbor Warehouse Roman 01",
+    "template": "HarborWarehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7463,6 +7889,7 @@
     "guid": 3403,
     "name": "Comptoir amélioré",
     "nameInternal": "Harbor Warehouse Roman 02",
+    "template": "HarborWarehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7480,6 +7907,7 @@
     "guid": 3406,
     "name": "Comptoir grandiose",
     "nameInternal": "Harbor Warehouse Roman 03",
+    "template": "HarborWarehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7497,6 +7925,7 @@
     "guid": 6726,
     "name": "Conseil des anciens",
     "nameInternal": "Public Celtic Town Hall",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7518,6 +7947,7 @@
     "guid": 30770,
     "name": "Custodes",
     "nameInternal": "Institution Roman Celtic Riot",
+    "template": "CityInstitutionBuilding_Marsh",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7539,6 +7969,7 @@
     "guid": 30762,
     "name": "Custodia",
     "nameInternal": "Institution Roman Riot",
+    "template": "CityInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7560,6 +7991,7 @@
     "guid": 3310,
     "name": "Entrepôt",
     "nameInternal": "Warehouse Roman 01",
+    "template": "Warehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7577,6 +8009,7 @@
     "guid": 7055,
     "name": "Entrepôt",
     "nameInternal": "Warehouse Roman Celtic 01",
+    "template": "Warehouse_Marsh",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7594,6 +8027,7 @@
     "guid": 3311,
     "name": "Entrepôt amélioré",
     "nameInternal": "Warehouse Roman 02",
+    "template": "Warehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7611,6 +8045,7 @@
     "guid": 7056,
     "name": "Entrepôt amélioré",
     "nameInternal": "Warehouse Roman Celtic 02",
+    "template": "Warehouse_Marsh",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7628,6 +8063,7 @@
     "guid": 3313,
     "name": "Entrepôt colossal",
     "nameInternal": "Warehouse Roman 04 DEPRECATED",
+    "template": "Warehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7645,6 +8081,7 @@
     "guid": 3312,
     "name": "Entrepôt grandiose",
     "nameInternal": "Warehouse Roman 03",
+    "template": "Warehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7662,6 +8099,7 @@
     "guid": 6728,
     "name": "Fanum",
     "nameInternal": "Public Roman Celtic Fanum",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7683,6 +8121,7 @@
     "guid": 3617,
     "name": "Forum",
     "nameInternal": "Wonder Roman Forum",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7704,6 +8143,7 @@
     "guid": 3616,
     "name": "Grammaticus",
     "nameInternal": "Public Roman Grammaticus",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7725,6 +8165,7 @@
     "guid": 6730,
     "name": "Grammaticus",
     "nameInternal": "Public Roman Celtic Grammaticus",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7746,6 +8187,7 @@
     "guid": 7057,
     "name": "Grand entrepôt",
     "nameInternal": "Warehouse Roman Celtic 03",
+    "template": "Warehouse_Marsh",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7763,6 +8205,7 @@
     "guid": 31608,
     "name": "Jetée marchande",
     "nameInternal": "Harbor Pier Roman",
+    "template": "TradeBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7781,6 +8224,7 @@
     "guid": 31611,
     "name": "Jetée marchande",
     "nameInternal": "Harbor Pier Roman Celtic",
+    "template": "TradeBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7799,6 +8243,7 @@
     "guid": 71266,
     "name": "Latrine",
     "nameInternal": "Institution Roman Illness Mini",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7820,6 +8265,7 @@
     "guid": 71269,
     "name": "Latrine",
     "nameInternal": "Institution Roman Celtic Illness Mini",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7841,6 +8287,7 @@
     "guid": 31367,
     "name": "Maison de jeu",
     "nameInternal": "Public Roman Gambling House",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7862,6 +8309,7 @@
     "guid": 37177,
     "name": "Maison de jeu",
     "nameInternal": "Public Roman Celtic Gambling House",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7883,6 +8331,7 @@
     "guid": 3527,
     "name": "Marché",
     "nameInternal": "Public Roman Market",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7904,6 +8353,7 @@
     "guid": 6724,
     "name": "Marché",
     "nameInternal": "Public Roman Celtic Market",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7925,6 +8375,7 @@
     "guid": 33048,
     "name": "Marina de Valéria",
     "nameInternal": "Harbor Heartlands Trader02 (Cumae Rep)",
+    "template": "HarborWarehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7942,6 +8393,7 @@
     "guid": 30765,
     "name": "Medici",
     "nameInternal": "Institution Roman Illness",
+    "template": "CityInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -7963,6 +8415,7 @@
     "guid": 30771,
     "name": "Medici",
     "nameInternal": "Institution Roman Celtic Illness",
+    "template": "CityInstitutionBuilding_Marsh",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -7984,6 +8437,7 @@
     "guid": 145104,
     "name": "Port de Caecilia",
     "nameInternal": "Harbor DLC01 Volcano Warehouse (Caecilia)",
+    "template": "HarborWarehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8001,6 +8455,7 @@
     "guid": 33047,
     "name": "Port de Diana",
     "nameInternal": "Harbor Heartlands Trader01 (Diana)",
+    "template": "HarborWarehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8018,6 +8473,7 @@
     "guid": 37204,
     "name": "Port de Manx",
     "nameInternal": "Harbor Wettlands Trader01 (Manx)",
+    "template": "HarborWarehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8035,6 +8491,7 @@
     "guid": 37203,
     "name": "Port du procurateur",
     "nameInternal": "Harbor Wettlands Trader02 (Procurator)",
+    "template": "HarborWarehouse",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8052,6 +8509,7 @@
     "guid": 71264,
     "name": "Puits",
     "nameInternal": "Institution Roman Fire Mini",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8073,6 +8531,7 @@
     "guid": 71267,
     "name": "Puits",
     "nameInternal": "Institution Roman Celtic Fire Mini",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8094,6 +8553,7 @@
     "guid": 3615,
     "name": "Sanctuaire",
     "nameInternal": "Public Roman Sanctuary",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8115,6 +8575,7 @@
     "guid": 81071,
     "name": "Sanctuaire d'Epona",
     "nameInternal": "Public Roman Shrine Epona",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8136,6 +8597,7 @@
     "guid": 82491,
     "name": "Sanctuaire d'Epona",
     "nameInternal": "Public Roman Celtic Shrine Epona",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8157,6 +8619,7 @@
     "guid": 81072,
     "name": "Sanctuaire de Cernunnos",
     "nameInternal": "Public Roman Shrine Cernunnos",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8178,6 +8641,7 @@
     "guid": 82492,
     "name": "Sanctuaire de Cernunnos",
     "nameInternal": "Public Roman Celtic Shrine Cernunnos",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8199,6 +8663,7 @@
     "guid": 81021,
     "name": "Sanctuaire de Cérès",
     "nameInternal": "Public Roman Shrine Ceres",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8220,6 +8685,7 @@
     "guid": 82487,
     "name": "Sanctuaire de Cérès",
     "nameInternal": "Public Roman Celtic Shrine Ceres",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8241,6 +8707,7 @@
     "guid": 80710,
     "name": "Sanctuaire de Mars",
     "nameInternal": "Public Roman Shrine Mars",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8262,6 +8729,7 @@
     "guid": 82486,
     "name": "Sanctuaire de Mars",
     "nameInternal": "Public Roman Celtic Shrine Mars",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8283,6 +8751,7 @@
     "guid": 81070,
     "name": "Sanctuaire de Mercure-Lug",
     "nameInternal": "Public Roman Shrine Mercuy-Lugus",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8304,6 +8773,7 @@
     "guid": 82490,
     "name": "Sanctuaire de Mercure-Lug",
     "nameInternal": "Public Roman Celtic Shrine Mercuy-Lugus",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8325,6 +8795,7 @@
     "guid": 81069,
     "name": "Sanctuaire de Minerve",
     "nameInternal": "Public Roman Shrine Minerva",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8346,6 +8817,7 @@
     "guid": 82489,
     "name": "Sanctuaire de Minerve",
     "nameInternal": "Public Roman Celtic Shrine Minerva",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8367,6 +8839,7 @@
     "guid": 81068,
     "name": "Sanctuaire de Neptune",
     "nameInternal": "Public Roman Shrine Neptune",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8388,6 +8861,7 @@
     "guid": 82488,
     "name": "Sanctuaire de Neptune",
     "nameInternal": "Public Roman Celtic Shrine Neptune",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8409,6 +8883,7 @@
     "guid": 19691,
     "name": "Source d'aqueduc",
     "nameInternal": "Aqueduct Roman Basin",
+    "template": "AqueductProducer",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8425,6 +8900,7 @@
     "guid": 29524,
     "name": "Source d'aqueduc",
     "nameInternal": "Aqueduct Roman Celtic Basin",
+    "template": "AqueductProducer",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8441,6 +8917,7 @@
     "guid": 3528,
     "name": "Taverne",
     "nameInternal": "Public Roman Tavern",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8462,6 +8939,7 @@
     "guid": 3619,
     "name": "Temple",
     "nameInternal": "Public Roman Temple",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8483,6 +8961,7 @@
     "guid": 6729,
     "name": "Temple",
     "nameInternal": "Wonder Roman Celtic Temple",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8504,6 +8983,7 @@
     "guid": 3618,
     "name": "Théâtre",
     "nameInternal": "Public Roman Theater",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8525,6 +9005,7 @@
     "guid": 37178,
     "name": "Théâtre",
     "nameInternal": "Public Roman Celtic Theater",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8546,6 +9027,7 @@
     "guid": 6727,
     "name": "Théâtre bardique",
     "nameInternal": "Public Celtic Bardic Hall",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8567,6 +9049,7 @@
     "guid": 71265,
     "name": "Tour de guet",
     "nameInternal": "Institution Roman Riot Mini",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8588,6 +9071,7 @@
     "guid": 71268,
     "name": "Tour de guet",
     "nameInternal": "Institution Roman Celtic Riot Mini",
+    "template": "MiniInstitutionBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8609,6 +9093,7 @@
     "guid": 55980,
     "name": "Tumulus",
     "nameInternal": "Wonder Celtic Barrow",
+    "template": "PublicServiceBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8630,6 +9115,7 @@
     "guid": 30754,
     "name": "Vigiles",
     "nameInternal": "Institution Roman Fire",
+    "template": "CityInstitutionBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -8651,6 +9137,7 @@
     "guid": 30769,
     "name": "Vigiles",
     "nameInternal": "Institution Roman Celtic Fire",
+    "template": "CityInstitutionBuilding_Marsh",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -8672,6 +9159,7 @@
     "guid": 3142,
     "name": "Résidence d'Equites",
     "nameInternal": "Residence Roman 03 Equites",
+    "template": "ResidenceBuilding",
     "category": "residentiel",
     "region": "Roman",
     "size": {
@@ -8688,6 +9176,7 @@
     "guid": 3087,
     "name": "Résidence de Liberti",
     "nameInternal": "Residence Roman 01 Peasants",
+    "template": "ResidenceBuilding",
     "category": "residentiel",
     "region": "Roman",
     "size": {
@@ -8704,6 +9193,7 @@
     "guid": 6475,
     "name": "Résidence de Mercators",
     "nameInternal": "Residence Roman Celtic 02 Merchants",
+    "template": "ResidenceBuilding",
     "category": "residentiel",
     "region": "Celtic",
     "size": {
@@ -8720,6 +9210,7 @@
     "guid": 6514,
     "name": "Résidence de Nobles",
     "nameInternal": "Residence Roman Celtic 03 Nobles",
+    "template": "ResidenceBuilding",
     "category": "residentiel",
     "region": "Celtic",
     "size": {
@@ -8736,6 +9227,7 @@
     "guid": 3145,
     "name": "Résidence de Patriciens",
     "nameInternal": "Residence Roman 04 Patricians",
+    "template": "ResidenceBuilding",
     "category": "residentiel",
     "region": "Roman",
     "size": {
@@ -8752,6 +9244,7 @@
     "guid": 3141,
     "name": "Résidence de Plébéiens",
     "nameInternal": "Residence Roman 02 Plebeians",
+    "template": "ResidenceBuilding",
     "category": "residentiel",
     "region": "Roman",
     "size": {
@@ -8768,6 +9261,7 @@
     "guid": 6414,
     "name": "Résidence de Tourbiers",
     "nameInternal": "Residence Celtic 01 Tribesmen",
+    "template": "ResidenceBuilding",
     "category": "residentiel",
     "region": "Celtic",
     "size": {
@@ -8784,6 +9278,7 @@
     "guid": 6471,
     "name": "Résidence de forgerons",
     "nameInternal": "Residence Celtic 02 Smiths",
+    "template": "ResidenceBuilding",
     "category": "residentiel",
     "region": "Celtic",
     "size": {
@@ -8800,6 +9295,7 @@
     "guid": 6472,
     "name": "Résidences d'Aldermen",
     "nameInternal": "Residence Celtic 03 Alderman",
+    "template": "ResidenceBuilding",
     "category": "residentiel",
     "region": "Celtic",
     "size": {

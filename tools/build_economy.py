@@ -151,7 +151,9 @@ def main():
                    for it in fb.findall("./FactoryInputs/Item")]
             maint = [{"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 0)}
                      for it in vals.findall("./Maintenance/Maintenances/Item")]
-            cyc = fb.findtext("CycleTime")
+            # CycleTime absent = défaut MOTEUR 30 s (confirmé [WEB] : scierie 30 s,
+            # cf. GAME_MECHANICS.md §5 ; concerne mines/scieries/bûcherons…)
+            cyc = fb.findtext("CycleTime") or "30"
             bprod[defId] = {
                 "cycleTime": int(cyc) if cyc else None,
                 "inputs": ins, "outputs": outs, "maint": maint,

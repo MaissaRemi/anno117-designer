@@ -1,7 +1,7 @@
 import type { Catalog, Layout } from "../model/types";
 
-// v5 : citerne/source d'aqueduc au catalogue + mapping besoin-citerne (68747/68748).
-const KEY = "anno117-designer:state:v5";
+// v6 : catalogue + template/transporterRange/Colisée (archetype production, eau).
+const KEY = "anno117-designer:state:v6";
 
 interface Persisted {
   catalog: Catalog;

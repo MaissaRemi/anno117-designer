@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "../state/store";
-import { tiers } from "../economy/economy";
-import { runIslandPlan } from "../optimizer/runIslandPlan";
-import type { IslandPlanResult } from "../optimizer/islandPlan";
+import { economy, tiers } from "../economy/economy";
+import { runIslandPlan, type AnyIslandPlanResult } from "../optimizer/runIslandPlan";
 
 interface Props {
   onClose: () => void;
@@ -25,17 +24,27 @@ export function IslandPlanner({ onClose }: Props) {
   const applyOptimization = useStore((s) => s.applyOptimization);
 
   const [tierGuid, setTierGuid] = useState(targetTiers[targetTiers.length - 1]?.guid ?? "");
-  const [mode, setMode] = useState<"import" | "local">("import");
+  const [mode, setMode] = useState<"population" | "production">("population");
   const [needMode, setNeedMode] = useState<"all" | "thresholds">("all");
   // 80 % par défaut : sur les vrais contours d'île, exiger 100 % des 11 services
   // T4 partout coûte ~3× moins de maisons (le rim n'a pas la place pour les wonders)
   const [floor, setFloor] = useState(80);
+  const [prodGood, setProdGood] = useState("");
+  const [prodRate, setProdRate] = useState(10);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ step: number; total: number } | null>(null);
-  const [result, setResult] = useState<IslandPlanResult | null>(null);
+  const [result, setResult] = useState<AnyIslandPlanResult | null>(null);
   const [placeMsg, setPlaceMsg] = useState<string | null>(null);
 
   const usable = useStore((s) => s.layout.grid.usable.filter(Boolean).length);
+
+  // biens produisibles (un producteur connu), triés par nom FR
+  const producibleGoods = useMemo(
+    () => Object.keys(economy.producers)
+      .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [],
+  );
 
   const run = () => {
     const s = useStore.getState();
@@ -44,7 +53,12 @@ export function IslandPlanner({ onClose }: Props) {
     setPlaceMsg(null);
     setProgress(null);
     const { promise } = runIslandPlan(
-      { catalog: s.catalog, grid: s.layout.grid, tierGuid, coverageFloor: floor / 100, needMode },
+      {
+        catalog: s.catalog, grid: s.layout.grid, mode, tierGuid,
+        coverageFloor: floor / 100, needMode,
+        productionGood: prodGood || producibleGoods[0]?.guid,
+        productionRate: prodRate,
+      },
       (step, total) => setProgress({ step, total }),
     );
     promise
@@ -55,16 +69,17 @@ export function IslandPlanner({ onClose }: Props) {
 
   const place = () => {
     if (!result) return;
+    const coverage = result.mode === "import" ? result.coverageMin / 100 : result.prodsCovered / Math.max(1, result.prodsTotal);
     applyOptimization({
       buildings: result.buildings,
       roads: result.roads,
       fields: result.fields,
-      aqueducts: result.aqueducts,
+      aqueducts: result.mode === "import" ? result.aqueducts : undefined,
       placed: result.buildings.length,
       requested: result.buildings.length,
       placedByDef: {},
       score: 0,
-      breakdown: { count: result.buildings.length, roadLen: result.roads.length, bboxArea: 0, coverage: result.coverageMin / 100 },
+      breakdown: { count: result.buildings.length, roadLen: result.roads.length, bboxArea: 0, coverage },
     });
     setPlaceMsg("✓ Placé sur l'île.");
   };
@@ -83,41 +98,66 @@ export function IslandPlanner({ onClose }: Props) {
 
         <div className="row">
           <label style={{ flex: 1 }}>
-            Tier-cible
-            <select value={tierGuid} onChange={(e) => setTierGuid(e.target.value)} style={{ width: "100%" }}>
-              {targetTiers.map((t) => (
-                <option key={t.guid} value={t.guid}>
-                  {t.name} ({t.region}) · cap {t.capacityDefault}
-                </option>
-              ))}
+            Archetype d'île
+            <select value={mode} onChange={(e) => setMode(e.target.value as "population" | "production")} style={{ width: "100%" }}>
+              <option value="population">🏠 Population (import des biens)</option>
+              <option value="production">🏭 Production (export, main-d'œuvre locale)</option>
             </select>
           </label>
-          <label style={{ flex: 1 }}>
-            Mode
-            <select value={mode} onChange={(e) => setMode(e.target.value as "import" | "local")} style={{ width: "100%" }}>
-              <option value="import">Import (prod ailleurs)</option>
-              <option value="local" disabled>
-                Auto-suffisant (phase 2)
-              </option>
-            </select>
-          </label>
+          {mode === "population" && (
+            <label style={{ flex: 1 }}>
+              Tier-cible
+              <select value={tierGuid} onChange={(e) => setTierGuid(e.target.value)} style={{ width: "100%" }}>
+                {targetTiers.map((t) => (
+                  <option key={t.guid} value={t.guid}>
+                    {t.name} ({t.region}) · cap {t.capacityDefault}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
-        <div className="row">
-          <label style={{ flex: 1 }}>
-            Besoins
-            <select value={needMode} onChange={(e) => setNeedMode(e.target.value as "all" | "thresholds")} style={{ width: "100%" }}>
-              <option value="all">Complets (max bonus/maison)</option>
-              <option value="thresholds">Seuils d'upgrade (min services → + de maisons)</option>
-            </select>
-          </label>
-        </div>
+        {mode === "population" && (
+          <>
+            <div className="row">
+              <label style={{ flex: 1 }}>
+                Besoins
+                <select value={needMode} onChange={(e) => setNeedMode(e.target.value as "all" | "thresholds")} style={{ width: "100%" }}>
+                  <option value="all">Complets (max bonus/maison)</option>
+                  <option value="thresholds">Seuils d'upgrade (min services → + de maisons)</option>
+                </select>
+              </label>
+            </div>
 
-        <label className="slider">
-          <span>Couverture visée</span>
-          <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
-          <span className="muted">{floor}%</span>
-        </label>
+            <label className="slider">
+              <span>Couverture visée</span>
+              <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
+              <span className="muted">{floor}%</span>
+            </label>
+          </>
+        )}
+
+        {mode === "production" && (
+          <div className="row">
+            <label style={{ flex: 2 }}>
+              Bien à produire
+              <select value={prodGood || producibleGoods[0]?.guid} onChange={(e) => setProdGood(e.target.value)} style={{ width: "100%" }}>
+                {producibleGoods.map((g) => (
+                  <option key={g.guid} value={g.guid}>{g.name}</option>
+                ))}
+              </select>
+            </label>
+            <label style={{ flex: 1 }}>
+              Débit (u/min)
+              <input
+                type="number" min={0.5} step={0.5} value={prodRate}
+                onChange={(e) => setProdRate(parseFloat(e.target.value) || 1)}
+                style={{ width: "100%" }}
+              />
+            </label>
+          </div>
+        )}
 
         {running && (
           <div className="opt-progress">
@@ -125,7 +165,7 @@ export function IslandPlanner({ onClose }: Props) {
           </div>
         )}
 
-        {result && !running && (
+        {result && !running && result.mode === "import" && (
           <div className="opt-result">
             <div style={{ marginBottom: 6 }}>
               <b>{result.residents.toLocaleString("fr")} habitants</b> ({result.tierName}) ·{" "}
@@ -179,6 +219,39 @@ export function IslandPlanner({ onClose }: Props) {
               <div className="warn">
                 ⚠ Trous : {result.gaps.join(" · ")}
               </div>
+            )}
+            {placeMsg && <div style={{ marginTop: 6 }}>{placeMsg}</div>}
+          </div>
+        )}
+
+        {result && !running && result.mode === "production" && (
+          <div className="opt-result">
+            <div style={{ marginBottom: 6 }}>
+              <b>{result.ratePerMin.toLocaleString("fr")}/min · {economy.goodNames[result.good] || result.good}</b>{" "}
+              · {result.prodsTotal} bâtiments de prod · {result.houses} maisons ouvrières
+            </div>
+            <div style={{ marginBottom: 6 }}>
+              🚚 Entrepôts : {result.warehousesPlaced} ·{" "}
+              <b style={{ color: color((100 * result.prodsCovered) / Math.max(1, result.prodsTotal)) }}>
+                {result.prodsCovered}/{result.prodsTotal}
+              </b>{" "}
+              prods à portée de charrette
+            </div>
+            <div style={{ marginBottom: 6 }}>
+              💰 net <span style={{ color: result.solution.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>
+                {result.solution.money.net >= 0 ? "+" : ""}{Math.round(result.solution.money.net).toLocaleString("fr")}/min
+              </span>{" "}
+              <span className="muted">· valeur marchande {Math.round(result.solution.marketValue).toLocaleString("fr")}/min</span>
+              {" "}· posés {result.placed}/{result.requested}
+            </div>
+            <b>👷 Population requise</b>
+            <ul className="bilan">
+              {Object.entries(result.solution.populationByTier).filter(([, p]) => p > 0).map(([t, p]) => (
+                <li key={t}>{tiers.find((x) => x.guid === t)?.name ?? t} : {Math.ceil(p).toLocaleString("fr")}</li>
+              ))}
+            </ul>
+            {result.gaps.length > 0 && (
+              <div className="warn">⚠ {result.gaps.join(" · ")}</div>
             )}
             {placeMsg && <div style={{ marginTop: 6 }}>{placeMsg}</div>}
           </div>
