@@ -1,4 +1,5 @@
 import { uid } from "../model/factories";
+import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import { economy } from "../economy/economy";
 import type { DefLookup } from "../engine/rules";
@@ -17,7 +18,6 @@ export interface LatticeOpts {
   water?: boolean;
   /** Hauteurs quantifiées (q = h/16) — pente des aqueducs (waterPlan). */
   heights?: Int8Array | null;
-  debug?: (msg: string) => void; // instrumentation (tests/diag)
 }
 
 export interface LatticeResult {
@@ -438,8 +438,7 @@ export function planLattice(
       const seeds: number[] = [];
       for (let bIdx = nBefore; bIdx < buildings.length; bIdx++) {
         const b = buildings[bIdx];
-        const pdef = lookup(b.defId)!;
-        const w = b.rotation === 90 ? pdef.size.h : pdef.size.w, h = b.rotation === 90 ? pdef.size.w : pdef.size.h;
+        const { w, h } = footprintSize(lookup(b.defId)!, b.rotation);
         for (let j = 0; j < h; j++) for (let i2 = 0; i2 < w; i2++) seeds.push((b.y + j) * W + (b.x + i2));
       }
       l1Update(distMap, seeds, rC + 1);
@@ -506,17 +505,27 @@ export function planLattice(
       if (miss > worstMiss) { worstMiss = miss; worst = tc; }
     }
     if (!worst || worstMiss <= demandTotal * (1 - floor)) break;
-    // densifier : poser une copie au barycentre du plus gros trou (max demande non couverte)
+    // densifier : poser une copie au barycentre du plus gros trou (max demande non
+    // couverte). Vraie table de sommes intégrales : la somme de fenêtre brute-force
+    // coûtait (bbox/3)² × q² par round (q≈106 pour le Colisée).
     const cov = covByType.get(worst.def.id)!;
-    const miss = new Uint8Array(N);
-    for (let i = 0; i < N; i++) miss[i] = demand[i] && !cov[i] ? 1 : 0;
-    // SAT pour trouver la fenêtre la plus dense de trous
+    const sat = new Int32Array((W + 1) * (H + 1));
+    for (let y = 0; y < H; y++) {
+      const r0 = y * (W + 1), r1 = (y + 1) * (W + 1);
+      for (let x = 0; x < W; x++) {
+        const m = demand[y * W + x] && !cov[y * W + x] ? 1 : 0;
+        sat[r1 + x + 1] = m + sat[r0 + x + 1] + sat[r1 + x] - sat[r0 + x];
+      }
+    }
+    const rectSum = (xa: number, ya: number, xb: number, yb: number): number => {
+      xa = Math.max(0, xa); ya = Math.max(0, ya); xb = Math.min(W - 1, xb); yb = Math.min(H - 1, yb);
+      if (xa > xb || ya > yb) return 0;
+      return sat[(yb + 1) * (W + 1) + xb + 1] - sat[ya * (W + 1) + xb + 1] - sat[(yb + 1) * (W + 1) + xa] + sat[ya * (W + 1) + xa];
+    };
     const q = Math.max(3, Math.floor((worst.range * 0.6) / Math.SQRT2));
     let bx = -1, by = -1, best = 0;
     for (let cy = y0; cy <= y1; cy += 3) for (let cx = x0; cx <= x1; cx += 3) {
-      let s = 0;
-      for (let yy = Math.max(y0, cy - q); yy <= Math.min(y1, cy + q); yy += 2)
-        for (let xx = Math.max(x0, cx - q); xx <= Math.min(x1, cx + q); xx += 2) s += miss[yy * W + xx];
+      const s = rectSum(cx - q, cy - q, cx + q, cy + q);
       if (s > best) { best = s; bx = cx; by = cy; }
     }
     if (bx < 0 || best === 0) { repairBudget.set(worst.def.id, 0); continue; }
@@ -537,9 +546,7 @@ export function planLattice(
     for (let i = 0; i < N; i++) if (roadAt[i]) roadsNow.push({ x: i % W, y: (i / W) | 0 });
     water = planWater(grid, buildings, roadsNow, lookup, opts.heights);
     for (const s of water.sources) {
-      const d = lookup(s.defId)!;
-      const w = s.rotation === 90 || s.rotation === 270 ? d.size.h : d.size.w;
-      const h = s.rotation === 90 || s.rotation === 270 ? d.size.w : d.size.h;
+      const { w, h } = footprintSize(lookup(s.defId)!, s.rotation);
       for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
         const c = (s.y + j) * W + (s.x + i);
         if (c >= 0 && c < N) { occ[c] = 1; if (roadAt[c]) roadAt[c] = 0; }
@@ -556,23 +563,6 @@ export function planLattice(
   // précédents (routes écrasées) — le filtre maisons doit voir l'état exact.
   rebuildDemand();
   for (const tc of typeCov.values()) refreshType(tc);
-  if (opts.debug) {
-    opts.debug(`demandTotal=${demandTotal}`);
-    let inter = 0;
-    for (let i = 0; i < N; i++) {
-      if (!demand[i]) continue;
-      let all = true;
-      for (const tc of typeCov.values()) if (!covByType.get(tc.def.id)![i]) { all = false; break; }
-      if (all) inter++;
-    }
-    opts.debug(`intersection(all types)=${inter} (${demandTotal ? Math.round((100 * inter) / demandTotal) : 0}%)`);
-    for (const tc of typeCov.values()) {
-      const cov = covByType.get(tc.def.id)!;
-      let c = 0;
-      for (let i = 0; i < N; i++) if (demand[i] && cov[i]) c++;
-      opts.debug(`  ${tc.def.name} range=${tc.range} effR=${effR(tc.def)} copies=${servicesPlaced[tc.def.id] ?? 0} covDemand=${demandTotal ? Math.round((100 * c) / demandTotal) : 0}%`);
-    }
-  }
 
   // --- MAISONS : tout slot accessible, gardé ssi couvert par tous (floor) ---
   const types = [...typeCov.values()].filter((tc) => (placements.get(tc.def.id) ?? []).length > 0);

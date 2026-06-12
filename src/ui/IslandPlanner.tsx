@@ -29,7 +29,13 @@ export function IslandPlanner({ onClose }: Props) {
   // 80 % par défaut : sur les vrais contours d'île, exiger 100 % des 11 services
   // T4 partout coûte ~3× moins de maisons (le rim n'a pas la place pour les wonders)
   const [floor, setFloor] = useState(80);
-  const [prodGood, setProdGood] = useState("");
+  // défaut = premier bien produisible, fixé UNE fois (l'affiché == l'envoyé)
+  const [prodGood, setProdGood] = useState(() => {
+    const first = Object.keys(economy.producers)
+      .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
+      .sort((a, b) => a.name.localeCompare(b.name))[0];
+    return first?.guid ?? "";
+  });
   const [prodRate, setProdRate] = useState(10);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ step: number; total: number } | null>(null);
@@ -56,8 +62,8 @@ export function IslandPlanner({ onClose }: Props) {
       {
         catalog: s.catalog, grid: s.layout.grid, mode, tierGuid,
         coverageFloor: floor / 100, needMode,
-        productionGood: prodGood || producibleGoods[0]?.guid,
-        productionRate: prodRate,
+        // params production joints seulement quand ils servent
+        ...(mode === "production" ? { productionGood: prodGood, productionRate: prodRate } : {}),
       },
       (step, total) => setProgress({ step, total }),
     );
@@ -142,7 +148,7 @@ export function IslandPlanner({ onClose }: Props) {
           <div className="row">
             <label style={{ flex: 2 }}>
               Bien à produire
-              <select value={prodGood || producibleGoods[0]?.guid} onChange={(e) => setProdGood(e.target.value)} style={{ width: "100%" }}>
+              <select value={prodGood} onChange={(e) => setProdGood(e.target.value)} style={{ width: "100%" }}>
                 {producibleGoods.map((g) => (
                   <option key={g.guid} value={g.guid}>{g.name}</option>
                 ))}

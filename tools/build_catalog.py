@@ -18,6 +18,7 @@ import xml.etree.ElementTree as ET
 
 sys.path.insert(0, os.path.dirname(__file__))
 import rda_extract as rda
+from game_defaults import CYCLE_TIME_DEFAULT
 
 GAME = r"F:\Anno 117 - Pax Romana\maindata"
 HERE = os.path.dirname(os.path.dirname(__file__))
@@ -213,8 +214,7 @@ def collect_buildings(texts, template_effects):
                 outs.append({"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 1)})
             for it in fb.findall("./FactoryInputs/Item"):
                 ins.append({"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 1)})
-            # CycleTime absent = défaut MOTEUR 30 s (cf. GAME_MECHANICS.md §5)
-            cycle = fb.findtext("CycleTime") or "30"
+            cycle = fb.findtext("CycleTime") or str(CYCLE_TIME_DEFAULT)
             if outs or ins:
                 production = {
                     "cycleTime": int(cycle) if cycle else None,
@@ -367,8 +367,10 @@ def to_app_catalog(buildings, product_name):
                 "outputs": [{"good": product_name.get(o["product"], o["product"]), "amount": o["amount"]} for o in p["outputs"]],
                 "inputs": [{"good": product_name.get(i["product"], i["product"]), "amount": i["amount"]} for i in p["inputs"]],
             }
-            # portée transporteur (défaut moteur 30 si absente)
-            entry["transporterRange"] = b.get("transporterRange") or 30
+            # portée transporteur : valeur BRUTE seulement — le défaut moteur (30)
+            # vit à UN seul étage, côté runtime (prodPlan DEFAULT_RANGE)
+            if b.get("transporterRange"):
+                entry["transporterRange"] = b["transporterRange"]
         cat.append(entry)
     # tri : par categorie puis nom
     cat.sort(key=lambda e: (e["category"], e["name"]))

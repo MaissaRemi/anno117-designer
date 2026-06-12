@@ -19,6 +19,9 @@ import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from game_defaults import CYCLE_TIME_DEFAULT
+
 HERE = os.path.dirname(os.path.dirname(__file__))
 ASSETS = os.path.join(HERE, ".gamedata", "assets_base.xml")
 TEXTS = os.path.join(HERE, ".gamedata", "texts_french.xml")
@@ -151,9 +154,7 @@ def main():
                    for it in fb.findall("./FactoryInputs/Item")]
             maint = [{"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 0)}
                      for it in vals.findall("./Maintenance/Maintenances/Item")]
-            # CycleTime absent = défaut MOTEUR 30 s (confirmé [WEB] : scierie 30 s,
-            # cf. GAME_MECHANICS.md §5 ; concerne mines/scieries/bûcherons…)
-            cyc = fb.findtext("CycleTime") or "30"
+            cyc = fb.findtext("CycleTime") or str(CYCLE_TIME_DEFAULT)
             bprod[defId] = {
                 "cycleTime": int(cyc) if cyc else None,
                 "inputs": ins, "outputs": outs, "maint": maint,

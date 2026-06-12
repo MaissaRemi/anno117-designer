@@ -1,10 +1,14 @@
 import { uid } from "../model/factories";
+import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import type { DefLookup } from "../engine/rules";
 import { solve, type SolveResult } from "../economy/solve";
 import { anneal } from "./anneal";
 import { DEFAULT_WEIGHTS } from "./types";
-import { blockMountains } from "./waterPlan";
+import { blockMountains, MOUNTAIN_BLOCK_RADIUS } from "./waterPlan";
+
+// zone posable/traversable autour d'un slot montagne (alignée sur waterPlan)
+const MOUNTAIN_ZONE = MOUNTAIN_BLOCK_RADIUS + 2;
 
 /**
  * Plan d'île PRODUCTION (archetype « île d'export », cf. session refonte) :
@@ -102,9 +106,7 @@ export function planIslandProduction(
   for (const r of roads) if (r.x >= 0 && r.y >= 0 && r.x < W && r.y < H) roadAt[r.y * W + r.x] = 1;
   const fpOf = (b: PlacedBuilding): { x: number; y: number; w: number; h: number } | null => {
     const d = lookup(b.defId);
-    if (!d) return null;
-    const rot = b.rotation === 90 || b.rotation === 270;
-    return { x: b.x, y: b.y, w: rot ? d.size.h : d.size.w, h: rot ? d.size.w : d.size.h };
+    return d ? { x: b.x, y: b.y, ...footprintSize(d, b.rotation) } : null;
   };
   for (const b of buildings) {
     const fp = fpOf(b);
@@ -124,7 +126,7 @@ export function planIslandProduction(
     for (let si = 0; si < freeSlots.length; si++) {
       const s = freeSlots[si];
       // spirale autour du slot (zone montagne non-usable : autorisée pour les mines)
-      for (let r = 0; r <= 8; r++) {
+      for (let r = 0; r <= MOUNTAIN_ZONE; r++) {
         for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
           const x = s.x + dx - (def.size.w >> 1), y = s.y + dy - (def.size.h >> 1);
@@ -135,7 +137,7 @@ export function planIslandProduction(
             // bâtiments interdits ; hors-terre toléré (montagne) ; routes interdites
             if (roadAt[c]) { ok = false; break; }
             if (occ[c] && grid.usable[c]) { ok = false; break; }
-            const nearSlot = Math.abs(x + i - s.x) <= 8 && Math.abs(y + j - s.y) <= 8;
+            const nearSlot = Math.abs(x + i - s.x) <= MOUNTAIN_ZONE && Math.abs(y + j - s.y) <= MOUNTAIN_ZONE;
             if (!grid.usable[c] && !nearSlot) { ok = false; break; }
           }
           if (!ok) continue;
@@ -207,43 +209,47 @@ export function planIslandProduction(
     gaps.push("Aucun entrepôt au catalogue");
   } else if (prods.length) {
     // BFS routes par prod → cases route à ≤ transporterRange ; un entrepôt couvre la
-    // prod s'il est ortho-adjacent à une de ces cases
+    // prod s'il est ortho-adjacent à une de ces cases.
+    // visited partagé + époques : un fill(-1) plein-grille par prod coûtait ~2,4 Mo × prods.
     const reachCount = new Map<number, number[]>(); // case route -> indices de prods
-    const reaches: Set<number>[] = [];
+    const seenEpoch = new Int32Array(N);
     for (let pi = 0; pi < prods.length; pi++) {
       const fp = fpOf(prods[pi])!;
       const range = lookup(prods[pi].defId)?.transporterRange ?? DEFAULT_RANGE;
-      const dist = new Int32Array(N).fill(-1);
+      const ep = pi + 1;
+      const visit = (c: number): boolean => {
+        if (seenEpoch[c] === ep) return false;
+        seenEpoch[c] = ep;
+        return true;
+      };
       let frontier: number[] = [];
       for (let i = 0; i < fp.w; i++) {
         for (const yy of [fp.y - 1, fp.y + fp.h]) {
           const c = yy * W + fp.x + i;
-          if (yy >= 0 && yy < H && roadAt[c] && dist[c] < 0) { dist[c] = 1; frontier.push(c); }
+          if (yy >= 0 && yy < H && roadAt[c] && visit(c)) frontier.push(c);
         }
       }
       for (let j = 0; j < fp.h; j++) {
         for (const xx of [fp.x - 1, fp.x + fp.w]) {
           const c = (fp.y + j) * W + xx;
-          if (xx >= 0 && xx < W && roadAt[c] && dist[c] < 0) { dist[c] = 1; frontier.push(c); }
+          if (xx >= 0 && xx < W && roadAt[c] && visit(c)) frontier.push(c);
         }
       }
       let d = 1;
-      const reach = new Set<number>(frontier);
+      const reach: number[] = [...frontier];
       while (frontier.length && d < range) {
         const next: number[] = [];
         for (const c of frontier) {
           const cx = c % W, cy = (c / W) | 0;
           for (const nb of [cx > 0 ? c - 1 : -1, cx < W - 1 ? c + 1 : -1, cy > 0 ? c - W : -1, cy < H - 1 ? c + W : -1]) {
-            if (nb < 0 || !roadAt[nb] || dist[nb] >= 0) continue;
-            dist[nb] = d + 1;
-            reach.add(nb);
+            if (nb < 0 || !roadAt[nb] || !visit(nb)) continue;
+            reach.push(nb);
             next.push(nb);
           }
         }
         frontier = next;
         d++;
       }
-      reaches.push(reach);
       for (const c of reach) {
         let arr = reachCount.get(c);
         if (!arr) reachCount.set(c, (arr = []));

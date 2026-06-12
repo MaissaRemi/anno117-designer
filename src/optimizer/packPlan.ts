@@ -22,6 +22,10 @@ export interface PackResult {
   fields: FieldTile[];
   houses: number;
   servicesPlaced: Record<string, number>;
+  /** Réseau d'eau intégré — jamais produit par packPlan (l'eau y serait routée
+   *  APRÈS les maisons, sans corridors) ; présent pour l'interface commune des
+   *  moteurs : le portfolio fait `dist.water ?? planWater(...)` uniformément. */
+  water?: import("./waterPlan").WaterPlanResult;
 }
 
 /**
@@ -80,7 +84,7 @@ export function planPacked(
 
   // --- peigne de routes (identique districtPlan) : double-rangée + épines ---
   const STEPH = 2 * rh + 1;
-  const minSmallRange = Math.min(...svcDefs.filter((d) => rangeOf(d) <= SMALL_RANGE_MAX).map(rangeOf), 28);
+  const minSmallRange = Math.min(...small.map(rangeOf), 28);
   const STEPV = Math.max(8, Math.min(24, minSmallRange - STEPH - 2));
   const layRoad = (x: number, y: number) => {
     if (x < 0 || y < 0 || x >= W || y >= H) return;
@@ -263,13 +267,13 @@ export function planPacked(
   };
   // maison couverte ssi une case d'emprise est ortho-adjacente à une route atteinte
   // (= cases servies de streetCoverage). On scanne les routes atteintes -> voisins maison.
-  const markCovered = (tc: TypeCov, onNew?: (idx: number) => void) => {
+  const markCovered = (tc: TypeCov) => {
     for (const c of tc.reachList) {
       const x = c % W, y = (c / W) | 0;
       for (const nb of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
         if (nb < 0) continue;
         const idx = houseOcc[nb];
-        if (idx >= 0 && houses[idx].alive && !tc.covered[idx]) { tc.covered[idx] = 1; onNew?.(idx); }
+        if (idx >= 0 && houses[idx].alive && !tc.covered[idx]) tc.covered[idx] = 1;
       }
     }
   };
@@ -391,9 +395,7 @@ export function planPacked(
       const prevCov = tc.covered.slice();
       stamp(tc.def, bx, by);
       bfsType(tc);
-      let gained = 0;
-      markCovered(tc, () => { gained++; });
-      // (gained compte aussi les recouvertes via prevCov ; recalcul propre du gain net)
+      markCovered(tc);
       let net = 0;
       for (let i = 0; i < houses.length; i++) if (houses[i].alive && tc.covered[i] && !prevCov[i]) net++;
       if (net < 1) return; // copie inutile -> stop ce type

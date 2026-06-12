@@ -5,6 +5,7 @@ import { buildTierProfile, solve } from "../economy/solve";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { planLattice } from "./planLattice";
 import { planPacked } from "./packPlan";
+import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, planWater, type WaterConsumerReport } from "./waterPlan";
 
 export interface IslandPlanRequest {
@@ -60,6 +61,24 @@ export interface IslandPlanResult {
 const goodName = (g: string): string => economy.goodNames[g] || g;
 
 /**
+ * Point d'entrée UNIQUE du plan d'île : dispatch par archetype (population/import
+ * vs production/export) + validation des paramètres. Le worker n'est qu'un shim.
+ */
+export function planIsland(
+  req: IslandPlanRequest,
+  onProgress?: (step: number, total: number) => void,
+): IslandPlanResult | ProdPlanResult {
+  if (req.mode === "production") {
+    if (!req.productionGood || !req.productionRate) throw new Error("Bien et débit cibles requis.");
+    return planIslandProduction(
+      req.catalog, req.grid, makeLookup(req.catalog),
+      req.productionGood, req.productionRate, {}, onProgress,
+    );
+  }
+  return planIslandImport(req, onProgress);
+}
+
+/**
  * Plan d'île — mode IMPORT. Cale le maximum de résidences du tier-cible sur l'île,
  * place les services publics pour couvrir au mieux (best-effort), et renvoie le
  * manifeste des biens à importer (u/min) pour satisfaire tous les besoins.
@@ -104,13 +123,12 @@ export function planIslandImport(
   const dist = candA.houses > candB.houses || (candA.houses === candB.houses && svcCount(candA) <= svcCount(candB))
     ? candA : candB;
 
-  // réseau d'eau : intégré au lattice ; sinon (gagnant packPlan, tiers sans
-  // consommateurs d'eau en pratique) routage post-hoc best-effort
+  // réseau d'eau : intégré au moteur s'il le fournit (lattice) ; sinon routage
+  // post-hoc best-effort (packPlan — tiers sans consommateurs d'eau en pratique)
   onProgress?.(3, 3);
-  const integratedWater = dist === candA ? candA.water : undefined;
-  const water = integratedWater ?? planWater(req.grid, dist.buildings, dist.roads, lookup, req.heights);
-  const buildings = integratedWater
-    ? dist.buildings // sources déjà intégrées par le lattice
+  const water = dist.water ?? planWater(req.grid, dist.buildings, dist.roads, lookup, req.heights);
+  const buildings = dist.water
+    ? dist.buildings // sources déjà intégrées par le moteur
     : [...dist.buildings, ...water.sources];
   const layout: Layout = { grid: req.grid, buildings, roads: dist.roads, fields: dist.fields, aqueducts: water.aqueducts };
   // couverture DISTANCE-RUE = la vraie mécanique du jeu (et ce que le district garantit)

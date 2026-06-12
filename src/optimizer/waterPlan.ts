@@ -1,4 +1,5 @@
 import { uid } from "../model/factories";
+import { footprintSize } from "../engine/geometry";
 import type { AqueductTile, BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import type { DefLookup } from "../engine/rules";
 
@@ -23,7 +24,12 @@ export const MAX_RUN = 140; // longueur max d'une conduite depuis sa source (pen
 export const CLIMB_MARGIN_Q = 2;
 
 const SOURCE_IDS = ["g19691", "g29524"]; // Source d'aqueduc (Roman / Celtic)
-const CISTERN_IDS = new Set(["g19753", "g29526"]); // Citerne (distributeur)
+
+/** Rayon (Chebyshev) de la zone montagne autour d'un slot : bloquée pour les
+ *  moteurs de placement, mais posable/traversable pour source+conduites (avec
+ *  une marge de +2). Les rayons dérivés s'expriment en fonction de celui-ci. */
+export const MOUNTAIN_BLOCK_RADIUS = 6;
+const MOUNTAIN_ZONE_RADIUS = MOUNTAIN_BLOCK_RADIUS + 2;
 
 // Conso d'eau [FICHIERS] (AqueductConsumer Mandatory + WaterConsumption template,
 // cf. GAME_MECHANICS.md §4) — par defId du catalogue.
@@ -54,7 +60,8 @@ export interface WaterPlanResult {
 }
 
 const waterAmountOf = (def: BuildingDef): number => {
-  if (CISTERN_IDS.has(def.id)) return CISTERN_CONSUMPTION;
+  // citerne = tout AqueductDistributor (couvre les variantes DLC/celtic sans table)
+  if (def.template === "AqueductDistributor") return CISTERN_CONSUMPTION;
   return CONSUMPTION_BY_ID[def.id] ?? 0;
 };
 
@@ -67,7 +74,7 @@ export const needsWater = (def: BuildingDef): boolean => waterAmountOf(def) > 0;
  * (le masque mapimage marque la montagne comme constructible, c'est faux ; et la
  * source d'aqueduc a besoin de cette place).
  */
-export function blockMountains(grid: GridShape, radius = 6): GridShape {
+export function blockMountains(grid: GridShape, radius = MOUNTAIN_BLOCK_RADIUS): GridShape {
   const slots = (grid.slots ?? []).filter((s) => s.type === "mountain");
   if (!slots.length) return grid;
   const usable = grid.usable.slice();
@@ -83,10 +90,8 @@ export function blockMountains(grid: GridShape, radius = 6): GridShape {
 
 interface FP { x: number; y: number; w: number; h: number }
 
-const footprintOf = (b: PlacedBuilding, def: BuildingDef): FP => {
-  const rot = b.rotation === 90 || b.rotation === 270;
-  return { x: b.x, y: b.y, w: rot ? def.size.h : def.size.w, h: rot ? def.size.w : def.size.h };
-};
+const footprintOf = (b: PlacedBuilding, def: BuildingDef): FP =>
+  ({ x: b.x, y: b.y, ...footprintSize(def, b.rotation) });
 
 /**
  * Planifie le réseau d'eau pour une disposition donnée : pose les sources sur les
@@ -150,8 +155,9 @@ export function planWater(
   // zone montagne (autour des slots) : traversable/posable même si le masque la dit
   // non-constructible — la source et ses conduites partent de là
   const mzone = new Uint8Array(N);
+  const MZ = MOUNTAIN_ZONE_RADIUS;
   for (const s of slots) {
-    for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) {
+    for (let dy = -MZ; dy <= MZ; dy++) for (let dx = -MZ; dx <= MZ; dx++) {
       const x = Math.round(s.x) + dx, y = Math.round(s.y) + dy;
       if (x >= 0 && y >= 0 && x < W && y < H) mzone[y * W + x] = 1;
     }
@@ -193,7 +199,7 @@ export function planWater(
       [srcDef.size.w, srcDef.size.h, 0],
       [srcDef.size.h, srcDef.size.w, 90],
     ];
-    for (let r = 0; r <= 10; r++) {
+    for (let r = 0; r <= MOUNTAIN_ZONE_RADIUS + 2; r++) {
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         for (const [w, h, rot] of dims) {
@@ -228,18 +234,26 @@ export function planWater(
     return null;
   };
 
-  // slots triés par proximité au barycentre des consommateurs
+  // slots restants (propriété unique). Un slot dont la POSE échoue est consommé
+  // (l'occupation ne fait que croître : il échouera toujours) ; un slot HORS PORTÉE
+  // de la cible n'est PAS consommé — il peut servir à un consommateur plus proche.
+  const remainingSlots = [...slots];
+  const takeSlotNear = (tx: number, ty: number, maxDist = Infinity): boolean => {
+    const candidates = remainingSlots
+      .filter((s) => Math.hypot(s.x - tx, s.y - ty) <= maxDist)
+      .sort((a, b) => Math.hypot(a.x - tx, a.y - ty) - Math.hypot(b.x - tx, b.y - ty));
+    for (const s of candidates) {
+      remainingSlots.splice(remainingSlots.indexOf(s), 1);
+      if (placeSource(Math.round(s.x), Math.round(s.y))) return true;
+    }
+    return false;
+  };
+
+  // 1re source : près du barycentre des consommateurs
   let cx = 0, cy = 0;
   for (const c of consumers) { cx += c.fp.x + c.fp.w / 2; cy += c.fp.y + c.fp.h / 2; }
   cx /= consumers.length; cy /= consumers.length;
-  const slotQueue = [...slots].sort(
-    (a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy),
-  );
-
-  // 1re source
-  let slotPtr = 0;
-  while (slotPtr < slotQueue.length && !placeSource(Math.round(slotQueue[slotPtr].x), Math.round(slotQueue[slotPtr].y))) slotPtr++;
-  slotPtr++;
+  takeSlotNear(cx, cy);
   if (!sources.length) {
     return {
       sources: [], aqueducts: [], capacity: 0, used: 0,
@@ -255,6 +269,12 @@ export function planWater(
   // Cases libres : direction indifférente (état canonique d=0).
   const DELTA = [1, -1, W, -W]; // 0:+x  1:-x  2:+y  3:-y
   const stateOf = (cell: number, d: number): number => (roadAt[cell] ? cell * 4 + d : cell * 4);
+  // scratch partagé entre raccordements (un BFS ne touche que ~MAX_RUN² états :
+  // re-remplir 4N par appel coûtait ~10 Mo de trafic mémoire PAR consommateur).
+  // Visite par époque : prevEpoch[s] !== epoch ⇔ état non visité.
+  const prevArr = new Int32Array(N * 4);
+  const prevEpoch = new Int32Array(N * 4);
+  let epoch = 0;
   const connect = (c: { fp: FP; amount: number }): boolean => {
     // terminus jamais sur route : départs = périmètre libre hors-route
     const starts = perimeter(c.fp).filter((p) => (pass(p) && !roadAt[p]) || netDist[p] >= 0);
@@ -264,13 +284,15 @@ export function planWater(
       srcUsed[netSrc[touching]] += c.amount;
       return true;
     }
-    const prev = new Int32Array(N * 4).fill(-2); // par état ; -1 = départ
+    epoch++;
+    const seen = (s: number): boolean => prevEpoch[s] === epoch;
+    const setPrev = (s: number, v: number) => { prevEpoch[s] = epoch; prevArr[s] = v; };
     let frontier: number[] = []; // états
     for (const p of starts) {
       if (roadAt[p] || netDist[p] >= 0) continue; // jamais partir DU réseau (no-merge)
       const s = stateOf(p, 0);
-      if (prev[s] !== -2) continue;
-      prev[s] = -1;
+      if (seen(s)) continue;
+      setPrev(s, -1);
       frontier.push(s);
     }
     for (let depth = 0; depth < MAX_RUN && frontier.length; depth++) {
@@ -279,12 +301,12 @@ export function planWater(
         const p = (s / 4) | 0;
         const din = s % 4;
         // arrivée : case réseau HORS ROUTE (un croisement n'est pas branchable)
-        if (netDist[p] >= 0 && !roadAt[p] && prev[s] !== -1) {
+        if (netDist[p] >= 0 && !roadAt[p] && prevArr[s] !== -1) {
           const sIdx = netSrc[p];
           if (srcUsed[sIdx] + c.amount > WATER_CAPACITY) continue; // source pleine — autre chemin ?
           if (netDist[p] + depth > MAX_RUN) continue; // trop loin de la source
           // tracer le chemin (nouvelles conduites), dist réseau croissante
-          let cur = prev[s], d = netDist[p];
+          let cur = prevArr[s], d = netDist[p];
           while (cur >= 0) {
             d++;
             const cell = (cur / 4) | 0;
@@ -292,9 +314,9 @@ export function planWater(
               netDist[cell] = d;
               // case route croisée : marquée non-branchable via roadAt (netSrc quand même)
               netSrc[cell] = sIdx;
-              aqueducts.push({ x: cell % W, y: (cell / W) | 0, gen: true });
+              aqueducts.push({ x: cell % W, y: (cell / W) | 0 }); // gen posé par le store
             }
-            cur = prev[cur];
+            cur = prevArr[cur];
           }
           srcUsed[sIdx] += c.amount;
           return true;
@@ -314,8 +336,8 @@ export function planWater(
           // case réseau ne peut être que l'ARRIVÉE (jonction sur SA source).
           if (!pass(nb) || !heightOK(nb)) continue;
           const ns = stateOf(nb, nd);
-          if (prev[ns] !== -2) continue;
-          prev[ns] = s;
+          if (seen(ns)) continue;
+          setPrev(ns, s);
           next.push(ns);
         }
       }
@@ -329,18 +351,10 @@ export function planWater(
   const report: WaterConsumerReport[] = [];
   for (const c of ordered) {
     let ok = connect(c);
-    if (!ok && slotPtr <= slotQueue.length - 1) {
-      // tenter une source supplémentaire près du consommateur non raccordé
-      const near = [...slotQueue.slice(slotPtr)].sort(
-        (a, b) => Math.hypot(a.x - c.fp.x, a.y - c.fp.y) - Math.hypot(b.x - c.fp.x, b.y - c.fp.y),
-      )[0];
-      const idx = slotQueue.indexOf(near);
-      if (placeSource(Math.round(near.x), Math.round(near.y))) {
-        slotQueue.splice(idx, 1);
-        ok = connect(c);
-      } else {
-        slotPtr++;
-      }
+    if (!ok && remainingSlots.length) {
+      // source supplémentaire près du consommateur non raccordé — seulement si un
+      // slot est à portée de conduite (au-delà de MAX_RUN, la pose serait gaspillée)
+      if (takeSlotNear(c.fp.x, c.fp.y, MAX_RUN) && connect(c)) ok = true;
     }
     report.push({ uid: c.b.uid, name: c.def.name, amount: c.amount, connected: ok });
     if (!ok) {

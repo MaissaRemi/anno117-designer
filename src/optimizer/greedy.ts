@@ -218,7 +218,7 @@ export function decode(
             // ferme : seule l'EMPRISE du bâtiment exige un rectangle ; les champs
             // sont un blob libre — il suffit qu'assez de cases soient ATTEIGNABLES
             if (!fits(occ, W, H, x, shelfTop, m.w, m.h, x1, y1)) return false;
-            return reachableFieldCells(occ, W, H, x, shelfTop, m) >= m.fieldTiles;
+            return growFieldBlob(occ, W, H, x, shelfTop, m).length >= m.fieldTiles;
           }
           return fits(occ, W, H, x, shelfTop, m.w, mh, x1, y1);
         });
@@ -267,41 +267,49 @@ function placeBuilding(
   counts[defId] = (counts[defId] ?? 0) + 1;
 }
 
-// Comptage À BLANC des cases de champ atteignables (même BFS que placeFields, sans
-// mutation) — prédicat exact pour accepter une ferme : production 100 % garantie.
-function reachableFieldCells(
+// Champs en FORME LIBRE (mécanique réelle, confirmée in-game) : un blob CONNEXE de
+// tuiles, dont au moins une touche la ferme — aucune contrainte de rectangle.
+// Croissance BFS depuis le bas de l'emprise : contourne l'eau/les obstacles.
+// Restreinte SOUS le bâtiment (y ≥ bas) : la rangée de route de l'étagère (posée
+// APRÈS) et le slot du voisin de droite restent libres.
+//
+// UNE seule fonction pour le dry-run (prédicat d'acceptation) ET la pose : renvoie
+// les cellules dans l'ordre de croissance, bornées à fieldTiles. Visited en scratch
+// epoch-stampé (cette fonction tourne dans la boucle interne du recuit — des Set
+// par tentative mangeaient le budget temps en hash-ops et GC).
+let fieldSeen: Int32Array = new Int32Array(0);
+let fieldEpoch = 0;
+function growFieldBlob(
   occ: Uint8Array,
   W: number,
   H: number,
   bx: number,
   by: number,
   m: Macro,
-): number {
-  const yMin = by + m.h;
-  const seen = new Set<number>();
+): number[] {
+  if (fieldSeen.length < W * H) fieldSeen = new Int32Array(W * H);
+  const epoch = ++fieldEpoch;
+  const yMin = by + m.h; // jamais au-dessus du bas de la ferme
+  const cells: number[] = [];
   const frontier: number[] = [];
   const push = (x: number, y: number) => {
     if (x < 0 || y < yMin || x >= W || y >= H) return;
     const c = y * W + x;
-    if (seen.has(c) || occ[c] !== 0) return;
-    seen.add(c);
+    if (fieldSeen[c] === epoch || occ[c] !== 0) return; // bloqué / route / déjà vu
+    fieldSeen[c] = epoch;
     frontier.push(c);
   };
-  for (let i = 0; i < m.w; i++) push(bx + i, yMin);
+  for (let i = 0; i < m.w; i++) push(bx + i, yMin); // graines : sous l'emprise
   let head = 0;
-  while (head < frontier.length && seen.size < m.fieldTiles) {
+  while (head < frontier.length && cells.length < m.fieldTiles) {
     const c = frontier[head++];
+    cells.push(c);
     const x = c % W, y = (c / W) | 0;
     push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
   }
-  return seen.size;
+  return cells;
 }
 
-// Champs en FORME LIBRE (mécanique réelle, confirmée in-game) : un blob CONNEXE de
-// tuiles, dont au moins une touche la ferme — aucune contrainte de rectangle.
-// Croissance BFS depuis le bas de l'emprise : contourne l'eau/les obstacles.
-// Restreinte SOUS le bâtiment (y ≥ bas) : la rangée de route de l'étagère (posée
-// APRÈS) et le slot du voisin de droite restent libres.
 function placeFields(
   occ: Uint8Array,
   W: number,
@@ -312,27 +320,9 @@ function placeFields(
   by: number,
   m: Macro,
 ): void {
-  let remaining = m.fieldTiles;
-  const yMin = by + m.h; // jamais au-dessus du bas de la ferme
-  const seen = new Set<number>();
-  const frontier: number[] = [];
-  const push = (x: number, y: number) => {
-    if (x < 0 || y < yMin || x >= W || y >= H) return;
-    const c = y * W + x;
-    if (seen.has(c) || occ[c] !== 0) return; // bloqué / route / déjà vu
-    seen.add(c);
-    frontier.push(c);
-  };
-  for (let i = 0; i < m.w; i++) push(bx + i, yMin); // graines : sous l'emprise
-  let head = 0;
-  while (head < frontier.length && remaining > 0) {
-    const c = frontier[head++];
-    if (occ[c] !== 0) continue;
-    const x = c % W, y = (c / W) | 0;
+  for (const c of growFieldBlob(occ, W, H, bx, by, m)) {
     occ[c] = BLOCKED;
-    out.push({ x, y, ownerUid, fieldType: m.fieldType! });
-    remaining--;
-    push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
+    out.push({ x: c % W, y: (c / W) | 0, ownerUid, fieldType: m.fieldType! });
   }
 }
 
