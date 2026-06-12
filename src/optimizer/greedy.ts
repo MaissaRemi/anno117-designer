@@ -214,13 +214,19 @@ export function decode(
         const v = variants.find((m) => {
           const mh = macroHeight(m);
           if (shelfH > 0 && mh > shelfH) return false; // dépasse l'étagère en cours
+          if (m.fieldTiles > 0 && m.fieldType) {
+            // ferme : seule l'EMPRISE du bâtiment exige un rectangle ; les champs
+            // sont un blob libre — il suffit qu'assez de cases soient ATTEIGNABLES
+            if (!fits(occ, W, H, x, shelfTop, m.w, m.h, x1, y1)) return false;
+            return reachableFieldCells(occ, W, H, x, shelfTop, m) >= m.fieldTiles;
+          }
           return fits(occ, W, H, x, shelfTop, m.w, mh, x1, y1);
         });
         if (!v) continue;
         if (shelfH === 0) shelfH = macroHeight(v); // 1er posé fixe la hauteur d'étagère
         placeBuilding(occ, W, buildings, placedByDef, defId, x, shelfTop, v);
         if (v.fieldTiles > 0 && v.fieldType) {
-          placeFields(occ, W, fields, buildings[buildings.length - 1].uid, x, shelfTop + v.h, v);
+          placeFields(occ, W, H, fields, buildings[buildings.length - 1].uid, x, shelfTop, v);
         }
         x += v.w;
         maxX = x - 1;
@@ -261,25 +267,72 @@ function placeBuilding(
   counts[defId] = (counts[defId] ?? 0) + 1;
 }
 
+// Comptage À BLANC des cases de champ atteignables (même BFS que placeFields, sans
+// mutation) — prédicat exact pour accepter une ferme : production 100 % garantie.
+function reachableFieldCells(
+  occ: Uint8Array,
+  W: number,
+  H: number,
+  bx: number,
+  by: number,
+  m: Macro,
+): number {
+  const yMin = by + m.h;
+  const seen = new Set<number>();
+  const frontier: number[] = [];
+  const push = (x: number, y: number) => {
+    if (x < 0 || y < yMin || x >= W || y >= H) return;
+    const c = y * W + x;
+    if (seen.has(c) || occ[c] !== 0) return;
+    seen.add(c);
+    frontier.push(c);
+  };
+  for (let i = 0; i < m.w; i++) push(bx + i, yMin);
+  let head = 0;
+  while (head < frontier.length && seen.size < m.fieldTiles) {
+    const c = frontier[head++];
+    const x = c % W, y = (c / W) | 0;
+    push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
+  }
+  return seen.size;
+}
+
+// Champs en FORME LIBRE (mécanique réelle, confirmée in-game) : un blob CONNEXE de
+// tuiles, dont au moins une touche la ferme — aucune contrainte de rectangle.
+// Croissance BFS depuis le bas de l'emprise : contourne l'eau/les obstacles.
+// Restreinte SOUS le bâtiment (y ≥ bas) : la rangée de route de l'étagère (posée
+// APRÈS) et le slot du voisin de droite restent libres.
 function placeFields(
   occ: Uint8Array,
   W: number,
+  H: number,
   out: FieldTile[],
   ownerUid: string,
-  x: number,
-  yStart: number,
+  bx: number,
+  by: number,
   m: Macro,
 ): void {
   let remaining = m.fieldTiles;
-  let y = yStart;
-  while (remaining > 0) {
-    for (let i = 0; i < m.w && remaining > 0; i++) {
-      const cx = x + i;
-      occ[y * W + cx] = BLOCKED;
-      out.push({ x: cx, y, ownerUid, fieldType: m.fieldType! });
-      remaining--;
-    }
-    y++;
+  const yMin = by + m.h; // jamais au-dessus du bas de la ferme
+  const seen = new Set<number>();
+  const frontier: number[] = [];
+  const push = (x: number, y: number) => {
+    if (x < 0 || y < yMin || x >= W || y >= H) return;
+    const c = y * W + x;
+    if (seen.has(c) || occ[c] !== 0) return; // bloqué / route / déjà vu
+    seen.add(c);
+    frontier.push(c);
+  };
+  for (let i = 0; i < m.w; i++) push(bx + i, yMin); // graines : sous l'emprise
+  let head = 0;
+  while (head < frontier.length && remaining > 0) {
+    const c = frontier[head++];
+    if (occ[c] !== 0) continue;
+    const x = c % W, y = (c / W) | 0;
+    occ[c] = BLOCKED;
+    out.push({ x, y, ownerUid, fieldType: m.fieldType! });
+    remaining--;
+    push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
   }
 }
 

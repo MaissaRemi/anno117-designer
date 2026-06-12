@@ -140,6 +140,11 @@ Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
   MINES (gros risque, sauts à 25 tuiles !) ; côtiers 9/3 ; pâturages 10/2 ;
   carrières 10/2. → coupe-feux et vigiles près de l'industrie.
 - [OUVERT] Prod ferme ∝ nb de cases champ ? (in-game #5).
+- **[IN-GAME]** Champs en FORME LIBRE (confirmé utilisateur 2026-06-12) : aucune
+  contrainte de rectangle — n'importe quelle forme, même non lisse, tant que chaque
+  tuile est 4-adjacente à au moins une autre tuile du champ (blob connexe) et qu'au
+  moins une tuile touche le bâtiment de ferme. Planner : croissance BFS (greedy.ts
+  placeFields), acceptation d'une ferme = cases ATTEIGNABLES ≥ tuiles requises.
 
 ## 6. Logistique & entrepôts [FICHIERS]
 

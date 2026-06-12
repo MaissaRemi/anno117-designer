@@ -71,7 +71,15 @@ export function planIslandProduction(
   }
 
   // --- 2. placement de masse (recuit : étagères + routes + champs) ---
+  // Les ENTREPÔTS sont injectés dans le recuit (posés DANS les étagères, accès
+  // route garanti) — les caser après coup échouait sur les zones denses en champs.
   onProgress?.(2, 4);
+  const whDef = catalog.find((d) => d.template === WAREHOUSE_TPL && d.region === "Roman")
+    ?? catalog.find((d) => d.template === WAREHOUSE_TPL);
+  const prodCount = sol.items.reduce((s, it) => s + (lookup(it.defId)?.production ? it.qty : 0), 0);
+  const annealItems = whDef && prodCount
+    ? [...others, { defId: whDef.id, qty: Math.ceil(prodCount / 8) + 1 }]
+    : others;
   const planGrid = blockMountains(grid);
   const { out } = anneal({
     catalog,
@@ -79,7 +87,7 @@ export function planIslandProduction(
     lockedBuildings: [],
     existingRoads: [],
     existingFields: [],
-    items: others,
+    items: annealItems,
     weights: DEFAULT_WEIGHTS,
     timeMs: opts.timeMs ?? 3000,
   });
@@ -187,9 +195,8 @@ export function planIslandProduction(
   }
 
   // --- 4. entrepôts : min-cover distance-rue sur les prods ---
+  // (ceux du recuit comptent d'abord ; le greedy ne fait que COMPLÉTER)
   onProgress?.(4, 4);
-  const whDef = catalog.find((d) => d.template === WAREHOUSE_TPL && d.region === "Roman")
-    ?? catalog.find((d) => d.template === WAREHOUSE_TPL);
   const prods = buildings.filter((b) => {
     const d = lookup(b.defId);
     return d && (d.production || d.template === MINE_TPL);
@@ -270,6 +277,13 @@ export function planIslandProduction(
       return [...out];
     };
     const coveredSet = new Set<number>();
+    // entrepôts déjà posés par le RECUIT : ils couvrent les prods dont le reach
+    // touche leur emprise (accès route garanti par l'étagère)
+    for (const b of buildings) {
+      if (b.defId !== whDef.id) continue;
+      whPlaced++;
+      for (const pi of adjacentReach(b.x, b.y)) coveredSet.add(pi);
+    }
     for (let iter = 0; iter < 30 && coveredSet.size < prods.length; iter++) {
       let bx = -1, by = -1, bestGain = 0, bestIds: number[] = [];
       // candidats échantillonnés le long des routes (positions autour des cases route)
@@ -329,7 +343,7 @@ export function planIslandProduction(
     prodsCovered: covered,
     warehousesPlaced: whPlaced,
     placed: out.buildings.length,
-    requested: sol.items.reduce((s, it) => s + it.qty, 0),
+    requested: annealItems.reduce((s, it) => s + it.qty, 0) + mines.reduce((s, it) => s + it.qty, 0),
     solution: sol,
     gaps: [...new Set(gaps)],
   };
