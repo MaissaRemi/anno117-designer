@@ -361,10 +361,13 @@ export function planLattice(
         const x = c % W, y = (c / W) | 0;
         if (x < nx0) nx0 = x; if (x > nx1) nx1 = x; if (y < ny0) ny0 = y; if (y > ny1) ny1 = y;
       }
+      // une ancre (diamant r) voit son gain changer ssi une case de son diamant a été
+      // abaissée par l1Update (portée r+1 autour des graines) → L1 ≤ 2r+1 du bbox
+      const m = 2 * r + 1;
       for (let i = 0; i < gains.length; i++) {
         if (gains[i] < 0) continue;
         const ax = anchors[i].x, ay = anchors[i].y;
-        if (ax >= nx0 - 2 * r && ax <= nx1 + 2 * r && ay >= ny0 - 2 * r && ay <= ny1 + 2 * r) {
+        if (ax >= nx0 - m && ax <= nx1 + m && ay >= ny0 - m && ay <= ny1 + m) {
           gains[i] = diamondGain(ax, ay, r, distMap);
         }
       }
@@ -385,7 +388,8 @@ export function planLattice(
     // minGain plafonné à 30 % de la terre : un type à portée >= taille d'île (Colisée
     // 250) aurait sinon un seuil inatteignable → jamais posé
     const minGain = Math.max(60, Math.min(Math.floor(2 * r * r * 0.25), Math.floor(landCount * 0.3)));
-    const maxCopies = Math.ceil(landCount / (2 * r * r)) * 2 + 2;
+    // BuildingUnique (Colisée…) : 1 seul exemplaire — sa portée (250) couvre l'île
+    const maxCopies = d.unique ? 1 : Math.ceil(landCount / (2 * r * r)) * 2 + 2;
     greedyCover(anchors, distMap, r, minGain, maxCopies, (a) => {
       const before = (placements.get(d.id) ?? []).length;
       placeNear(d, a.x, a.y, Math.floor(r / 2) + 4);
@@ -504,7 +508,8 @@ export function planLattice(
   const repairBudget = new Map<string, number>();
   for (const tc of typeCov.values()) {
     const r = effR(tc.def);
-    repairBudget.set(tc.def.id, Math.max(3, Math.ceil(landCount / (2 * r * r))));
+    // type unique (Colisée) : aucune densification (1 exemplaire déjà posé suffit)
+    repairBudget.set(tc.def.id, tc.def.unique ? 0 : Math.max(3, Math.ceil(landCount / (2 * r * r))));
   }
   const maxRounds = 8 * svcDefs.length;
   for (let round = 0; round < maxRounds; round++) {

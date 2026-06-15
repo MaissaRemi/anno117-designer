@@ -252,6 +252,9 @@ export function planIslandProduction(
     if (bx < 0) return false;
     buildings.push({ uid: uid("free"), defId: def.id, x: bx, y: by, rotation: 0, locked: false });
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) occ[(by + j) * W + (bx + i)] = 1;
+    // raccorder à la route AVANT de réserver : sinon l'anneau de réserve (qui mange
+    // tout le périmètre) ensemence le BFS du stub avec des cases déjà occ → stub mort
+    stubToRoads(bx, by, w, h);
     // réserve NeededArea cases libres autour (les plus proches) → restent "nature"
     let reserve = fa.area;
     for (let ring = 1; ring <= R && reserve > 0; ring++) {
@@ -263,7 +266,6 @@ export function planIslandProduction(
         if (grid.usable[c] && !occ[c] && !roadAt[c]) { occ[c] = 1; reserve--; }
       }
     }
-    stubToRoads(bx, by, w, h);
     return true;
   };
   for (const fp of freeAreaItems) {

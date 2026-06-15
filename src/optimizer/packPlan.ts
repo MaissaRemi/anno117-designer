@@ -343,7 +343,8 @@ export function planPacked(
     bfsType(tc); markCovered(tc);
     const q = proxyQ(tc.range);
     const stride = 3;
-    for (let iter = 0; iter < 60; iter++) {
+    const maxIters = tc.def.unique ? 1 : 60; // BuildingUnique (Colisée) : 1 copie max
+    for (let iter = 0; iter < maxIters; iter++) {
       // uncov = maisons vivantes non couvertes (origines) ; cible du glouton
       const uncov = new Int32Array(N);
       let uncovN = 0, totalAlive = 0;

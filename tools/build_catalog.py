@@ -235,6 +235,11 @@ def collect_buildings(texts, template_effects):
         # Portée transporteur (distance-rue prod <-> entrepôt, défaut moteur 30)
         mtr = text_of(el, "./Values/FactoryBase/MaxTransporterRange")
 
+        # BuildingUnique AVEC enfant Uniques = 1 exemplaire max (Colisée…) ; le tag
+        # vide (entrepôts…) n'est PAS une contrainte d'unicité
+        bu = values.find("BuildingUnique")
+        unique = bu is not None and len(bu) > 0
+
         buildings.append({
             "guid": guid,
             "template": tpl,
@@ -250,6 +255,7 @@ def collect_buildings(texts, template_effects):
             "radius": radius,
             "field": field,
             "freeArea": free_area,
+            "unique": unique,
             "production": production,
             "transporterRange": int(mtr) if mtr else None,
         })
@@ -373,6 +379,8 @@ def to_app_catalog(buildings, product_name):
             entry["field"] = {"tiles": b["field"]["tiles"], "fieldType": slug(ft) or "field"}
         if b.get("freeArea"):
             entry["freeArea"] = b["freeArea"]
+        if b.get("unique"):
+            entry["unique"] = True
         if b.get("production"):
             p = b["production"]
             entry["production"] = {

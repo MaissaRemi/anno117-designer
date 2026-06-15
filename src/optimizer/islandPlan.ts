@@ -6,7 +6,7 @@ import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { planLattice } from "./planLattice";
 import { planPacked } from "./packPlan";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
-import { blockMountains, planWater, type WaterConsumerReport } from "./waterPlan";
+import { blockMountains, needsWater, planWater, type WaterConsumerReport } from "./waterPlan";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -148,8 +148,23 @@ export function planIslandImport(
   const analyzable = coverage.services.filter((s) => s.hasRadius && (!relevant || relevant.has(s.serviceId)));
   const coverageMin = analyzable.length ? Math.min(...analyzable.map((s) => s.pct)) : 100;
   const houses = dist.houses;
-  const fullyCovered = dist.fullyCovered;
-  const fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 100;
+  // EAU : un service consommateur d'eau requis mais dont AUCUN exemplaire n'est
+  // raccordé est INACTIF en jeu (Bains/Forum/Colisée/Citerne sans aqueduc) → les
+  // maisons qui en dépendent ne montent PAS au tier. analyzeCoverage ne le voit pas
+  // (couverture géométrique) → on annule la couverture-tier si un tel service est mort.
+  const defOfUid = new Map(buildings.map((b) => [b.uid, b.defId]));
+  const connectedByDef = new Map<string, number>();
+  for (const c of water.consumers) {
+    if (!c.connected) continue;
+    const id = defOfUid.get(c.uid);
+    if (id) connectedByDef.set(id, (connectedByDef.get(id) ?? 0) + 1);
+  }
+  const waterDead = [...new Set(tier.services.map((s) => s.building))]
+    .filter((id): id is string => !!id && (!relevant || relevant.has(id)))
+    .filter((id) => { const d = lookup(id); return d && needsWater(d) && !connectedByDef.get(id); });
+  const waterOk = waterDead.length === 0;
+  const fullyCovered = waterOk ? dist.fullyCovered : 0; // service eau mort → aucune maison au tier
+  const fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
   // habitants au TIER-CIBLE = maisons pleinement couvertes (les partielles n'ont pas
   // tous les besoins → tier inférieur). Manifeste d'import + bonus basés là-dessus.
   const residents = fullyCovered * cap;
@@ -186,6 +201,10 @@ export function planIslandImport(
     if (s.pct < 100) gaps.push(`${s.name} : ${s.pct}% des maisons couvertes (distance-rue)`);
   }
   gaps.push(...water.gaps);
+  for (const id of waterDead) {
+    const d = lookup(id);
+    gaps.push(`${d?.name ?? id} sans eau (aucun raccordé) → 0 maison au tier-cible`);
+  }
 
   const hasWaterConsumers = water.consumers.length > 0;
   return {
@@ -210,7 +229,7 @@ export function planIslandImport(
     money: sol.money,
     attributes,
     gaps: [...new Set(gaps)],
-    // faisable = fraction de maisons au tier-cible atteint le seuil visé (par-maison)
-    feasible: fullyCoveredPct >= floor,
+    // faisable = au moins une maison ET fraction au tier-cible ≥ seuil ET eau OK
+    feasible: houses > 0 && waterOk && fullyCoveredPct >= floor,
   };
 }

@@ -7417,7 +7417,8 @@
       "kind": "service",
       "range": 250
     },
-    "streetRange": 250
+    "streetRange": 250,
+    "unique": true
   },
   {
     "id": "g36912",
@@ -7435,6 +7436,7 @@
     "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
+    "unique": true,
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7478,6 +7480,7 @@
     "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
+    "unique": true,
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7521,6 +7524,7 @@
     "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
+    "unique": true,
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7556,6 +7560,7 @@
     "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
+    "unique": true,
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7591,6 +7596,7 @@
     "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
+    "unique": true,
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7630,6 +7636,7 @@
     "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
+    "unique": true,
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7673,7 +7680,8 @@
       "kind": "service",
       "range": 16
     },
-    "streetRange": 20
+    "streetRange": 20,
+    "unique": true
   },
   {
     "id": "g144813",
@@ -7695,7 +7703,8 @@
       "kind": "service",
       "range": 18
     },
-    "streetRange": 22
+    "streetRange": 22,
+    "unique": true
   },
   {
     "id": "g3620",
@@ -7801,6 +7810,7 @@
     "needsRoad": true,
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
+    "unique": true,
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -8592,7 +8602,8 @@
       "kind": "service",
       "range": 16
     },
-    "streetRange": 20
+    "streetRange": 20,
+    "unique": true
   },
   {
     "id": "g82491",
@@ -8614,7 +8625,8 @@
       "kind": "service",
       "range": 16
     },
-    "streetRange": 20
+    "streetRange": 20,
+    "unique": true
   },
   {
     "id": "g81072",
@@ -8636,7 +8648,8 @@
       "kind": "service",
       "range": 18
     },
-    "streetRange": 22
+    "streetRange": 22,
+    "unique": true
   },
   {
     "id": "g82492",
@@ -8658,7 +8671,8 @@
       "kind": "service",
       "range": 20
     },
-    "streetRange": 24
+    "streetRange": 24,
+    "unique": true
   },
   {
     "id": "g81021",
@@ -8680,7 +8694,8 @@
       "kind": "service",
       "range": 16
     },
-    "streetRange": 20
+    "streetRange": 20,
+    "unique": true
   },
   {
     "id": "g82487",
@@ -8702,7 +8717,8 @@
       "kind": "service",
       "range": 16
     },
-    "streetRange": 20
+    "streetRange": 20,
+    "unique": true
   },
   {
     "id": "g80710",
@@ -8724,7 +8740,8 @@
       "kind": "service",
       "range": 16
     },
-    "streetRange": 20
+    "streetRange": 20,
+    "unique": true
   },
   {
     "id": "g82486",
@@ -8746,7 +8763,8 @@
       "kind": "service",
       "range": 18
     },
-    "streetRange": 22
+    "streetRange": 22,
+    "unique": true
   },
   {
     "id": "g81070",
@@ -8768,7 +8786,8 @@
       "kind": "service",
       "range": 14
     },
-    "streetRange": 18
+    "streetRange": 18,
+    "unique": true
   },
   {
     "id": "g82490",
@@ -8790,7 +8809,8 @@
       "kind": "service",
       "range": 12
     },
-    "streetRange": 16
+    "streetRange": 16,
+    "unique": true
   },
   {
     "id": "g81069",
@@ -8812,7 +8832,8 @@
       "kind": "service",
       "range": 18
     },
-    "streetRange": 22
+    "streetRange": 22,
+    "unique": true
   },
   {
     "id": "g82489",
@@ -8834,7 +8855,8 @@
       "kind": "service",
       "range": 16
     },
-    "streetRange": 20
+    "streetRange": 20,
+    "unique": true
   },
   {
     "id": "g81068",
@@ -8856,7 +8878,8 @@
       "kind": "service",
       "range": 16
     },
-    "streetRange": 20
+    "streetRange": 20,
+    "unique": true
   },
   {
     "id": "g82488",
@@ -8878,7 +8901,8 @@
       "kind": "service",
       "range": 16
     },
-    "streetRange": 20
+    "streetRange": 20,
+    "unique": true
   },
   {
     "id": "g19691",

@@ -37,6 +37,7 @@ export interface BuildingDef {
   transporterRange?: number; // prod : distance-rue max vers un entrepôt (défaut 30)
   template?: string; // template du jeu (SlotFactoryBuilding7 = mines, Warehouse…)
   freeArea?: { radius: number; area: number }; // prod ∝ cases libres dans le rayon
+  unique?: boolean; // BuildingUnique : 1 exemplaire max sur l'île (Colisée…)
   radius?: RadiusSpec;
   field?: FieldSpec;
   color: string; // couleur de rendu (#rrggbb)
