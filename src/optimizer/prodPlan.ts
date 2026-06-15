@@ -84,10 +84,16 @@ export function planIslandProduction(
     if (!f.available) gaps.push(`Fertilité absente de l'île : ${f.name} (chaîne impossible)`);
   }
 
+  // 3 familles de placement : mines (slots montagne), prods à AIRE LIBRE (bûcheron/
+  // ruches/marais — hors du tissu dense, réservent leur rayon), reste (recuit).
   const mines: { defId: string; qty: number }[] = [];
+  const freeAreaItems: { defId: string; qty: number }[] = [];
   const others: { defId: string; qty: number }[] = [];
   for (const it of sol.items) {
-    (lookup(it.defId)?.template === MINE_TPL ? mines : others).push(it);
+    const d = lookup(it.defId);
+    if (d?.template === MINE_TPL) mines.push(it);
+    else if (d?.freeArea) freeAreaItems.push(it);
+    else others.push(it);
   }
 
   // --- 2. placement de masse (recuit : étagères + routes + champs) ---
@@ -123,6 +129,14 @@ export function planIslandProduction(
   const fpOf = (b: PlacedBuilding): { x: number; y: number; w: number; h: number } | null => {
     const d = lookup(b.defId);
     return d ? { x: b.x, y: b.y, ...footprintSize(d, b.rotation) } : null;
+  };
+  const fitsBld = (x: number, y: number, w: number, h: number): boolean => {
+    if (x < 0 || y < 0 || x + w > W || y + h > H) return false;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const c = (y + j) * W + (x + i);
+      if (occ[c] || roadAt[c] || !grid.usable[c]) return false;
+    }
+    return true;
   };
   for (const b of buildings) {
     const fp = fpOf(b);
@@ -210,6 +224,54 @@ export function planIslandProduction(
     for (let k = 0; k < m.qty; k++) {
       if (!placeMine(def)) {
         gaps.push(`${def.name} : plus de slot montagne libre (${m.qty - k} non posée(s))`);
+        break;
+      }
+    }
+  }
+
+  // --- 3b. prods à AIRE LIBRE : posées en zone ouverte, réservent leur rayon ---
+  // (productivité ∝ cases libres dans InfluenceRadius ; on garantit NeededArea de
+  // terre vide autour, marquée occ pour que rien d'autre ne s'y installe)
+  const placeFreeArea = (def: BuildingDef): boolean => {
+    const fa = def.freeArea!;
+    const w = def.size.w, h = def.size.h, R = fa.radius;
+    let bx = -1, by = -1, bestFree = -1;
+    const stride = 3;
+    for (let y = 0; y + h <= H; y += stride) for (let x = 0; x + w <= W; x += stride) {
+      if (!fitsBld(x, y, w, h)) continue;
+      // cases de terre libres dans le disque Chebyshev R autour de l'emprise
+      let free = 0;
+      for (let dy = -R; dy < h + R; dy++) for (let dx = -R; dx < w + R; dx++) {
+        const px = x + dx, py = y + dy;
+        if (px < 0 || py < 0 || px >= W || py >= H) continue;
+        const c = py * W + px;
+        if (grid.usable[c] && !occ[c] && !roadAt[c]) free++;
+      }
+      if (free > bestFree) { bestFree = free; bx = x; by = y; if (free >= fa.area) break; }
+    }
+    if (bx < 0) return false;
+    buildings.push({ uid: uid("free"), defId: def.id, x: bx, y: by, rotation: 0, locked: false });
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) occ[(by + j) * W + (bx + i)] = 1;
+    // réserve NeededArea cases libres autour (les plus proches) → restent "nature"
+    let reserve = fa.area;
+    for (let ring = 1; ring <= R && reserve > 0; ring++) {
+      for (let dy = -ring; dy < h + ring && reserve > 0; dy++) for (let dx = -ring; dx < w + ring && reserve > 0; dx++) {
+        if (dx > -ring && dx < w + ring - 1 && dy > -ring && dy < h + ring - 1) continue; // anneau seulement
+        const px = bx + dx, py = by + dy;
+        if (px < 0 || py < 0 || px >= W || py >= H) continue;
+        const c = py * W + px;
+        if (grid.usable[c] && !occ[c] && !roadAt[c]) { occ[c] = 1; reserve--; }
+      }
+    }
+    stubToRoads(bx, by, w, h);
+    return true;
+  };
+  for (const fp of freeAreaItems) {
+    const def = lookup(fp.defId);
+    if (!def?.freeArea) continue;
+    for (let k = 0; k < fp.qty; k++) {
+      if (!placeFreeArea(def)) {
+        gaps.push(`${def.name} : pas assez d'espace libre (${fp.qty - k} non posée(s))`);
         break;
       }
     }

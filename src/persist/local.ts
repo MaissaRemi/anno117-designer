@@ -1,7 +1,7 @@
 import type { Catalog, Layout } from "../model/types";
 
-// v6 : catalogue + template/transporterRange/Colisée (archetype production, eau).
-const KEY = "anno117-designer:state:v6";
+// v7 : catalogue + freeArea (non-enclavement prods forêt/marais).
+const KEY = "anno117-designer:state:v7";
 
 interface Persisted {
   catalog: Catalog;

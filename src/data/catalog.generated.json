@@ -2323,6 +2323,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 10,
+      "area": 140
+    },
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -2579,6 +2583,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 8,
+      "area": 80
+    },
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -2611,6 +2619,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 8,
+      "area": 80
+    },
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -3103,6 +3115,10 @@
       "range": 20
     },
     "streetRange": 24,
+    "freeArea": {
+      "radius": 9,
+      "area": 80
+    },
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -3136,6 +3152,10 @@
       "range": 20
     },
     "streetRange": 24,
+    "freeArea": {
+      "radius": 9,
+      "area": 80
+    },
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -3169,6 +3189,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 10,
+      "area": 180
+    },
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3243,6 +3267,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 8,
+      "area": 45
+    },
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -3275,6 +3303,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 8,
+      "area": 45
+    },
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -5908,6 +5940,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 9,
+      "area": 140
+    },
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -6075,6 +6111,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 8,
+      "area": 80
+    },
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -6107,6 +6147,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 8,
+      "area": 80
+    },
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -6747,6 +6791,10 @@
       "range": 22
     },
     "streetRange": 26,
+    "freeArea": {
+      "radius": 10,
+      "area": 180
+    },
     "production": {
       "cycleTime": 90,
       "outputs": [

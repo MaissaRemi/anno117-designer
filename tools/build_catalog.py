@@ -205,6 +205,16 @@ def collect_buildings(texts, template_effects):
         if limit:
             field = {"tiles": int(limit)}
 
+        # Aire libre requise (bûcheron/ruches/marais) : productivité ∝ cases libres
+        # dans InfluenceRadius (cf. GAME_MECHANICS.md §5) — ne pas enclaver
+        free_area = None
+        fa = values.find(".//FreeAreaProductivity")
+        if fa is not None and fa.findtext("NeededArea"):
+            free_area = {
+                "radius": int(fa.findtext("InfluenceRadius") or 8),
+                "area": int(fa.findtext("NeededArea")),
+            }
+
         # Production
         production = None
         fb = values.find("FactoryBase")
@@ -239,6 +249,7 @@ def collect_buildings(texts, template_effects):
             "placement": placement,
             "radius": radius,
             "field": field,
+            "freeArea": free_area,
             "production": production,
             "transporterRange": int(mtr) if mtr else None,
         })
@@ -360,6 +371,8 @@ def to_app_catalog(buildings, product_name):
             if b.get("production") and b["production"]["outputs"]:
                 ft = product_name.get(b["production"]["outputs"][0]["product"])
             entry["field"] = {"tiles": b["field"]["tiles"], "fieldType": slug(ft) or "field"}
+        if b.get("freeArea"):
+            entry["freeArea"] = b["freeArea"]
         if b.get("production"):
             p = b["production"]
             entry["production"] = {

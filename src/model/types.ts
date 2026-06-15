@@ -36,6 +36,7 @@ export interface BuildingDef {
   placement?: "land" | "water"; // "water" = se pose sur l'eau/la côte (défaut land)
   transporterRange?: number; // prod : distance-rue max vers un entrepôt (défaut 30)
   template?: string; // template du jeu (SlotFactoryBuilding7 = mines, Warehouse…)
+  freeArea?: { radius: number; area: number }; // prod ∝ cases libres dans le rayon
   radius?: RadiusSpec;
   field?: FieldSpec;
   color: string; // couleur de rendu (#rrggbb)
