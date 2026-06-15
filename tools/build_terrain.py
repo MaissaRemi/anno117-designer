@@ -32,6 +32,7 @@ from filedb import parse
 GAME = r"F:\Anno 117 - Pax Romana\maindata"
 HERE = os.path.dirname(os.path.dirname(__file__))
 OUT = os.path.join(HERE, "src", "data", "terrain.generated.json")
+OUT_HEIGHTS = os.path.join(HERE, "src", "data", "terrain.heights.generated.json")
 
 ARCHIVES = ["provinces_roman.rda", "provinces_celtic.rda", "dlc01_provinces.rda"]
 
@@ -132,6 +133,7 @@ def heights_from_gamedata(root, w: int, h: int):
 
 def main():
     terrain = {}
+    heights_out = {}
     for arc in ARCHIVES:
         path = os.path.join(GAME, arc)
         if not os.path.exists(path):
@@ -166,9 +168,13 @@ def main():
             terrain[island_id] = {
                 "slots": slots,
                 "rivers": rle_encode(rivers) if rivers and riverCount else None,
-                "heights": heights,
+                # les hauteurs (~95 % du volume) vont dans un fichier SÉPARÉ chargé à
+                # la demande (import dynamique) — hors du bundle principal
+                "hasHeights": bool(heights),
                 "heightScale": 16 if heights else None,
             }
+            if heights:
+                heights_out[island_id] = heights
             byType = {}
             for s in slots:
                 byType[s["type"]] = byType.get(s["type"], 0) + 1
@@ -177,7 +183,8 @@ def main():
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     json.dump(terrain, open(OUT, "w", encoding="utf-8"), ensure_ascii=False)
-    print(f"OK -> {OUT} ({len(terrain)} îles)", file=sys.stderr)
+    json.dump(heights_out, open(OUT_HEIGHTS, "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"OK -> {OUT} ({len(terrain)} îles) + {OUT_HEIGHTS} ({len(heights_out)} hauteurs)", file=sys.stderr)
 
 
 if __name__ == "__main__":

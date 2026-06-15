@@ -315,57 +315,87 @@ export function planLattice(
     }
   };
 
+  // gain d'une ancre = cases de terre encore à > r (L1) dans son diamant
+  const diamondGain = (ax0: number, ay0: number, r: number, distMap: Int32Array): number => {
+    let g = 0;
+    for (let dy = -r; dy <= r; dy++) {
+      const ay = ay0 + dy;
+      if (ay < 0 || ay >= H) continue;
+      const span = r - Math.abs(dy), base = ay * W;
+      for (let dx = -span; dx <= span; dx++) {
+        const ax = ax0 + dx;
+        if (ax < 0 || ax >= W) continue;
+        const c = base + ax;
+        if (grid.usable[c] && distMap[c] > r) g++;
+      }
+    }
+    return g;
+  };
+
+  // GREEDY INCRÉMENTAL : pose des copies au max-gain (identique au greedy naïf), mais
+  // après chaque pose, ne RECALCULE le diamant que des ancres PROCHES du copie posée
+  // (les seules dont le gain a pu changer — le gain est sous-modulaire et borné par la
+  // distance). Le greedy naïf rescannait TOUTES les ancres × tout le diamant à chaque
+  // tour → O(51 s) sur continental 768² ; ici l'île entière tombe sous 3 s.
+  const greedyCover = (
+    anchors: { x: number; y: number }[],
+    distMap: Int32Array,
+    r: number,
+    minGain: number,
+    maxCopies: number,
+    place: (a: { x: number; y: number }) => number[] | null,
+  ) => {
+    const gains = anchors.map((a) => diamondGain(a.x, a.y, r, distMap));
+    for (let placed = 0; placed < maxCopies; placed++) {
+      let bi = -1, bg = minGain - 1; // scan du max (O(ancres), bon marché)
+      for (let i = 0; i < gains.length; i++) if (gains[i] > bg) { bg = gains[i]; bi = i; }
+      if (bi < 0) break; // plus aucune ancre ≥ minGain
+      gains[bi] = -1; // ancre consommée
+      const seeds = place(anchors[bi]);
+      if (!seeds) continue; // rien ne tient ici
+      l1Update(distMap, seeds, r + 1);
+      // zone réellement altérée = bbox des cases posées ± r (portée du diamant L1) ;
+      // dérivée des SEEDS (un strip de cluster s'étend bien au-delà de l'ancre)
+      let nx0 = W, ny0 = H, nx1 = 0, ny1 = 0;
+      for (const c of seeds) {
+        const x = c % W, y = (c / W) | 0;
+        if (x < nx0) nx0 = x; if (x > nx1) nx1 = x; if (y < ny0) ny0 = y; if (y > ny1) ny1 = y;
+      }
+      for (let i = 0; i < gains.length; i++) {
+        if (gains[i] < 0) continue;
+        const ax = anchors[i].x, ay = anchors[i].y;
+        if (ax >= nx0 - 2 * r && ax <= nx1 + 2 * r && ay >= ny0 - 2 * r && ay <= ny1 + 2 * r) {
+          gains[i] = diamondGain(ax, ay, r, distMap);
+        }
+      }
+    }
+  };
+
   const SMALL_RANGE_MAX = 40; // gros (Théâtre/Biblio/Bains/Temple/Forum/MJeu) vs petits
   const placeLattice = (d: BuildingDef) => {
     const r = effR(d);
-    // candidats : grille FINE (pas r/2) + centroïde en tête. Le greedy max-gain
-    // borné ci-dessous est un min-set-cover approché par type : terrain ouvert →
-    // converge vers le quinconce (~aire/2r² copies) ; contours irréguliers → il
-    // s'adapte (les ancres quinconce strictes tombaient dans l'eau → rim non couvert).
+    // candidats : grille FINE (r/2) + centroïde en tête. Le lazy-greedy borné ci-dessous
+    // est un min-set-cover approché par type (converge vers le quinconce ~aire/2r²).
     const cstep = Math.max(4, Math.floor(r / 2));
     const anchors: { x: number; y: number }[] = [{ x: gx, y: gy }];
     for (let ly = y0; ly <= y1; ly += cstep) {
       for (let lx = x0; lx <= x1; lx += cstep) anchors.push({ x: lx, y: ly });
     }
-    // greedy par GAIN : une ancre n'est posée que si son diamant L1 apporte assez de
-    // terre pas encore couverte par CE type (élimine copies de coin / sur l'eau).
-    // Copies bornées par construction ≈ 2 × aire/2r² (pas d'explosion de réparation).
     const distMap = new Int32Array(N).fill(N);
-    // plafonné à 30 % de la terre : un type à portée >= taille de l'île (Colisée 250)
-    // aurait sinon un minGain inatteignable → jamais posé
+    // minGain plafonné à 30 % de la terre : un type à portée >= taille d'île (Colisée
+    // 250) aurait sinon un seuil inatteignable → jamais posé
     const minGain = Math.max(60, Math.min(Math.floor(2 * r * r * 0.25), Math.floor(landCount * 0.3)));
     const maxCopies = Math.ceil(landCount / (2 * r * r)) * 2 + 2;
-    for (let iter = 0; iter < maxCopies; iter++) {
-      let bi = -1, bGain = minGain - 1;
-      for (let i = 0; i < anchors.length; i++) {
-        const a = anchors[i];
-        if (a.x < 0) continue; // consommée
-        let g = 0;
-        for (let dy = -r; dy <= r; dy++) {
-          const ay = a.y + dy;
-          if (ay < 0 || ay >= H) continue;
-          const span = r - Math.abs(dy);
-          for (let dx = -span; dx <= span; dx++) {
-            const ax = a.x + dx;
-            if (ax < 0 || ax >= W) continue;
-            const c = ay * W + ax;
-            if (grid.usable[c] && distMap[c] > r) g++;
-          }
-        }
-        if (g > bGain) { bGain = g; bi = i; }
-      }
-      if (bi < 0) break; // plus aucune ancre utile
-      const a = anchors[bi];
-      anchors[bi] = { x: -1, y: -1 };
+    greedyCover(anchors, distMap, r, minGain, maxCopies, (a) => {
       const before = (placements.get(d.id) ?? []).length;
       placeNear(d, a.x, a.y, Math.floor(r / 2) + 4);
       const arr = placements.get(d.id) ?? [];
-      if (arr.length === before) continue; // rien ne tient ici
+      if (arr.length === before) return null;
       const p = arr[arr.length - 1];
       const seeds: number[] = [];
       for (let j = 0; j < p.h; j++) for (let i2 = 0; i2 < p.w; i2++) seeds.push((p.y + j) * W + (p.x + i2));
-      l1Update(distMap, seeds, r + 1);
-    }
+      return seeds;
+    });
   };
 
   // --- CLUSTERS de petits services : CO-LOCALISATION sur quinconce gain-pruné ---
@@ -409,43 +439,22 @@ export function planLattice(
     const distMap = new Int32Array(N).fill(N);
     const minGain = Math.max(60, Math.floor(2 * rC * rC * 0.25));
     const maxStrips = Math.ceil(landCount / (2 * rC * rC)) * 2 + 2;
-    for (let iter = 0; iter < maxStrips; iter++) {
-      let bi = -1, bGain = minGain - 1;
-      for (let i = 0; i < anchors.length; i++) {
-        const a = anchors[i];
-        if (a.x < 0) continue;
-        let g = 0;
-        for (let dy = -rC; dy <= rC; dy++) {
-          const ay = a.y + dy;
-          if (ay < 0 || ay >= H) continue;
-          const span = rC - Math.abs(dy);
-          for (let dx = -span; dx <= span; dx++) {
-            const ax = a.x + dx;
-            if (ax < 0 || ax >= W) continue;
-            const c = ay * W + ax;
-            if (grid.usable[c] && distMap[c] > rC) g++;
-          }
-        }
-        if (g > bGain) { bGain = g; bi = i; }
-      }
-      if (bi < 0) break;
-      const a = anchors[bi];
-      anchors[bi] = { x: -1, y: -1 };
+    greedyCover(anchors, distMap, rC, minGain, maxStrips, (a) => {
       // strip atomique : essai en glissant le long de la ligne
       const nBefore = buildings.length;
       let ok = false;
       for (const dx of [0, -3, 3, -6, 6, -9, 9, -12, 12]) {
         if (tryStrip(a.x + dx, a.y)) { ok = true; break; }
       }
-      if (!ok) continue;
+      if (!ok) return null;
       const seeds: number[] = [];
       for (let bIdx = nBefore; bIdx < buildings.length; bIdx++) {
         const b = buildings[bIdx];
         const { w, h } = footprintSize(lookup(b.defId)!, b.rotation);
         for (let j = 0; j < h; j++) for (let i2 = 0; i2 < w; i2++) seeds.push((b.y + j) * W + (b.x + i2));
       }
-      l1Update(distMap, seeds, rC + 1);
-    }
+      return seeds;
+    });
   };
 
   for (const d of bigDefs) placeLattice(d); // gros : grand → petit (espace contigu)
