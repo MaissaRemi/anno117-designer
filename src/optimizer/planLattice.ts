@@ -25,6 +25,7 @@ export interface LatticeResult {
   roads: RoadTile[];
   fields: FieldTile[];
   houses: number;
+  fullyCovered: number; // maisons couvertes par TOUS les types (tier-cible atteint)
   servicesPlaced: Record<string, number>;
   water?: WaterPlanResult; // présent si opts.water
 }
@@ -76,7 +77,7 @@ export function planLattice(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
@@ -289,8 +290,10 @@ export function planLattice(
   // le minimum de copies pour couvrir une zone (≈ aire/2r²), posé d'AVANCE — pas de
   // boucle de réparation qui explose comme districtPlan.
   // floor < 1 : espacement étiré (trous de bordure acceptés → moins de copies).
-  const stretch = 1 + (1 - floor) * 0.6;
-  const effR = (d: BuildingDef): number => Math.max(8, Math.round((rangeOf(d) - STEPH) * stretch));
+  // services TOUJOURS dimensionnés à leur portée réelle (maximise les maisons
+  // PLEINEMENT couvertes) ; le floor ne joue plus sur la densité de services mais
+  // sur le quota de maisons partielles gardées en bordure (cf. passe MAISONS).
+  const effR = (d: BuildingDef): number => Math.max(8, rangeOf(d) - STEPH);
 
   // BFS L1 plein-grille (proxy OPTIMISTE de la distance-rue : rue ≥ L1). Sert à
   // ÉLAGUER les ancres redondantes — la densification exacte (rue) répare derrière.
@@ -564,35 +567,34 @@ export function planLattice(
   rebuildDemand();
   for (const tc of typeCov.values()) refreshType(tc);
 
-  // --- MAISONS : tout slot accessible, gardé ssi couvert par tous (floor) ---
+  // --- MAISONS : floor = fraction des maisons PLEINEMENT couvertes (mécanique
+  // d'upgrade du jeu, cf. GAME_MECHANICS.md §3 — pas "chaque service ≥ floor").
+  //  Passe 1 : toutes les maisons couvertes par TOUS les types (= tier-cible atteint).
+  //  Passe 2 : maisons partielles (meilleures d'abord) tant que pleines/total ≥ floor.
   const types = [...typeCov.values()].filter((tc) => (placements.get(tc.def.id) ?? []).length > 0);
   const covArr = types.map((tc) => covByType.get(tc.def.id) ?? coveredOrigins(tc));
-
-  // 2 passes : slots COMPLETS d'abord (une maison partielle acceptée tôt en scan
-  // row-major bloquait des slots complets en aval), puis remplissage partiel sous
-  // quota (chaque type reste ≥ floor sur l'ensemble gardé).
-  let houses = 0, total = 0;
-  const covCount = new Array<number>(types.length).fill(0);
-  const tryPlaceHouse = (x: number, y: number, allowPartial: boolean): void => {
-    if (!fitsHouse(x, y) || !touchesRoad(x, y)) return;
-    const o = y * W + x;
-    let failing = 0;
-    for (let t = 0; t < types.length; t++) if (!covArr[t][o]) failing++;
-    if (failing > 0) {
-      if (!allowPartial || floor >= 1) return;
-      for (let t = 0; t < types.length; t++) {
-        if (covCount[t] + (covArr[t][o] ? 1 : 0) < floor * (total + 1) - 1e-9) return;
-      }
-    }
+  let houses = 0, fullyCovered = 0;
+  const placeAt = (x: number, y: number, full: boolean) => {
     for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
     buildings.push({ uid: uid("lat"), defId: residenceId, x, y, rotation: 0, locked: false });
     markAdj(x, y, rw, rh);
-    houses++; total++;
-    for (let t = 0; t < types.length; t++) if (covArr[t][o]) covCount[t]++;
+    houses++;
+    if (full) fullyCovered++;
   };
-  for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) tryPlaceHouse(x, y, false);
-  if (floor < 1) {
-    for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) tryPlaceHouse(x, y, true);
+  const partials: { x: number; y: number; cov: number }[] = [];
+  for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
+    if (!fitsHouse(x, y) || !touchesRoad(x, y)) continue;
+    const o = y * W + x;
+    let cov = 0;
+    for (let t = 0; t < types.length; t++) if (covArr[t][o]) cov++;
+    if (cov === types.length) placeAt(x, y, true);
+    else if (floor < 1) partials.push({ x, y, cov });
+  }
+  // partielles les MIEUX couvertes d'abord ; gardées tant que la fraction pleine ≥ floor
+  partials.sort((a, b) => b.cov - a.cov);
+  for (const p of partials) {
+    if (fullyCovered < floor * (houses + 1) - 1e-9) break; // ajouter diluerait sous le seuil
+    if (fitsHouse(p.x, p.y) && touchesRoad(p.x, p.y)) placeAt(p.x, p.y, false);
   }
 
   // --- ÉLAGAGE routes : adjacentes aux bâtiments + chemins maison→service ---
@@ -616,5 +618,5 @@ export function planLattice(
   const roads: RoadTile[] = [];
   for (let i = 0; i < N; i++) if (keep[i]) roads.push({ x: i % W, y: (i / W) | 0 });
 
-  return { buildings, roads, fields: [], houses, servicesPlaced, water };
+  return { buildings, roads, fields: [], houses, fullyCovered, servicesPlaced, water };
 }

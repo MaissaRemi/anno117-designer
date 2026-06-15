@@ -137,10 +137,14 @@ export function IslandPlanner({ onClose }: Props) {
             </div>
 
             <label className="slider">
-              <span>Couverture visée</span>
+              <span>% maisons au tier-cible</span>
               <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
               <span className="muted">{floor}%</span>
             </label>
+            <p className="muted" style={{ fontSize: "0.8em", margin: "2px 0 0" }}>
+              Fraction des maisons recevant TOUS leurs besoins (montent au tier) ; le reste tient
+              au tier inférieur. 100 % = densité moindre (le bord d'île ne loge pas tous les services).
+            </p>
           </>
         )}
 
@@ -175,9 +179,12 @@ export function IslandPlanner({ onClose }: Props) {
           <div className="opt-result">
             <div style={{ marginBottom: 6 }}>
               <b>{result.residents.toLocaleString("fr")} habitants</b> ({result.tierName}) ·{" "}
-              {result.houses} maisons · couverture min{" "}
-              <b style={{ color: color(result.coverageMin) }}>{result.coverageMin}%</b>
+              <b style={{ color: color(result.fullyCoveredPct) }}>{result.fullyCovered}</b>/{result.houses} maisons
+              {" "}au tier ({result.fullyCoveredPct}% complètes)
               {!result.feasible && <span style={{ color: "#ffcc66" }}> (best-effort)</span>}
+              <div className="muted" style={{ fontSize: "0.85em" }}>
+                couverture min par service {result.coverageMin}% · {result.houses - result.fullyCovered} maisons partielles (tier inférieur)
+              </div>
             </div>
             <div style={{ marginBottom: 6 }}>
               💰 net <span style={{ color: result.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>

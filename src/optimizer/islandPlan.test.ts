@@ -21,7 +21,9 @@ describe("planIslandImport (mode import)", () => {
   it("cale des maisons et renvoie un manifeste d'import", () => {
     const r = plan(36, 36, 0.5);
     expect(r.houses).toBeGreaterThan(0);
-    expect(r.residents).toBe(r.houses * r.cap);
+    // habitants = maisons PLEINEMENT couvertes × cap (les partielles = tier inférieur)
+    expect(r.residents).toBe(r.fullyCovered * r.cap);
+    expect(r.fullyCovered).toBeLessThanOrEqual(r.houses);
     expect(r.buildings.length).toBeGreaterThanOrEqual(r.houses); // résidences + services
     expect(r.importGoods.length).toBeGreaterThan(0); // biens à acheminer
     expect(r.importGoods.every((g) => g.perMin > 0)).toBe(true);
@@ -33,10 +35,10 @@ describe("planIslandImport (mode import)", () => {
     expect(big.houses).toBeGreaterThanOrEqual(small.houses);
   });
 
-  it("manifeste = demande directe solve(pop = houses*cap)", () => {
+  it("manifeste = demande directe solve(pop = fullyCovered*cap)", () => {
     const r = plan(36, 36, 0.5);
     const sol = solve(
-      [{ tier: tier.guid, pop: r.houses * r.cap }],
+      [{ tier: tier.guid, pop: r.fullyCovered * r.cap }],
       { includeProduction: false, includeServices: true, includeWorkforce: false, optimizeNeeds: false, capacities: { [tier.guid]: r.cap } },
     );
     // chaque bien du manifeste correspond à la demande solve (arrondie)

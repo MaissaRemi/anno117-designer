@@ -31,9 +31,8 @@ describe("planIslandProduction (archetype île d'export)", () => {
     const r = planIslandProduction(catalog, grid, lookup, anyGood, 5, { timeMs: 800 });
     expect(r.prodsTotal).toBeGreaterThan(0);
     expect(r.warehousesPlaced).toBeGreaterThanOrEqual(1);
-    // la grande majorité des prods à portée de charrette d'un entrepôt (les fermes
-    // enclavées par leurs champs sans accès route = limitation du recuit, en gap)
-    expect(r.prodsCovered / r.prodsTotal).toBeGreaterThanOrEqual(0.7);
+    // entrepôts écrasent les champs au besoin → quasi toutes les prods à portée
+    expect(r.prodsCovered / r.prodsTotal).toBeGreaterThanOrEqual(0.9);
     // main-d'œuvre locale : des maisons ouvrières sont posées si la chaîne en demande
     if (Object.values(r.solution.populationByTier).some((p) => p > 0)) {
       expect(r.houses).toBeGreaterThan(0);

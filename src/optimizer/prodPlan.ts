@@ -116,7 +116,10 @@ export function planIslandProduction(
       if (x >= 0 && y >= 0 && x < W && y < H) occ[y * W + x] = 1;
     }
   }
-  for (const f of fields) if (f.x >= 0 && f.y >= 0 && f.x < W && f.y < H) occ[f.y * W + f.x] = 1;
+  // champs marqués SÉPARÉMENT : un entrepôt peut les écraser (perte de quelques
+  // tuiles de champ = perte de prod mineure, comme en vrai jeu), pas un bâtiment.
+  const fieldAt = new Uint8Array(N);
+  for (const f of fields) if (f.x >= 0 && f.y >= 0 && f.x < W && f.y < H) { occ[f.y * W + f.x] = 1; fieldAt[f.y * W + f.x] = 1; }
 
   // --- 3. mines sur slots MONTAGNE + stub route ---
   onProgress?.(3, 4);
@@ -256,15 +259,26 @@ export function planIslandProduction(
         arr.push(pi);
       }
     }
-    // candidats : emprise libre, ortho-adjacente à ≥1 case route
+    // candidats : emprise sur terre, hors route, hors BÂTIMENT — les CHAMPS sont
+    // écrasables (qq tuiles de champ perdues ≪ prod débloquée faute d'entrepôt).
     const ww = whDef.size.w, wh = whDef.size.h;
     const fits = (x: number, y: number): boolean => {
       if (x < 0 || y < 0 || x + ww > W || y + wh > H) return false;
       for (let j = 0; j < wh; j++) for (let i = 0; i < ww; i++) {
         const c = (y + j) * W + (x + i);
-        if (occ[c] || roadAt[c] || !grid.usable[c]) return false;
+        if (roadAt[c] || !grid.usable[c]) return false;
+        if (occ[c] && !fieldAt[c]) return false; // bâtiment/mer : interdit ; champ : OK
       }
       return true;
+    };
+    const stampWarehouse = (x: number, y: number) => {
+      buildings.push({ uid: uid("wh"), defId: whDef.id, x, y, rotation: 0, locked: false });
+      whPlaced++;
+      for (let j = 0; j < wh; j++) for (let i = 0; i < ww; i++) {
+        const c = (y + j) * W + (x + i);
+        occ[c] = 1;
+        if (fieldAt[c]) fieldAt[c] = 0; // tuile de champ consommée par l'entrepôt
+      }
     };
     const adjacentReach = (x: number, y: number): number[] => {
       const out = new Set<number>();
@@ -302,9 +316,7 @@ export function planIslandProduction(
         }
       }
       if (bx < 0 || bestGain === 0) break;
-      buildings.push({ uid: uid("wh"), defId: whDef.id, x: bx, y: by, rotation: 0, locked: false });
-      whPlaced++;
-      for (let j = 0; j < wh; j++) for (let i = 0; i < ww; i++) occ[(by + j) * W + (bx + i)] = 1;
+      stampWarehouse(bx, by);
       for (const pi of bestIds) coveredSet.add(pi);
     }
     // repli : entrepôt COLLÉ aux prods encore non couvertes (distance-rue ~1)
@@ -319,9 +331,7 @@ export function planIslandProduction(
             // emprise hors de la prod, à distance ring de son périmètre
             if (px + ww > fp.x && px < fp.x + fp.w && py + wh > fp.y && py < fp.y + fp.h) continue;
             if (!fits(px, py)) continue;
-            buildings.push({ uid: uid("wh"), defId: whDef.id, x: px, y: py, rotation: 0, locked: false });
-            whPlaced++;
-            for (let jj = 0; jj < wh; jj++) for (let ii = 0; ii < ww; ii++) occ[(py + jj) * W + (px + ii)] = 1;
+            stampWarehouse(px, py);
             coveredSet.add(pi);
             done = true;
           }
@@ -343,7 +353,7 @@ export function planIslandProduction(
     ratePerMin,
     buildings,
     roads,
-    fields,
+    fields: fields.filter((f) => fieldAt[f.y * W + f.x] === 1), // champs consommés par entrepôt retirés
     houses,
     prodsTotal: prods.length,
     prodsCovered: covered,

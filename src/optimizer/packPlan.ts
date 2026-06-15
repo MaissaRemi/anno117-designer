@@ -21,6 +21,7 @@ export interface PackResult {
   roads: RoadTile[];
   fields: FieldTile[];
   houses: number;
+  fullyCovered: number; // maisons couvertes par TOUS les types
   servicesPlaced: Record<string, number>;
   /** Réseau d'eau intégré — jamais produit par packPlan (l'eau y serait routée
    *  APRÈS les maisons, sans corridors) ; présent pour l'interface commune des
@@ -79,7 +80,7 @@ export function planPacked(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- peigne de routes (identique districtPlan) : double-rangée + épines ---
@@ -423,47 +424,31 @@ export function planPacked(
   const types = [...typeCov.values()].filter((tc) => (placements.get(tc.def.id) ?? []).length > 0);
   for (const tc of types) { tc.covered = new Uint8Array(houses.length); bfsType(tc); markCovered(tc); }
 
-  // mode 100% : retirer les maisons non couvertes par TOUS les types.
-  // floor<1 : garder le partiel tant que chaque type reste ≥ floor.
+  // floor = fraction des maisons PLEINEMENT couvertes (mécanique d'upgrade, comme
+  // planLattice) : garder toutes les pleines + les partielles les mieux couvertes
+  // tant que pleines/total ≥ floor.
+  const covOf = (i: number): number => { let c = 0; for (const tc of types) if (tc.covered[i]) c++; return c; };
   const alive = houses.map((h) => h.alive);
-  if (floor >= 1) {
-    for (let i = 0; i < houses.length; i++) {
-      if (!alive[i]) continue;
-      for (const tc of types) if (!tc.covered[i]) { alive[i] = false; break; }
-    }
-  } else {
-    // greedy : trier les maisons par nb de types couverts décroissant, garder tant
-    // que chaque type reste ≥ floor sur l'ensemble gardé
-    const order2 = houses.map((_, i) => i).filter((i) => alive[i])
-      .sort((a, b) => {
-        let ca = 0, cb = 0;
-        for (const tc of types) { if (tc.covered[a]) ca++; if (tc.covered[b]) cb++; }
-        return cb - ca;
-      });
-    const covCount = new Map<string, number>();
-    let kept = 0;
-    const keepSet = new Set<number>();
-    for (const i of order2) {
-      // tenter de garder i : chaque type doit rester ≥ floor
-      let ok = true;
-      for (const tc of types) {
-        const c = (covCount.get(tc.def.id) ?? 0) + (tc.covered[i] ? 1 : 0);
-        if (c < floor * (kept + 1) - 1e-9) { ok = false; break; }
-      }
-      if (!ok) continue;
-      keepSet.add(i); kept++;
-      for (const tc of types) if (tc.covered[i]) covCount.set(tc.def.id, (covCount.get(tc.def.id) ?? 0) + 1);
-    }
-    for (let i = 0; i < houses.length; i++) if (alive[i] && !keepSet.has(i)) alive[i] = false;
+  let houseCount = 0, fullyCovered = 0;
+  const partial: number[] = [];
+  for (let i = 0; i < houses.length; i++) {
+    if (!alive[i]) continue;
+    if (covOf(i) === types.length) fullyCovered++;
+    else { alive[i] = false; if (floor < 1) partial.push(i); }
   }
+  // réintégrer les partielles (mieux couvertes d'abord) sous quota
+  partial.sort((a, b) => covOf(b) - covOf(a));
+  for (const i of partial) {
+    if (fullyCovered < floor * (fullyCovered + houseCount + 1) - 1e-9) break;
+    alive[i] = true; houseCount++;
+  }
+  houseCount += fullyCovered;
 
   // émettre les maisons gardées
-  let houseCount = 0;
   for (let i = 0; i < houses.length; i++) {
     if (!alive[i]) continue;
     const h = houses[i];
     buildings.push({ uid: uid("pack"), defId: tier.residenceId, x: h.x, y: h.y, rotation: 0, locked: false });
-    houseCount++;
   }
 
   // ===================== ÉLAGAGE ROUTES =====================
@@ -489,5 +474,5 @@ export function planPacked(
   const roads: RoadTile[] = [];
   for (let i = 0; i < N; i++) if (keep[i]) roads.push({ x: i % W, y: (i / W) | 0 });
 
-  return { buildings, roads, fields: [], houses: houseCount, servicesPlaced };
+  return { buildings, roads, fields: [], houses: houseCount, fullyCovered, servicesPlaced };
 }

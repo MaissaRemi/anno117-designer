@@ -38,7 +38,9 @@ export interface IslandPlanResult {
   tierName: string;
   cap: number;
   houses: number;
-  residents: number;
+  fullyCovered: number; // maisons couvertes par TOUS leurs besoins (= tier-cible atteint)
+  fullyCoveredPct: number; // 0..100 (fullyCovered / houses)
+  residents: number; // habitants des maisons PLEINEMENT couvertes (au tier-cible)
   buildings: PlacedBuilding[]; // résidences + services + sources d'eau
   roads: RoadTile[];
   fields: FieldTile[];
@@ -120,8 +122,13 @@ export function planIslandImport(
   const candB = planPacked(planGrid, req.tierGuid, lookup, engineOpts);
   const svcCount = (r: { servicesPlaced: Record<string, number> }) =>
     Object.values(r.servicesPlaced).reduce((a, b) => a + b, 0);
-  const dist = candA.houses > candB.houses || (candA.houses === candB.houses && svcCount(candA) <= svcCount(candB))
-    ? candA : candB;
+  // critère : d'abord les maisons PLEINEMENT couvertes (= tier-cible, tous bonus),
+  // puis le total de maisons, puis le moins de services (anti-confetti)
+  const better = (a: typeof candA, b: typeof candB): boolean =>
+    a.fullyCovered !== b.fullyCovered ? a.fullyCovered > b.fullyCovered
+    : a.houses !== b.houses ? a.houses > b.houses
+    : svcCount(a) <= svcCount(b);
+  const dist = better(candA, candB) ? candA : candB;
 
   // réseau d'eau : intégré au moteur s'il le fournit (lattice) ; sinon routage
   // post-hoc best-effort (packPlan — tiers sans consommateurs d'eau en pratique)
@@ -138,7 +145,11 @@ export function planIslandImport(
   const analyzable = coverage.services.filter((s) => s.hasRadius && (!relevant || relevant.has(s.serviceId)));
   const coverageMin = analyzable.length ? Math.min(...analyzable.map((s) => s.pct)) : 100;
   const houses = dist.houses;
-  const residents = houses * cap;
+  const fullyCovered = dist.fullyCovered;
+  const fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 100;
+  // habitants au TIER-CIBLE = maisons pleinement couvertes (les partielles n'ont pas
+  // tous les besoins → tier inférieur). Manifeste d'import + bonus basés là-dessus.
+  const residents = fullyCovered * cap;
 
   // manifeste d'import : biens consommables (pas d'explosion de chaîne → on ship le fini)
   const sol = solve(
@@ -153,9 +164,9 @@ export function planIslandImport(
     .map(([good, perMin]) => ({ good, name: goodName(good), perMin: Math.round(perMin * 100) / 100 }))
     .sort((a, b) => b.perMin - a.perMin);
 
-  // bonus d'attributs cumulés (maisons pleines)
+  // bonus d'attributs cumulés (maisons PLEINEMENT couvertes = au tier-cible)
   const attributes: Record<string, number> = {};
-  for (const [k, v] of Object.entries(tier.perHouse || {})) attributes[k] = Math.round(v * houses);
+  for (const [k, v] of Object.entries(tier.perHouse || {})) attributes[k] = Math.round(v * fullyCovered);
 
   // trous best-effort (en mode seuils : seulement les services retenus)
   const gaps: string[] = [];
@@ -180,6 +191,8 @@ export function planIslandImport(
     tierName: tier.name,
     cap,
     houses,
+    fullyCovered,
+    fullyCoveredPct,
     residents,
     buildings: layout.buildings,
     roads: layout.roads,
@@ -194,6 +207,7 @@ export function planIslandImport(
     money: sol.money,
     attributes,
     gaps: [...new Set(gaps)],
-    feasible: coverageMin >= floor, // a atteint le seuil de couverture visé
+    // faisable = fraction de maisons au tier-cible atteint le seuil visé (par-maison)
+    feasible: fullyCoveredPct >= floor,
   };
 }
