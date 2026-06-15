@@ -2,6 +2,7 @@ import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import type { DefLookup } from "../engine/rules";
+import { chainFertilities, economy } from "../economy/economy";
 import { solve, type SolveResult } from "../economy/solve";
 import { anneal } from "./anneal";
 import { DEFAULT_WEIGHTS } from "./types";
@@ -39,6 +40,9 @@ export interface ProdPlanResult {
   placed: number; // bâtiments demandés effectivement posés (recuit)
   requested: number;
   solution: SolveResult;
+  // fertilités/gisements exigés par la chaîne (available=false ⇒ chaîne impossible
+  // sur cette île tant que la fertilité n'est pas débloquée)
+  requiredFertilities: { guid: string; name: string; available: boolean }[];
   gaps: string[];
 }
 
@@ -52,21 +56,33 @@ export function planIslandProduction(
   lookup: DefLookup,
   good: string,
   ratePerMin: number,
-  opts: { timeMs?: number } = {},
+  opts: { timeMs?: number; islandFertilities?: string[] } = {},
   onProgress?: (step: number, total: number) => void,
 ): ProdPlanResult {
   const gaps: string[] = [];
   const W = grid.w, H = grid.h, N = W * H;
 
   // --- 1. solveur : chaîne + workforce locale + services ouvriers ---
+  // région de l'île → préférence de producteur (pas de chaîne celtique sur île romaine)
+  const islandRegion = grid.islandId?.includes("celtic") ? "Celtic" : "Roman";
   onProgress?.(1, 4);
   const sol = solve(
     [],
-    { includeProduction: true, includeServices: true, includeWorkforce: true, capacities: {} },
+    { includeProduction: true, includeServices: true, includeWorkforce: true, capacities: {}, region: islandRegion },
     { [good]: ratePerMin },
   );
   if (!sol.items.length) throw new Error("Aucun producteur connu pour ce bien.");
   if (!sol.converged) gaps.push("Cascade main-d'œuvre non convergée : résultat = besoins directs");
+
+  // fertilités exigées par la chaîne ; si l'île ne les a pas (saisie utilisateur),
+  // la chaîne est impossible en jeu → gap explicite (sélection vide = toutes supposées OK)
+  const haveFert = opts.islandFertilities && opts.islandFertilities.length ? new Set(opts.islandFertilities) : null;
+  const requiredFertilities = [...chainFertilities(good, islandRegion)].map((guid) => ({
+    guid, name: economy.fertilities[guid] ?? guid, available: !haveFert || haveFert.has(guid),
+  }));
+  for (const f of requiredFertilities) {
+    if (!f.available) gaps.push(`Fertilité absente de l'île : ${f.name} (chaîne impossible)`);
+  }
 
   const mines: { defId: string; qty: number }[] = [];
   const others: { defId: string; qty: number }[] = [];
@@ -361,6 +377,7 @@ export function planIslandProduction(
     placed: out.buildings.length,
     requested: annealItems.reduce((s, it) => s + it.qty, 0) + mines.reduce((s, it) => s + it.qty, 0),
     solution: sol,
+    requiredFertilities,
     gaps: [...new Set(gaps)],
   };
 }

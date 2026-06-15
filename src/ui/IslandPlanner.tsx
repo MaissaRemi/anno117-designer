@@ -37,6 +37,7 @@ export function IslandPlanner({ onClose }: Props) {
     return first?.guid ?? "";
   });
   const [prodRate, setProdRate] = useState(10);
+  const [islandFerts, setIslandFerts] = useState<string[]>([]); // fertilités déclarées de l'île
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ step: number; total: number } | null>(null);
   const [result, setResult] = useState<AnyIslandPlanResult | null>(null);
@@ -48,6 +49,11 @@ export function IslandPlanner({ onClose }: Props) {
   const producibleGoods = useMemo(
     () => Object.keys(economy.producers)
       .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [],
+  );
+  const allFertilities = useMemo(
+    () => Object.entries(economy.fertilities).map(([guid, name]) => ({ guid, name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     [],
   );
@@ -63,7 +69,9 @@ export function IslandPlanner({ onClose }: Props) {
         catalog: s.catalog, grid: s.layout.grid, mode, tierGuid,
         coverageFloor: floor / 100, needMode,
         // params production joints seulement quand ils servent
-        ...(mode === "production" ? { productionGood: prodGood, productionRate: prodRate } : {}),
+        ...(mode === "production"
+          ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: islandFerts.length ? islandFerts : undefined }
+          : {}),
       },
       (step, total) => setProgress({ step, total }),
     );
@@ -169,6 +177,19 @@ export function IslandPlanner({ onClose }: Props) {
           </div>
         )}
 
+        {mode === "production" && (
+          <label style={{ display: "block", marginTop: 6 }}>
+            Fertilités/gisements de l'île <span className="muted">(vide = ne pas vérifier)</span>
+            <select
+              multiple value={islandFerts}
+              onChange={(e) => setIslandFerts([...e.target.selectedOptions].map((o) => o.value))}
+              style={{ width: "100%", height: 90 }}
+            >
+              {allFertilities.map((f) => <option key={f.guid} value={f.guid}>{f.name}</option>)}
+            </select>
+          </label>
+        )}
+
         {running && (
           <div className="opt-progress">
             Recherche du maximum… {progress ? `${progress.step}/${progress.total}` : ""}
@@ -263,6 +284,16 @@ export function IslandPlanner({ onClose }: Props) {
                 <li key={t}>{tiers.find((x) => x.guid === t)?.name ?? t} : {Math.ceil(p).toLocaleString("fr")}</li>
               ))}
             </ul>
+            {result.requiredFertilities.length > 0 && (
+              <div style={{ marginBottom: 6 }}>
+                🌱 Fertilités requises :{" "}
+                {result.requiredFertilities.map((f) => (
+                  <span key={f.guid} style={{ color: f.available ? "#8bc34a" : "#ff8a85" }}>
+                    {f.available ? "✓" : "✗"} {f.name}{" "}
+                  </span>
+                ))}
+              </div>
+            )}
             {result.gaps.length > 0 && (
               <div className="warn">⚠ {result.gaps.join(" · ")}</div>
             )}

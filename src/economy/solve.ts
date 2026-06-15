@@ -20,6 +20,9 @@ export interface SolveOptions {
    *  - "thresholds" : sous-ensemble le MOINS CHER atteignant les seuils d'upgrade
    *    par catégorie (SupplyWeight) — moins d'infrastructure, plus de maisons. */
   needSelection?: "all" | "thresholds";
+  /** Région de l'ÎLE (Roman/Celtic) : préférence de producteur pour les biens
+   *  exogènes (objectif de production) — évite une chaîne celtique sur île romaine. */
+  region?: string;
 }
 
 export interface TierProfile {
@@ -184,7 +187,8 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
       if (!(good in demandRegion)) demandRegion[good] = region;
       else if (demandRegion[good] !== region) demandRegion[good] = ""; // consommé par 2 régions
     };
-    for (const g of Object.keys(extraDemand)) noteRegion(g, "");
+    // biens exogènes (objectif de prod) : préfèrent la région de l'île si fournie
+    for (const g of Object.keys(extraDemand)) noteRegion(g, opts.region ?? "");
     for (const tier of economy.tiers) {
       const p = popMap[tier.guid];
       if (!p) continue;

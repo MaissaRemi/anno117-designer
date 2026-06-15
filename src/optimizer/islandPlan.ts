@@ -21,6 +21,8 @@ export interface IslandPlanRequest {
   /** Mode production : bien cible (GUID) + débit u/min. */
   productionGood?: string;
   productionRate?: number;
+  /** Fertilités/gisements disponibles sur l'île (GUIDs) — vide = toutes supposées OK. */
+  islandFertilities?: string[];
   /** Hauteurs quantifiées de l'île (q = h/16, mer < 0) — pente des aqueducs.
    *  Décodées par le worker depuis terrain.generated (grid.islandId). */
   heights?: Int8Array;
@@ -74,7 +76,8 @@ export function planIsland(
     if (!req.productionGood || !req.productionRate) throw new Error("Bien et débit cibles requis.");
     return planIslandProduction(
       req.catalog, req.grid, makeLookup(req.catalog),
-      req.productionGood, req.productionRate, {}, onProgress,
+      req.productionGood, req.productionRate,
+      { islandFertilities: req.islandFertilities }, onProgress,
     );
   }
   return planIslandImport(req, onProgress);

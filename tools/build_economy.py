@@ -78,6 +78,7 @@ def main():
     icon_to_def = {}     # icon basename -> defId (bâtiments publics surtout)
     building_upkeep = {} # defId -> entretien argent/min
     public_effects = {}  # defId -> functional effect guids (pour services)
+    fertilities = {}     # GUID Fertility/Deposit -> nom FR (saisie île + filtrage chaînes)
 
     for _, el in ET.iterparse(ASSETS, events=("end",)):
         if el.tag != "Asset":
@@ -96,6 +97,13 @@ def main():
                 "workforce": t(el, "./Values/PopulationLevel/ConnectedWorkforce"),
                 "factor": float(t(el, "./Values/PopulationLevel/PopulationToWorkforceFactor") or 0.5),
             }
+            el.clear(); continue
+
+        if tpl == "Fertility":
+            nm = texts.get(oasis) or t(el, "./Values/Standard/Name") or guid
+            # nettoyage : "Fertility Roman Olives" -> "Olives" si pas de texte FR
+            nm = re.sub(r"^(Fertility|Deposit)\s+(Roman|Celtic|Limited\s+Roman)?\s*", "", nm).strip() or nm
+            fertilities[guid] = nm
             el.clear(); continue
 
         if tpl == "Product":
@@ -155,9 +163,13 @@ def main():
             maint = [{"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 0)}
                      for it in vals.findall("./Maintenance/Maintenances/Item")]
             cyc = fb.findtext("CycleTime") or str(CYCLE_TIME_DEFAULT)
+            # fertilité requise par ce producteur (GUID d'asset Fertility/Deposit,
+            # sous Factory7) — le mode production avertit si l'île ne l'a pas
+            fert = t(el, "./Values/Factory7/NeededFertility")
             bprod[defId] = {
                 "cycleTime": int(cyc) if cyc else None,
                 "inputs": ins, "outputs": outs, "maint": maint,
+                **({"fertility": fert} if fert else {}),
             }
             for o in outs:
                 if o["good"]:
@@ -280,6 +292,7 @@ def main():
         "goodNames": products,
         "goodPrices": good_prices,
         "buildingRegion": building_region,
+        "fertilities": fertilities,
     }
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False)
     # résumé
