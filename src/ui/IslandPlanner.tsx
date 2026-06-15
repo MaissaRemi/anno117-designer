@@ -204,7 +204,8 @@ export function IslandPlanner({ onClose }: Props) {
               {" "}au tier ({result.fullyCoveredPct}% complètes)
               {!result.feasible && <span style={{ color: "#ffcc66" }}> (best-effort)</span>}
               <div className="muted" style={{ fontSize: "0.85em" }}>
-                couverture min par service {result.coverageMin}% · {result.houses - result.fullyCovered} maisons partielles (tier inférieur)
+                couverture min par service {result.coverageMin}% · {result.houses - result.fullyCovered} maisons
+                partielles (tier inférieur, non chiffrées : revenu/import = tier-cible seul)
               </div>
             </div>
             <div style={{ marginBottom: 6 }}>

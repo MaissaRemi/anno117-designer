@@ -163,7 +163,14 @@ export function planIslandImport(
     .filter((id): id is string => !!id && (!relevant || relevant.has(id)))
     .filter((id) => { const d = lookup(id); return d && needsWater(d) && !connectedByDef.get(id); });
   const waterOk = waterDead.length === 0;
-  const fullyCovered = waterOk ? dist.fullyCovered : 0; // service eau mort → aucune maison au tier
+  // borne autoritative : analyzeCoverage exige TOUS les services du tier (y compris
+  // un type que le moteur n'aurait pas pu poser → sorti de son compte) ; en mode
+  // "all" on plafonne le compte moteur par cette vérité-terrain (corrige le
+  // sur-comptage quand un service requis finit à 0 copie sur île saturée).
+  const fullyCappable = needMode === "all"
+    ? Math.min(dist.fullyCovered, coverage.housesFullyCovered)
+    : dist.fullyCovered;
+  const fullyCovered = waterOk ? fullyCappable : 0; // service eau mort → aucune maison au tier
   const fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
   // habitants au TIER-CIBLE = maisons pleinement couvertes (les partielles n'ont pas
   // tous les besoins → tier inférieur). Manifeste d'import + bonus basés là-dessus.
