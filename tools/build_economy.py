@@ -277,11 +277,21 @@ def main():
 
     # région des bâtiments : réutilise le catalogue déjà généré (AssociatedRegions décodé)
     building_region = {}
+    catalog_ids = set()
     cat_path = os.path.join(HERE, "src", "data", "catalog.generated.json")
     if os.path.exists(cat_path):
         for b in json.load(open(cat_path, encoding="utf-8")):
+            catalog_ids.add(b["id"])
             if b.get("region"):
                 building_region[b["id"]] = b["region"]
+
+    # garde-fou : un override de service périmé (besoin OU bâtiment introuvable après un
+    # patch du jeu) ferait disparaître un service d'un tier en silence → on le crie.
+    for need_guid, def_id in SERVICE_BUILDING_OVERRIDES.items():
+        if need_guid not in needs:
+            print(f"  ! override perime : besoin {need_guid} introuvable (patch jeu ?)", file=sys.stderr)
+        if catalog_ids and def_id not in catalog_ids:
+            print(f"  ! override perime : batiment {def_id} absent du catalogue (patch jeu ?)", file=sys.stderr)
 
     out = {
         "tiers": tiers,

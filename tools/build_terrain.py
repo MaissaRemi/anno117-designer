@@ -29,7 +29,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import rda_extract as rda
 from filedb import parse
 
-GAME = r"F:\Anno 117 - Pax Romana\maindata"
+GAME = os.environ.get("ANNO_GAME_DIR", r"F:\Anno 117 - Pax Romana\maindata")
+assert os.path.isdir(GAME), f"Repertoire jeu introuvable : {GAME!r}. Definir ANNO_GAME_DIR."
 HERE = os.path.dirname(os.path.dirname(__file__))
 OUT = os.path.join(HERE, "src", "data", "terrain.generated.json")
 OUT_HEIGHTS = os.path.join(HERE, "src", "data", "terrain.heights.generated.json")
@@ -83,11 +84,15 @@ def grid_bits(node, w: int, h: int):
     raw = node.attr("bits")
     gx = struct.unpack("<I", node.attr("x"))[0]
     gy = struct.unpack("<I", node.attr("y"))[0]
+    if (gx, gy) != (w, h):
+        # grille désalignée → on DROPPE (comme les heights, heights_from_gamedata
+        # renvoie None) au lieu d'émettre un masque décalé qui marquerait les
+        # mauvaises cases inconstructibles dans l'app (corruption silencieuse).
+        print(f"    ! grille {gx}x{gy} != île {w}x{h} — rivières ignorées", file=sys.stderr)
+        return None
     bits = []
     for i in range(gx * gy):
         bits.append((raw[i >> 3] >> (i & 7)) & 1)
-    if (gx, gy) != (w, h):
-        print(f"    ! grille {gx}x{gy} != île {w}x{h}", file=sys.stderr)
     return bits
 
 

@@ -20,7 +20,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import rda_extract as rda
 from game_defaults import CYCLE_TIME_DEFAULT
 
-GAME = r"F:\Anno 117 - Pax Romana\maindata"
+GAME = os.environ.get("ANNO_GAME_DIR", r"F:\Anno 117 - Pax Romana\maindata")
+assert os.path.isdir(GAME), f"Repertoire jeu introuvable : {GAME!r}. Definir ANNO_GAME_DIR."
 HERE = os.path.dirname(os.path.dirname(__file__))
 ASSETS = os.path.join(HERE, ".gamedata", "assets_base.xml")
 TEXTS = os.path.join(HERE, ".gamedata", "texts_french.xml")

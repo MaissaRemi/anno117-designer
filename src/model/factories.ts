@@ -40,25 +40,17 @@ export function resizeGridShape(g: GridShape, w: number, h: number): GridShape {
 }
 
 export function makeBuildingDef(partial: Partial<BuildingDef> = {}): BuildingDef {
+  // valeurs par défaut + spread du partiel : AUCUN champ optionnel ne peut être
+  // oublié (transporterRange/template/freeArea/unique/placement/… passent tout seuls).
   return {
-    id: partial.id ?? uid("def"),
-    name: partial.name ?? "Nouveau bâtiment",
-    category: partial.category ?? "production",
-    size: partial.size ?? { w: 3, h: 3 },
-    rotatable: partial.rotatable ?? true,
-    needsRoad: partial.needsRoad ?? true,
-    placement: partial.placement,
-    radius: partial.radius,
-    field: partial.field,
-    color: partial.color ?? "#8d6e63",
-    // champs optionnels (extraction jeu) préservés
-    guid: partial.guid,
-    nameInternal: partial.nameInternal,
-    region: partial.region,
-    icon: partial.icon,
-    streetRange: partial.streetRange,
-    production: partial.production,
-    roadRoot: partial.roadRoot,
+    id: uid("def"),
+    name: "Nouveau bâtiment",
+    category: "production",
+    size: { w: 3, h: 3 },
+    rotatable: true,
+    needsRoad: true,
+    color: "#8d6e63",
+    ...partial,
   };
 }
 

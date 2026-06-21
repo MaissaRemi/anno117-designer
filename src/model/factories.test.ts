@@ -1,6 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { resizeGridShape } from "./factories";
+import { makeBuildingDef, resizeGridShape } from "./factories";
 import type { GridShape } from "./types";
+
+describe("makeBuildingDef — préservation des champs (Phase 0)", () => {
+  it("recopie TOUS les champs optionnels (transporterRange/template/freeArea/unique)", () => {
+    const d = makeBuildingDef({
+      id: "x",
+      unique: true,
+      template: "Warehouse",
+      transporterRange: 25,
+      freeArea: { radius: 5, area: 9 },
+      placement: "water",
+    });
+    expect(d.unique).toBe(true);
+    expect(d.template).toBe("Warehouse");
+    expect(d.transporterRange).toBe(25);
+    expect(d.freeArea).toEqual({ radius: 5, area: 9 });
+    expect(d.placement).toBe("water");
+  });
+
+  it("défauts appliqués quand le partiel est vide", () => {
+    const d = makeBuildingDef();
+    expect(d.id).toMatch(/^def_/);
+    expect(d.category).toBe("production");
+    expect(d.size).toEqual({ w: 3, h: 3 });
+    expect(d.needsRoad).toBe(true);
+  });
+});
 
 describe("resizeGridShape — préservation du terrain (B3)", () => {
   // grille 4×4 : eau sur la colonne 0, rivière en (1,1), un slot montagne en (3,3)

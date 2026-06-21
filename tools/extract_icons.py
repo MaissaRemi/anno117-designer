@@ -8,7 +8,8 @@ import rda_extract as rda
 from PIL import Image
 import io
 
-GAME = r"F:\Anno 117 - Pax Romana\maindata"
+GAME = os.environ.get("ANNO_GAME_DIR", r"F:\Anno 117 - Pax Romana\maindata")
+assert os.path.isdir(GAME), f"Repertoire jeu introuvable : {GAME!r}. Definir ANNO_GAME_DIR."
 HERE = os.path.dirname(os.path.dirname(__file__))
 RAW = os.path.join(HERE, ".gamedata", "catalog.raw.json")
 OUTDIR = os.path.join(HERE, "public", "icons")
