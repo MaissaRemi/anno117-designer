@@ -2,6 +2,7 @@ import { useState } from "react";
 import { makeBuildingDef } from "../model/factories";
 import type { BuildingDef } from "../model/types";
 import { useStore } from "../state/store";
+import { Modal } from "./Modal";
 
 interface Props {
   initial: BuildingDef | null; // null => nouveau
@@ -32,9 +33,8 @@ export function CatalogEditor({ initial, onClose }: Props) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{initial ? "Éditer le bâtiment" : "Nouveau bâtiment"}</h3>
+    <Modal onClose={onClose}>
+      <h3>{initial ? "Éditer le bâtiment" : "Nouveau bâtiment"}</h3>
 
         <label>
           Nom
@@ -162,8 +162,7 @@ export function CatalogEditor({ initial, onClose }: Props) {
             Enregistrer
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

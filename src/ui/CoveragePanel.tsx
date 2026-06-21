@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useStore } from "../state/store";
 import { makeLookup } from "../engine/rules";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
+import { Modal } from "./Modal";
 
 interface Props {
   onClose: () => void;
@@ -34,9 +35,8 @@ export function CoveragePanel({ onClose }: Props) {
   const color = (pct: number) => (pct >= 100 ? "#8bc34a" : pct >= 75 ? "#ffcc66" : "#ff8a85");
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal opt" onClick={(e) => e.stopPropagation()}>
-        <h3>📡 Couverture des services publics</h3>
+    <Modal className="opt" onClose={onClose}>
+      <h3>📡 Couverture des services publics</h3>
         <p className="muted">
           {report.housesTotal} résidence(s) posée(s). <b>{report.housesFullyCovered}</b> couverte(s) par
           TOUS leurs services à rayon connu (<b style={{ color: color(report.fullyCoveredPct) }}>{report.fullyCoveredPct}%</b>).
@@ -70,7 +70,6 @@ export function CoveragePanel({ onClose }: Props) {
         <div className="modal-actions">
           <button onClick={onClose}>Fermer</button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

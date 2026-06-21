@@ -3,6 +3,7 @@ import { useStore } from "../state/store";
 import { exportJson, importJson } from "../persist/json";
 import { exportPng } from "../persist/png";
 import { findOrphanRefs } from "../model/serialize";
+import { renderFullCanvas } from "../render/exportImage";
 import { IslandPicker } from "./IslandPicker";
 import { RoadAudit } from "./RoadAudit";
 import { CoveragePanel } from "./CoveragePanel";
@@ -44,8 +45,8 @@ export function TopBar() {
   };
 
   const onPng = () => {
-    const canvas = document.querySelector("canvas");
-    if (canvas) exportPng(canvas);
+    // rend l'île ENTIÈRE hors-écran (plus le viewport visible → fin du crop au zoom/pan)
+    exportPng(renderFullCanvas(layout, catalog));
   };
 
   return (

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { economy, tiers } from "../economy/economy";
 import { runIslandPlan, type AnyIslandPlanResult } from "../optimizer/runIslandPlan";
+import { Modal } from "./Modal";
 
 interface Props {
   onClose: () => void;
@@ -42,6 +43,7 @@ export function IslandPlanner({ onClose }: Props) {
   const [progress, setProgress] = useState<{ step: number; total: number } | null>(null);
   const [result, setResult] = useState<AnyIslandPlanResult | null>(null);
   const [placeMsg, setPlaceMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const usable = useStore((s) => s.layout.grid.usable.filter(Boolean).length);
 
@@ -69,6 +71,7 @@ export function IslandPlanner({ onClose }: Props) {
     setResult(null);
     setPlaceMsg(null);
     setProgress(null);
+    setError(null);
     cancelRef.current?.(); // annule un éventuel calcul précédent
     const { promise, cancel } = runIslandPlan(
       {
@@ -84,7 +87,7 @@ export function IslandPlanner({ onClose }: Props) {
     cancelRef.current = cancel;
     promise
       .then(setResult)
-      .catch((e) => alert(String(e)))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => { setRunning(false); cancelRef.current = null; });
   };
 
@@ -108,9 +111,8 @@ export function IslandPlanner({ onClose }: Props) {
   const color = (pct: number) => (pct >= 100 ? "#8bc34a" : pct >= 75 ? "#ffcc66" : "#ff8a85");
 
   return (
-    <div className="modal-backdrop" onClick={running ? undefined : onClose}>
-      <div className="modal opt" onClick={(e) => e.stopPropagation()}>
-        <h3>🏛 Plan d'île</h3>
+    <Modal className="opt" onClose={onClose} closeDisabled={running}>
+      <h3>🏛 Plan d'île</h3>
         <p className="muted">
           Cale le <b>maximum d'habitants</b> du tier-cible sur l'île chargée ({usable} cases de terre),
           en plaçant tous les services publics pour les couvrir (best-effort). En mode import, les biens
@@ -200,6 +202,13 @@ export function IslandPlanner({ onClose }: Props) {
         {running && (
           <div className="opt-progress">
             Recherche du maximum… {progress ? `${progress.step}/${progress.total}` : ""}
+          </div>
+        )}
+
+        {error && !running && <div className="warn">⚠ Échec du calcul : {error}</div>}
+        {result && !running && result.buildings.length === 0 && (
+          <div className="warn">
+            Aucun plan trouvé{result.gaps?.length ? ` — ${result.gaps[0]}` : " (île trop petite ou fragmentée)"}.
           </div>
         )}
 
@@ -317,11 +326,10 @@ export function IslandPlanner({ onClose }: Props) {
           <button onClick={run} disabled={running || !tierGuid}>
             {running ? "Calcul…" : "Calculer"}
           </button>
-          <button className="primary" onClick={place} disabled={!result || running}>
+          <button className="primary" onClick={place} disabled={!result || running || result.buildings.length === 0}>
             Placer sur l'île
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
