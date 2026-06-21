@@ -141,10 +141,11 @@ export function planIslandImport(
     ? dist.buildings // sources déjà intégrées par le moteur
     : [...dist.buildings, ...water.sources];
   const layout: Layout = { grid: req.grid, buildings, roads: dist.roads, fields: dist.fields, aqueducts: water.aqueducts };
-  // couverture DISTANCE-RUE = la vraie mécanique du jeu (et ce que le district garantit)
-  const coverage = analyzeCoverage(layout, lookup);
-  // en mode seuils, seuls les services RETENUS comptent pour la faisabilité
+  // en mode seuils, seuls les services RETENUS comptent pour la faisabilité/couverture-tier
   const relevant = needMode === "thresholds" ? new Set(retainedServices) : null;
+  // couverture DISTANCE-RUE = la vraie mécanique du jeu. `requiredServices` scope le gate
+  // "pleinement couverte" au sous-ensemble retenu (mode seuils), sinon tous les services.
+  const coverage = analyzeCoverage(layout, lookup, relevant ? { requiredServices: relevant } : {});
   const analyzable = coverage.services.filter((s) => s.hasRadius && (!relevant || relevant.has(s.serviceId)));
   const coverageMin = analyzable.length ? Math.min(...analyzable.map((s) => s.pct)) : 100;
   const houses = dist.houses;
@@ -163,13 +164,11 @@ export function planIslandImport(
     .filter((id): id is string => !!id && (!relevant || relevant.has(id)))
     .filter((id) => { const d = lookup(id); return d && needsWater(d) && !connectedByDef.get(id); });
   const waterOk = waterDead.length === 0;
-  // borne autoritative : analyzeCoverage exige TOUS les services du tier (y compris
-  // un type que le moteur n'aurait pas pu poser → sorti de son compte) ; en mode
-  // "all" on plafonne le compte moteur par cette vérité-terrain (corrige le
-  // sur-comptage quand un service requis finit à 0 copie sur île saturée).
-  const fullyCappable = needMode === "all"
-    ? Math.min(dist.fullyCovered, coverage.housesFullyCovered)
-    : dist.fullyCovered;
+  // borne autoritative DANS LES DEUX MODES : analyzeCoverage (scopé aux services
+  // retenus) exige TOUS les services pertinents — y compris un type que le moteur
+  // n'aurait pas pu poser (sorti de son propre compte) → corrige le sur-comptage
+  // quand un service requis finit à 0 copie sur île saturée.
+  const fullyCappable = Math.min(dist.fullyCovered, coverage.housesFullyCovered);
   const fullyCovered = waterOk ? fullyCappable : 0; // service eau mort → aucune maison au tier
   const fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
   // habitants au TIER-CIBLE = maisons pleinement couvertes (les partielles n'ont pas

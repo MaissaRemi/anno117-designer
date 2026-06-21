@@ -61,4 +61,25 @@ describe("analyzeCoverage", () => {
     const rep = analyzeCoverage(layout, lookup);
     expect(rep.housesTotal).toBe(2);
   });
+
+  it("B4 — requiredServices scope le statut pleinement-couverte au sous-ensemble retenu", () => {
+    const grid = makeGrid(80, 80);
+    // résidence + UN seul service (marché) collé = couvert ; les autres services du
+    // tier ne sont PAS posés
+    const layout: Layout = {
+      grid,
+      buildings: [place(tier.residenceId!, 0, 0), place(marche, 4, 4)],
+      roads: [],
+      fields: [],
+    };
+    const full = analyzeCoverage(layout, lookup).housesFullyCovered;
+    const scoped = analyzeCoverage(layout, lookup, { requiredServices: new Set([marche]) }).housesFullyCovered;
+    // scopé au seul marché (couvert) → la maison est pleinement couverte
+    expect(scoped).toBe(1);
+    // restreindre les exigences ne peut PAS diminuer le compte (full exige plus de services)
+    expect(scoped).toBeGreaterThanOrEqual(full);
+    // si le service retenu n'est PAS couvert → 0 maison pleine (même scopé)
+    const farLayout: Layout = { ...layout, buildings: [place(tier.residenceId!, 0, 0), place(marche, 75, 75)] };
+    expect(analyzeCoverage(farLayout, lookup, { requiredServices: new Set([marche]) }).housesFullyCovered).toBe(0);
+  });
 });
