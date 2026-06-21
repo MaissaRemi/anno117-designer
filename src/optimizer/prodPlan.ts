@@ -2,7 +2,7 @@ import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import type { DefLookup } from "../engine/rules";
-import { chainFertilities, economy } from "../economy/economy";
+import { chainFertilities, economy, priceOf } from "../economy/economy";
 import { solve, type SolveResult } from "../economy/solve";
 import { anneal } from "./anneal";
 import { DEFAULT_WEIGHTS } from "./types";
@@ -40,6 +40,8 @@ export interface ProdPlanResult {
   placed: number; // bâtiments demandés effectivement posés (recuit)
   requested: number;
   solution: SolveResult;
+  exportValue: number; // revenu d'export /min = ratePerMin × prix de base du bien fini
+  exportNet: number; // profit total /min de l'île = solution.money.net + exportValue
   // fertilités/gisements exigés par la chaîne (available=false ⇒ chaîne impossible
   // sur cette île tant que la fertilité n'est pas débloquée)
   requiredFertilities: { guid: string; name: string; available: boolean }[];
@@ -427,6 +429,12 @@ export function planIslandProduction(
   const residenceIds = new Set(catalog.filter((d) => d.category === "residentiel").map((d) => d.id));
   const houses = buildings.filter((b) => residenceIds.has(b.defId)).length;
 
+  // valeur d'export : l'île VEND le bien fini. Le solveur ne compte que taxe − entretien
+  // (net souvent négatif sur une île de prod) ; le vrai signal d'une île d'export est
+  // revenu de vente − coût. exportValue = débit × prix de base ; exportNet = net + ça.
+  const exportValue = Math.round(ratePerMin * priceOf(good));
+  const exportNet = sol.money.net + exportValue;
+
   return {
     mode: "production",
     good,
@@ -441,6 +449,8 @@ export function planIslandProduction(
     placed: out.buildings.length,
     requested: annealItems.reduce((s, it) => s + it.qty, 0) + mines.reduce((s, it) => s + it.qty, 0),
     solution: sol,
+    exportValue,
+    exportNet,
     requiredFertilities,
     gaps: [...new Set(gaps)],
   };

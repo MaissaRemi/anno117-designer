@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { economy, tiers } from "../economy/economy";
 import { runIslandPlan, type AnyIslandPlanResult } from "../optimizer/runIslandPlan";
@@ -58,13 +58,19 @@ export function IslandPlanner({ onClose }: Props) {
     [],
   );
 
+  // handle d'annulation du worker en cours → évite un worker orphelin si le panel
+  // est démonté pendant un calcul (I8).
+  const cancelRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => cancelRef.current?.(), []);
+
   const run = () => {
     const s = useStore.getState();
     setRunning(true);
     setResult(null);
     setPlaceMsg(null);
     setProgress(null);
-    const { promise } = runIslandPlan(
+    cancelRef.current?.(); // annule un éventuel calcul précédent
+    const { promise, cancel } = runIslandPlan(
       {
         catalog: s.catalog, grid: s.layout.grid, mode, tierGuid,
         coverageFloor: floor / 100, needMode,
@@ -75,10 +81,11 @@ export function IslandPlanner({ onClose }: Props) {
       },
       (step, total) => setProgress({ step, total }),
     );
+    cancelRef.current = cancel;
     promise
       .then(setResult)
       .catch((e) => alert(String(e)))
-      .finally(() => setRunning(false));
+      .finally(() => { setRunning(false); cancelRef.current = null; });
   };
 
   const place = () => {
@@ -273,10 +280,13 @@ export function IslandPlanner({ onClose }: Props) {
               prods à portée de charrette
             </div>
             <div style={{ marginBottom: 6 }}>
-              💰 net <span style={{ color: result.solution.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>
-                {result.solution.money.net >= 0 ? "+" : ""}{Math.round(result.solution.money.net).toLocaleString("fr")}/min
-              </span>{" "}
-              <span className="muted">· valeur marchande {Math.round(result.solution.marketValue).toLocaleString("fr")}/min</span>
+              💰 profit export <b style={{ color: result.exportNet >= 0 ? "#8bc34a" : "#ff8a85" }}>
+                {result.exportNet >= 0 ? "+" : ""}{result.exportNet.toLocaleString("fr")}/min
+              </b>{" "}
+              <span className="muted">
+                (vente {result.exportValue.toLocaleString("fr")} + exploitation{" "}
+                {result.solution.money.net >= 0 ? "+" : ""}{Math.round(result.solution.money.net).toLocaleString("fr")})
+              </span>
               {" "}· posés {result.placed}/{result.requested}
             </div>
             <b>👷 Population requise</b>

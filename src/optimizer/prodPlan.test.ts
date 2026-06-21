@@ -39,6 +39,9 @@ describe("planIslandProduction (archetype île d'export)", () => {
     if (Object.values(r.solution.populationByTier).some((p) => p > 0)) {
       expect(r.houses).toBeGreaterThan(0);
     }
+    // I2 — valeur d'export : revenu = débit × prix de base, profit = net + revenu
+    expect(r.exportValue).toBe(Math.round(5 * (economy.goodPrices[anyGood] ?? 0)));
+    expect(r.exportNet).toBe(r.solution.money.net + r.exportValue);
   });
 
   it("pas de chevauchement entre bâtiments posés", () => {
