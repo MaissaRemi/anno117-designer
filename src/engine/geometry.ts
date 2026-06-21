@@ -27,15 +27,22 @@ export function footprintCells(def: BuildingDef, x: number, y: number, rot: Rota
     return cells;
   }
   // diagonale : rectangle (demi-largeurs a,b) pivoté de rot, rastérisé sur la bbox carrée.
+  // Règle "aire" (packing serré, cf. objectif densité) : cellule bloquée si >= 50 % de son
+  // aire est dans le rectangle → sous-échantillonnage SS×SS, seuil SS²/2. ~aire préservée.
   const side = footprintSize(def, rot).w;
   const a = def.size.w, b = def.size.h;
   const cx = x + side / 2, cy = y + side / 2; // centre du bâtiment
   const rad = (-rot * Math.PI) / 180; // rotation INVERSE pour passer en repère local
   const cos = Math.cos(rad), sin = Math.sin(rad);
+  const SS = 4, thresh = (SS * SS) / 2; // 4×4 sous-points/cellule, >= 50 %
   for (let j = 0; j < side; j++) for (let i = 0; i < side; i++) {
-    const dxp = x + i + 0.5 - cx, dyp = y + j + 0.5 - cy; // centre de cellule − centre
-    const lx = dxp * cos - dyp * sin, ly = dxp * sin + dyp * cos;
-    if (Math.abs(lx) <= a && Math.abs(ly) <= b) cells.push({ x: x + i, y: y + j });
+    let inside = 0;
+    for (let sj = 0; sj < SS; sj++) for (let si = 0; si < SS; si++) {
+      const dxp = x + i + (si + 0.5) / SS - cx, dyp = y + j + (sj + 0.5) / SS - cy;
+      const lx = dxp * cos - dyp * sin, ly = dxp * sin + dyp * cos;
+      if (Math.abs(lx) <= a && Math.abs(ly) <= b) inside++;
+    }
+    if (inside >= thresh) cells.push({ x: x + i, y: y + j });
   }
   return cells;
 }

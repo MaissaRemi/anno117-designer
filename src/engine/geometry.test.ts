@@ -114,13 +114,17 @@ describe("geometry 45° — rotations diagonales", () => {
     expect(footprintCells(d, 5, 7, 90).length).toBe(6);
   });
 
-  it("footprintCells diamant : aire ~ préservée", () => {
+  it("footprintCells diamant SERRÉ (règle ≥50% aire) : ~ aire préservée, pas gonflé", () => {
+    // carré 3×3 (axe = 36 ½-tuiles) → diamant serré ≈ 37 (et NON 41 de la règle "centre")
+    const d33 = makeBuildingDef({ id: "d33", size: { w: 3, h: 3 } });
+    expect(footprintCells(d33, 0, 0, 45).length).toBe(37);
+    // borne générale : jamais beaucoup plus que l'aire axis (sinon packing dégradé)
     for (const [w, h] of [[2, 2], [3, 3], [2, 4]] as const) {
       const d = makeBuildingDef({ id: `s${w}${h}`, size: { w, h } });
       const n = footprintCells(d, 0, 0, 45).length;
       const area = 2 * w * 2 * h;
-      expect(n).toBeGreaterThanOrEqual(Math.floor(area * 0.5));
-      expect(n).toBeLessThanOrEqual(Math.ceil(area * 1.6));
+      expect(n).toBeLessThanOrEqual(Math.ceil(area * 1.15)); // serré (≤ +15%)
+      expect(n).toBeGreaterThan(0);
     }
   });
 

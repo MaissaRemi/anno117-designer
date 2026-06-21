@@ -66,10 +66,13 @@ Extension additive : le code existant ne produit que 0/90/180/270 → rétro-com
   - **diagonal** : le bâtiment est un rectangle de `2*def.size.w x 2*def.size.h` HT, donc de
     **demi-largeurs `def.size.w` et `def.size.h` HT**, pivoté de `rot` autour de son centre.
     `(x,y)` = coin haut-gauche de la **bbox du diamant** (côté = `footprintSize`) ; centre =
-    `(x + side/2, y + side/2)`. Pour chaque cellule candidate `c` de la bbox, on prend son
-    centre `cc = (cx + 0.5, cy + 0.5)` HT, on calcule le point local `local = R(-rot) . (cc -
-    centre)` (rotation **inverse**), et la cellule est **bloquee ssi `|local.x| <= def.size.w
-    && |local.y| <= def.size.h`**. -> diamant en escalier deterministe, hand-computable (tests).
+    `(x + side/2, y + side/2)`. **Règle "aire" (packing serré, décision user : densité max,
+    symétrie inutile)** : une cellule est **bloquée ssi >= 50 % de son aire est dans le
+    rectangle pivoté**, estimé par **sous-échantillonnage 4×4** (16 sous-points, seuil 8).
+    Pour chaque sous-point `(x+i+(si+.5)/4, y+j+(sj+.5)/4)`, on calcule `local = R(-rot) .
+    (sp - centre)` et on compte `|local.x| <= def.size.w && |local.y| <= def.size.h`. ->
+    diamant ~ aire-préservée (3×3 = 37 cases vs 36 axis ; les diamants s'interpénètrent aux
+    bords = packing dense). Déterministe, hand-computable (tests).
   - Note : seuls 45 (≡225 par symétrie centrale) et 135 (≡315) donnent des diamants distincts ;
     on les calcule tous via la formule générale (robuste).
 - `orthoNeighbors(x,y)` (existant, 4-adj) **conservé** + nouveau
