@@ -81,6 +81,29 @@ export function upscale2x(mask: boolean[], w: number, h: number): boolean[] {
 
 ---
 
+## ×2 SITE INVENTORY (confirmé par grep — ~70 occurrences code, hors tests)
+
+L'invasivité réelle : les moteurs lisent `def.size` ET les portées DIRECTEMENT (pas
+seulement via footprintSize). Chaque site doit être classé : **TAILLE/PORTÉE (×2)** vs
+**indice/comparaison neutre (inchangé)**. Comptage `.size./streetRange/radius.range/
+rangeOf/DEFAULT_RANGE/MAX_RUN/...` :
+- `packPlan.ts` (25) — `rangeOf` ×2 ; `rw=resDef.size.w`/`rh` ×2 ; `def.size.w/h` dans
+  fitsBld/coverType/stamp/SAT ×2 ; STEPH/STEPV dérivent de rh (auto si rh ×2).
+- `planLattice.ts` (15) — `rangeOf` ×2 ; `rw/rh` ×2 ; `effR` (via rangeOf) ; placeAt/
+  stamp `def.size` ×2 ; densif `worst.range` (via rangeOf).
+- `waterPlan.ts` (16) — `MAX_RUN` ×2, `MOUNTAIN_BLOCK_RADIUS`/zone ×2, `footprintOf`
+  (footprintSize→×2 auto), consommations INCHANGÉES (unités, pas longueurs), `CLIMB_MARGIN_Q`
+  INCHANGÉ (hauteurs, pas grille).
+- `prodPlan.ts` (11) — `transporterRange ?? DEFAULT_RANGE` ×2 ; `def.size`/footprint mines/
+  warehouses/freeArea ×2 ; `MOUNTAIN_ZONE` (via waterPlan const) ×2.
+- `greedy.ts` (2), `score.ts` (1), `anneal.ts` (1) — `def.size`/area : ×2 (ou via footprint).
+- `engine/rules.ts` — `streetCoverage` limit (def.streetRange) ×2 ; `computeRadiusCoverage`
+  euclidien radius ×2.
+- `economy/coverage.ts` — via computeRadiusCoverage (rules) — auto si rules ×2.
+**Risque : un seul site neutre doublé par erreur (ou un site portée oublié) → layout
+faux qui passe les seuils lâches.** D'où la garde Stage-0/C2 (293 maisons / 235 pleines)
+qui DOIT retomber juste, sinon un ×2 est faux.
+
 ## STAGE C — Engine recalibration (ranges & constants ×2)
 
 **Files:** `src/optimizer/streetGrid.ts` · `planLattice.ts` · `packPlan.ts` · `prodPlan.ts` · `waterPlan.ts` · `economy/coverage.ts` · `engine/rules.ts` · all affected `*.test.ts`
