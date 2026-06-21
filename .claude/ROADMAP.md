@@ -10,19 +10,18 @@ Phases attaquées dans l'ordre. **124 tests verts, tsc clean, lint 0, build gree
   bannière « aucun plan » + garde Placer, export PNG pleine île.
 - **Phase 3 ✅** — gate eau par-bâtiment, I3 coût d'import, I4 productivité FreeArea.
 - **Phase 4 §2-B ✅** — `streetGrid.ts` extrait (task #10), **prouvé byte-identique**
-  (FP_HASH avant=après). **§2-D : slice sûre ✅** (test vérité-terrain de l'oracle).
+  (FP_HASH avant=après). **§2-D slice sûre ✅** (test vérité-terrain de l'oracle).
+  **§2-E ✅** — `placeHouses`/`pruneRoads` extraits + en-têtes de phase, **byte-identique**.
 - **Phase 6 ✅ (scaffolds)** — Q1 opt `consumptionUnit` (flip prêt), B6 marqueur derate.
 
 **Reportés (motivé) :**
 - **§2-D unification BFS complète** — *non fait volontairement* : unifier l'oracle et le
   BFS moteur rendrait l'oracle NON-indépendant (préoccupation du critic) ; le test
   vérité-terrain est la meilleure correction → fait.
-- **§2-E découpe planLattice en phases** — readability pure sur une fonction qui marche
-  et est gatée par snapshot. La méthode de vérif FP existe (prouvée en §2-B) → faisable
-  sans risque, mais c'est un gros refacto dédié. **À greenlighter si voulu.**
 - **Phase 5** — calibration MAX_RUN/CLIMB_MARGIN = EN JEU (protocole livré) ; découplage
-  double-pente = gaté sur la calibration ; BFS jump-edges = clarté seule (L), reporté.
-- **B6 derate** — gaté sur la réponse en jeu (3 branches pré-spécifiées ci-dessous).
+  double-pente = gaté sur la calibration ; BFS jump-edges = clarté seule (L, med risk),
+  reporté (cohérent avec le ratio risque/valeur appliqué partout).
+- **B6 derate** — gaté sur la réponse en jeu (3 branches pré-spécifiées plus bas).
 
 ---
 
