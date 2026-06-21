@@ -238,7 +238,10 @@ export function planIslandProduction(
   // --- 3b. prods à AIRE LIBRE : posées en zone ouverte, réservent leur rayon ---
   // (productivité ∝ cases libres dans InfluenceRadius ; on garantit NeededArea de
   // terre vide autour, marquée occ pour que rien d'autre ne s'y installe)
-  const placeFreeArea = (def: BuildingDef): boolean => {
+  // renvoie la PRODUCTIVITÉ atteinte (0..1 = aire libre dispo / NeededArea), ou -1 si
+  // l'emprise n'a pas pu être posée. Le jeu module la prod par l'aire libre (I4) → une
+  // copie sur île saturée peut tourner < 100% au lieu d'être comptée pleine.
+  const placeFreeArea = (def: BuildingDef): number => {
     const fa = def.freeArea!;
     const w = def.size.w, h = def.size.h, R = fa.radius;
     let bx = -1, by = -1, bestFree = -1;
@@ -255,12 +258,13 @@ export function planIslandProduction(
       }
       if (free > bestFree) { bestFree = free; bx = x; by = y; if (free >= fa.area) break; }
     }
-    if (bx < 0) return false;
+    if (bx < 0) return -1;
     buildings.push({ uid: uid("free"), defId: def.id, x: bx, y: by, rotation: 0, locked: false });
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) occ[(by + j) * W + (bx + i)] = 1;
     // raccorder à la route AVANT de réserver : sinon l'anneau de réserve (qui mange
     // tout le périmètre) ensemence le BFS du stub avec des cases déjà occ → stub mort
     stubToRoads(bx, by, w, h);
+    const productivity = fa.area > 0 ? Math.min(1, bestFree / fa.area) : 1;
     // réserve NeededArea cases libres autour (les plus proches) → restent "nature"
     let reserve = fa.area;
     for (let ring = 1; ring <= R && reserve > 0; ring++) {
@@ -272,16 +276,23 @@ export function planIslandProduction(
         if (grid.usable[c] && !occ[c] && !roadAt[c]) { occ[c] = 1; reserve--; }
       }
     }
-    return true;
+    return productivity;
   };
   for (const fp of freeAreaItems) {
     const def = lookup(fp.defId);
     if (!def?.freeArea) continue;
+    let minProd = 1;
     for (let k = 0; k < fp.qty; k++) {
-      if (!placeFreeArea(def)) {
+      const prod = placeFreeArea(def);
+      if (prod < 0) {
         gaps.push(`${def.name} : pas assez d'espace libre (${fp.qty - k} non posée(s))`);
         break;
       }
+      if (prod < minProd) minProd = prod;
+    }
+    // I4 : aire libre insuffisante → productivité < 100% (débit cible non garanti)
+    if (minProd < 0.999) {
+      gaps.push(`${def.name} : aire libre réduite → productivité min ~${Math.round(minProd * 100)}% (débit cible non garanti)`);
     }
   }
 
@@ -437,7 +448,8 @@ export function planIslandProduction(
   // (net souvent négatif sur une île de prod) ; le vrai signal d'une île d'export est
   // revenu de vente − coût. exportValue = débit × prix de base ; exportNet = net + ça.
   const exportValue = Math.round(ratePerMin * priceOf(good));
-  const exportNet = sol.money.net + exportValue;
+  // profit = vente − exploitation (net) − achat des matières premières importées (I3)
+  const exportNet = sol.money.net + exportValue - sol.importCost;
 
   return {
     mode: "production",

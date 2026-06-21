@@ -31,12 +31,16 @@ export interface CoverageReport {
 export function analyzeCoverage(
   layout: Layout,
   lookup: DefLookup,
-  opts: { euclidean?: boolean; requiredServices?: Set<string> } = {},
+  opts: { euclidean?: boolean; requiredServices?: Set<string>; inactiveBuildings?: Set<string> } = {},
 ): CoverageReport {
   // `requiredServices` (optionnel) restreint le calcul "pleinement couverte" à un
   // SOUS-ENSEMBLE de services (mode seuils : seuls les services retenus comptent).
   // Le rapport par-service reste complet ; seul le gate housesFullyCovered est scopé.
   const required = opts.requiredServices;
+  // `inactiveBuildings` (uids) : copies de service INACTIVES en jeu (ex: consommateur
+  // d'eau non raccordé) → leur couverture ne compte pas (une maison servie uniquement
+  // par une copie sèche n'est pas réellement couverte).
+  const inactive = opts.inactiveBuildings;
   // tier par residenceId ; service requis (avec rayon) par tier
   const tierByResidence = new Map<string, (typeof economy.tiers)[number]>();
   for (const t of economy.tiers) if (t.residenceId) tierByResidence.set(t.residenceId, t);
@@ -46,7 +50,7 @@ export function analyzeCoverage(
   const coverByService = new Map<string, Set<string>>();
   for (const b of layout.buildings) {
     const set = cov.get(b.uid);
-    if (!set) continue;
+    if (!set || inactive?.has(b.uid)) continue; // copie inactive (sèche) → ne couvre pas
     let u = coverByService.get(b.defId);
     if (!u) coverByService.set(b.defId, (u = new Set<string>()));
     for (const k of set) u.add(k);

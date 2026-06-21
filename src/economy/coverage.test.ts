@@ -80,6 +80,24 @@ describe("analyzeCoverage", () => {
     expect(eucl.pct).toBe(100); // euclidien forcé : dans le rayon → couvert
   });
 
+  it("raccordement partiel : une copie de service INACTIVE ne couvre pas", () => {
+    const grid = makeGrid(80, 80);
+    const layout: Layout = {
+      grid,
+      buildings: [
+        { ...place(tier.residenceId!, 0, 0), uid: "house1" },
+        { ...place(marche, 0, 4), uid: "svc1" }, // unique copie, couvre la maison (euclidien)
+      ],
+      roads: [],
+      fields: [],
+    };
+    const req = new Set([marche]);
+    const active = analyzeCoverage(layout, lookup, { requiredServices: req });
+    const inactive = analyzeCoverage(layout, lookup, { requiredServices: req, inactiveBuildings: new Set(["svc1"]) });
+    expect(active.housesFullyCovered).toBe(1);
+    expect(inactive.housesFullyCovered).toBe(0); // seule copie inactive → maison non couverte
+  });
+
   it("B4 — requiredServices scope le statut pleinement-couverte au sous-ensemble retenu", () => {
     const grid = makeGrid(80, 80);
     // résidence + UN seul service (marché) collé = couvert ; les autres services du

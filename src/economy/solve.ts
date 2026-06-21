@@ -48,6 +48,10 @@ export interface SolveResult {
   // valeur marchande des biens produits (Σ débit × BasePrice) — potentiel de vente,
   // NON inclus dans `net` (dépend des décisions de commerce du joueur).
   marketValue: number;
+  // matières premières SANS producteur dans la chaîne → à IMPORTER (GUID -> /min) +
+  // coût d'achat (Σ /min × BasePrice, approximation). Avant : silencieusement gratuites.
+  imports: Record<string, number>;
+  importCost: number;
 }
 
 // Débits homogènes en "par minute".
@@ -201,12 +205,13 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
       }
     }
     const counts: Record<string, number> = {};
+    const imports: Record<string, number> = {};
     if (opts.includeProduction) {
       const stack = new Set<string>();
       const requireGood = (good: string, ratePerMin: number, region?: string) => {
         if (ratePerMin <= 0 || stack.has(good)) return;
         const defId = pickProducer(good, region);
-        if (!defId) return; // matière brute
+        if (!defId) { imports[good] = (imports[good] || 0) + ratePerMin; return; } // matière brute → import
         const p = economy.buildingProd[defId];
         if (!p) return;
         const r = prodRatePerMin(p, good);
@@ -222,20 +227,22 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
         requireGood(good, rate, region);
       }
     }
-    return { demand, counts };
+    return { demand, counts, imports };
   };
 
   let pop: Record<string, number> = { ...targetMap };
   let production: Record<string, number> = {};
   let goodsDemand: Record<string, number> = {};
+  let goodsImports: Record<string, number> = {};
   let iterations = 0;
   let converged = true;
 
   for (let iter = 0; iter < 200; iter++) {
     iterations = iter + 1;
-    const { demand, counts } = computeProduction(pop);
+    const { demand, counts, imports } = computeProduction(pop);
     goodsDemand = demand;
     production = counts;
+    goodsImports = imports;
 
     if (!includeWorkforce) break; // pas de cascade : pop = cibles seulement
 
@@ -322,6 +329,9 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
   // valeur marchande des biens demandés (potentiel de vente, hors net)
   let marketValue = 0;
   for (const [good, rate] of Object.entries(goodsDemand)) marketValue += rate * priceOf(good);
+  // coût d'achat des matières premières importées (BasePrice ≈ prix d'achat PNJ, approx.)
+  let importCost = 0;
+  for (const [good, rate] of Object.entries(goodsImports)) importCost += rate * priceOf(good);
 
   return {
     populationByTier: pop,
@@ -334,5 +344,7 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
     converged,
     money: { gross: Math.round(gross), upkeep: Math.round(upkeep), net: Math.round(gross - upkeep) },
     marketValue: Math.round(marketValue),
+    imports: goodsImports,
+    importCost: Math.round(importCost),
   };
 }

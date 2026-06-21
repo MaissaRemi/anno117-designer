@@ -120,4 +120,17 @@ describe("pickProducer (préférence région)", () => {
     // au moins un bien multi-région doit exister dans les données du jeu
     expect(tested).toBe(true);
   });
+
+  it("I3 — matières premières sans producteur → imports + importCost cohérent", () => {
+    let foundPaid = false;
+    for (const g of Object.keys(economy.producers).slice(0, 60)) {
+      const r = solve([], { includeProduction: true, includeServices: false, capacities: {} }, { [g]: 10 });
+      // invariant : importCost = Σ débit_import × BasePrice (arrondi)
+      const expected = Math.round(Object.entries(r.imports).reduce((s, [ig, rate]) => s + rate * priceOf(ig), 0));
+      expect(r.importCost).toBe(expected);
+      if (r.importCost > 0) foundPaid = true;
+    }
+    // au moins une chaîne bottoms-out sur une matière première à importer (≠ gratuit)
+    expect(foundPaid).toBe(true);
+  });
 });

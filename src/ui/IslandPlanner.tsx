@@ -294,7 +294,8 @@ export function IslandPlanner({ onClose }: Props) {
               </b>{" "}
               <span className="muted">
                 (vente {result.exportValue.toLocaleString("fr")} + exploitation{" "}
-                {result.solution.money.net >= 0 ? "+" : ""}{Math.round(result.solution.money.net).toLocaleString("fr")})
+                {result.solution.money.net >= 0 ? "+" : ""}{Math.round(result.solution.money.net).toLocaleString("fr")}
+                {result.solution.importCost > 0 ? ` − import ${result.solution.importCost.toLocaleString("fr")}` : ""})
               </span>
               {" "}· posés {result.placed}/{result.requested}
             </div>

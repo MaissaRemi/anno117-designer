@@ -145,7 +145,14 @@ export function planIslandImport(
   const relevant = needMode === "thresholds" ? new Set(retainedServices) : null;
   // couverture DISTANCE-RUE = la vraie mécanique du jeu. `requiredServices` scope le gate
   // "pleinement couverte" au sous-ensemble retenu (mode seuils), sinon tous les services.
-  const coverage = analyzeCoverage(layout, lookup, relevant ? { requiredServices: relevant } : {});
+  // `inactiveBuildings` = consommateurs d'eau NON raccordés (inactifs en jeu) → une maison
+  // servie uniquement par une copie sèche n'est PAS comptée couverte (corrige l'optimisme
+  // du raccordement partiel : le gate eau par-def ne voyait que le cas 0-raccordé).
+  const inactiveWater = new Set(water.consumers.filter((c) => !c.connected).map((c) => c.uid));
+  const coverage = analyzeCoverage(layout, lookup, {
+    ...(relevant ? { requiredServices: relevant } : {}),
+    inactiveBuildings: inactiveWater,
+  });
   const analyzable = coverage.services.filter((s) => s.hasRadius && (!relevant || relevant.has(s.serviceId)));
   const coverageMin = analyzable.length ? Math.min(...analyzable.map((s) => s.pct)) : 100;
   const houses = dist.houses;
