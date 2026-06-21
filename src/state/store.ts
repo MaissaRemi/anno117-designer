@@ -73,7 +73,6 @@ interface State {
   loadAll: (catalog: Catalog, layout: Layout) => void;
   loadIsland: (id: string) => void;
   applyOptimization: (result: OptimizeResult) => void;
-  addBuildings: (buildings: PlacedBuilding[]) => void; // ajout (ex: services de couverture)
   setCoverageHighlight: (cells: string[] | null) => void;
 
   lookup: () => (id: string) => BuildingDef | undefined;
@@ -287,11 +286,6 @@ export const useStore = create<State>((set, get) => {
         // aqueducs : même politique que les routes (les dessinés à la main restent)
         const kept = (l.aqueducts ?? []).filter((a) => !a.gen);
         l.aqueducts = [...kept, ...(result.aqueducts ?? []).map((a) => ({ ...a, gen: true }))];
-      }),
-
-    addBuildings: (buildings) =>
-      commit((l) => {
-        l.buildings = [...l.buildings, ...buildings];
       }),
 
     setCoverageHighlight: (cells) => set({ coverageHighlight: cells }),
