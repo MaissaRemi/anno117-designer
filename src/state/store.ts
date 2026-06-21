@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { emptyLayout, placeBuilding, uid } from "../model/factories";
+import { emptyLayout, placeBuilding, resizeGridShape, uid } from "../model/factories";
 import type {
   BuildingDef,
   Catalog,
@@ -73,7 +73,6 @@ interface State {
   loadAll: (catalog: Catalog, layout: Layout) => void;
   loadIsland: (id: string) => void;
   applyOptimization: (result: OptimizeResult) => void;
-  addBuildings: (buildings: PlacedBuilding[]) => void; // ajout (ex: services de couverture)
   setCoverageHighlight: (cells: string[] | null) => void;
 
   lookup: () => (id: string) => BuildingDef | undefined;
@@ -191,13 +190,8 @@ export const useStore = create<State>((set, get) => {
 
     resizeGrid: (w, h) =>
       commit((l) => {
-        const next = new Array(w * h).fill(true);
-        for (let y = 0; y < Math.min(h, l.grid.h); y++) {
-          for (let x = 0; x < Math.min(w, l.grid.w); x++) {
-            next[y * w + x] = l.grid.usable[y * l.grid.w + x];
-          }
-        }
-        l.grid = { w, h, usable: next };
+        // préserve le terrain (eau/rivières/slots/île) au lieu de l'effacer
+        l.grid = resizeGridShape(l.grid, w, h);
       }),
 
     addDef: (def) => {
@@ -261,7 +255,7 @@ export const useStore = create<State>((set, get) => {
       const slots = slotsOf(id).map((s) => ({ type: s.type, x: Math.round(s.x), y: Math.round(s.y) }));
       set({
         layout: {
-          grid: { w: isl.size.w, h: isl.size.h, usable, water, rivers, slots: slots.length ? slots : undefined },
+          grid: { w: isl.size.w, h: isl.size.h, usable, water, rivers, slots: slots.length ? slots : undefined, islandId: id },
           buildings: [], fields: [], roads: [],
         },
         past: [],
@@ -284,11 +278,9 @@ export const useStore = create<State>((set, get) => {
         l.buildings = [...lockedBuildings, ...result.buildings];
         l.fields = [...lockedFields, ...result.fields];
         l.roads = Array.from(roadSet.values());
-      }),
-
-    addBuildings: (buildings) =>
-      commit((l) => {
-        l.buildings = [...l.buildings, ...buildings];
+        // aqueducs : même politique que les routes (les dessinés à la main restent)
+        const kept = (l.aqueducts ?? []).filter((a) => !a.gen);
+        l.aqueducts = [...kept, ...(result.aqueducts ?? []).map((a) => ({ ...a, gen: true }))];
       }),
 
     setCoverageHighlight: (cells) => set({ coverageHighlight: cells }),

@@ -51,7 +51,8 @@ export function scoreDecode(req: OptimizeRequest, out: DecodeOutput): Scored {
   let coveredBuildingCells = 0;
   for (const b of all) {
     const def = lookup(b.defId);
-    if (!def || def.radius) continue; // on mesure ce qui est SERVI (hors fournisseurs)
+    // on mesure ce qui est SERVI (hors fournisseurs : rayon classique OU portée-rue)
+    if (!def || def.radius || def.streetRange) continue;
     for (const c of footprintCells(def, b.x, b.y, b.rotation)) {
       if (covered.has(`${c.x},${c.y}`)) coveredBuildingCells++;
     }

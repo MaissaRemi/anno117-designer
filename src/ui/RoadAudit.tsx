@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../state/store";
 import type { BuildingDef } from "../model/types";
+import { Modal } from "./Modal";
 
 interface Props {
   onClose: () => void;
@@ -34,9 +35,8 @@ export function RoadAudit({ onClose }: Props) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal opt" onClick={(e) => e.stopPropagation()}>
-        <h3>🛣 Audit : bâtiments sans route</h3>
+    <Modal className="opt" onClose={onClose}>
+      <h3>🛣 Audit : bâtiments sans route</h3>
         <p className="muted">
           {list.length} bâtiment(s) marqué(s) <b>sans route</b> (donnée <code>needsRoad=false</code>,
           extraite de <code>&lt;StreetActivation/&gt;</code>). Si l'un d'eux a en réalité besoin d'une
@@ -85,7 +85,6 @@ export function RoadAudit({ onClose }: Props) {
         <div className="modal-actions">
           <button onClick={onClose}>Fermer</button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

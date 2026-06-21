@@ -34,6 +34,10 @@ export interface BuildingDef {
   rotatable: boolean;
   needsRoad: boolean;
   placement?: "land" | "water"; // "water" = se pose sur l'eau/la côte (défaut land)
+  transporterRange?: number; // prod : distance-rue max vers un entrepôt (défaut 30)
+  template?: string; // template du jeu (SlotFactoryBuilding7 = mines, Warehouse…)
+  freeArea?: { radius: number; area: number }; // prod ∝ cases libres dans le rayon
+  unique?: boolean; // BuildingUnique : 1 exemplaire max sur l'île (Colisée…)
   radius?: RadiusSpec;
   field?: FieldSpec;
   color: string; // couleur de rendu (#rrggbb)
@@ -71,6 +75,13 @@ export interface RoadTile {
   gen?: boolean; // true = route générée par l'optimiseur (remplaçable au re-calcul)
 }
 
+/** Tuile de conduite d'aqueduc (réseau d'eau, distinct des routes). */
+export interface AqueductTile {
+  x: number;
+  y: number;
+  gen?: boolean; // true = générée par le planificateur (remplaçable au re-calcul)
+}
+
 /** Slot de ressource du terrain (montagne/rivière/marais) — extrait du jeu. */
 export interface GridSlot {
   type: string; // "mountain" | "river" | "marsh"
@@ -86,6 +97,7 @@ export interface GridShape {
   water?: boolean[]; // optionnel : cases EAU/mer (pour bâtiments côtiers). Îles surtout.
   rivers?: boolean[]; // optionnel : cases RIVIÈRE (argile, slots river)
   slots?: GridSlot[]; // optionnel : slots de ressource (mines, argile, source d'aqueduc)
+  islandId?: string; // optionnel : île d'origine (accès aux données terrain — hauteurs)
 }
 
 export interface Layout {
@@ -93,6 +105,7 @@ export interface Layout {
   buildings: PlacedBuilding[];
   fields: FieldTile[];
   roads: RoadTile[];
+  aqueducts?: AqueductTile[]; // optionnel (compat persistance) : conduites d'eau
 }
 
 /** Catalogue persistant des définitions de bâtiments. */

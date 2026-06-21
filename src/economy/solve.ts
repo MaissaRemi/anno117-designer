@@ -20,6 +20,13 @@ export interface SolveOptions {
    *  - "thresholds" : sous-ensemble le MOINS CHER atteignant les seuils d'upgrade
    *    par catégorie (SupplyWeight) — moins d'infrastructure, plus de maisons. */
   needSelection?: "all" | "thresholds";
+  /** Région de l'ÎLE (Roman/Celtic) : préférence de producteur pour les biens
+   *  exogènes (objectif de production) — évite une chaîne celtique sur île romaine. */
+  region?: string;
+  /** Q1 (à confirmer EN JEU, GAME_MECHANICS test #4) : la conso est-elle par MAISON
+   *  (défaut, hypothèse [WEB]) ou par HABITANT ? Si "resident", la demande de biens
+   *  est multipliée par la capacité/maison. Prêt à flipper une fois validé en jeu. */
+  consumptionUnit?: "house" | "resident";
 }
 
 export interface TierProfile {
@@ -45,6 +52,10 @@ export interface SolveResult {
   // valeur marchande des biens produits (Σ débit × BasePrice) — potentiel de vente,
   // NON inclus dans `net` (dépend des décisions de commerce du joueur).
   marketValue: number;
+  // matières premières SANS producteur dans la chaîne → à IMPORTER (GUID -> /min) +
+  // coût d'achat (Σ /min × BasePrice, approximation). Avant : silencieusement gratuites.
+  imports: Record<string, number>;
+  importCost: number;
 }
 
 // Débits homogènes en "par minute".
@@ -184,25 +195,30 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
       if (!(good in demandRegion)) demandRegion[good] = region;
       else if (demandRegion[good] !== region) demandRegion[good] = ""; // consommé par 2 régions
     };
-    for (const g of Object.keys(extraDemand)) noteRegion(g, "");
+    // biens exogènes (objectif de prod) : préfèrent la région de l'île si fournie
+    for (const g of Object.keys(extraDemand)) noteRegion(g, opts.region ?? "");
     for (const tier of economy.tiers) {
       const p = popMap[tier.guid];
       if (!p) continue;
       const pr = prof(tier.guid);
-      const houses = p / pr.cap; // NeedConsumptionRate est par MAISON
+      const houses = p / pr.cap; // NeedConsumptionRate est par MAISON (hypothèse défaut)
+      // Q1 : si la conso s'avère par HABITANT en jeu, on consomme `p` (population) au
+      // lieu de `houses` — un seul point de bascule, le reste de la cascade suit.
+      const consumers = opts.consumptionUnit === "resident" ? p : houses;
       for (const g of pr.goods) {
         if (!g.good) continue;
-        demand[g.good] = (demand[g.good] || 0) + houses * g.rate;
+        demand[g.good] = (demand[g.good] || 0) + consumers * g.rate;
         noteRegion(g.good, tier.region);
       }
     }
     const counts: Record<string, number> = {};
+    const imports: Record<string, number> = {};
     if (opts.includeProduction) {
       const stack = new Set<string>();
       const requireGood = (good: string, ratePerMin: number, region?: string) => {
         if (ratePerMin <= 0 || stack.has(good)) return;
         const defId = pickProducer(good, region);
-        if (!defId) return; // matière brute
+        if (!defId) { imports[good] = (imports[good] || 0) + ratePerMin; return; } // matière brute → import
         const p = economy.buildingProd[defId];
         if (!p) return;
         const r = prodRatePerMin(p, good);
@@ -218,23 +234,31 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
         requireGood(good, rate, region);
       }
     }
-    return { demand, counts };
+    return { demand, counts, imports };
   };
 
   let pop: Record<string, number> = { ...targetMap };
   let production: Record<string, number> = {};
   let goodsDemand: Record<string, number> = {};
+  let goodsImports: Record<string, number> = {};
   let iterations = 0;
   let converged = true;
 
   for (let iter = 0; iter < 200; iter++) {
     iterations = iter + 1;
-    const { demand, counts } = computeProduction(pop);
+    const { demand, counts, imports } = computeProduction(pop);
     goodsDemand = demand;
     production = counts;
+    goodsImports = imports;
 
     if (!includeWorkforce) break; // pas de cascade : pop = cibles seulement
 
+    // B6 (À CONFIRMER EN JEU — GAME_MECHANICS) : ici la cascade FAIT MONTER la pop pour
+    // satisfaire 100% de la main-d'œuvre. Si le jeu DÉGRADE la prod quand la M.O. manque
+    // (au lieu d'invoquer des résidents), basculer ici en mode "derate" : garder pop =
+    // cibles, calculer ratio = min(1, fournie/demandée) par tier, et scaler counts/
+    // goodsPerMin/marketValue par ce ratio (seuil 10% = WorkforceThresholdInPercent).
+    // Les 3 branches sont pré-spécifiées dans .claude/ROADMAP.md (Phase 6).
     // main-d'œuvre consommée par tier -> population requise
     const wfConsumed: Record<string, number> = {};
     for (const [defId, count] of Object.entries(counts)) {
@@ -318,6 +342,9 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
   // valeur marchande des biens demandés (potentiel de vente, hors net)
   let marketValue = 0;
   for (const [good, rate] of Object.entries(goodsDemand)) marketValue += rate * priceOf(good);
+  // coût d'achat des matières premières importées (BasePrice ≈ prix d'achat PNJ, approx.)
+  let importCost = 0;
+  for (const [good, rate] of Object.entries(goodsImports)) importCost += rate * priceOf(good);
 
   return {
     populationByTier: pop,
@@ -330,5 +357,7 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
     converged,
     money: { gross: Math.round(gross), upkeep: Math.round(upkeep), net: Math.round(gross - upkeep) },
     marketValue: Math.round(marketValue),
+    imports: goodsImports,
+    importCost: Math.round(importCost),
   };
 }

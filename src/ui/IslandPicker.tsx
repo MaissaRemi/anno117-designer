@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { decodeMask, islands, type Island } from "../data/islands";
 import { useStore } from "../state/store";
+import { Modal } from "./Modal";
 
 interface Props {
   onClose: () => void;
@@ -58,9 +59,8 @@ export function IslandPicker({ onClose }: Props) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal islands" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
+    <Modal className="islands" onClose={onClose}>
+      <div className="panel-head">
           <h3>🏝 Îles d'Anno 117 ({list.length})</h3>
           <select value={region} onChange={(e) => setRegion(e.target.value)}>
             <option value="">Toutes régions</option>
@@ -87,7 +87,6 @@ export function IslandPicker({ onClose }: Props) {
         <div className="modal-actions">
           <button onClick={onClose}>Fermer</button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -25,3 +25,23 @@ export function parse(text: string): SaveFile {
   }
   return data as SaveFile;
 }
+
+export interface RefIssues {
+  orphanDefs: string[]; // defId référencés mais absents du catalogue (bâtiments invisibles)
+  orphanFieldOwners: number; // champs dont le bâtiment propriétaire n'existe pas
+}
+
+/**
+ * Vérifie l'intégrité référentielle d'une disposition : tout `defId` doit exister
+ * dans le catalogue et tout champ doit pointer un bâtiment réel. Sinon → éléments
+ * invisibles au rendu (perte de données silencieuse). À appeler avant import.
+ */
+export function findOrphanRefs(catalog: Catalog, layout: Layout): RefIssues {
+  const defIds = new Set(catalog.map((d) => d.id));
+  const buildingUids = new Set(layout.buildings.map((b) => b.uid));
+  const orphanDefs = new Set<string>();
+  for (const b of layout.buildings) if (!defIds.has(b.defId)) orphanDefs.add(b.defId);
+  let orphanFieldOwners = 0;
+  for (const f of layout.fields) if (!buildingUids.has(f.ownerUid)) orphanFieldOwners++;
+  return { orphanDefs: [...orphanDefs], orphanFieldOwners };
+}

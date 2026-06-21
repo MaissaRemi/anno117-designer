@@ -1,7 +1,7 @@
 import type { Catalog, Layout } from "../model/types";
 
-// v5 : citerne/source d'aqueduc au catalogue + mapping besoin-citerne (68747/68748).
-const KEY = "anno117-designer:state:v5";
+// v7 : catalogue + freeArea (non-enclavement prods forêt/marais).
+const KEY = "anno117-designer:state:v7";
 
 interface Persisted {
   catalog: Catalog;

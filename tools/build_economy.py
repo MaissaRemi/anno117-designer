@@ -19,6 +19,9 @@ import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from game_defaults import CYCLE_TIME_DEFAULT
+
 HERE = os.path.dirname(os.path.dirname(__file__))
 ASSETS = os.path.join(HERE, ".gamedata", "assets_base.xml")
 TEXTS = os.path.join(HERE, ".gamedata", "texts_french.xml")
@@ -43,6 +46,10 @@ SERVICE_BUILDING_OVERRIDES = {
     # Maison de jeu CELTIC (besoin 37176, icône celtic) : le bâtiment 37177 réutilise
     # l'icône ROMAINE → le match d'icône tombait sur la version romaine déjà prise.
     "37176": "g37177",
+    # COLISÉE : le match d'icône tombait sur la phase de chantier « fondations »
+    # (36908, Monument, aucune portée). Le bâtiment FINAL est 3621 (MonumentEventBuilding,
+    # street 250, eau 50u Mandatory) — cf. GAME_MECHANICS.md §9.
+    "2783": "g3621",
 }
 
 
@@ -71,6 +78,7 @@ def main():
     icon_to_def = {}     # icon basename -> defId (bâtiments publics surtout)
     building_upkeep = {} # defId -> entretien argent/min
     public_effects = {}  # defId -> functional effect guids (pour services)
+    fertilities = {}     # GUID Fertility/Deposit -> nom FR (saisie île + filtrage chaînes)
 
     for _, el in ET.iterparse(ASSETS, events=("end",)):
         if el.tag != "Asset":
@@ -89,6 +97,13 @@ def main():
                 "workforce": t(el, "./Values/PopulationLevel/ConnectedWorkforce"),
                 "factor": float(t(el, "./Values/PopulationLevel/PopulationToWorkforceFactor") or 0.5),
             }
+            el.clear(); continue
+
+        if tpl == "Fertility":
+            nm = texts.get(oasis) or t(el, "./Values/Standard/Name") or guid
+            # nettoyage : "Fertility Roman Olives" -> "Olives" si pas de texte FR
+            nm = re.sub(r"^(Fertility|Deposit)\s+(Roman|Celtic|Limited\s+Roman)?\s*", "", nm).strip() or nm
+            fertilities[guid] = nm
             el.clear(); continue
 
         if tpl == "Product":
@@ -147,10 +162,14 @@ def main():
                    for it in fb.findall("./FactoryInputs/Item")]
             maint = [{"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 0)}
                      for it in vals.findall("./Maintenance/Maintenances/Item")]
-            cyc = fb.findtext("CycleTime")
+            cyc = fb.findtext("CycleTime") or str(CYCLE_TIME_DEFAULT)
+            # fertilité requise par ce producteur (GUID d'asset Fertility/Deposit,
+            # sous Factory7) — le mode production avertit si l'île ne l'a pas
+            fert = t(el, "./Values/Factory7/NeededFertility")
             bprod[defId] = {
                 "cycleTime": int(cyc) if cyc else None,
                 "inputs": ins, "outputs": outs, "maint": maint,
+                **({"fertility": fert} if fert else {}),
             }
             for o in outs:
                 if o["good"]:
@@ -258,11 +277,21 @@ def main():
 
     # région des bâtiments : réutilise le catalogue déjà généré (AssociatedRegions décodé)
     building_region = {}
+    catalog_ids = set()
     cat_path = os.path.join(HERE, "src", "data", "catalog.generated.json")
     if os.path.exists(cat_path):
         for b in json.load(open(cat_path, encoding="utf-8")):
+            catalog_ids.add(b["id"])
             if b.get("region"):
                 building_region[b["id"]] = b["region"]
+
+    # garde-fou : un override de service périmé (besoin OU bâtiment introuvable après un
+    # patch du jeu) ferait disparaître un service d'un tier en silence → on le crie.
+    for need_guid, def_id in SERVICE_BUILDING_OVERRIDES.items():
+        if need_guid not in needs:
+            print(f"  ! override perime : besoin {need_guid} introuvable (patch jeu ?)", file=sys.stderr)
+        if catalog_ids and def_id not in catalog_ids:
+            print(f"  ! override perime : batiment {def_id} absent du catalogue (patch jeu ?)", file=sys.stderr)
 
     out = {
         "tiers": tiers,
@@ -273,6 +302,7 @@ def main():
         "goodNames": products,
         "goodPrices": good_prices,
         "buildingRegion": building_region,
+        "fertilities": fertilities,
     }
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False)
     # résumé

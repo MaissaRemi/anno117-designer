@@ -12,6 +12,8 @@ export interface TerrainSlot {
 interface TerrainEntry {
   slots: TerrainSlot[];
   rivers: string | null; // RLE 1 bit/tuile (même encodage que le masque terre)
+  hasHeights?: boolean; // hauteurs dispo (dans terrain.heights.generated, chargé à la demande)
+  heightScale?: number | null;
 }
 
 const terrain = raw as unknown as Record<string, TerrainEntry>;
@@ -27,9 +29,33 @@ export function riversOf(islandId: string, w: number, h: number): boolean[] | un
   return decodeMask(t.rivers, w, h);
 }
 
+/** Vrai si l'île a des hauteurs extraites (le décodage peut malgré tout échouer côté navigateur). */
+export function hasHeights(islandId: string): boolean {
+  return terrain[islandId]?.hasHeights === true;
+}
+
 /** Slots posables (montagne/rivière/marais — les blockers sont ignorés). */
 export function slotsOf(islandId: string): TerrainSlot[] {
   const t = terrain[islandId];
   if (!t) return [];
   return t.slots.filter((s) => s.type !== "blocker");
+}
+
+/**
+ * Hauteurs quantifiées d'une île (Int8Array w*h, q = hauteur/heightScale, mer < 0),
+ * ou null si absentes. Le gros fichier de hauteurs (~4.7 Mo) est chargé À LA DEMANDE
+ * (import dynamique → chunk séparé, hors bundle principal). Décodage zlib async.
+ */
+let heightsData: Record<string, string> | null = null;
+export async function heightsOf(islandId: string): Promise<Int8Array | null> {
+  const t = terrain[islandId];
+  if (!t?.hasHeights || typeof DecompressionStream === "undefined") return null;
+  if (!heightsData) heightsData = (await import("./terrain.heights.generated.json")).default as Record<string, string>;
+  const b64 = heightsData[islandId];
+  if (!b64) return null;
+  const compressed = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const ds = new DecompressionStream("deflate"); // zlib (RFC 1950)
+  const stream = new Blob([compressed]).stream().pipeThrough(ds);
+  const buf = await new Response(stream).arrayBuffer();
+  return new Int8Array(buf);
 }

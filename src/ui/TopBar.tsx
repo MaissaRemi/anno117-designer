@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useStore } from "../state/store";
 import { exportJson, importJson } from "../persist/json";
 import { exportPng } from "../persist/png";
-import { OptimizerPanel } from "./OptimizerPanel";
+import { findOrphanRefs } from "../model/serialize";
+import { renderFullCanvas } from "../render/exportImage";
 import { IslandPicker } from "./IslandPicker";
-import { PopulationPlanner } from "./PopulationPlanner";
-import { ProductionPlanner } from "./ProductionPlanner";
 import { RoadAudit } from "./RoadAudit";
 import { CoveragePanel } from "./CoveragePanel";
 import { IslandPlanner } from "./IslandPlanner";
@@ -20,10 +19,7 @@ export function TopBar() {
   const resizeGrid = useStore((s) => s.resizeGrid);
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
-  const [optOpen, setOptOpen] = useState(false);
   const [islOpen, setIslOpen] = useState(false);
-  const [popOpen, setPopOpen] = useState(false);
-  const [prodOpen, setProdOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [covOpen, setCovOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
@@ -31,6 +27,17 @@ export function TopBar() {
   const onImport = async () => {
     try {
       const file = await importJson();
+      const issues = findOrphanRefs(file.catalog, file.layout);
+      if (issues.orphanDefs.length || issues.orphanFieldOwners) {
+        const preview = issues.orphanDefs.slice(0, 5).join(", ") + (issues.orphanDefs.length > 5 ? "…" : "");
+        const ok = confirm(
+          `⚠ Références manquantes dans la disposition importée :\n` +
+            `• ${issues.orphanDefs.length} type(s) de bâtiment absent(s) du catalogue${preview ? ` (${preview})` : ""}\n` +
+            (issues.orphanFieldOwners ? `• ${issues.orphanFieldOwners} champ(s) sans bâtiment propriétaire\n` : "") +
+            `Ces éléments seront invisibles. Charger quand même ?`,
+        );
+        if (!ok) return;
+      }
       loadAll(file.catalog, file.layout);
     } catch (e) {
       alert((e as Error).message);
@@ -38,8 +45,8 @@ export function TopBar() {
   };
 
   const onPng = () => {
-    const canvas = document.querySelector("canvas");
-    if (canvas) exportPng(canvas);
+    // rend l'île ENTIÈRE hors-écran (plus le viewport visible → fin du crop au zoom/pan)
+    exportPng(renderFullCanvas(layout, catalog));
   };
 
   return (
@@ -80,16 +87,7 @@ export function TopBar() {
       <button className="primary" onClick={() => setPlanOpen(true)} title="Maximiser un tier sur l'île chargée">
         🏛 Plan d'île
       </button>
-      <button className="primary" onClick={() => setPopOpen(true)}>
-        👥 Population
-      </button>
-      <button className="primary" onClick={() => setProdOpen(true)}>
-        🏭 Production
-      </button>
-      <button className="primary" onClick={() => setOptOpen(true)}>
-        ⚙ Optimiser
-      </button>
-      <button className="primary" onClick={() => setCovOpen(true)}>
+      <button onClick={() => setCovOpen(true)} title="Diagnostic : % de résidences couvertes par service">
         📡 Couverture
       </button>
       <button onClick={() => setAuditOpen(true)} title="Vérifier les bâtiments sans route">
@@ -100,10 +98,7 @@ export function TopBar() {
       <button onClick={onImport}>⬆ JSON</button>
       <button onClick={onPng}>🖼 PNG</button>
 
-      {optOpen && <OptimizerPanel onClose={() => setOptOpen(false)} />}
       {islOpen && <IslandPicker onClose={() => setIslOpen(false)} />}
-      {popOpen && <PopulationPlanner onClose={() => setPopOpen(false)} />}
-      {prodOpen && <ProductionPlanner onClose={() => setProdOpen(false)} />}
       {auditOpen && <RoadAudit onClose={() => setAuditOpen(false)} />}
       {covOpen && <CoveragePanel onClose={() => setCovOpen(false)} />}
       {planOpen && <IslandPlanner onClose={() => setPlanOpen(false)} />}

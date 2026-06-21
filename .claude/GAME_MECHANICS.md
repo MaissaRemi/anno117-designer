@@ -1,165 +1,280 @@
-# Anno 117 Pax Romana — Mécaniques réelles du jeu (référence planner)
+# Anno 117 Pax Romana — Mécaniques réelles du jeu (référence planner) — v2
 
-Notes de recherche (web + fouille `assets_base.xml` extrait du jeu). À relire AVANT toute refonte
-du planificateur. Datées juin 2026. Vérité-terrain = fichiers du jeu (`.gamedata/assets_base.xml`),
-le web confirme/complète.
+Registre d'hypothèses validées/réfutées. Campagne de recherche 2026-06-11 (plan
+`ultrathink-tip-important-on-smooth-catmull.md`). Verdicts :
+**[FICHIERS]** = prouvé dans les données du jeu (source exacte citée) ;
+**[WEB]** = source communautaire (confiance moindre) ;
+**[IN-GAME]** = testé par l'utilisateur ;
+**[OUVERT]** = non tranché (voir checklist tests in-game §13).
+
+Sources fichiers : `.gamedata/assets_base.xml` (AB), `.gamedata/templates.xml` (T),
+dumps `.gamedata/research/*.json` (script `tools/_dump_research.py`),
+`.gamedata/med01_gamedata.data` (île médium, FileDB).
 
 ---
 
-## 1. Influence des services publics = DISTANCE PAR LA RUE (pas euclidienne !)
+## 1. Grille & routes
 
-**Preuve fichiers** : chaque service a un asset `Effect` avec `<EffectScope>StreetDistance</EffectScope>`
-(Effect Roman Market Service 99314, Tavern 99315, Cistern 99330, Library 99320…). Le scope `Radius`
-n'est utilisé que pour specialists/items/incidents/colisée, PAS pour les services de base.
+- **[FICHIERS]** Portée des services = DISTANCE PAR LA RUE (`EffectScope StreetDistance`,
+  ×1279 dans AB). `RadiusDistance` = préviz UI seulement. Pattern systématique :
+  **street = radius + 4** sur tous les services.
+- **[FICHIERS]** Coûts routes (argent 1010017) : terre **5**, pavée **40**, route de
+  marais (Celtic) 10, pont bois 10 / pavé 20, quai bois/pierre/marbre 10/40/80,
+  ponts-canaux celtiques 10/20/25. Pavée = vitesse charrettes (aucun `RangeFactor`
+  trouvé → ne change PAS la portée des services). [OUVERT in-game #7 pour confirmation]
+- **[FICHIERS]** Rues de quai = template `Street` → routes normales pour
+  réseau/couverture (H1.9).
+- **[FICHIERS]** `BridgeLengthMax = 16` (MeshGraphBalancing 43985).
+- **[FICHIERS]** `StreetActivation` sur les templates PublicService/CityInstitution/
+  MiniInstitution/AqueductDistributor : service non raccordé = inactif.
+- **[WEB devblog]** Connexion par le COIN comptée (8-adjacence) — notre modèle
+  4-adjacence est plus strict = conservateur. [OUVERT in-game #3]
+- [OUVERT] Distance-rue en diagonale (coût 1/tuile ?), grille 45° sous-tuiles.
 
-- `EffectSource` des bâtiments porte DEUX valeurs : `RadiusDistance` (UI/préviz) et `StreetDistance`
-  (la vraie portée jeu). Ex Marché : Radius 24 / **Street 28**. Citerne : 36/36. Bains : 62/**66**.
-  Forum : 66/**70**.
-- En jeu : on clique un bâtiment → les routes connectées deviennent VERTES jusqu'à la portée ;
-  là où le vert s'arrête, l'influence s'arrête. Une maison est couverte si elle touche une route
-  verte (les diagonales/coins comptent, cf. §2).
-- Le mod « Public Buildings Use Radius » CONVERTIT street→radius : confirme que vanilla = street.
-- Notre `streetCoverage` (BFS le long des routes depuis les routes adjacentes au bâtiment, limite
-  `streetRange`, cases servies = adjacentes à une route atteinte) est le BON modèle de base.
-  **Le planner districtPlan v2 utilise l'euclidien (`radius.range`) → à migrer vers BFS-rue.**
+## 2. Services publics — TABLE COMPLÈTE DES PORTÉES [FICHIERS]
 
-## 2. Routes & grille
+Défauts templates : PublicServiceBuilding & CityInstitutionBuilding **26 street / 22
+radius** ; MiniInstitutionBuilding **22/18** ; AqueductDistributor 26/22 (citerne
+override 36/36) ; MonumentEventBuilding 90/84 (Colisée override 250).
 
-- Grille en tuiles, chaque tuile divisée en 4 sous-tuiles (45° supporté). Routes = graphe.
-- **Connexion par le COIN comptée** : une route qui passe au coin d'un bâtiment connecte (devblog
-  officiel — différent d'Anno 1800 qui exigeait une arête). Notre modèle 4-adjacence est plus
-  strict que le jeu (acceptable/conservateur).
-- 2 niveaux de route (terre/pavée) + ponts + rues de quai. RIEN dans les assets n'indique une
-  portée différente par type de route (pas de RangeFactor) → pavée = vitesse charrettes (logistique),
-  pas la portée des services.
-- `StreetActivation` sur résidences/services : le bâtiment ne FONCTIONNE que raccordé à une route.
-
-## 3. Résidences
-
-- `Residence7/PopulationLevel` = GUID tier. GUIDs : 1499 Liberti, 1496 Plébéiens, 1497 Equites,
-  1498 Patriciens (Latium) ; 1500 Tourbiers, 1501 Forgerons, 1502 Aldermen (Albion) ;
-  1503 Mercators, 1504 Nobles (romano-celtes).
-- `NeedsList` : items AVEC `NeedConsumptionRate` = biens (tonnes/min PAR MAISON, pas par habitant) ;
-  SANS taux = service/wonder (présence dans la portée rue).
-- Les biens sont consommés depuis le **stock partagé de l'île** (pas de transport physique vers les
-  maisons). Pas de contrainte de distance maison↔entrepôt pour les BIENS. Seuls les SERVICES ont
-  une portée.
-- Capacité par maison = Σ `Population` des NeedAttributes des besoins REMPLIS (déjà modélisé).
-- `AttributeProvider/Population` = GUID du tier desservi (PAS un cap de desserte — fausse piste).
-
-### Catégories de besoins & seuils d'UPGRADE (mécanique clé, non modélisée chez nous)
-
-Chaque besoin a `SupplyWeight` (1/2/4/8) et `NeedCategoryType` : `Food`, `Fashion`, `Household`,
-`Wonders`, `Culture` — absent = **Public** (services). Besoin REMPLI → ajoute son poids au score de
-sa catégorie. `UpgradeThreshold` de la résidence = scores minimaux pour MONTER DE TIER :
-
-| Tier (vers le suivant) | Public | Food | Fashion | Household | Wonders | Culture |
+| Bâtiment (Roman) | street | radius | | Bâtiment (Celtic) | street | radius |
 |---|---|---|---|---|---|---|
-| T1 Liberti/Tourbiers (1499/1500) | 1 | 1 | 1 | — | — | — |
-| T2 Plébéiens/Forgerons/Mercators (1496/1501/1503) | 3 | 3 | 3 | 2 | — | — |
-| T3 Equites/Aldermen/Nobles (1497/1502/1504) | 7 | 7 | 7 | 6 | 4 | — |
-| T4 Patriciens (1498) | 15 | 15 | 15 | 14 | 12 | 8 |
+| Marché | 28 | 24 | | Marché | 28 | 24 |
+| Taverne (défaut tpl) | 26 | 22 | | Fanum | 36 | 32 |
+| Grammaticus (défaut tpl) | 26 | 22 | | Grammaticus (défaut) | 26 | 22 |
+| Sanctuaire | 38 | 34 | | Sporting Grounds | 38 | 34 |
+| Citerne d'aqueduc | 36 | 36 | | Citerne | 36 | 36 |
+| Maison de jeu | 42 | 38 | | Maison de jeu | 42 | 38 |
+| Théâtre | 50 | 46 | | Théâtre | 50 | 46 |
+| Bibliothèque | 62 | 58 | | Town Hall | 46 | 42 |
+| Bains (wonder) | 66 | 62 | | Bains | 66 | 62 |
+| Temple (wonder) | 68 | 64 | | Temple | 68 | 64 |
+| Forum (wonder) | 70 | 66 | | Barrow (wonder) | 66 | 62 |
+| **Colisée** (wonder) | **250** | 250 | | Sacred Grove (wonder) | 68 | 64 |
 
-(Seuil affiché sur la résidence du tier = condition pour upgrade VERS le tier suivant. T4 : seuils
-pour « besoins complets »/colisée etc.)
+Institutions anti-incidents (portée street) : **Vigiles (feu) 30**, **Medicus
+(maladie) 38**, **Préfecture (émeute) 34** ; versions Mini (early game) 20/24/20 ;
+celtiques idem mini. Shrines (mini-services) : 16-24 street.
 
-Ex Equites (somme max par catégorie de sa NeedsList) : Food 16, Public 18, Fashion 14, Household 16,
-Wonders 8 → pour passer Patricien il faut Public≥7, Food≥7, Fashion≥7, Household≥6, Wonders≥4 :
-**sous-ensemble au choix** → c'est LA base d'un vrai « max-éco » (choisir les besoins les moins
-chers atteignant les seuils). Remplace notre heuristique actuelle « besoin rentable ssi Money ≥ coût ».
+- **[FICHIERS]** Pas de falloff dans `Effect` → couverture binaire à la coupure.
+- [OUVERT] H2.13 : des bâtiments de PROD donneraient des bonus pop en rayon
+  (« bakery +2 pop/maison » vu en guide [WEB] + TextPools « Tavern Supplied ») — à
+  vérifier : 2e système de desserte par bâtiment de production ?
 
-- Poids notables (Equites/Patriciens) : Sardines/Porridge/Marché/Taverne/Tuniques/Chapeaux w=1 ;
-  Pain/Garum/Sanctuaire/Grammaticus/Sandales/Savon/Amphores/Huile w=2 ; Vin/Fromage/Citerne/
-  Théâtre/Maison de jeu/Toges/Broches/Tablettes/Verre fin/Idoles/Forum/Bains w=4 ; Temple/
-  Bibliothèque w=8.
+## 3. Résidences & besoins
 
-## 4. Wonders (Forum, Bains, Colisée) — catégorie à part
+- **[FICHIERS]** `UpgradeThreshold` par catégorie (somme des `SupplyWeight` des
+  besoins REMPLIS, sous-ensemble au choix) : T1 Public1/Food1/Fashion1 ;
+  T2 3/3/3/Household2 ; T3 7/7/7/6/Wonders4 ; T4 Patriciens 15/15/15/14/12/Culture8.
+  Identique Roman/Celtic (Smiths=T2, Alderman/Nobles=T3-équivalent).
+- **[FICHIERS]** Upgrade MANUEL : `Upgradable/PossibleUpgrades` avec `Cost`
+  (argent 1010017 + matériaux 2174/2176…). Patriciens/Nobles/Alderman : `<Upgradable />`
+  vide = tier final.
+- **[WEB]** Conso de biens liée au NOMBRE DE MAISONS, pas à la population
+  (« tied to the amount of residence buildings alone ») — conforme à notre modèle
+  NeedConsumptionRate par maison. [OUVERT in-game #4 pour trancher plein/vide]
+- **[FICHIERS]** Capacité = Σ `Population` des NeedAttributes des besoins remplis (v1).
+- **[FICHIERS]** `EconomyFeature7` : `ProductivityDeltaSpeedPos/Neg = 0.333`
+  (vitesse de transition de productivité), `MissingWorkforce/WorkforceThresholdInPercent = 10`.
+- [OUVERT] Workforce manquante → productivité proportionnelle ou tout-ou-rien ?
+  (guides [WEB] : « efficiency plummets, halting production »).
 
-- `NeedCategoryType: Wonders` : Forum (2755), Bains (2782), Colisée (2783, Patriciens), + celtiques.
-- Ce sont des `PublicServiceBuilding` géants à portée rue ÉNORME (Bains street 66, Forum 70) —
-  quelques exemplaires couvrent l'île. MAIS :
-- **EAU OBLIGATOIRE** : `AqueductConsumer` `Mandatory` — Bains consomment **25**, Forum **15**
-  unités d'eau (sur les 100 d'une source). Sans aqueduc → pas de Bains/Forum → pas de T4.
+## 4. Eau & aqueducs (mécanique critique T3+)
 
-## 5. Aqueducs & eau (non modélisé chez nous — bloquant pour T3+/T4)
+Budget par source (`WaterVolumeSupply = 100`, basins Roman 19691 / Celtic 29524) :
 
-Système (fichiers + web) :
-- **Source** (« Aqueduct Roman Basin » 19691) : `WaterVolumeSupply 100`. Se pose sur **slot
-  MONTAGNE** (concurrence mines/carrières). Entretien 26/min.
-- **Conduites** : 3 sous-types (H1 2 arches, H2 3 arches, tours). L'eau coule en PENTE : la hauteur
-  de l'aqueduc décroît avec la longueur ; descendre un terrain rallonge la portée, monter la réduit.
-  Sous le minimum H1 → l'eau ne coule plus. Tours = reset hauteur (mais réduisent la portée
-  effective). Split = tour automatique.
-- **Citerne** (« Aqueduct Roman Distribution » 19753, celtic 29526) : `AqueductDistributor`,
-  agit comme un SERVICE PUBLIC : `EffectSource` street **36**, effet 99330 scope StreetDistance.
-  Entretien 26/min. Plusieurs citernes par source possibles.
-- **Citerne = BESOIN public** (need 68747 « Public Cistern », w=4, Health+3 FireSafety+3) exigé par
-  les tiers **1497 Equites et 1498 Patriciens** (+ équivalent celtic 80116-zone). Dans notre
-  `economy.generated.json` le besoin existe mais `building: None` → c'est le « Service sans
-  bâtiment au catalogue » affiché en trou par l'UI. Le bâtiment est 19753 (template infra, pas
-  PublicServiceBuilding → raté par build_economy).
-- **Consommateurs d'eau** (`AqueductConsumer`):
-  - `Mandatory` : Bains 25, Forum 15 (sans eau → inactifs).
-  - `Optional` : fermes (`AqueductConsumedWaterSupply 5`, buff **+50 productivité**, débloqué par
-    recherche « Duct Irrigation » 26949) ; plantations (« Aqua Arborica ») ; mines (« Hushing »).
-  - Présent vide (`<AqueductConsumer />`) sur marché/pêcheries etc. = raccordables, sans obligation.
-- Budget eau : Σ conso des consommateurs actifs ≤ 100 par source. Trop de fermes → désactivation.
-- **Limite data pour nous** : nos masques d'île n'ont PAS l'élévation ni les slots montagne →
-  impossible de tracer les conduites exactement. Approximation raisonnable : citerne = service
-  posable (coût + entretien), budget eau par source, et marquer Bains/Forum « nécessitent réseau eau ».
+| Consommateur | Conso | Type | Source |
+|---|---|---|---|
+| **Colisée** (3621) | **50** | Mandatory | [FICHIERS] AB AqueductConsumer |
+| Bains | 25 | Mandatory | [FICHIERS] |
+| Forum | 15 | Mandatory | [FICHIERS] |
+| **Citerne** (19753/29526) | **10** | (distributeur) | [FICHIERS] T `WaterConsumption=10`, non overridé |
+| Champs (oats/hemp/wheat/grapes/lavender/olives/flax/herbs/barley/dye) | 5 | Optional (+buff prod) | [FICHIERS] |
+| Mines (iron/gold/silver/tin/copper/coal) | 10 | Optional (+buff) | [FICHIERS] |
+| Carrières (limestone/marble/minerals/granite) | (conso après unlock 26950 « Hushing ») | Optional | [FICHIERS] |
 
-## 6. Bâtiments de production
+⚠ Conséquence : les 3 wonders romains = 90u → quasi une source ENTIÈRE ; chaque
+citerne mange 10u → une source alimente au mieux 10 citernes (et zéro wonder).
+Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
 
-- `FactoryBase` : `FactoryOutputs` (Product, Amount, StorageAmount), `FactoryInputs`, `CycleTime` s.
-- **`MaxTransporterRange`** : portée MAX des charrettes (en distance-rue) pour livrer/chercher au
-  réseau entrepôt. Distribution réelle : **30 (majorité, 85 assets), 40 (16 : côtiers+champs),
-  70 (3), 80 (2), 45 (1)**. → Un bâtiment de prod doit avoir un entrepôt/comptoir à ≤ ~30 de rue,
-  sinon les biens ne partent pas. **Contrainte de placement majeure, pas modélisée chez nous.**
-- En jeu, cliquer une prod montre en vert jusqu'où vont les charrettes.
-- Fermes : `ModuleOwner/ModuleLimits/Main/Limit` = nb cases champ (oats 80, olive 160…), modules
-  CONNECTÉS (bloc contigu), `FarmType PlantFarm`. Champ lui-même = asset Production Field avec
-  son propre FactoryBase (cycle).
-- `RawResourceType` : `Coastal` (pose sur côte/eau), mines = slots montagne, argile = **rivière**
-  (tiles). Fertilités par île : certains biens exigent la fertilité (vin, olives…), d'autres non
-  (oats, hemp → partout).
-- Entretien : argent + workforce (Product 2181 = workforce T1 etc.) — déjà modélisé.
-- Entrepôt (`Warehouse`) : stock PARTAGÉ île entière, `LogisticNode` LoadingSpeed 0.15,
-  upgrades ↑ nb transporteurs. Les biens doivent être charriés prod→entrepôt ; entre entrepôts
-  d'une même île : partagé automatiquement.
+- **[IN-GAME]** Conduite JAMAIS sur case route ; croisement perpendiculaire OK
+  (l'arche enjambe) ; pas de terminus/virage/jonction sur route.
+- **[IN-GAME]** **NO-MERGE** : impossible de raccorder 2 réseaux pour cumuler l'eau.
+  1 réseau = 1 source. Planner : conduites de réseaux ≠ ne partagent jamais une case.
+- **[WEB Steam]** H1 (2 arches) / H2 (3 arches) / tours : l'eau perd de la hauteur
+  avec la longueur ; descendre regagne, monter perd plus vite ; sous le min H1 → stop.
+  Tour = reset à max-H1 (pénalise la portée). **Citerne attachée = « fausse tour »
+  SANS réduction de hauteur**. Pas de constantes publiées. [OUVERT in-game #1]
+- [OUVERT] H4.20 : une conduite peut-elle en CROISER une autre ? (impacte le routage)
+- [OUVERT] Priorité de coupure si Σ conso > 100 (Mandatory d'abord ?).
+- **[FICHIERS]** Heightmap île DISPONIBLE (cf. §7) → pente réelle calculable.
 
-## 7. Divers utiles
+## 5. Production & chaînes
 
-- `IncidentInfectable` : feu/émeute/maladie/séismes — FireSafety/Health des besoins remplis et de
-  la citerne réduisent les risques. Bibliothèque : FireSafety **−2** (risque incendie !).
-- `Maintenance` argent : Product 1010017 par minute (modélisé). Marché 10, Bains 160, Citerne 26.
-- `InfluencedByNeighbors` sur résidences = purement VISUEL (variations de façades).
-- Romanization/Buffs/Specialists : hors scope planner v1.
+- **[FICHIERS]** `FreeAreaProductivity` — productivité fonction de l'AIRE LIBRE
+  (ne pas enclaver !) :
 
-## 8. Écarts planner actuel → corrections à faire (ordre de priorité)
+| Bâtiment | InfluenceRadius | NeededArea |
+|---|---|---|
+| Bûcheron (wood) | 8 | 80 |
+| Charbonnier | 9 | 80 |
+| Résine | — | 45 |
+| Ruches (miel) | 8 | 80 (Beehive) |
+| Anguilles (marais) | 9 | 140 |
+| Oiseaux (marais) | 10 | 180 |
+| Castor (Celtic) | 10 | 180 |
+| Poneys Dartmoor | 10 | 140 (Meadow) |
 
-1. **Couverture services par BFS-rue** (StreetDistance) au lieu d'euclidien `radius.range` :
-   utiliser `streetRange` + `streetCoverage` existant. Conséquence design : les maisons doivent
-   partager le RÉSEAU de routes avec le service (notre peigne + squelette le permet déjà).
-2. **Citerne** : mapper need 68747/celtic → bâtiment 19753/29526 dans build_economy (+ catalogue
-   si absent) ; la traiter comme service street-36 + prérequis « réseau d'eau » (approx).
-3. **Seuils par catégorie** : extraire SupplyWeight + NeedCategoryType + UpgradeThreshold dans
-   build_economy → max-éco = choisir le sous-ensemble de besoins le moins cher qui atteint les
-   seuils du tier visé (sinon les maisons NE MONTENT PAS de tier → plan « 100% nul » actuel).
-4. **Wonders** : Forum/Bains à poser en 1-2 exemplaires (portée 66-70 rue) + eau obligatoire
-   (25/15 par source de 100) ; Colisée pour Patriciens.
-5. **MaxTransporterRange ~30** : toute prod placée doit être à ≤30 de rue d'un entrepôt → le plan
-   auto-suffisant (phase 2) doit semer des entrepôts (ou poser la prod autour du comptoir).
-6. Corner-adjacency route (jeu plus permissif que notre 4-adj — on peut rester conservateur).
-7. Terrain : slots montagne (mines + source aqueduc), rivière (argile), côte (déjà), fertilités —
-   données absentes de nos masques d'île → à extraire des .a7m si on veut la phase 2 exacte.
+- **[FICHIERS]** 31 productions exigent une FERTILITÉ (`NeededFertility`) — y compris
+  CÔTIÈRES (maquereaux 2206, escargots de mer 4051, huîtres 2208) et MINIÈRES
+  (fer 4049, or 32027, marbre 4062…). 51 items/techs AJOUTENT des fertilités.
+- **[FICHIERS]** Fertilités PAR PARTIE, pas par île : `RandomIsland` ne référence
+  que le fichier .a7m (aucun FertilitySet). → Le planner doit DEMANDER à
+  l'utilisateur les fertilités de son île (saisie).
+- **[FICHIERS]** `MaxTransporterRange` (distance-rue prod↔entrepôt) : **30 défaut**
+  (85 assets) ; **40** = côtiers (sardines, snails, huîtres, coques), champs de base
+  (avoine/chanvre/blé), crafts (tissu, coussins, bois ouvragé), porridge, concrete,
+  cordes/voiles, anguilles ; **45** = olives ; **70** = raisin, lin, caviar ;
+  **80** = SEL et SILICE.
+- **[FICHIERS]** Feu : `HeatValue 2` + `BurstDistance 25 / BurstCount 6` sur les
+  MINES (gros risque, sauts à 25 tuiles !) ; côtiers 9/3 ; pâturages 10/2 ;
+  carrières 10/2. → coupe-feux et vigiles près de l'industrie.
+- [OUVERT] Prod ferme ∝ nb de cases champ ? (in-game #5).
+- **[IN-GAME]** Champs en FORME LIBRE (confirmé utilisateur 2026-06-12) : aucune
+  contrainte de rectangle — n'importe quelle forme, même non lisse, tant que chaque
+  tuile est 4-adjacente à au moins une autre tuile du champ (blob connexe) et qu'au
+  moins une tuile touche le bâtiment de ferme. Planner : croissance BFS (greedy.ts
+  placeFields), acceptation d'une ferme = cases ATTEIGNABLES ≥ tuiles requises.
 
-## 9. Sources
+## 6. Logistique & entrepôts [FICHIERS]
 
-- Fichiers jeu : `.gamedata/assets_base.xml` (GUIDs cités), `templates.xml`.
+- **Entrepôts TERRESTRES : `StorageMax = 0`** — ils n'ajoutent AUCUNE capacité de
+  stockage, ce sont des points d'accès logistiques (charrettes). Niveaux 1/2/3 :
+  parallélisme de traitement —/4/6 (`ProcessingQueueParallelCount`), LoadingSpeed 0.15.
+- **Entrepôts PORTUAIRES (Harbor Warehouse 1/2/3) : StorageMax 75/150/250**,
+  parallélisme —/4/6. Harbor Depot : +100. → La capacité de stock d'île vient du PORT.
+- Stock partagé à l'échelle de l'île (v1) ; biens des maisons : pas de contrainte
+  de distance (consommation depuis le stock).
+- **[WEB]** Pas de transfert de workforce inter-île en vanilla (un mod existe pour ça).
+
+## 7. Terrain — HEIGHTMAP EXTRACTIBLE [FICHIERS]
+
+- **`med01_gamedata.data` → `TerrainManager/HeightMap`** : 641×641 (= 2×320+1,
+  grille demi-tuile) **int16** ; mer < 0 (≈ −2000), terre > 0 (max 3155, médiane 380).
+  Validé : slots montagne à 303-865 (pied des reliefs). `DisplacementHeightMap` idem.
+  → `build_terrain.py` peut exporter hauteur/pente par île (échelle d'unité à
+  calibrer in-game vs `SteepnessMaxHeightDiff`).
+- **`WorldManager`** : `Water` (bitmask), `RiverGrid` (déjà extrait), **`FordGrid`**
+  (gués ?), `EnvironmentGrid` (val 6400o). **`IrrigationManager/m_StaticTileGrid`** :
+  tuiles irrigables statiques (irrigation naturelle le long des rivières ? [OUVERT]).
+- **[FICHIERS]** `SteepnessMaxHeightDiff` : seulement 15 assets l'overrident
+  (gros bâtiments = 5 ; Bains = 3). Le défaut des autres bâtiments est dans le
+  template (non trouvé explicitement → probablement valeur moteur).
+- a7minfo : slots (déjà extraits) + StartCoastDirection. PAS de fertilités.
+
+## 8. Économie
+
+- **[FICHIERS]** Entretien argent = Product 1010017/min (v1). Workforce par tier (v1).
+- **[FICHIERS]** Romanisation (Albion) : PAR BÂTIMENT — `RomanizationType`
+  Roman/Regional, `RomanizationValue` 10-25 (shrines 25, Grammaticus 10). Le choix
+  des bâtiments (romains vs régionaux) déplace la jauge.
+- [OUVERT] Revenu par habitant (pas de slider taxes apparent), prix PNJ fixes.
+
+## 9. Wonders & monuments [FICHIERS]
+
+- **Colisée** : bâtiment final = `MonumentEventBuilding` 3621 « Wonder Roman
+  Colosseum », **street 250** (couvre l'île entière — PAS de contrainte de
+  centrage), **`BuildingUnique`**, **eau 50u Mandatory**, pente max 5. CHANTIER =
+  3 assets `Monument` (Phase 0/1/2) — construction par phases avec livraisons.
+  `MonumentEvent` : jeux du Colisée (Small/Medium/Grand) = events activables.
+- Forum/Bains/Temple = `PublicServiceBuilding` ordinaires (construction instantanée),
+  catégorie de besoin `Wonders`.
+- **[FICHIERS] Poids Wonders : Forum 4, Bains 4, COLISÉE 8.** Seuil T4 Patriciens
+  Wonders = 12 → Forum+Bains (8) NE SUFFISENT PAS : **le Colisée est OBLIGATOIRE
+  pour monter Patricien** (8+4=12). Tout plan T4 doit l'inclure (unique, 50u d'eau,
+  chantier 3 phases).
+- **[FICHIERS]** Catégorie Culture (seuil T4 = 8) : biens de luxe Lyres (2785),
+  Chars (2781), Jeux de plateau (145225) — w=8 chacun → UN des trois suffit.
+- Pas de Circus Maximus constructible (textes narratifs seulement).
+
+## 10. Incidents
+
+- **[FICHIERS]** Propagation feu par SAUTS euclidiens : `BurstDistance`/`BurstCount`
+  par bâtiment (mines 25/6 !, côtiers 9/3, pâturages 10/2). `HeatValue` = risque.
+- **[FICHIERS]** Contre-mesures = CityInstitution/MiniInstitution à portée STREET
+  (vigiles 30, medicus 38, préfecture 34 ; minis 20/24/20).
+- Citerne/besoins donnent FireSafety/Health (réduction de risque, v1).
+
+## 11. Côtier & maritime
+
+- **[FICHIERS]** Rues de quai = routes normales (template Street).
+- **[FICHIERS]** Pêcheries/côtiers : fertilités côtières requises (maquereaux,
+  huîtres…), MaxTransporterRange 40-80.
+- LoadingPier/piers : débit navire (LoadingSpeed 0.15). [non bloquant planner v1]
+
+## 12. Albion / celtique
+
+- **[FICHIERS]** Services celtiques : portées dans la table §2. Citerne celtique
+  29526 = 36/36, basin celtique 29524 = 100u. Mêmes mécaniques d'eau.
+- **[FICHIERS]** Prods de marais (anguilles, oiseaux, etc.) : `CanBePlacedOnNonMarsh=1`
+  → posables AUSSI hors marais. Route de marais dédiée (coût 10).
+- **[FICHIERS]** Romanisation par bâtiment (cf. §8).
+
+## 13. CHECKLIST TESTS IN-GAME (pour l'utilisateur — à plus fort levier)
+
+1. **Aqueduc plat** : tracer une conduite droite sur terrain plat depuis une source ;
+   noter la longueur exacte à laquelle l'eau s'arrête (départ H2 vs H1 si possible).
+   → calibre la constante de pente + l'échelle de la heightmap.
+2. **Citernes par source** : sur 1 source isolée, raccorder des citernes une à une ;
+   noter à combien la dernière se désactive (attendu : 10).
+3. **Coin de route** : maison touchant une route uniquement par le COIN — s'active ?
+   reçoit les services ? (attendu : oui d'après devblog).
+4. **Conso par maison** : île figée, noter la conso t/min d'un bien ; poser 10
+   maisons VIDES de plus ; re-noter (attendu si « par maison » : +10×taux immédiat).
+5. **Ferme à moitié de champs** : ferme avec 50 % des modules — productivité 50 % ?
+6. **Propagation feu** : (optionnel, sauvegarde !) feu près d'une mine — distance des
+   sauts (attendu 25 tuiles).
+7. **Route pavée** : portée d'un marché et zone charrette d'une prod : identiques
+   sur terre vs pavé ? (attendu : oui).
+8. **Croisement conduite × conduite** (H4.20) : tenter de croiser 2 conduites de
+   réseaux différents perpendiculairement (attendu : refus ?).
+9. **Σ conso > 100** : sursaturer une source (ex Bains+Forum+Colisée+citernes) ;
+   qui se désactive en premier ?
+
+## 14. BACKLOG DE FIXES PLANNER (classé par impact)
+
+1. **Citernes = 10u** dans waterPlan (actuellement 0) + nb max citernes/source ;
+   re-dimensionner les sources par île (3 wonders = 90u → source dédiée).
+2. **Colisée** : OBLIGATOIRE pour T4 (Wonders 12 = Colisée 8 + Forum/Bains 4).
+   Unique, street 250 = zéro contrainte de placement couverture, MAIS 50u d'eau
+   Mandatory + chantier 3 phases. Le planner T4 doit le poser + le compter dans
+   le besoin d'eau et le seuil d'upgrade.
+3. **Portées complètes** (§2) : vérifier catalog.generated vs table — notamment
+   les défauts hérités 26/22 (Taverne/Grammaticus OK) et institutions (vigiles…)
+   absentes de nos services de tier (elles ne sont PAS des besoins → placement
+   anti-incidents = feature séparée).
+4. **Heightmap** : étendre build_terrain.py (hauteur quantifiée + pente par tuile)
+   → aqueducs en pente réelle + constructibilité des pentes.
+5. **Entrepôts** : archetype production — le STOCKAGE vient du port ; les entrepôts
+   terrestres = accès charrettes (MaxTransporterRange par bâtiment, table §5).
+6. **FreeAreaProductivity** : contrainte de non-enclavement pour bûcherons/ruches/
+   marais (rayon + aire libre, table §5).
+7. **Fertilités** : UI de saisie des fertilités de l'île (par partie) + filtrage
+   des chaînes possibles.
+8. **Coin-adjacence** (si in-game #3 confirme) : couverture 8-adj → plus de maisons.
+9. **Anti-incidents** : vigiles/medicus/préfecture en placement optionnel (portées §2,
+   burst data §10).
+10. **Romanisation** (si Albion) : choix bâtiments romains vs régionaux.
+
+## 15. Sources
+
+- Fichiers jeu : assets_base.xml, templates.xml (extraits config.rda), gamedata.data
+  des îles (RDA imbriqué .a7m), dumps `.gamedata/research/`.
 - [DevBlog roads & grid](https://www.anno-union.com/devblog-roads-building-in-the-grid/) — coins/diagonales.
 - [Mod Public Buildings Use Radius](https://mod.io/g/anno-117-pax-romana/m/public-buildings-use-radius-taludas) — vanilla = street.
-- [Steam : observations aqueducs](https://steamcommunity.com/app/3274580/discussions/0/802331493180488207/) — pente/hauteurs/tours.
-- [GameRant : construire les aqueducs](https://gamerant.com/anno-117-pax-romana-how-build-aqueduct/) — source 100u, slots montagne, boosts.
-- [NoobFeed : entrepôts](https://www.noobfeed.com/articles/anno-117-pax-romana-how-to-use-warehouses) — stock partagé.
-- [Anno-companion wiki](https://anno-companion.com/wiki/117/goods) — base de données biens.
-- [GameRant : fertilités](https://gamerant.com/anno-117-pax-romana-island-fertility-guide-how-settle-island-expand/).
+- [Steam : observations aqueducs](https://steamcommunity.com/app/3274580/discussions/0/802331493180488207/) — H1/H2/tours qualitatif, citerne fausse-tour.
+- [GameRant : aqueducs](https://gamerant.com/anno-117-pax-romana-how-build-aqueduct/), [Deltia's Gaming](https://deltiasgaming.com/how-to-build-aqueducts-in-anno-117-pax-romana/).
+- [Steam : consumption per house](https://steamcommunity.com/app/3274580/discussions/0/684112727828918553/), [Into Indie Games éco](https://intoindiegames.com/walkthroughs/anno-117-pax-romana-money-and-economy-guide/).
+- [Calculateur communautaire anno-117-calculator](https://anno-mods.github.io/anno-117-calculator/) — validation croisée des chaînes.
+- [Mod workforce inter-île](https://mod.io/g/anno-117-pax-romana/m/workforce-transfer-between-islands-crash-fixed) — confirme pas de navettage vanilla.
+- Historique v1 (notes détaillées NeedsList/capacités/solveur) : voir git history de ce fichier.

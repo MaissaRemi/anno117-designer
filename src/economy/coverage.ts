@@ -31,18 +31,26 @@ export interface CoverageReport {
 export function analyzeCoverage(
   layout: Layout,
   lookup: DefLookup,
-  opts: { euclidean?: boolean } = {},
+  opts: { euclidean?: boolean; requiredServices?: Set<string>; inactiveBuildings?: Set<string> } = {},
 ): CoverageReport {
+  // `requiredServices` (optionnel) restreint le calcul "pleinement couverte" à un
+  // SOUS-ENSEMBLE de services (mode seuils : seuls les services retenus comptent).
+  // Le rapport par-service reste complet ; seul le gate housesFullyCovered est scopé.
+  const required = opts.requiredServices;
+  // `inactiveBuildings` (uids) : copies de service INACTIVES en jeu (ex: consommateur
+  // d'eau non raccordé) → leur couverture ne compte pas (une maison servie uniquement
+  // par une copie sèche n'est pas réellement couverte).
+  const inactive = opts.inactiveBuildings;
   // tier par residenceId ; service requis (avec rayon) par tier
   const tierByResidence = new Map<string, (typeof economy.tiers)[number]>();
   for (const t of economy.tiers) if (t.residenceId) tierByResidence.set(t.residenceId, t);
 
   // couverture (cellKeys) par defId de service = union des bâtiments de ce type
-  const cov = computeRadiusCoverage(layout, lookup, opts);
+  const cov = computeRadiusCoverage(layout, lookup, { euclidean: opts.euclidean });
   const coverByService = new Map<string, Set<string>>();
   for (const b of layout.buildings) {
     const set = cov.get(b.uid);
-    if (!set) continue;
+    if (!set || inactive?.has(b.uid)) continue; // copie inactive (sèche) → ne couvre pas
     let u = coverByService.get(b.defId);
     if (!u) coverByService.set(b.defId, (u = new Set<string>()));
     for (const k of set) u.add(k);
@@ -81,12 +89,14 @@ export function analyzeCoverage(
       if (!s.building) continue;
       const rec = ensure(s.building);
       rec.housesRequiring++;
-      if (!rec.hasRadius) { allOk = false; continue; } // rayon inconnu -> non analysable
+      // ce service compte-t-il pour le statut "pleinement couverte" de la maison ?
+      const counts = !required || required.has(s.building);
+      if (!rec.hasRadius) { if (counts) allOk = false; continue; } // rayon inconnu -> non analysable
       const union = coverByService.get(s.building);
       const covered = !!union && cells.some((k) => union.has(k));
       if (covered) rec.housesCovered++;
       else {
-        allOk = false;
+        if (counts) allOk = false;
         for (const k of cells) { rec.uncovered.push(k); uncoveredAnyAll.add(k); }
       }
     }

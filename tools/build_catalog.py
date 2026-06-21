@@ -18,8 +18,10 @@ import xml.etree.ElementTree as ET
 
 sys.path.insert(0, os.path.dirname(__file__))
 import rda_extract as rda
+from game_defaults import CYCLE_TIME_DEFAULT
 
-GAME = r"F:\Anno 117 - Pax Romana\maindata"
+GAME = os.environ.get("ANNO_GAME_DIR", r"F:\Anno 117 - Pax Romana\maindata")
+assert os.path.isdir(GAME), f"Repertoire jeu introuvable : {GAME!r}. Definir ANNO_GAME_DIR."
 HERE = os.path.dirname(os.path.dirname(__file__))
 ASSETS = os.path.join(HERE, ".gamedata", "assets_base.xml")
 TEXTS = os.path.join(HERE, ".gamedata", "texts_french.xml")
@@ -57,6 +59,9 @@ TEMPLATE_CATEGORY = {
     "CityInstitutionBuilding": "public",
     "CityInstitutionBuilding_Marsh": "public",
     "Monument": "public",
+    # Colisée FINAL (3621, street 250, eau 50u Mandatory) — les assets Monument
+    # ci-dessus ne sont que les PHASES de chantier (fondations/murs/arène)
+    "MonumentEventBuilding": "public",
     "Warehouse": "public",
     "Warehouse_Marsh": "public",
     "HarborWarehouse": "public",
@@ -201,6 +206,16 @@ def collect_buildings(texts, template_effects):
         if limit:
             field = {"tiles": int(limit)}
 
+        # Aire libre requise (bûcheron/ruches/marais) : productivité ∝ cases libres
+        # dans InfluenceRadius (cf. GAME_MECHANICS.md §5) — ne pas enclaver
+        free_area = None
+        fa = values.find(".//FreeAreaProductivity")
+        if fa is not None and fa.findtext("NeededArea"):
+            free_area = {
+                "radius": int(fa.findtext("InfluenceRadius") or 8),
+                "area": int(fa.findtext("NeededArea")),
+            }
+
         # Production
         production = None
         fb = values.find("FactoryBase")
@@ -210,13 +225,21 @@ def collect_buildings(texts, template_effects):
                 outs.append({"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 1)})
             for it in fb.findall("./FactoryInputs/Item"):
                 ins.append({"product": it.findtext("Product"), "amount": float(it.findtext("Amount") or 1)})
-            cycle = fb.findtext("CycleTime")
+            cycle = fb.findtext("CycleTime") or str(CYCLE_TIME_DEFAULT)
             if outs or ins:
                 production = {
                     "cycleTime": int(cycle) if cycle else None,
                     "outputs": outs,
                     "inputs": ins,
                 }
+
+        # Portée transporteur (distance-rue prod <-> entrepôt, défaut moteur 30)
+        mtr = text_of(el, "./Values/FactoryBase/MaxTransporterRange")
+
+        # BuildingUnique AVEC enfant Uniques = 1 exemplaire max (Colisée…) ; le tag
+        # vide (entrepôts…) n'est PAS une contrainte d'unicité
+        bu = values.find("BuildingUnique")
+        unique = bu is not None and len(bu) > 0
 
         buildings.append({
             "guid": guid,
@@ -232,7 +255,10 @@ def collect_buildings(texts, template_effects):
             "placement": placement,
             "radius": radius,
             "field": field,
+            "freeArea": free_area,
+            "unique": unique,
             "production": production,
+            "transporterRange": int(mtr) if mtr else None,
         })
         el.clear()
     print(f"  {len(buildings)} batiments, {len(product_oasis)} produits", file=sys.stderr)
@@ -329,6 +355,7 @@ def to_app_catalog(buildings, product_name):
             "guid": int(b["guid"]),
             "name": name,
             "nameInternal": b.get("nameInternal"),
+            "template": b.get("template"),
             "category": b["category"],
             "region": b.get("region"),
             "size": size,
@@ -351,6 +378,10 @@ def to_app_catalog(buildings, product_name):
             if b.get("production") and b["production"]["outputs"]:
                 ft = product_name.get(b["production"]["outputs"][0]["product"])
             entry["field"] = {"tiles": b["field"]["tiles"], "fieldType": slug(ft) or "field"}
+        if b.get("freeArea"):
+            entry["freeArea"] = b["freeArea"]
+        if b.get("unique"):
+            entry["unique"] = True
         if b.get("production"):
             p = b["production"]
             entry["production"] = {
@@ -358,6 +389,10 @@ def to_app_catalog(buildings, product_name):
                 "outputs": [{"good": product_name.get(o["product"], o["product"]), "amount": o["amount"]} for o in p["outputs"]],
                 "inputs": [{"good": product_name.get(i["product"], i["product"]), "amount": i["amount"]} for i in p["inputs"]],
             }
+            # portée transporteur : valeur BRUTE seulement — le défaut moteur (30)
+            # vit à UN seul étage, côté runtime (prodPlan DEFAULT_RANGE)
+            if b.get("transporterRange"):
+                entry["transporterRange"] = b["transporterRange"]
         cat.append(entry)
     # tri : par categorie puis nom
     cat.sort(key=lambda e: (e["category"], e["name"]))

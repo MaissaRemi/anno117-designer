@@ -11,6 +11,17 @@ export interface AnnealOutput {
 
 type OnProgress = (iter: number, best: number, placed: number, requested: number) => void;
 
+/** PRNG déterministe (mulberry32) — recuit reproductible sous une graine donnée. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /** Ordre initial : items développés, gros bâtiments d'abord (meilleur packing). */
 function initialOrder(req: OptimizeRequest): string[] {
   const lookup = makeLookup(req.catalog);
@@ -29,6 +40,10 @@ export function anneal(req: OptimizeRequest, onProgress?: OnProgress): AnnealOut
   const dec = makeDecoder(req);
   const requested = req.items.reduce((s, it) => s + it.qty, 0);
   const bandMod = dec.band + 1;
+  // graine fixe par défaut → recuit reproductible (le hasard pur empêchait tout
+  // test exact et tout snapshot). maxIters défini → budget en itérations (déterministe).
+  const rng = mulberry32(req.seed ?? 0x9e3779b9);
+  const fixedIters = req.maxIters;
 
   let order = initialOrder(req);
   let bandOffset = 0;
@@ -42,22 +57,23 @@ export function anneal(req: OptimizeRequest, onProgress?: OnProgress): AnnealOut
   const budget = Math.max(200, req.timeMs);
   let iter = 0;
 
-  while (Date.now() - start < budget) {
+  while (fixedIters != null ? iter < fixedIters : Date.now() - start < budget) {
     iter++;
-    const t = (Date.now() - start) / budget; // 0..1
+    // progression : itérations si budget fixe, sinon temps écoulé
+    const t = fixedIters != null ? iter / fixedIters : (Date.now() - start) / budget; // 0..1
     const temp = Math.max(0.01, 1 - t) * 5; // refroidissement linéaire
 
     const nOrder = order.slice();
     let nOffset = bandOffset;
-    const move = Math.random();
+    const move = rng();
     if (move < 0.2) {
       // décalage vertical de départ
-      nOffset = Math.floor(Math.random() * bandMod);
+      nOffset = Math.floor(rng() * bandMod);
     } else if (move < 0.5 && nOrder.length >= 3) {
       // inversion d'un segment : réordonne des groupes entiers (meilleur regroupement
       // par hauteur d'étagère que de simples échanges)
-      let i = (Math.random() * nOrder.length) | 0;
-      let j = (Math.random() * nOrder.length) | 0;
+      let i = (rng() * nOrder.length) | 0;
+      let j = (rng() * nOrder.length) | 0;
       if (i > j) [i, j] = [j, i];
       while (i < j) {
         [nOrder[i], nOrder[j]] = [nOrder[j], nOrder[i]];
@@ -66,14 +82,14 @@ export function anneal(req: OptimizeRequest, onProgress?: OnProgress): AnnealOut
       }
     } else if (move < 0.75 && nOrder.length >= 2) {
       // déplacement d'un élément (insertion ailleurs)
-      const from = (Math.random() * nOrder.length) | 0;
-      const to = (Math.random() * nOrder.length) | 0;
+      const from = (rng() * nOrder.length) | 0;
+      const to = (rng() * nOrder.length) | 0;
       const [it] = nOrder.splice(from, 1);
       nOrder.splice(to, 0, it);
     } else if (nOrder.length >= 2) {
       // échange simple de deux éléments
-      const i = (Math.random() * nOrder.length) | 0;
-      let j = (Math.random() * nOrder.length) | 0;
+      const i = (rng() * nOrder.length) | 0;
+      let j = (rng() * nOrder.length) | 0;
       if (i === j) j = (j + 1) % nOrder.length;
       [nOrder[i], nOrder[j]] = [nOrder[j], nOrder[i]];
     }
@@ -81,7 +97,7 @@ export function anneal(req: OptimizeRequest, onProgress?: OnProgress): AnnealOut
     const nOut = decode(req, dec, nOrder, nOffset);
     const ns = scoreDecode(req, nOut);
     const d = ns.score - cur.score;
-    if (d > 0 || Math.random() < Math.exp(d / temp)) {
+    if (d > 0 || rng() < Math.exp(d / temp)) {
       order = nOrder;
       bandOffset = nOffset;
       curOut = nOut;

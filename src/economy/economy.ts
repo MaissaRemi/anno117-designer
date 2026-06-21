@@ -36,6 +36,7 @@ export interface BProd {
   cycleTime: number | null;
   inputs: { good: string; amount: number }[];
   outputs: { good: string; amount: number }[];
+  fertility?: string; // GUID Fertility/Deposit requis (sinon non constructible)
 }
 
 interface EconomyData {
@@ -47,6 +48,25 @@ interface EconomyData {
   goodNames: Record<string, string>;
   goodPrices: Record<string, number>; // GUID -> BasePrice (valeur marchande de réf.)
   buildingRegion: Record<string, string>; // defId -> région ("Roman"/"Celtic")
+  fertilities: Record<string, string>; // GUID Fertility/Deposit -> nom FR
+}
+
+/** Fertilités/gisements requis par la chaîne de production d'un bien (récursif). */
+export function chainFertilities(good: string, region?: string): Set<string> {
+  const out = new Set<string>();
+  const seen = new Set<string>();
+  const walk = (g: string) => {
+    if (seen.has(g)) return;
+    seen.add(g);
+    const defId = pickProducer(g, region);
+    if (!defId) return;
+    const p = economy.buildingProd[defId];
+    if (!p) return;
+    if (p.fertility) out.add(p.fertility);
+    for (const inp of p.inputs) walk(inp.good);
+  };
+  walk(good);
+  return out;
 }
 
 export const economy = data as unknown as EconomyData;

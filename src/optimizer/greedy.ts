@@ -214,13 +214,19 @@ export function decode(
         const v = variants.find((m) => {
           const mh = macroHeight(m);
           if (shelfH > 0 && mh > shelfH) return false; // dépasse l'étagère en cours
+          if (m.fieldTiles > 0 && m.fieldType) {
+            // ferme : seule l'EMPRISE du bâtiment exige un rectangle ; les champs
+            // sont un blob libre — il suffit qu'assez de cases soient ATTEIGNABLES
+            if (!fits(occ, W, H, x, shelfTop, m.w, m.h, x1, y1)) return false;
+            return growFieldBlob(occ, W, H, x, shelfTop, m).length >= m.fieldTiles;
+          }
           return fits(occ, W, H, x, shelfTop, m.w, mh, x1, y1);
         });
         if (!v) continue;
         if (shelfH === 0) shelfH = macroHeight(v); // 1er posé fixe la hauteur d'étagère
         placeBuilding(occ, W, buildings, placedByDef, defId, x, shelfTop, v);
         if (v.fieldTiles > 0 && v.fieldType) {
-          placeFields(occ, W, fields, buildings[buildings.length - 1].uid, x, shelfTop + v.h, v);
+          placeFields(occ, W, H, fields, buildings[buildings.length - 1].uid, x, shelfTop, v);
         }
         x += v.w;
         maxX = x - 1;
@@ -261,25 +267,62 @@ function placeBuilding(
   counts[defId] = (counts[defId] ?? 0) + 1;
 }
 
+// Champs en FORME LIBRE (mécanique réelle, confirmée in-game) : un blob CONNEXE de
+// tuiles, dont au moins une touche la ferme — aucune contrainte de rectangle.
+// Croissance BFS depuis le bas de l'emprise : contourne l'eau/les obstacles.
+// Restreinte SOUS le bâtiment (y ≥ bas) : la rangée de route de l'étagère (posée
+// APRÈS) et le slot du voisin de droite restent libres.
+//
+// UNE seule fonction pour le dry-run (prédicat d'acceptation) ET la pose : renvoie
+// les cellules dans l'ordre de croissance, bornées à fieldTiles. Visited en scratch
+// epoch-stampé (cette fonction tourne dans la boucle interne du recuit — des Set
+// par tentative mangeaient le budget temps en hash-ops et GC).
+let fieldSeen: Int32Array = new Int32Array(0);
+let fieldEpoch = 0;
+function growFieldBlob(
+  occ: Uint8Array,
+  W: number,
+  H: number,
+  bx: number,
+  by: number,
+  m: Macro,
+): number[] {
+  if (fieldSeen.length < W * H) fieldSeen = new Int32Array(W * H);
+  const epoch = ++fieldEpoch;
+  const yMin = by + m.h; // jamais au-dessus du bas de la ferme
+  const cells: number[] = [];
+  const frontier: number[] = [];
+  const push = (x: number, y: number) => {
+    if (x < 0 || y < yMin || x >= W || y >= H) return;
+    const c = y * W + x;
+    if (fieldSeen[c] === epoch || occ[c] !== 0) return; // bloqué / route / déjà vu
+    fieldSeen[c] = epoch;
+    frontier.push(c);
+  };
+  for (let i = 0; i < m.w; i++) push(bx + i, yMin); // graines : sous l'emprise
+  let head = 0;
+  while (head < frontier.length && cells.length < m.fieldTiles) {
+    const c = frontier[head++];
+    cells.push(c);
+    const x = c % W, y = (c / W) | 0;
+    push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
+  }
+  return cells;
+}
+
 function placeFields(
   occ: Uint8Array,
   W: number,
+  H: number,
   out: FieldTile[],
   ownerUid: string,
-  x: number,
-  yStart: number,
+  bx: number,
+  by: number,
   m: Macro,
 ): void {
-  let remaining = m.fieldTiles;
-  let y = yStart;
-  while (remaining > 0) {
-    for (let i = 0; i < m.w && remaining > 0; i++) {
-      const cx = x + i;
-      occ[y * W + cx] = BLOCKED;
-      out.push({ x: cx, y, ownerUid, fieldType: m.fieldType! });
-      remaining--;
-    }
-    y++;
+  for (const c of growFieldBlob(occ, W, H, bx, by, m)) {
+    occ[c] = BLOCKED;
+    out.push({ x: c % W, y: (c / W) | 0, ownerUid, fieldType: m.fieldType! });
   }
 }
 
