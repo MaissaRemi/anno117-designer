@@ -93,4 +93,17 @@ describe("anneal", () => {
       expect(overlap).toBe(false);
     }
   });
+
+  it("I1 — déterministe sous (seed, maxIters) : même entrée → sortie identique", () => {
+    const make = () => ({ ...req([{ defId: "house", qty: 20 }]), seed: 1234, maxIters: 400 });
+    const a = anneal(make());
+    const b = anneal(make());
+    expect(a.iters).toBe(400);
+    expect(a.scored.score).toBe(b.scored.score);
+    const pos = (o: typeof a) => o.out.buildings.map((x) => `${x.defId}@${x.x},${x.y},${x.rotation}`).join("|");
+    expect(pos(a)).toBe(pos(b)); // positions exactes reproductibles
+    // graine différente → résultat (très probablement) différent, mais toujours valide
+    const c = anneal({ ...make(), seed: 9999 });
+    expect(c.out.buildings.length).toBeGreaterThan(0);
+  });
 });

@@ -97,4 +97,19 @@ describe("planLattice (clusters co-localisés + gros gain-prunés)", () => {
     expect(streetMin(layout)).toBe(100);
     expect(r.houses).toBeGreaterThan(80);
   });
+
+  it("I5 — déterministe : même île + tier → sortie identique (snapshot de régression)", () => {
+    const grid = realIsland("roman_island_medium_01");
+    const fingerprint = (g: GridShape) => {
+      const r = planLattice(g, tierRich.guid, lookup, { coverageFloor: 0.8 });
+      const blds = r.buildings.map((b) => `${b.defId}@${b.x},${b.y},${b.rotation}`).sort().join("|");
+      return { houses: r.houses, fullyCovered: r.fullyCovered, blds, roads: r.roads.length };
+    };
+    const a = fingerprint(grid);
+    const b = fingerprint(realIsland("roman_island_medium_01"));
+    expect(a.houses).toBe(b.houses);
+    expect(a.fullyCovered).toBe(b.fullyCovered);
+    expect(a.roads).toBe(b.roads);
+    expect(a.blds).toBe(b.blds); // positions exactes reproductibles (greedy déterministe)
+  });
 });

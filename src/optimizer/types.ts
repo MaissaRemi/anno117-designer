@@ -21,8 +21,9 @@ export interface OptimizeRequest {
   existingFields: FieldTile[]; // champs des bâtiments verrouillés
   items: RequestItem[];
   weights: Weights;
-  timeMs: number; // budget de calcul
-  seed?: number;
+  timeMs: number; // budget de calcul (ignoré si maxIters est défini)
+  seed?: number; // graine du PRNG du recuit (défaut fixe → reproductible)
+  maxIters?: number; // si défini : nb d'itérations FIXE (au lieu du budget temps) → déterministe
 }
 
 export interface OptimizeResult {
