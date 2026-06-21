@@ -19,6 +19,25 @@ const farm = makeBuildingDef({
   field: { tiles: 4, fieldType: "ble" },
 });
 const catalog = [farm];
+
+describe("computeRadiusCoverage — vérité-terrain (§2-D : oracle indépendant des moteurs)", () => {
+  it("distance-rue bornée + cases servies = voisines des routes ATTEINTES (calcul manuel)", () => {
+    const svc = makeBuildingDef({ id: "svc", size: { w: 1, h: 1 }, radius: { kind: "service", range: 2 }, streetRange: 2 });
+    const lk = makeLookup([svc]);
+    const layout: Layout = {
+      ...emptyLayout(10, 10),
+      buildings: [{ uid: "s", defId: "svc", x: 5, y: 5, rotation: 0, locked: false }],
+      roads: [{ x: 5, y: 6 }, { x: 5, y: 7 }, { x: 5, y: 8 }],
+    };
+    const cov = computeRadiusCoverage(layout, lk).get("s")!;
+    // graine = (5,6) (route ortho-adjacente à l'emprise), dist 1 ; BFS jusqu'à streetRange 2
+    // → routes atteintes {(5,6) d1, (5,7) d2} ; (5,8) d3 hors portée. Cases servies =
+    // cases usables ortho-adjacentes à une route atteinte.
+    expect(new Set(cov)).toEqual(new Set(["4,6", "6,6", "5,5", "5,7", "4,7", "6,7", "5,6", "5,8"]));
+    expect(cov.has("5,9")).toBe(false); // au-delà : (5,8) n'est pas une route ATTEINTE
+    expect(cov.has("4,5")).toBe(false); // adjacent au service mais aucune route atteinte adjacente
+  });
+});
 const lookup = makeLookup(catalog);
 
 function base(): Layout {
