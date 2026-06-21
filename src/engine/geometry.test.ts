@@ -6,11 +6,14 @@ import {
   cellKey,
   footprintCells,
   footprintSize,
+  htToTile,
   inBounds,
   isBuildable,
   isUsable,
   isWater,
+  neighbors8,
   orthoNeighbors,
+  tileToHT,
 } from "./geometry";
 
 const def = makeBuildingDef({ id: "g", size: { w: 3, h: 12 } }); // asymétrique → détecte la transposition
@@ -78,5 +81,58 @@ describe("geometry — grille", () => {
       { x: 1, y: 2 },
       { x: 1, y: 0 },
     ]);
+  });
+});
+
+describe("geometry 45° — rotations diagonales", () => {
+  it("footprintSize accepte les 8 rotations ; diamant = bbox carrée", () => {
+    const d = makeBuildingDef({ id: "d", size: { w: 3, h: 12 } });
+    for (const rot of [45, 135, 225, 315] as const) {
+      const s = footprintSize(d, rot);
+      expect(s.w).toBe(s.h);
+      expect(s.w).toBeGreaterThan(0);
+    }
+  });
+
+  it("footprintSize diamant : côté = ceil(2(w+h)/√2)", () => {
+    const d = makeBuildingDef({ id: "d", size: { w: 3, h: 3 } });
+    // demi-largeurs 3,3 ; côté = ceil(2*6/√2) = ceil(8.49) = 9
+    expect(footprintSize(d, 45)).toEqual({ w: 9, h: 9 });
+    expect(footprintSize(d, 135)).toEqual({ w: 9, h: 9 });
+  });
+
+  it("footprintCells diamant 1×1 : croix de 5 cellules (calcul manuel)", () => {
+    const d = makeBuildingDef({ id: "u", size: { w: 1, h: 1 } });
+    // côté 3, centre (1.5,1.5), |lx|<=1 && |ly|<=1 → la croix centrale
+    const cells = footprintCells(d, 0, 0, 45).map((c) => `${c.x},${c.y}`).sort();
+    expect(cells).toEqual(["0,1", "1,0", "1,1", "1,2", "2,1"].sort());
+  });
+
+  it("footprintCells axis inchangé (régression)", () => {
+    const d = makeBuildingDef({ id: "r", size: { w: 2, h: 3 } });
+    expect(footprintCells(d, 5, 7, 0).length).toBe(6);
+    expect(footprintCells(d, 5, 7, 90).length).toBe(6);
+  });
+
+  it("footprintCells diamant : aire ~ préservée", () => {
+    for (const [w, h] of [[2, 2], [3, 3], [2, 4]] as const) {
+      const d = makeBuildingDef({ id: `s${w}${h}`, size: { w, h } });
+      const n = footprintCells(d, 0, 0, 45).length;
+      const area = 2 * w * 2 * h;
+      expect(n).toBeGreaterThanOrEqual(Math.floor(area * 0.5));
+      expect(n).toBeLessThanOrEqual(Math.ceil(area * 1.6));
+    }
+  });
+});
+
+describe("geometry 45° — 8-adjacence + conversions", () => {
+  it("neighbors8 = 4 ortho + 4 diagonaux", () => {
+    const n = neighbors8(5, 5).map((c) => `${c.x},${c.y}`).sort();
+    expect(n).toEqual(["4,4", "4,5", "4,6", "5,4", "5,6", "6,4", "6,5", "6,6"].sort());
+  });
+  it("tileToHT / htToTile", () => {
+    expect(tileToHT(3)).toBe(6);
+    expect(htToTile(6)).toBe(3);
+    expect(htToTile(7)).toBe(3);
   });
 });

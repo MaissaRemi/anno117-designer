@@ -1,6 +1,6 @@
 // Modèle de données central de l'éditeur Anno 117.
 
-export type Rotation = 0 | 90 | 180 | 270;
+export type Rotation = 0 | 45 | 90 | 135 | 180 | 225 | 270 | 315;
 
 export type RadiusKind = "service" | "boost";
 
