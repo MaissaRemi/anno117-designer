@@ -376,7 +376,10 @@ export function planLattice(
     return cov;
   };
 
-  // --- VÉRIFICATION + DENSIFICATION : tout type sous le seuil reçoit des copies ---
+  // ═══ PHASE densification : tout type sous le seuil reçoit des copies de secours.
+  // ORDRE PORTEUR (hazards) : densif → EAU → refresh final → maisons → élagage. L'eau
+  // AVANT les maisons (les conduites n'occupent pas les routes ; après, plus de passage).
+  // refresh FINAL obligatoire (stamps tardifs de densif/eau invalident les BFS). ═══
   const covByType = new Map<string, Uint8Array>();
   const refreshType = (tc: TypeCov) => { bfsType(tc); covByType.set(tc.def.id, coveredOrigins(tc)); };
   for (const tc of typeCov.values()) refreshType(tc);
@@ -431,10 +434,9 @@ export function planLattice(
     refreshType(worst);
   }
 
-  // --- EAU (avant les maisons !) : services posés = consommateurs connus ; les
-  // conduites ne partagent pas les cases route → si on posait les maisons d'abord,
-  // les poches seraient pleines et il ne resterait AUCUN passage. Routées ici, les
-  // maisons contournent les corridors (cases conduite occupées).
+  // ═══ PHASE eau (AVANT les maisons) : services posés = consommateurs connus ; les
+  // conduites ne partagent pas les cases route → maisons d'abord = poches pleines, aucun
+  // passage. Routées ici, les maisons contournent les corridors (cases conduite occupées). ═══
   let water: WaterPlanResult | undefined;
   if (opts.water) {
     const roadsNow: RoadTile[] = [];
@@ -465,50 +467,62 @@ export function planLattice(
   //  Passe 2 : maisons partielles (meilleures d'abord) tant que pleines/total ≥ floor.
   const types = [...typeCov.values()].filter((tc) => (placements.get(tc.def.id) ?? []).length > 0);
   const covArr = types.map((tc) => covByType.get(tc.def.id) ?? coveredOrigins(tc));
-  let houses = 0, fullyCovered = 0;
-  const placeAt = (x: number, y: number, full: boolean) => {
-    for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
-    buildings.push({ uid: uid("lat"), defId: residenceId, x, y, rotation: 0, locked: false });
-    markAdj(x, y, rw, rh);
-    houses++;
-    if (full) fullyCovered++;
-  };
-  const partials: { x: number; y: number; cov: number }[] = [];
-  for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
-    if (!fitsHouse(x, y) || !touchesRoad(x, y)) continue;
-    const o = y * W + x;
-    let cov = 0;
-    for (let t = 0; t < types.length; t++) if (covArr[t][o]) cov++;
-    if (cov === types.length) placeAt(x, y, true);
-    else if (floor < 1) partials.push({ x, y, cov });
-  }
-  // partielles les MIEUX couvertes d'abord ; gardées tant que la fraction pleine ≥ floor
-  partials.sort((a, b) => b.cov - a.cov);
-  for (const p of partials) {
-    if (fullyCovered < floor * (houses + 1) - 1e-9) break; // ajouter diluerait sous le seuil
-    if (fitsHouse(p.x, p.y) && touchesRoad(p.x, p.y)) placeAt(p.x, p.y, false);
-  }
 
-  // --- ÉLAGAGE routes : adjacentes aux bâtiments + chemins maison→service ---
-  const keep = new Uint8Array(N);
-  for (let i = 0; i < N; i++) if (roadAt[i] && bldAdj[i]) keep[i] = 1;
-  const housesPlaced = buildings.filter((b) => b.defId === tier.residenceId);
-  const chainKept = new Map<string, Uint8Array>();
-  for (const t of types) chainKept.set(t.def.id, new Uint8Array(N));
-  for (const hb of housesPlaced) {
-    const anchors = orthoRoadCells(hb.x, hb.y, rw, rh);
-    for (const t of types) {
-      const ck = chainKept.get(t.def.id)!;
-      for (const a of anchors) {
-        if (!t.reach[a]) continue;
-        let cur = a;
-        while (cur >= 0 && !ck[cur]) { ck[cur] = 1; keep[cur] = 1; cur = t.parent[cur]; }
-        break;
+  // ═══ PHASE maisons : floor = fraction PLEINEMENT couverte (mécanique d'upgrade du jeu,
+  // GAME_MECHANICS §3 — pas « chaque service ≥ floor »). Passe 1 : maisons couvertes par
+  // TOUS les types. Passe 2 : partielles les mieux couvertes tant que pleines/total ≥ floor.
+  const placeHouses = (): { houses: number; fullyCovered: number } => {
+    let houses = 0, fullyCovered = 0;
+    const placeAt = (x: number, y: number, full: boolean) => {
+      for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
+      buildings.push({ uid: uid("lat"), defId: residenceId, x, y, rotation: 0, locked: false });
+      markAdj(x, y, rw, rh);
+      houses++;
+      if (full) fullyCovered++;
+    };
+    const partials: { x: number; y: number; cov: number }[] = [];
+    for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
+      if (!fitsHouse(x, y) || !touchesRoad(x, y)) continue;
+      const o = y * W + x;
+      let cov = 0;
+      for (let t = 0; t < types.length; t++) if (covArr[t][o]) cov++;
+      if (cov === types.length) placeAt(x, y, true);
+      else if (floor < 1) partials.push({ x, y, cov });
+    }
+    // partielles les MIEUX couvertes d'abord ; gardées tant que la fraction pleine ≥ floor
+    partials.sort((a, b) => b.cov - a.cov);
+    for (const p of partials) {
+      if (fullyCovered < floor * (houses + 1) - 1e-9) break; // ajouter diluerait sous le seuil
+      if (fitsHouse(p.x, p.y) && touchesRoad(p.x, p.y)) placeAt(p.x, p.y, false);
+    }
+    return { houses, fullyCovered };
+  };
+
+  // ═══ PHASE élagage routes : adjacentes aux bâtiments + chemins maison→service ═══
+  const pruneRoads = (): RoadTile[] => {
+    const keep = new Uint8Array(N);
+    for (let i = 0; i < N; i++) if (roadAt[i] && bldAdj[i]) keep[i] = 1;
+    const housesPlaced = buildings.filter((b) => b.defId === tier.residenceId);
+    const chainKept = new Map<string, Uint8Array>();
+    for (const t of types) chainKept.set(t.def.id, new Uint8Array(N));
+    for (const hb of housesPlaced) {
+      const anchors = orthoRoadCells(hb.x, hb.y, rw, rh);
+      for (const t of types) {
+        const ck = chainKept.get(t.def.id)!;
+        for (const a of anchors) {
+          if (!t.reach[a]) continue;
+          let cur = a;
+          while (cur >= 0 && !ck[cur]) { ck[cur] = 1; keep[cur] = 1; cur = t.parent[cur]; }
+          break;
+        }
       }
     }
-  }
-  const roads: RoadTile[] = [];
-  for (let i = 0; i < N; i++) if (keep[i]) roads.push({ x: i % W, y: (i / W) | 0 });
+    const roads: RoadTile[] = [];
+    for (let i = 0; i < N; i++) if (keep[i]) roads.push({ x: i % W, y: (i / W) | 0 });
+    return roads;
+  };
 
+  const { houses, fullyCovered } = placeHouses();
+  const roads = pruneRoads();
   return { buildings, roads, fields: [], houses, fullyCovered, servicesPlaced, water };
 }
