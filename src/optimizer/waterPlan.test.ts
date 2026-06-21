@@ -101,6 +101,33 @@ describe("planWater", () => {
     expect(ok.consumers[0].connected).toBe(true);
   });
 
+  it("B1 — pente PAR SOURCE : une source basse ne tire pas l'eau au-dessus de sa tête, même si une source haute existe ailleurs", () => {
+    const W = 200;
+    // 2 slots : bas (20,100) en plaine, haut (180,20) sur relief
+    const grid = gridWithMountain(W, W, [
+      { type: "mountain", x: 20, y: 100 },
+      { type: "mountain", x: 180, y: 20 },
+    ]);
+    const base = new Int8Array(W * W).fill(5); // plaine q=5 (tête source basse)
+    for (let y = 0; y < 70; y++) for (let x = 155; x < W; x++) base[y * W + x] = 60; // relief q=60 (source haute + Bains A)
+    const bump = new Int8Array(base);
+    for (let y = 0; y < W; y++) for (let x = 30; x <= 34; x++) bump[y * W + x] = 20; // crête q=20 entre source basse et Bains B
+    // A près du relief (→ source haute), B près de la plaine derrière la crête (→ source basse)
+    const A = pb(BAINS, 178, 35), B = pb(BAINS, 40, 100);
+
+    const r = planWater(grid, [A, B], [], lookup, bump);
+    expect(r.sources.length).toBe(2); // A et B sont hors portée l'un de l'autre → 2 sources
+    const byUid = Object.fromEntries(r.consumers.map((c) => [c.uid, c.connected]));
+    expect(byUid[A.uid]).toBe(true); // A : tout en q=60, raccordé
+    expect(byUid[B.uid]).toBe(false); // B : la source basse (q=5) ne franchit pas la crête q=20
+    expect(r.gaps.some((g) => /non raccord/i.test(g))).toBe(true);
+
+    // contrôle : SANS la crête, B se raccorde (la pente est bien la cause, pas la distance)
+    const r2 = planWater(grid, [A, B], [], lookup, base);
+    const byUid2 = Object.fromEntries(r2.consumers.map((c) => [c.uid, c.connected]));
+    expect(byUid2[B.uid]).toBe(true);
+  });
+
   it("Colisée (50u) + Bains + Forum = 90u sur une source ; citerne en plus force une 2e source", () => {
     const grid = gridWithMountain(160, 160, [
       { type: "mountain", x: 20, y: 20 },

@@ -164,8 +164,11 @@ export function planWater(
   }
   // case franchissable par une conduite (mer interdite, bâtiments interdits)
   const pass = (c: number): boolean => !bldOcc[c] && (grid.usable[c] || mzone[c] === 1);
-  // « l'eau ne monte pas » : une conduite ne traverse pas une case plus haute que la
-  // source la plus haute + marge (approximation de la pente, cf. CLIMB_MARGIN_Q)
+  // « l'eau ne monte pas » : une conduite reliée à une source ne grimpe jamais au-dessus
+  // de la TÊTE DE CETTE source (+marge). `maxSrcQ` = max global, utilisé comme borne
+  // LÂCHE pendant l'expansion BFS ; la contrainte stricte PAR SOURCE (srcMaxQ) est
+  // vérifiée à l'arrivée sur le réseau (sinon une source basse hériterait du plafond
+  // d'une source haute et l'eau monterait — cf. CLIMB_MARGIN_Q).
   let maxSrcQ = -128;
   const heightOK = (c: number): boolean => !heights || heights[c] <= maxSrcQ + CLIMB_MARGIN_Q;
 
@@ -175,6 +178,7 @@ export function planWater(
   const aqueducts: AqueductTile[] = [];
   const sources: PlacedBuilding[] = [];
   const srcUsed: number[] = []; // budget consommé par source
+  const srcMaxQ: number[] = []; // hauteur de tête par source (plafond de montée propre)
 
   const perimeter = (fp: FP): number[] => {
     const out: number[] = [];
@@ -221,12 +225,16 @@ export function planWater(
           }
           sources.push(pb);
           srcUsed.push(0);
+          // hauteur de tête de CETTE source (max de son emprise) : son plafond propre
+          let myQ = -128;
           if (heights) {
             for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
               const q = heights[(y + j) * W + (x + i)];
-              if (q > maxSrcQ) maxSrcQ = q;
+              if (q > myQ) myQ = q;
             }
+            if (myQ > maxSrcQ) maxSrcQ = myQ;
           }
+          srcMaxQ[srcIdx] = myQ;
           return pb;
         }
       }
@@ -305,6 +313,17 @@ export function planWater(
           const sIdx = netSrc[p];
           if (srcUsed[sIdx] + c.amount > WATER_CAPACITY) continue; // source pleine — autre chemin ?
           if (netDist[p] + depth > MAX_RUN) continue; // trop loin de la source
+          // pente PAR SOURCE : le nouveau tronçon ne grimpe pas au-dessus de la tête de
+          // CETTE source (+marge). Une source basse ne tire pas l'eau vers une crête,
+          // même si une autre source plus haute existe ailleurs sur l'île.
+          if (heights) {
+            const cap = srcMaxQ[sIdx] + CLIMB_MARGIN_Q;
+            let climbs = false;
+            for (let cur = prevArr[s]; cur >= 0; cur = prevArr[cur]) {
+              if (heights[(cur / 4) | 0] > cap) { climbs = true; break; }
+            }
+            if (climbs) continue; // ce chemin monte trop pour cette source
+          }
           // tracer le chemin (nouvelles conduites), dist réseau croissante
           let cur = prevArr[s], d = netDist[p];
           while (cur >= 0) {
