@@ -2,6 +2,7 @@ import { uid } from "../model/factories";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import { economy } from "../economy/economy";
 import type { DefLookup } from "../engine/rules";
+import { makeStreetGrid } from "./streetGrid";
 
 const SMALL_RANGE_MAX = 40; // services portée <= 40 = locaux
 
@@ -87,12 +88,10 @@ export function planPacked(
   const STEPH = 2 * rh + 1;
   const minSmallRange = Math.min(...small.map(rangeOf), 28);
   const STEPV = Math.max(8, Math.min(24, minSmallRange - STEPH - 2));
-  const layRoad = (x: number, y: number) => {
-    if (x < 0 || y < 0 || x >= W || y >= H) return;
-    const i = y * W + x;
-    if (occ[i] || roadAt[i]) return;
-    roadAt[i] = 1;
-  };
+  // primitives de grille/rue partagées (cf. streetGrid.ts). packPlan : pas de hooks
+  // (ni anti-emmurement bldAdj, ni prises d'eau — propres à planLattice).
+  const sg = makeStreetGrid({ W, H, occ, roadAt, bldAdj, usable: grid.usable, rw, rh, x0, y0, x1, y1, STEPH });
+  const { fitsBld, fitsHouse, orthoRoadCells, touchesRoad, markAdj, layRoad, layRing, connectRing } = sg;
   for (let y = y0; y <= y1; y += STEPH) for (let x = x0; x <= x1; x++) layRoad(x, y);
   for (let x = x0; x <= x1; x += STEPV) for (let y = y0; y <= y1; y++) layRoad(x, y);
 
@@ -100,46 +99,6 @@ export function planPacked(
   const buildings: PlacedBuilding[] = [];
   const servicesPlaced: Record<string, number> = {};
   const placements = new Map<string, { x: number; y: number; w: number; h: number }[]>();
-
-  const fitsBld = (w: number, h: number, x: number, y: number): boolean => {
-    if (x < 0 || y < 0 || x + w > W || y + h > H) return false;
-    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-      const c = (y + j) * W + (x + i);
-      if (!grid.usable[c] || occ[c]) return false; // routes OK (écrasées)
-    }
-    return true;
-  };
-  const fitsHouse = (x: number, y: number): boolean => {
-    if (x < x0 || y < y0 || x + rw - 1 > x1 || y + rh - 1 > y1) return false;
-    for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) {
-      const c = (y + j) * W + (x + i);
-      if (!grid.usable[c] || occ[c] || roadAt[c]) return false;
-    }
-    return true;
-  };
-  const orthoRoadCells = (x: number, y: number, w: number, h: number): number[] => {
-    const out: number[] = [];
-    for (let i = 0; i < w; i++) {
-      if (y - 1 >= 0 && roadAt[(y - 1) * W + (x + i)]) out.push((y - 1) * W + (x + i));
-      if (y + h < H && roadAt[(y + h) * W + (x + i)]) out.push((y + h) * W + (x + i));
-    }
-    for (let j = 0; j < h; j++) {
-      if (x - 1 >= 0 && roadAt[(y + j) * W + (x - 1)]) out.push((y + j) * W + (x - 1));
-      if (x + w < W && roadAt[(y + j) * W + (x + w)]) out.push((y + j) * W + (x + w));
-    }
-    return out;
-  };
-  const touchesRoad = (x: number, y: number): boolean => orthoRoadCells(x, y, rw, rh).length > 0;
-  const markAdj = (x: number, y: number, w: number, h: number) => {
-    for (let i = 0; i < w; i++) {
-      if (y - 1 >= 0) bldAdj[(y - 1) * W + (x + i)] = 1;
-      if (y + h < H) bldAdj[(y + h) * W + (x + i)] = 1;
-    }
-    for (let j = 0; j < h; j++) {
-      if (x - 1 >= 0) bldAdj[(y + j) * W + (x - 1)] = 1;
-      if (x + w < W) bldAdj[(y + j) * W + (x + w)] = 1;
-    }
-  };
 
   // --- maisons : structure + déplacement ---
   interface House { x: number; y: number; alive: boolean; }
@@ -166,64 +125,6 @@ export function planPacked(
     }
   };
 
-  // anneau de route périmétrique : reconnecte les lignes du peigne coupées + accès route
-  const layRing = (x: number, y: number, w: number, h: number): number[] => {
-    const ring: number[] = [];
-    const tryLay = (px: number, py: number) => {
-      if (px < 0 || py < 0 || px >= W || py >= H) return;
-      const i = py * W + px;
-      if (roadAt[i]) { ring.push(i); return; }
-      if (occ[i] || !grid.usable[i]) return;
-      roadAt[i] = 1; ring.push(i);
-    };
-    for (let i = -1; i <= w; i++) { tryLay(x + i, y - 1); tryLay(x + i, y + h); }
-    for (let j = 0; j < h; j++) { tryLay(x - 1, y + j); tryLay(x + w, y + j); }
-    return ring;
-  };
-  const connectRing = (ring: number[]) => {
-    if (!ring.length) return;
-    const ringSet = new Set(ring);
-    const seen = new Set<number>(ring);
-    let fr = [...ring];
-    while (fr.length) {
-      const next: number[] = [];
-      for (const c of fr) {
-        const x = c % W, y = (c / W) | 0;
-        for (const nb of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
-          if (nb < 0 || !roadAt[nb] || seen.has(nb)) continue;
-          if (!ringSet.has(nb)) return; // connecté au réseau
-          seen.add(nb); next.push(nb);
-        }
-      }
-      fr = next;
-    }
-    const maxDepth = 3 * STEPH;
-    const prev = new Map<number, number>();
-    let frontier: number[] = [];
-    for (const c of ring) { prev.set(c, -1); frontier.push(c); }
-    for (let depth = 0; depth < maxDepth && frontier.length; depth++) {
-      const next: number[] = [];
-      for (const c of frontier) {
-        const cx = c % W, cy = (c / W) | 0;
-        for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
-          const px = cx + dx, py = cy + dy;
-          if (px < 0 || py < 0 || px >= W || py >= H) continue;
-          const n = py * W + px;
-          if (prev.has(n)) continue;
-          if (roadAt[n] && !ringSet.has(n)) {
-            let cur = c;
-            while (cur >= 0 && !roadAt[cur]) { roadAt[cur] = 1; cur = prev.get(cur)!; }
-            return;
-          }
-          if (roadAt[n] || !grid.usable[n] || occ[n]) continue;
-          prev.set(n, c);
-          next.push(n);
-        }
-      }
-      frontier = next;
-    }
-  };
-
   // --- état couverture STREET par type ---
   interface TypeCov {
     def: BuildingDef;
@@ -238,34 +139,8 @@ export function planPacked(
     def: d, range: rangeOf(d), reach: new Uint8Array(N), reachList: [], parent: new Int32Array(N), covered: new Uint8Array(0),
   });
 
-  // BFS multi-source le long des routes depuis toutes les copies d'un type.
-  const bfsType = (tc: TypeCov) => {
-    tc.reach = new Uint8Array(N);
-    tc.reachList = [];
-    tc.parent = new Int32Array(N).fill(-2);
-    const dist = new Int32Array(N).fill(-1);
-    let frontier: number[] = [];
-    for (const p of placements.get(tc.def.id) ?? []) {
-      for (const c of orthoRoadCells(p.x, p.y, p.w, p.h)) {
-        if (dist[c] >= 0) continue;
-        dist[c] = 1; tc.parent[c] = -1; tc.reach[c] = 1;
-        tc.reachList.push(c); frontier.push(c);
-      }
-    }
-    let d = 1;
-    while (frontier.length && d < tc.range) {
-      const next: number[] = [];
-      for (const c of frontier) {
-        const x = c % W, y = (c / W) | 0;
-        for (const nb of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
-          if (nb < 0 || !roadAt[nb] || dist[nb] >= 0) continue;
-          dist[nb] = d + 1; tc.parent[nb] = c; tc.reach[nb] = 1;
-          tc.reachList.push(nb); next.push(nb);
-        }
-      }
-      frontier = next; d++;
-    }
-  };
+  // BFS distance-rue partagé (cf. streetGrid.ts) — wrapper conservant la signature locale.
+  const bfsType = (tc: TypeCov) => sg.bfsType(tc, placements);
   // maison couverte ssi une case d'emprise est ortho-adjacente à une route atteinte
   // (= cases servies de streetCoverage). On scanne les routes atteintes -> voisins maison.
   const markCovered = (tc: TypeCov) => {
@@ -313,18 +188,7 @@ export function planPacked(
 
   // ===================== PHASE B : MIN-COVER SERVICES =====================
   // tables de sommes (proxy euclidien pour CHOISIR les positions)
-  const sat = new Int32Array((W + 1) * (H + 1));
-  const buildSAT = (mask: Int32Array | Uint8Array) => {
-    for (let y = 0; y < H; y++) {
-      const r0 = y * (W + 1), r1 = (y + 1) * (W + 1);
-      for (let x = 0; x < W; x++) sat[r1 + x + 1] = mask[y * W + x] + sat[r0 + x + 1] + sat[r1 + x] - sat[r0 + x];
-    }
-  };
-  const rectSum = (xa: number, ya: number, xb: number, yb: number): number => {
-    xa = Math.max(0, xa); ya = Math.max(0, ya); xb = Math.min(W - 1, xb); yb = Math.min(H - 1, yb);
-    if (xa > xb || ya > yb) return 0;
-    return sat[(yb + 1) * (W + 1) + xb + 1] - sat[ya * (W + 1) + xb + 1] - sat[(yb + 1) * (W + 1) + xa] + sat[ya * (W + 1) + xa];
-  };
+  const { buildSAT, rectSum } = sg.makeSAT();
   const proxyQ = (range: number): number => Math.max(2, Math.floor((range * 0.7) / Math.SQRT2));
 
   // masque vivant des origines maison (1 = maison vivante à cette origine)
