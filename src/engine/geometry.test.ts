@@ -123,6 +123,26 @@ describe("geometry 45° — rotations diagonales", () => {
       expect(n).toBeLessThanOrEqual(Math.ceil(area * 1.6));
     }
   });
+
+  const fpSet = (def: ReturnType<typeof makeBuildingDef>, rot: 0 | 45 | 90 | 135 | 180 | 225 | 270 | 315) =>
+    new Set(footprintCells(def, 0, 0, rot).map((c) => `${c.x},${c.y}`));
+
+  it("symétrie 180° du rectangle : 45 ≡ 225 et 135 ≡ 315", () => {
+    const rect = makeBuildingDef({ id: "rect", size: { w: 2, h: 4 } });
+    expect(fpSet(rect, 45)).toEqual(fpSet(rect, 225));
+    expect(fpSet(rect, 135)).toEqual(fpSet(rect, 315));
+  });
+
+  it("symétrie 90° du carré : 45 ≡ 135 (≡ 225 ≡ 315)", () => {
+    const sq = makeBuildingDef({ id: "sq", size: { w: 3, h: 3 } });
+    expect(fpSet(sq, 45)).toEqual(fpSet(sq, 135));
+    expect(fpSet(sq, 45)).toEqual(fpSet(sq, 315));
+  });
+
+  it("rectangle non carré : 45 ≠ 135 (orientations distinctes)", () => {
+    const rect = makeBuildingDef({ id: "r2", size: { w: 2, h: 5 } });
+    expect(fpSet(rect, 45)).not.toEqual(fpSet(rect, 135));
+  });
 });
 
 describe("geometry 45° — 8-adjacence + conversions", () => {
