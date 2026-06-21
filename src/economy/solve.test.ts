@@ -121,6 +121,16 @@ describe("pickProducer (préférence région)", () => {
     expect(tested).toBe(true);
   });
 
+  it("Q1 — consumptionUnit 'resident' multiplie la demande de biens par la capacité/maison", () => {
+    const cap = 10;
+    const base = { includeProduction: false, includeServices: true, capacities: { [liberti.guid]: cap } };
+    const house = solve([{ tier: liberti.guid, pop: 1000 }], { ...base, consumptionUnit: "house" });
+    const resident = solve([{ tier: liberti.guid, pop: 1000 }], { ...base, consumptionUnit: "resident" });
+    const goods = Object.keys(house.goodsPerMin).filter((g) => house.goodsPerMin[g] > 0);
+    expect(goods.length).toBeGreaterThan(0);
+    for (const g of goods) expect(resident.goodsPerMin[g]).toBeCloseTo(house.goodsPerMin[g] * cap, 3);
+  });
+
   it("I3 — matières premières sans producteur → imports + importCost cohérent", () => {
     let foundPaid = false;
     for (const g of Object.keys(economy.producers).slice(0, 60)) {

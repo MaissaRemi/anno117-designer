@@ -23,6 +23,10 @@ export interface SolveOptions {
   /** Région de l'ÎLE (Roman/Celtic) : préférence de producteur pour les biens
    *  exogènes (objectif de production) — évite une chaîne celtique sur île romaine. */
   region?: string;
+  /** Q1 (à confirmer EN JEU, GAME_MECHANICS test #4) : la conso est-elle par MAISON
+   *  (défaut, hypothèse [WEB]) ou par HABITANT ? Si "resident", la demande de biens
+   *  est multipliée par la capacité/maison. Prêt à flipper une fois validé en jeu. */
+  consumptionUnit?: "house" | "resident";
 }
 
 export interface TierProfile {
@@ -197,10 +201,13 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
       const p = popMap[tier.guid];
       if (!p) continue;
       const pr = prof(tier.guid);
-      const houses = p / pr.cap; // NeedConsumptionRate est par MAISON
+      const houses = p / pr.cap; // NeedConsumptionRate est par MAISON (hypothèse défaut)
+      // Q1 : si la conso s'avère par HABITANT en jeu, on consomme `p` (population) au
+      // lieu de `houses` — un seul point de bascule, le reste de la cascade suit.
+      const consumers = opts.consumptionUnit === "resident" ? p : houses;
       for (const g of pr.goods) {
         if (!g.good) continue;
-        demand[g.good] = (demand[g.good] || 0) + houses * g.rate;
+        demand[g.good] = (demand[g.good] || 0) + consumers * g.rate;
         noteRegion(g.good, tier.region);
       }
     }
@@ -246,6 +253,12 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
 
     if (!includeWorkforce) break; // pas de cascade : pop = cibles seulement
 
+    // B6 (À CONFIRMER EN JEU — GAME_MECHANICS) : ici la cascade FAIT MONTER la pop pour
+    // satisfaire 100% de la main-d'œuvre. Si le jeu DÉGRADE la prod quand la M.O. manque
+    // (au lieu d'invoquer des résidents), basculer ici en mode "derate" : garder pop =
+    // cibles, calculer ratio = min(1, fournie/demandée) par tier, et scaler counts/
+    // goodsPerMin/marketValue par ce ratio (seuil 10% = WorkforceThresholdInPercent).
+    // Les 3 branches sont pré-spécifiées dans .claude/ROADMAP.md (Phase 6).
     // main-d'œuvre consommée par tier -> population requise
     const wfConsumed: Record<string, number> = {};
     for (const [defId, count] of Object.entries(counts)) {
