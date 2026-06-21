@@ -58,7 +58,7 @@ export function planIslandProduction(
   lookup: DefLookup,
   good: string,
   ratePerMin: number,
-  opts: { timeMs?: number; islandFertilities?: string[] } = {},
+  opts: { timeMs?: number; islandFertilities?: string[]; seed?: number; maxIters?: number } = {},
   onProgress?: (step: number, total: number) => void,
 ): ProdPlanResult {
   const gaps: string[] = [];
@@ -118,6 +118,10 @@ export function planIslandProduction(
     items: annealItems,
     weights: DEFAULT_WEIGHTS,
     timeMs: opts.timeMs ?? 3000,
+    // seed/maxIters optionnels → recuit reproductible (tests déterministes ; l'UI laisse
+    // le budget temps par défaut). maxIters défini ⇒ timeMs ignoré (cf. anneal).
+    seed: opts.seed,
+    maxIters: opts.maxIters,
   });
   const buildings = [...out.buildings];
   const roads: RoadTile[] = [...out.roads];

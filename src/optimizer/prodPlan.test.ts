@@ -28,12 +28,14 @@ const anyGood = Object.keys(economy.producers)[0];
 describe("planIslandProduction (archetype île d'export)", () => {
   it("chaîne + maisons ouvrières + entrepôts couvrant les prods (île réelle)", () => {
     const grid = realIsland("roman_island_medium_01");
-    const r = planIslandProduction(catalog, grid, lookup, anyGood, 5, { timeMs: 800 });
+    // maxIters (au lieu de timeMs) → recuit DÉTERMINISTE : ce test ne dépend plus de la
+    // vitesse machine (le seuil 0.85 ne masque plus de variance temps/RNG).
+    const r = planIslandProduction(catalog, grid, lookup, anyGood, 5, { maxIters: 1500 });
     expect(r.prodsTotal).toBeGreaterThan(0);
     expect(r.warehousesPlaced).toBeGreaterThanOrEqual(1);
-    // entrepôts écrasent les champs au besoin → grande majorité des prods à portée
-    // (les prods à aire libre sont distantes/isolées → un peu plus dures à couvrir ;
-    // recuit borné par temps → léger jeu sur le seuil)
+    // reproductible : même entrée → même couverture (graine fixe par défaut)
+    const r2 = planIslandProduction(catalog, realIsland("roman_island_medium_01"), lookup, anyGood, 5, { maxIters: 1500 });
+    expect(r2.prodsCovered).toBe(r.prodsCovered);
     expect(r.prodsCovered / r.prodsTotal).toBeGreaterThanOrEqual(0.85);
     // main-d'œuvre locale : des maisons ouvrières sont posées si la chaîne en demande
     if (Object.values(r.solution.populationByTier).some((p) => p > 0)) {

@@ -86,6 +86,23 @@ describe("planPacked (houses-first + min-cover)", () => {
     }
   });
 
+  it("déterministe : même grille + tier → sortie identique (gate du refacto streetGrid)", () => {
+    const fp = () => {
+      const r = planPacked(makeGrid(100, 100), tier.guid, lookup);
+      return {
+        houses: r.houses,
+        fullyCovered: r.fullyCovered,
+        roads: r.roads.length,
+        blds: r.buildings.map((b) => `${b.defId}@${b.x},${b.y},${b.rotation}`).sort().join("|"),
+      };
+    };
+    const a = fp(), b = fp();
+    expect(a.houses).toBe(b.houses);
+    expect(a.fullyCovered).toBe(b.fullyCovered);
+    expect(a.roads).toBe(b.roads);
+    expect(a.blds).toBe(b.blds); // positions exactes reproductibles
+  });
+
   it("île irrégulière (disque) : rien sur l'eau", () => {
     const W = 128, cx = 64, cy = 64, R = 55;
     const grid = makeGrid(W, W, false);

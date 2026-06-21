@@ -15,20 +15,23 @@ const depot = makeBuildingDef({ id: "depot", name: "Comptoir", size: { w: 3, h: 
 const cat = [house, farm, depot];
 const lookup = makeLookup(cat);
 
-function solveLayout(items: RequestItem[], w: number, h: number, ms = 1500, locked: Layout["buildings"] = []) {
+function solveLayout(
+  items: RequestItem[], w: number, h: number, ms = 1500,
+  locked: Layout["buildings"] = [], opts: { seed?: number; maxIters?: number } = {},
+) {
   const grid = makeGrid(w, h);
   const req: OptimizeRequest = {
     catalog: cat, grid, lockedBuildings: locked, existingRoads: [], existingFields: [],
-    items, weights: { ...DEFAULT_WEIGHTS }, timeMs: ms,
+    items, weights: { ...DEFAULT_WEIGHTS }, timeMs: ms, seed: opts.seed, maxIters: opts.maxIters,
   };
-  const { out } = anneal(req);
+  const { out, scored } = anneal(req);
   const layout: Layout = {
     grid,
     buildings: [...locked, ...out.buildings],
     roads: out.roads,
     fields: out.fields,
   };
-  return { out, layout, grid, usable: grid.usable.filter(Boolean).length };
+  return { out, scored, layout, grid, usable: grid.usable.filter(Boolean).length };
 }
 
 describe("qualité optimiseur — la sortie remplit son rôle", () => {
@@ -58,9 +61,10 @@ describe("qualité optimiseur — la sortie remplit son rôle", () => {
   it("atteint l'optimum de topologie (peigne) pour des maisons uniformes", () => {
     // grille 30×30, maisons 3×3 needsRoad. Peigne : rangée route toutes les 4 lignes,
     // ~9 maisons/rangée (épine prend 1 colonne) × ~7 rangées ≈ 63.
-    const { out } = solveLayout([{ defId: "house", qty: 200 }], 30, 30, 800);
+    const { out } = solveLayout([{ defId: "house", qty: 200 }], 30, 30, 0, [], { maxIters: 1200 });
     const W = 30, period = 4, perRow = Math.floor((W - 1) / 3), rows = Math.floor(W / period);
     const comb = perRow * rows; // borne théorique du peigne mono-orientation
+    // DÉTERMINISTE (seed+maxIters) : plus de tolérance liée au temps machine
     expect(out.buildings.length).toBeGreaterThanOrEqual(Math.floor(comb * 0.9));
   });
 
@@ -76,11 +80,13 @@ describe("qualité optimiseur — la sortie remplit son rôle", () => {
     expect(out.buildings.length).toBe(12); // espace large → 100 % placés
   });
 
-  it("le recuit conserve le meilleur : plus de budget ne dégrade pas le score", () => {
+  it("reproductible : même (seed, maxIters) → sortie identique (déterminisme I1)", () => {
     const items = [{ defId: "house", qty: 60 }, { defId: "farm", qty: 20 }];
-    const short = solveLayout(items, 28, 28, 300);
-    const long = solveLayout(items, 28, 28, 1200);
-    // tolérance au hasard du recuit : le long ne doit pas être nettement pire
-    expect(long.out.buildings.length).toBeGreaterThanOrEqual(short.out.buildings.length - 2);
+    const a = solveLayout(items, 28, 28, 0, [], { seed: 7, maxIters: 600 });
+    const b = solveLayout(items, 28, 28, 0, [], { seed: 7, maxIters: 600 });
+    expect(a.scored.score).toBe(b.scored.score);
+    expect(a.out.buildings.length).toBe(b.out.buildings.length);
+    const pos = (o: typeof a) => o.out.buildings.map((x) => `${x.x},${x.y}`).sort().join("|");
+    expect(pos(a)).toBe(pos(b)); // positions exactes reproductibles
   });
 });

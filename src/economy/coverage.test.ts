@@ -62,6 +62,24 @@ describe("analyzeCoverage", () => {
     expect(rep.housesTotal).toBe(2);
   });
 
+  it("fork euclidien vs distance-rue : sans route adjacente, le mode rue ne couvre pas", () => {
+    // service avec une VRAIE portée-rue (sinon le fork n'existe pas)
+    const streetSvc = tier.services.find((s) => s.building && (lookup(s.building)!.streetRange ?? 0) > 0)?.building;
+    if (!streetSvc) return; // tier sans service street-range → fork non applicable
+    const grid = makeGrid(80, 80);
+    // résidence collée au service (euclidien proche) mais SEULE route loin (non adjacente)
+    const layout: Layout = {
+      grid,
+      buildings: [place(tier.residenceId!, 0, 0), place(streetSvc, 0, 4)],
+      roads: [{ x: 70, y: 70 }], // roads.size>0 → mode rue, mais aucune route près du service
+      fields: [],
+    };
+    const street = analyzeCoverage(layout, lookup).services.find((s) => s.serviceId === streetSvc)!;
+    const eucl = analyzeCoverage(layout, lookup, { euclidean: true }).services.find((s) => s.serviceId === streetSvc)!;
+    expect(street.pct).toBe(0); // distance-rue : pas de route atteinte adjacente → non couvert
+    expect(eucl.pct).toBe(100); // euclidien forcé : dans le rayon → couvert
+  });
+
   it("B4 — requiredServices scope le statut pleinement-couverte au sous-ensemble retenu", () => {
     const grid = makeGrid(80, 80);
     // résidence + UN seul service (marché) collé = couvert ; les autres services du
