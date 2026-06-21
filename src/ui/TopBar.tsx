@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useStore } from "../state/store";
 import { exportJson, importJson } from "../persist/json";
 import { exportPng } from "../persist/png";
+import { findOrphanRefs } from "../model/serialize";
 import { IslandPicker } from "./IslandPicker";
 import { RoadAudit } from "./RoadAudit";
 import { CoveragePanel } from "./CoveragePanel";
@@ -25,6 +26,17 @@ export function TopBar() {
   const onImport = async () => {
     try {
       const file = await importJson();
+      const issues = findOrphanRefs(file.catalog, file.layout);
+      if (issues.orphanDefs.length || issues.orphanFieldOwners) {
+        const preview = issues.orphanDefs.slice(0, 5).join(", ") + (issues.orphanDefs.length > 5 ? "…" : "");
+        const ok = confirm(
+          `⚠ Références manquantes dans la disposition importée :\n` +
+            `• ${issues.orphanDefs.length} type(s) de bâtiment absent(s) du catalogue${preview ? ` (${preview})` : ""}\n` +
+            (issues.orphanFieldOwners ? `• ${issues.orphanFieldOwners} champ(s) sans bâtiment propriétaire\n` : "") +
+            `Ces éléments seront invisibles. Charger quand même ?`,
+        );
+        if (!ok) return;
+      }
       loadAll(file.catalog, file.layout);
     } catch (e) {
       alert((e as Error).message);

@@ -15,6 +15,30 @@ export function emptyLayout(w = 40, h = 40): Layout {
   return { grid: makeGrid(w, h), buildings: [], fields: [], roads: [] };
 }
 
+/**
+ * Redimensionne une grille en PRÉSERVANT le terrain : re-clippe les masques
+ * par-case (usable/water/rivers) et filtre les slots hors limites, en gardant
+ * l'île d'origine. Les nouvelles cases sont constructibles (usable=true) et non-eau.
+ */
+export function resizeGridShape(g: GridShape, w: number, h: number): GridShape {
+  const clip = (src: boolean[] | undefined, fill: boolean): boolean[] | undefined => {
+    if (!src) return undefined;
+    const out = new Array(w * h).fill(fill);
+    for (let y = 0; y < Math.min(h, g.h); y++)
+      for (let x = 0; x < Math.min(w, g.w); x++) out[y * w + x] = src[y * g.w + x];
+    return out;
+  };
+  return {
+    w,
+    h,
+    usable: clip(g.usable, true)!,
+    water: clip(g.water, false),
+    rivers: clip(g.rivers, false),
+    slots: g.slots?.filter((s) => s.x < w && s.y < h),
+    islandId: g.islandId,
+  };
+}
+
 export function makeBuildingDef(partial: Partial<BuildingDef> = {}): BuildingDef {
   return {
     id: partial.id ?? uid("def"),

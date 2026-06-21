@@ -29,6 +29,11 @@ export function riversOf(islandId: string, w: number, h: number): boolean[] | un
   return decodeMask(t.rivers, w, h);
 }
 
+/** Vrai si l'île a des hauteurs extraites (le décodage peut malgré tout échouer côté navigateur). */
+export function hasHeights(islandId: string): boolean {
+  return terrain[islandId]?.hasHeights === true;
+}
+
 /** Slots posables (montagne/rivière/marais — les blockers sont ignorés). */
 export function slotsOf(islandId: string): TerrainSlot[] {
   const t = terrain[islandId];

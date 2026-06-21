@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { emptyLayout, placeBuilding, uid } from "../model/factories";
+import { emptyLayout, placeBuilding, resizeGridShape, uid } from "../model/factories";
 import type {
   BuildingDef,
   Catalog,
@@ -190,13 +190,8 @@ export const useStore = create<State>((set, get) => {
 
     resizeGrid: (w, h) =>
       commit((l) => {
-        const next = new Array(w * h).fill(true);
-        for (let y = 0; y < Math.min(h, l.grid.h); y++) {
-          for (let x = 0; x < Math.min(w, l.grid.w); x++) {
-            next[y * w + x] = l.grid.usable[y * l.grid.w + x];
-          }
-        }
-        l.grid = { w, h, usable: next };
+        // préserve le terrain (eau/rivières/slots/île) au lieu de l'effacer
+        l.grid = resizeGridShape(l.grid, w, h);
       }),
 
     addDef: (def) => {
