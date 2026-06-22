@@ -124,3 +124,35 @@ qui DOIT retomber juste, sinon un ×2 est faux.
 
 ## NOT in this plan
 SP2 (editor diagonal placement + wedge/diamond render), SP3 (8-adjacency coverage + diagonal road graph + √2 cost), SP4 (optimizer generates diagonals). Each separate spec+plan.
+
+---
+
+## ACTUAL IMPLEMENTATION (2026-06-22) — deviation from the ×2-engine plan
+
+The plan above proposed making `footprintSize` axis branch ×2 globally and doubling
+~70 engine sites (Stage C). **That approach was NOT used.** During execution two flaws
+surfaced: (a) mechanically doubling `STEPH=2*rh+1` yields a **½-tile-wide road** → plans
+un-buildable in-game; (b) `footprintCells`/`footprintSize` and `rules.ts` are consumed at
+BOTH resolutions (live editor + tile-res optimizer & ~5 test suites), so a global ×2 breaks
+every tile-res consumer and regenerates all snapshots.
+
+**Implemented instead — scale-on-grid + optimizer boundary adapter (lower risk, buildable
+output, snapshots intact):**
+- **Geometry** carries a `scale` param (cells/tile, default 1). `GridShape.cellsPerTile`
+  (2 = live ½-tile grid, absent/1 = tile/optimiseur). `gridScale(grid)` reads it.
+  → commit `45deg palier 2A`.
+- **Live layer** (`rules.ts`, `economy/coverage.ts`, `render/draw.ts`, editor) reads scale
+  from the grid: footprints ×scale, ranges ×scale, field area ×scale². Half-tile data:
+  `islands.upscale2x`, `loadIsland` builds a 2× grid (cellsPerTile=2), persist **v8** +
+  v7→v8 ×2 migration. → commit `45deg palier 2B+2C`.
+- **Optimizer stays at TILE resolution, untouched.** `islandPlanWorker` **downscales** the
+  half-tile grid → tile, runs `planIsland` byte-identically (golden snapshots intact, roads
+  stay 1 tile = buildable), then **upscales** the result ×2 (`halfTileAdapter`: buildings ×2,
+  roads/fields/aqueducts → 2×2 block). The Stage-0/C2 physical invariant (293 houses) holds
+  **by construction** — the engines see the exact same tile grid they always saw.
+- **Render culling** added (4× cells) so large islands stay usable.
+
+This honors the user's "grille 2× entière uniforme" (storage/render/editor are uniformly
+half-tile) while avoiding the fragile engine ×2. SP2 (45° placement+diamond render), SP3
+(8-adjacency road network on the live grid), SP4 (optimizer avoids locked diamonds) built
+on top. Commits: `45deg palier 2A`, `2B+2C`, `SP2`, `SP3`, `SP4`.
