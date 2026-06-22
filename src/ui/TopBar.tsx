@@ -109,5 +109,5 @@ export function TopBar() {
 function clamp(v: string, fallback: number): number {
   const n = parseInt(v, 10);
   if (!Number.isFinite(n)) return fallback;
-  return Math.max(5, Math.min(200, n));
+  return Math.max(10, Math.min(400, n)); // bornes ½-tuile (cf. inputs Grille)
 }

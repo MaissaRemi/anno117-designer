@@ -17,6 +17,8 @@ export function Toolbar() {
   const rotation = useStore((s) => s.rotation);
   const showRadius = useStore((s) => s.showRadius);
   const toggleRadius = useStore((s) => s.toggleRadius);
+  const diagonalBuild = useStore((s) => s.diagonalBuild);
+  const toggleDiagonalBuild = useStore((s) => s.toggleDiagonalBuild);
   const selectedUid = useStore((s) => s.selectedUid);
   const setFieldOwner = useStore((s) => s.setFieldOwner);
 
@@ -39,7 +41,14 @@ export function Toolbar() {
         </button>
       ))}
       <span className="sep" />
-      <button title="Pivoter la pose (R)" onClick={rotateCurrent}>
+      <button
+        className={diagonalBuild ? "active" : ""}
+        onClick={toggleDiagonalBuild}
+        title="Construction à 45° (crans de 45° au lieu de 90°)"
+      >
+        ◇ 45°
+      </button>
+      <button title={`Pivoter la pose (R) — cran de ${diagonalBuild ? 45 : 90}°`} onClick={rotateCurrent}>
         ⟳ {rotation}°
       </button>
       <button className={showRadius ? "active" : ""} onClick={toggleRadius} title="Afficher les rayons">

@@ -73,6 +73,20 @@ describe("canPlace", () => {
     l.grid.usable[0] = false;
     expect(canPlace(l, lookup, farm, 0, 0, 0)).toBe(false);
   });
+
+  it("pose diagonale (45°) : valide le DIAMANT en ½-tuile (scale=2)", () => {
+    const dia = makeBuildingDef({ id: "dia", size: { w: 1, h: 1 }, needsRoad: false });
+    const lk = makeLookup([dia]);
+    const grid = { w: 10, h: 10, usable: new Array(100).fill(true), cellsPerTile: 2 };
+    const l: Layout = { grid, buildings: [], fields: [], roads: [] };
+    // 1×1 @45 en ½-tuile → croix de 5 cellules, toutes libres → pose OK
+    expect(canPlace(l, lk, dia, 0, 0, 45)).toBe(true);
+    // un occupant sur le centre du diamant → chevauchement → refus
+    l.buildings.push({ uid: "o", defId: "dia", x: 0, y: 0, rotation: 45, locked: false });
+    expect(canPlace(l, lk, dia, 0, 0, 45)).toBe(false);
+    // hors-grille (le diamant déborde) → refus
+    expect(canPlace(l, lk, dia, 9, 9, 45)).toBe(false);
+  });
 });
 
 describe("roadConnected", () => {

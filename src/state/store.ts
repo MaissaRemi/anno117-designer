@@ -36,6 +36,7 @@ interface State {
   selectedUid: string | null; // bâtiment sélectionné
   fieldOwnerUid: string | null; // bâtiment dont on peint le champ
   showRadius: boolean;
+  diagonalBuild: boolean; // pose 45° activée (DiagonalBuildEnabled du jeu) → rotation par crans de 45°
   coverageHighlight: string[] | null; // cellKeys de résidences non couvertes à surligner
   past: Layout[];
   future: Layout[];
@@ -47,6 +48,7 @@ interface State {
   setFieldOwner: (uid: string | null) => void;
   rotateCurrent: () => void;
   toggleRadius: () => void;
+  toggleDiagonalBuild: () => void;
 
   // --- mutations layout (avec undo) ---
   addBuildingAt: (x: number, y: number) => void;
@@ -105,6 +107,7 @@ export const useStore = create<State>((set, get) => {
     selectedUid: null,
     fieldOwnerUid: null,
     showRadius: true,
+    diagonalBuild: false,
     coverageHighlight: null,
     past: [],
     future: [],
@@ -113,8 +116,15 @@ export const useStore = create<State>((set, get) => {
     setSelectedDef: (id) => set({ selectedDefId: id, mode: id ? "place" : get().mode }),
     setSelectedUid: (u) => set({ selectedUid: u }),
     setFieldOwner: (u) => set({ fieldOwnerUid: u }),
-    rotateCurrent: () => set((s) => ({ rotation: rotate90(s.rotation) })),
+    rotateCurrent: () => set((s) => ({ rotation: rotateStep(s.rotation, s.diagonalBuild ? 45 : 90) })),
     toggleRadius: () => set((s) => ({ showRadius: !s.showRadius })),
+    // bascule la pose 45° ; en repassant en axe, on resnap la rotation courante au multiple de 90°
+    toggleDiagonalBuild: () =>
+      set((s) => {
+        const diagonalBuild = !s.diagonalBuild;
+        const rotation = diagonalBuild ? s.rotation : (snapTo90(s.rotation) as Rotation);
+        return { diagonalBuild, rotation };
+      }),
 
     addBuildingAt: (x, y) => {
       const { selectedDefId, rotation } = get();
@@ -144,7 +154,7 @@ export const useStore = create<State>((set, get) => {
     rotateBuilding: (u) =>
       commit((l) => {
         const b = l.buildings.find((bb) => bb.uid === u);
-        if (b) b.rotation = rotate90(b.rotation);
+        if (b) b.rotation = rotateStep(b.rotation, get().diagonalBuild ? 45 : 90);
       }),
 
     toggleLock: (u) =>
@@ -292,8 +302,14 @@ export const useStore = create<State>((set, get) => {
   };
 });
 
-function rotate90(r: Rotation): Rotation {
-  return (((r + 90) % 360) as Rotation);
+/** Avance la rotation d'un cran (45° en pose diagonale, 90° en axe). 8 valeurs possibles. */
+function rotateStep(r: Rotation, step: 45 | 90): Rotation {
+  return (((r + step) % 360) as Rotation);
+}
+
+/** Resnap au multiple de 90° le plus proche (retour en mode axe depuis une pose 45°). */
+function snapTo90(r: Rotation): 0 | 90 | 180 | 270 {
+  return ((Math.round(r / 90) * 90) % 360) as 0 | 90 | 180 | 270;
 }
 
 /** Cellules occupées par un bâtiment donné — réexport pratique pour l'UI. */
