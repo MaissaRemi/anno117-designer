@@ -234,6 +234,42 @@ describe("validateLayout", () => {
   });
 });
 
+describe("SP3 — 8-adjacence (coin) sur grille ½-tuile : routes diagonales", () => {
+  const svc = makeBuildingDef({ id: "s8", size: { w: 1, h: 1 }, needsRoad: true });
+  const lk = makeLookup([svc]);
+
+  it("roadConnected : connexion au COIN acceptée en ½-tuile, refusée en tuile", () => {
+    // ½-tuile : emprise 2×2 (4,4)..(5,5) ; route (6,6) = diagonale au coin de (5,5)
+    const b = { uid: "b", defId: "s8", x: 4, y: 4, rotation: 0 as const, locked: false };
+    const ht: Layout = {
+      grid: { w: 12, h: 12, usable: new Array(144).fill(true), cellsPerTile: 2 },
+      buildings: [b], fields: [], roads: [{ x: 6, y: 6 }],
+    };
+    expect(roadConnected(ht, lk, b)).toBe(true); // 8-adjacence
+    // tuile : emprise 1×1 (4,4) ; route (5,5) en diagonale → 4-adjacence refuse
+    const tile: Layout = {
+      grid: { w: 12, h: 12, usable: new Array(144).fill(true) },
+      buildings: [b], fields: [], roads: [{ x: 5, y: 5 }],
+    };
+    expect(roadConnected(tile, lk, b)).toBe(false);
+  });
+
+  it("streetCoverage : un run de route DIAGONAL est parcouru (½-tuile)", () => {
+    const svcR = makeBuildingDef({ id: "sr", size: { w: 1, h: 1 }, needsRoad: true, radius: { kind: "service", range: 1 }, streetRange: 6 });
+    const lkR = makeLookup([svcR]);
+    // service en (0,0) (emprise 2×2) ; escalier diagonal de routes (2,2)→(5,5)
+    const roads = [{ x: 2, y: 2 }, { x: 3, y: 3 }, { x: 4, y: 4 }, { x: 5, y: 5 }];
+    const l: Layout = {
+      grid: { w: 16, h: 16, usable: new Array(256).fill(true), cellsPerTile: 2 },
+      buildings: [{ uid: "s", defId: "sr", x: 0, y: 0, rotation: 0, locked: false }],
+      fields: [], roads,
+    };
+    const cov = computeRadiusCoverage(l, lkR).get("s")!;
+    // une cellule voisine du bout lointain (5,5) du run diagonal est couverte
+    expect(cov.has("6,6") || cov.has("5,6") || cov.has("6,5")).toBe(true);
+  });
+});
+
 describe("computeRadiusCoverage (distance le long des rues)", () => {
   const service = makeBuildingDef({
     id: "svc",

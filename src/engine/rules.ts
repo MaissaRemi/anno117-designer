@@ -12,10 +12,19 @@ import {
   gridScale,
   isBuildable,
   isUsable,
+  neighbors8,
   orthoNeighbors,
 } from "./geometry";
 
 export type DefLookup = (defId: string) => BuildingDef | undefined;
+
+/**
+ * Adjacence du RÉSEAU DE ROUTES. Sur la grille vivante ½-tuile (scale 2 = 45° actif),
+ * la connexion se fait AU COIN → 8-adjacence (cf. spec : runs diagonaux + jonctions de
+ * coin). Sur les grilles tuile (optimiseur/tests axis), on garde la 4-adjacence
+ * historique (snapshots + oracle vérité-terrain inchangés).
+ */
+const roadAdj = (scale: number) => (scale === 2 ? neighbors8 : orthoNeighbors);
 
 export function makeLookup(catalog: Catalog): DefLookup {
   const map = new Map(catalog.map((d) => [d.id, d]));
@@ -78,6 +87,7 @@ export function rootedRoadSet(
   lookup: DefLookup,
 ): { set: Set<string>; hasRoot: boolean } {
   const scale = gridScale(layout.grid);
+  const adj = roadAdj(scale);
   const roads = new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
   // graines : routes adjacentes à un bâtiment racine
   const seeds: string[] = [];
@@ -85,7 +95,7 @@ export function rootedRoadSet(
     const def = lookup(b.defId);
     if (!def?.roadRoot) continue;
     for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) {
-      for (const n of orthoNeighbors(c.x, c.y)) {
+      for (const n of adj(c.x, c.y)) {
         const k = cellKey(n.x, n.y);
         if (roads.has(k)) seeds.push(k);
       }
@@ -99,7 +109,7 @@ export function rootedRoadSet(
   while (queue.length) {
     const k = queue.pop()!;
     const [x, y] = k.split(",").map(Number);
-    for (const n of orthoNeighbors(x, y)) {
+    for (const n of adj(x, y)) {
       const nk = cellKey(n.x, n.y);
       if (roads.has(nk) && !reachable.has(nk)) {
         reachable.add(nk);
@@ -126,8 +136,10 @@ export function roadConnected(
   if (!def.needsRoad || def.roadRoot) return true;
   const roads = rootSet ?? new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
   if (roads.size === 0) return false;
-  for (const c of footprintCells(def, b.x, b.y, b.rotation, gridScale(layout.grid))) {
-    for (const n of orthoNeighbors(c.x, c.y)) {
+  const scale = gridScale(layout.grid);
+  const adj = roadAdj(scale);
+  for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) {
+    for (const n of adj(c.x, c.y)) {
       if (roads.has(cellKey(n.x, n.y))) return true;
     }
   }
@@ -227,14 +239,15 @@ function streetCoverage(
   scale: number,
 ): Set<string> {
   const limit = def.streetRange! * scale; // portée en TUILES → cellules (½-tuile : ×2)
+  const adj = roadAdj(scale); // 8-adjacence sur la grille ½-tuile (routes diagonales)
   const footprint = new Set(
     footprintCells(def, b.x, b.y, b.rotation, scale).map((c) => cellKey(c.x, c.y)),
   );
-  // graines : routes orthogonalement adjacentes à l'emprise (distance 1)
+  // graines : routes adjacentes à l'emprise (distance 1)
   const dist = new Map<string, number>();
   const queue: string[] = [];
   for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) {
-    for (const n of orthoNeighbors(c.x, c.y)) {
+    for (const n of adj(c.x, c.y)) {
       const k = cellKey(n.x, n.y);
       if (footprint.has(k) || !roads.has(k) || dist.has(k)) continue;
       dist.set(k, 1);
@@ -246,7 +259,7 @@ function streetCoverage(
     const d = dist.get(k)!;
     if (d >= limit) continue;
     const [x, y] = k.split(",").map(Number);
-    for (const n of orthoNeighbors(x, y)) {
+    for (const n of adj(x, y)) {
       const nk = cellKey(n.x, n.y);
       if (roads.has(nk) && !dist.has(nk)) {
         dist.set(nk, d + 1);
@@ -258,7 +271,7 @@ function streetCoverage(
   const covered = new Set<string>();
   for (const k of dist.keys()) {
     const [x, y] = k.split(",").map(Number);
-    for (const n of orthoNeighbors(x, y)) {
+    for (const n of adj(x, y)) {
       if (isUsable(layout.grid, n.x, n.y)) covered.add(cellKey(n.x, n.y));
     }
   }
