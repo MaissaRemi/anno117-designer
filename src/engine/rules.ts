@@ -9,6 +9,7 @@ import type {
 import {
   cellKey,
   footprintCells,
+  gridScale,
   isBuildable,
   isUsable,
   orthoNeighbors,
@@ -22,20 +23,20 @@ export function makeLookup(catalog: Catalog): DefLookup {
 }
 
 /** Ensemble des cases occupées (clé "x,y") par tous les bâtiments sauf `exceptUid`. */
-function occupiedSet(layout: Layout, lookup: DefLookup, exceptUid?: string): Set<string> {
+function occupiedSet(layout: Layout, lookup: DefLookup, exceptUid: string | undefined, scale: number): Set<string> {
   const set = new Set<string>();
   for (const b of layout.buildings) {
     if (b.uid === exceptUid) continue;
     const def = lookup(b.defId);
     if (!def) continue;
-    for (const c of footprintCells(def, b.x, b.y, b.rotation)) set.add(cellKey(c.x, c.y));
+    for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) set.add(cellKey(c.x, c.y));
   }
   return set;
 }
 
 /** Toutes les cases occupées par un usage quelconque (bâtiments, champs, routes). */
-function blockedSet(layout: Layout, lookup: DefLookup, exceptUid?: string): Set<string> {
-  const set = occupiedSet(layout, lookup, exceptUid);
+function blockedSet(layout: Layout, lookup: DefLookup, exceptUid: string | undefined, scale: number): Set<string> {
+  const set = occupiedSet(layout, lookup, exceptUid, scale);
   for (const f of layout.fields) {
     if (f.ownerUid === exceptUid) continue;
     set.add(cellKey(f.x, f.y));
@@ -57,8 +58,9 @@ export function canPlace(
   rot: Rotation,
   exceptUid?: string,
 ): boolean {
-  const blocked = blockedSet(layout, lookup, exceptUid);
-  for (const c of footprintCells(def, x, y, rot)) {
+  const scale = gridScale(layout.grid);
+  const blocked = blockedSet(layout, lookup, exceptUid, scale);
+  for (const c of footprintCells(def, x, y, rot, scale)) {
     // terre vs eau selon le terrain de pose du bâtiment
     if (!isBuildable(layout.grid, c.x, c.y, def.placement)) return false;
     if (blocked.has(cellKey(c.x, c.y))) return false;
@@ -75,13 +77,14 @@ export function rootedRoadSet(
   layout: Layout,
   lookup: DefLookup,
 ): { set: Set<string>; hasRoot: boolean } {
+  const scale = gridScale(layout.grid);
   const roads = new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
   // graines : routes adjacentes à un bâtiment racine
   const seeds: string[] = [];
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
     if (!def?.roadRoot) continue;
-    for (const c of footprintCells(def, b.x, b.y, b.rotation)) {
+    for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) {
       for (const n of orthoNeighbors(c.x, c.y)) {
         const k = cellKey(n.x, n.y);
         if (roads.has(k)) seeds.push(k);
@@ -123,7 +126,7 @@ export function roadConnected(
   if (!def.needsRoad || def.roadRoot) return true;
   const roads = rootSet ?? new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
   if (roads.size === 0) return false;
-  for (const c of footprintCells(def, b.x, b.y, b.rotation)) {
+  for (const c of footprintCells(def, b.x, b.y, b.rotation, gridScale(layout.grid))) {
     for (const n of orthoNeighbors(c.x, c.y)) {
       if (roads.has(cellKey(n.x, n.y))) return true;
     }
@@ -143,7 +146,8 @@ export interface FieldResult {
 export function validateFields(layout: Layout, lookup: DefLookup, b: PlacedBuilding): FieldResult | null {
   const def = lookup(b.defId);
   if (!def || !def.field) return null;
-  const required = def.field.tiles;
+  const scale = gridScale(layout.grid);
+  const required = def.field.tiles * scale * scale; // tuiles → cellules (aire : ×scale²)
   const owned = layout.fields.filter(
     (f) => f.ownerUid === b.uid && f.fieldType === def.field!.fieldType,
   );
@@ -154,7 +158,7 @@ export function validateFields(layout: Layout, lookup: DefLookup, b: PlacedBuild
 
   // Adjacence au bâtiment.
   const footprint = new Set(
-    footprintCells(def, b.x, b.y, b.rotation).map((c) => cellKey(c.x, c.y)),
+    footprintCells(def, b.x, b.y, b.rotation, scale).map((c) => cellKey(c.x, c.y)),
   );
   let touchesBuilding = false;
   for (const f of owned) {
@@ -192,11 +196,11 @@ function isConnected(cells: Cell[]): boolean {
 }
 
 /** Couverture euclidienne (disque centré sur le bâtiment) — utilisée si pas de rues. */
-function euclideanCoverage(layout: Layout, def: BuildingDef, b: PlacedBuilding): Set<string> {
-  const cells = footprintCells(def, b.x, b.y, b.rotation);
+function euclideanCoverage(layout: Layout, def: BuildingDef, b: PlacedBuilding, scale: number): Set<string> {
+  const cells = footprintCells(def, b.x, b.y, b.rotation, scale);
   const cx = cells.reduce((s, c) => s + c.x, 0) / cells.length + 0.5;
   const cy = cells.reduce((s, c) => s + c.y, 0) / cells.length + 0.5;
-  const r = def.radius!.range;
+  const r = def.radius!.range * scale; // portée en TUILES → cellules
   const covered = new Set<string>();
   for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
     for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
@@ -220,15 +224,16 @@ function streetCoverage(
   def: BuildingDef,
   b: PlacedBuilding,
   roads: Set<string>,
+  scale: number,
 ): Set<string> {
-  const limit = def.streetRange!;
+  const limit = def.streetRange! * scale; // portée en TUILES → cellules (½-tuile : ×2)
   const footprint = new Set(
-    footprintCells(def, b.x, b.y, b.rotation).map((c) => cellKey(c.x, c.y)),
+    footprintCells(def, b.x, b.y, b.rotation, scale).map((c) => cellKey(c.x, c.y)),
   );
   // graines : routes orthogonalement adjacentes à l'emprise (distance 1)
   const dist = new Map<string, number>();
   const queue: string[] = [];
-  for (const c of footprintCells(def, b.x, b.y, b.rotation)) {
+  for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) {
     for (const n of orthoNeighbors(c.x, c.y)) {
       const k = cellKey(n.x, n.y);
       if (footprint.has(k) || !roads.has(k) || dist.has(k)) continue;
@@ -271,13 +276,14 @@ export function computeRadiusCoverage(
   opts: { euclidean?: boolean } = {},
 ): Map<string, Set<string>> {
   const result = new Map<string, Set<string>>();
+  const scale = gridScale(layout.grid);
   const roads = new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
     if (!def || !def.radius) continue;
     // forcer l'euclidien (borne de planification, indépendante des rues) si demandé
     const useStreet = !opts.euclidean && def.streetRange && def.streetRange > 0 && roads.size > 0;
-    result.set(b.uid, useStreet ? streetCoverage(layout, def, b, roads) : euclideanCoverage(layout, def, b));
+    result.set(b.uid, useStreet ? streetCoverage(layout, def, b, roads, scale) : euclideanCoverage(layout, def, b, scale));
   }
   return result;
 }
@@ -294,12 +300,13 @@ export interface BuildingIssues {
 /** Valide toute la disposition, renvoie les problèmes par bâtiment. */
 export function validateLayout(layout: Layout, lookup: DefLookup): Map<string, BuildingIssues> {
   const issues = new Map<string, BuildingIssues>();
+  const scale = gridScale(layout.grid);
   const { set: rootSet } = rootedRoadSet(layout, lookup);
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
     if (!def) continue;
     // terrain : chaque case de l'emprise doit correspondre au terrain de pose
-    const terrain = footprintCells(def, b.x, b.y, b.rotation).some(
+    const terrain = footprintCells(def, b.x, b.y, b.rotation, scale).some(
       (c) => !isBuildable(layout.grid, c.x, c.y, def.placement),
     );
     const overlap = !canPlace(layout, lookup, def, b.x, b.y, b.rotation, b.uid);

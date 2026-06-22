@@ -11,8 +11,13 @@ export function makeGrid(w: number, h: number, usable = true): GridShape {
   return { w, h, usable: new Array(w * h).fill(usable) };
 }
 
-export function emptyLayout(w = 40, h = 40): Layout {
-  return { grid: makeGrid(w, h), buildings: [], fields: [], roads: [] };
+/**
+ * Layout vide pour l'éditeur : grille ½-tuile (cellsPerTile=2) afin que la
+ * construction 45° soit possible d'emblée (cf. geometry.ts). Dimensions par défaut
+ * 80×80 cellules = 40×40 tuiles. NB : `makeGrid` seul reste en TUILES (optimiseur/tests).
+ */
+export function emptyLayout(w = 80, h = 80): Layout {
+  return { grid: { ...makeGrid(w, h), cellsPerTile: 2 }, buildings: [], fields: [], roads: [] };
 }
 
 /**
@@ -36,6 +41,7 @@ export function resizeGridShape(g: GridShape, w: number, h: number): GridShape {
     rivers: clip(g.rivers, false),
     slots: g.slots?.filter((s) => s.x < w && s.y < h),
     islandId: g.islandId,
+    cellsPerTile: g.cellsPerTile,
   };
 }
 

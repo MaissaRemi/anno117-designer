@@ -1,5 +1,5 @@
 import { computeRadiusCoverage, type DefLookup } from "../engine/rules";
-import { footprintCells } from "../engine/geometry";
+import { footprintCells, gridScale } from "../engine/geometry";
 import type { Layout } from "../model/types";
 import { economy } from "./economy";
 
@@ -81,9 +81,10 @@ export function analyzeCoverage(
 
   let fullyCovered = 0;
   const uncoveredAnyAll = new Set<string>();
+  const scale = gridScale(layout.grid);
 
   for (const { b, tier } of residences) {
-    const cells = footprintCells(lookup(b.defId)!, b.x, b.y, b.rotation).map((c) => `${c.x},${c.y}`);
+    const cells = footprintCells(lookup(b.defId)!, b.x, b.y, b.rotation, scale).map((c) => `${c.x},${c.y}`);
     let allOk = true;
     for (const s of tier.services) {
       if (!s.building) continue;

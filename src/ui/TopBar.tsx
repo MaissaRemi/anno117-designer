@@ -66,16 +66,16 @@ export function TopBar() {
         Grille
         <input
           type="number"
-          min={5}
-          max={200}
+          min={10}
+          max={400}
           value={layout.grid.w}
           onChange={(e) => resizeGrid(clamp(e.target.value, layout.grid.w), layout.grid.h)}
         />
         ×
         <input
           type="number"
-          min={5}
-          max={200}
+          min={10}
+          max={400}
           value={layout.grid.h}
           onChange={(e) => resizeGrid(layout.grid.w, clamp(e.target.value, layout.grid.h))}
         />

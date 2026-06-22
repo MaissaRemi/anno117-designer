@@ -1,4 +1,4 @@
-import { footprintCells, footprintSize } from "../engine/geometry";
+import { footprintCells, footprintSize, gridScale } from "../engine/geometry";
 import type { BuildingIssues } from "../engine/rules";
 import type { BuildingDef, Layout, Rotation } from "../model/types";
 
@@ -35,6 +35,21 @@ export const gridToScreen = (v: View, x: number, y: number): [number, number] =>
   v.originY + y * v.cell,
 ];
 
+/**
+ * Fenêtre de cellules visibles (culling) : la grille ½-tuile a 4× plus de cellules, et
+ * une couverture/réseau dense peut représenter des millions de fillRect → on borne tout
+ * dessin par-cellule à la fenêtre canvas. `inView(x,y)` teste l'appartenance.
+ */
+function visibleRange(ctx: CanvasRenderingContext2D, v: View, gw: number, gh: number) {
+  const { width, height } = ctx.canvas;
+  return {
+    cx0: Math.max(0, Math.floor((0 - v.originX) / v.cell)),
+    cx1: Math.min(gw, Math.ceil((width - v.originX) / v.cell) + 1),
+    cy0: Math.max(0, Math.floor((0 - v.originY) / v.cell)),
+    cy1: Math.min(gh, Math.ceil((height - v.originY) / v.cell) + 1),
+  };
+}
+
 export function screenToGrid(v: View, px: number, py: number): { x: number; y: number } {
   return {
     x: Math.floor((px - v.originX) / v.cell),
@@ -44,6 +59,7 @@ export function screenToGrid(v: View, px: number, py: number): { x: number; y: n
 
 export function drawScene(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   const { layout, view, lookup } = o;
+  const scale = gridScale(layout.grid);
   const { width, height } = ctx.canvas;
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = "#1b1f24";
@@ -57,7 +73,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
     if (!def) continue;
-    drawBuilding(ctx, view, def, b.x, b.y, b.rotation, {
+    drawBuilding(ctx, view, def, b.x, b.y, b.rotation, scale, {
       selected: b.uid === o.selectedUid,
       locked: b.locked,
       issue: o.issues.get(b.uid),
@@ -72,11 +88,14 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
 /** Surligne en rouge les cases de résidence non couvertes par un service. */
 function drawCoverageHighlight(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   const v = o.view;
+  const { cx0, cx1, cy0, cy1 } = visibleRange(ctx, v, o.layout.grid.w, o.layout.grid.h);
   ctx.fillStyle = "rgba(255, 80, 80, 0.45)";
   ctx.strokeStyle = "rgba(255, 80, 80, 0.9)";
   ctx.lineWidth = 1;
   for (const key of o.coverageHighlight!) {
-    const [x, y] = key.split(",").map(Number);
+    const ci = key.indexOf(",");
+    const x = +key.slice(0, ci), y = +key.slice(ci + 1);
+    if (x < cx0 || x >= cx1 || y < cy0 || y >= cy1) continue;
     const [sx, sy] = gridToScreen(v, x, y);
     ctx.fillRect(sx, sy, v.cell, v.cell);
     ctx.strokeRect(sx + 0.5, sy + 0.5, v.cell - 1, v.cell - 1);
@@ -86,8 +105,11 @@ function drawCoverageHighlight(ctx: CanvasRenderingContext2D, o: DrawOpts): void
 function drawGrid(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   const { grid } = o.layout;
   const v = o.view;
-  for (let y = 0; y < grid.h; y++) {
-    for (let x = 0; x < grid.w; x++) {
+  // CULLING viewport : ne dessiner que les cellules visibles (la grille ½-tuile a 4× plus
+  // de cellules — sur une île 768²→1536² le balayage plein crève le renderer).
+  const { cx0, cx1, cy0, cy1 } = visibleRange(ctx, v, grid.w, grid.h);
+  for (let y = cy0; y < cy1; y++) {
+    for (let x = cx0; x < cx1; x++) {
       const i = y * grid.w + x;
       const usable = grid.usable[i];
       const water = grid.water?.[i];
@@ -121,29 +143,38 @@ function drawGrid(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
       ctx.stroke();
     }
   }
-  // lignes de grille
-  ctx.strokeStyle = "rgba(255,255,255,0.06)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let x = 0; x <= grid.w; x++) {
-    const [sx, sy] = gridToScreen(v, x, 0);
-    ctx.moveTo(sx + 0.5, sy);
-    ctx.lineTo(sx + 0.5, sy + grid.h * v.cell);
+  // lignes de grille (visibles seulement ; sautées si cellules trop petites = bruit/overdraw)
+  if (v.cell >= 4) {
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const [, gy0] = gridToScreen(v, 0, cy0);
+    const [, gy1] = gridToScreen(v, 0, cy1);
+    const [gx0] = gridToScreen(v, cx0, 0);
+    const [gx1] = gridToScreen(v, cx1, 0);
+    for (let x = cx0; x <= cx1; x++) {
+      const [sx] = gridToScreen(v, x, 0);
+      ctx.moveTo(sx + 0.5, gy0);
+      ctx.lineTo(sx + 0.5, gy1);
+    }
+    for (let y = cy0; y <= cy1; y++) {
+      const [, sy] = gridToScreen(v, 0, y);
+      ctx.moveTo(gx0, sy + 0.5);
+      ctx.lineTo(gx1, sy + 0.5);
+    }
+    ctx.stroke();
   }
-  for (let y = 0; y <= grid.h; y++) {
-    const [sx, sy] = gridToScreen(v, 0, y);
-    ctx.moveTo(sx, sy + 0.5);
-    ctx.lineTo(sx + grid.w * v.cell, sy + 0.5);
-  }
-  ctx.stroke();
 }
 
 function drawCoverage(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   const v = o.view;
+  const { cx0, cx1, cy0, cy1 } = visibleRange(ctx, v, o.layout.grid.w, o.layout.grid.h);
   ctx.fillStyle = "rgba(124,179,66,0.15)";
   for (const set of o.coverage.values()) {
     for (const key of set) {
-      const [x, y] = key.split(",").map(Number);
+      const ci = key.indexOf(",");
+      const x = +key.slice(0, ci), y = +key.slice(ci + 1);
+      if (x < cx0 || x >= cx1 || y < cy0 || y >= cy1) continue; // hors viewport
       const [sx, sy] = gridToScreen(v, x, y);
       ctx.fillRect(sx, sy, v.cell, v.cell);
     }
@@ -152,13 +183,16 @@ function drawCoverage(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
 
 function drawRoads(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   const v = o.view;
+  const { cx0, cx1, cy0, cy1 } = visibleRange(ctx, v, o.layout.grid.w, o.layout.grid.h);
   ctx.fillStyle = "#55606b";
   for (const r of o.layout.roads) {
+    if (r.x < cx0 || r.x >= cx1 || r.y < cy0 || r.y >= cy1) continue;
     const [sx, sy] = gridToScreen(v, r.x, r.y);
     ctx.fillRect(sx + 1, sy + 1, v.cell - 2, v.cell - 2);
   }
   // conduites d'aqueduc : par-dessus les routes (aqueduc surélevé), teinte eau
   for (const a of o.layout.aqueducts ?? []) {
+    if (a.x < cx0 || a.x >= cx1 || a.y < cy0 || a.y >= cy1) continue;
     const [sx, sy] = gridToScreen(v, a.x, a.y);
     ctx.fillStyle = "rgba(77,208,225,0.8)";
     ctx.fillRect(sx + 1, sy + 1, v.cell - 2, v.cell - 2);
@@ -169,7 +203,9 @@ function drawRoads(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
 
 function drawFields(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   const v = o.view;
+  const { cx0, cx1, cy0, cy1 } = visibleRange(ctx, v, o.layout.grid.w, o.layout.grid.h);
   for (const f of o.layout.fields) {
+    if (f.x < cx0 || f.x >= cx1 || f.y < cy0 || f.y >= cy1) continue;
     const [sx, sy] = gridToScreen(v, f.x, f.y);
     ctx.fillStyle = "rgba(150,200,90,0.55)";
     ctx.fillRect(sx + 1, sy + 1, v.cell - 2, v.cell - 2);
@@ -185,6 +221,8 @@ interface BuildingStyle {
   name: string;
 }
 
+const isDiagonalRot = (rot: Rotation): boolean => rot === 45 || rot === 135 || rot === 225 || rot === 315;
+
 function drawBuilding(
   ctx: CanvasRenderingContext2D,
   v: View,
@@ -192,25 +230,33 @@ function drawBuilding(
   x: number,
   y: number,
   rot: Rotation,
+  scale: number,
   style: BuildingStyle,
 ): void {
-  const { w, h } = footprintSize(def, rot);
+  const { w, h } = footprintSize(def, rot, scale);
   const [sx, sy] = gridToScreen(v, x, y);
   const pw = w * v.cell;
   const ph = h * v.cell;
-
-  ctx.fillStyle = def.color;
-  ctx.fillRect(sx + 1, sy + 1, pw - 2, ph - 2);
-
-  // bordure : rouge si problème, blanc si sélection, sinon sombre
   const hasIssue = style.issue && !style.issue.ok;
-  ctx.lineWidth = style.selected ? 3 : 2;
-  ctx.strokeStyle = hasIssue
-    ? "#e53935"
-    : style.selected
-      ? "#ffffff"
-      : "rgba(0,0,0,0.5)";
-  ctx.strokeRect(sx + 1.5, sy + 1.5, pw - 3, ph - 3);
+  const stroke = hasIssue ? "#e53935" : style.selected ? "#ffffff" : "rgba(0,0,0,0.5)";
+
+  if (isDiagonalRot(rot)) {
+    // 45° : on peint l'emprise DIAMANT réelle (cellules), pas la bbox carrée
+    ctx.fillStyle = def.color;
+    for (const c of footprintCells(def, x, y, rot, scale)) {
+      const [cx, cy] = gridToScreen(v, c.x, c.y);
+      ctx.fillRect(cx, cy, v.cell + 0.5, v.cell + 0.5);
+    }
+    ctx.lineWidth = style.selected ? 3 : 2;
+    ctx.strokeStyle = stroke;
+    ctx.strokeRect(sx + 1.5, sy + 1.5, pw - 3, ph - 3); // bbox indicatif
+  } else {
+    ctx.fillStyle = def.color;
+    ctx.fillRect(sx + 1, sy + 1, pw - 2, ph - 2);
+    ctx.lineWidth = style.selected ? 3 : 2;
+    ctx.strokeStyle = stroke;
+    ctx.strokeRect(sx + 1.5, sy + 1.5, pw - 3, ph - 3);
+  }
 
   // cadenas si verrouillé
   if (style.locked) {
@@ -219,8 +265,8 @@ function drawBuilding(
     ctx.fillText("🔒", sx + 3, sy + Math.min(v.cell, 16));
   }
 
-  // nom si la place le permet
-  if (pw > 34 && v.cell >= 8) {
+  // nom si la place le permet (axis seulement — le diamant n'a pas de bande nette)
+  if (!isDiagonalRot(rot) && pw > 34 && v.cell >= 8) {
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.font = "11px sans-serif";
     ctx.textBaseline = "middle";
@@ -232,7 +278,7 @@ function drawBuilding(
 function drawHover(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   const h = o.hover!;
   const v = o.view;
-  const cells = footprintCells(h.def, h.x, h.y, h.rot);
+  const cells = footprintCells(h.def, h.x, h.y, h.rot, gridScale(o.layout.grid));
   ctx.fillStyle = h.valid ? "rgba(124,179,66,0.4)" : "rgba(229,57,53,0.4)";
   for (const c of cells) {
     const [sx, sy] = gridToScreen(v, c.x, c.y);

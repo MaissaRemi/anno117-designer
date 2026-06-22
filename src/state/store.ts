@@ -12,7 +12,7 @@ import { makeLookup } from "../engine/rules";
 import { seedCatalog } from "../data/seed";
 import { loadState, saveState } from "../persist/local";
 import type { OptimizeResult } from "../optimizer/types";
-import { decodeMask, islandById } from "../data/islands";
+import { decodeMask, islandById, upscale2x } from "../data/islands";
 import { riversOf, slotsOf } from "../data/terrain";
 
 export type Tool =
@@ -246,16 +246,19 @@ export const useStore = create<State>((set, get) => {
     loadIsland: (id) => {
       const isl = islandById(id);
       if (!isl) return;
-      const usable = decodeMask(isl.mask, isl.size.w, isl.size.h);
-      // mer = toute case du carré de l'île qui n'est pas terre (bâtiments côtiers)
-      const water = usable.map((land) => !land);
-      // terrain réel (extrait du jeu) : rivières (argile) + slots (mines, source d'aqueduc, marais)
-      const rivers = riversOf(id, isl.size.w, isl.size.h);
-      if (rivers) for (let i = 0; i < rivers.length; i++) if (rivers[i]) usable[i] = false; // rivière non constructible
-      const slots = slotsOf(id).map((s) => ({ type: s.type, x: Math.round(s.x), y: Math.round(s.y) }));
+      // île décodée en TUILES, puis suréchantillonnée ×2 → grille VIVANTE ½-tuile
+      // (cellsPerTile=2) : la résolution requise pour la construction 45° (cf. geometry.ts).
+      const tw = isl.size.w, th = isl.size.h;
+      const usableT = decodeMask(isl.mask, tw, th);
+      const riversT = riversOf(id, tw, th);
+      if (riversT) for (let i = 0; i < riversT.length; i++) if (riversT[i]) usableT[i] = false; // rivière non constructible
+      const usable = upscale2x(usableT, tw, th);
+      const water = usable.map((land) => !land); // mer = non-terre
+      const rivers = riversT ? upscale2x(riversT, tw, th) : undefined;
+      const slots = slotsOf(id).map((s) => ({ type: s.type, x: Math.round(s.x) * 2, y: Math.round(s.y) * 2 }));
       set({
         layout: {
-          grid: { w: isl.size.w, h: isl.size.h, usable, water, rivers, slots: slots.length ? slots : undefined, islandId: id },
+          grid: { w: tw * 2, h: th * 2, usable, water, rivers, slots: slots.length ? slots : undefined, islandId: id, cellsPerTile: 2 },
           buildings: [], fields: [], roads: [],
         },
         past: [],
@@ -294,8 +297,8 @@ function rotate90(r: Rotation): Rotation {
 }
 
 /** Cellules occupées par un bâtiment donné — réexport pratique pour l'UI. */
-export function cellsOf(def: BuildingDef, b: PlacedBuilding): string[] {
-  return footprintCells(def, b.x, b.y, b.rotation).map((c) => cellKey(c.x, c.y));
+export function cellsOf(def: BuildingDef, b: PlacedBuilding, scale = 1): string[] {
+  return footprintCells(def, b.x, b.y, b.rotation, scale).map((c) => cellKey(c.x, c.y));
 }
 
 export { uid };

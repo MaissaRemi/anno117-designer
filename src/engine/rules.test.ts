@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { emptyLayout, makeBuildingDef, placeBuilding } from "../model/factories";
+import { makeBuildingDef, makeGrid, placeBuilding } from "../model/factories";
 import type { Layout } from "../model/types";
+
+// Oracle vérité-terrain en TUILES (cellsPerTile=1 → scale 1). emptyLayout est ½-tuile
+// (grille vivante) ; ici on teste la sémantique tuile avec des valeurs calculées à la main.
+const tileLayout = (w: number, h: number): Layout => ({
+  grid: makeGrid(w, h, true),
+  buildings: [],
+  fields: [],
+  roads: [],
+});
 import {
   canPlace,
   computeRadiusCoverage,
@@ -25,7 +34,7 @@ describe("computeRadiusCoverage — vérité-terrain (§2-D : oracle indépendan
     const svc = makeBuildingDef({ id: "svc", size: { w: 1, h: 1 }, radius: { kind: "service", range: 2 }, streetRange: 2 });
     const lk = makeLookup([svc]);
     const layout: Layout = {
-      ...emptyLayout(10, 10),
+      ...tileLayout(10, 10),
       buildings: [{ uid: "s", defId: "svc", x: 5, y: 5, rotation: 0, locked: false }],
       roads: [{ x: 5, y: 6 }, { x: 5, y: 7 }, { x: 5, y: 8 }],
     };
@@ -41,7 +50,7 @@ describe("computeRadiusCoverage — vérité-terrain (§2-D : oracle indépendan
 const lookup = makeLookup(catalog);
 
 function base(): Layout {
-  return emptyLayout(20, 20);
+  return tileLayout(20, 20);
 }
 
 describe("canPlace", () => {

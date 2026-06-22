@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { footprintCells } from "../engine/geometry";
+import { footprintCells, gridScale } from "../engine/geometry";
 import { canPlace, computeRadiusCoverage, makeLookup, validateLayout } from "../engine/rules";
 import type { PlacedBuilding } from "../model/types";
 import { drawScene, screenToGrid, type HoverPreview, type View } from "../render/draw";
@@ -18,7 +18,8 @@ export function GridCanvas() {
   const showRadius = useStore((s) => s.showRadius);
   const coverageHighlight = useStore((s) => s.coverageHighlight);
 
-  const [view, setView] = useState<View>({ originX: 20, originY: 20, cell: 22 });
+  // cell px par défaut adapté à la grille ½-tuile (cellsPerTile=2 → cellules 2× plus petites)
+  const [view, setView] = useState<View>({ originX: 20, originY: 20, cell: 11 });
   const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null);
   const dragging = useRef<null | "pan" | "paint" | "move">(null);
   const panStart = useRef<{ mx: number; my: number; ox: number; oy: number } | null>(null);
@@ -30,17 +31,18 @@ export function GridCanvas() {
 
   const buildingAt = useCallback(
     (gx: number, gy: number): PlacedBuilding | null => {
+      const scale = gridScale(layout.grid);
       for (let i = layout.buildings.length - 1; i >= 0; i--) {
         const b = layout.buildings[i];
         const def = lookup(b.defId);
         if (!def) continue;
-        if (footprintCells(def, b.x, b.y, b.rotation).some((c) => c.x === gx && c.y === gy)) {
+        if (footprintCells(def, b.x, b.y, b.rotation, scale).some((c) => c.x === gx && c.y === gy)) {
           return b;
         }
       }
       return null;
     },
-    [layout.buildings, lookup],
+    [layout.buildings, layout.grid, lookup],
   );
 
   // Aperçu de pose.
