@@ -98,6 +98,7 @@ export interface GridShape {
   rivers?: boolean[]; // optionnel : cases RIVIÈRE (argile, slots river)
   slots?: GridSlot[]; // optionnel : slots de ressource (mines, argile, source d'aqueduc)
   islandId?: string; // optionnel : île d'origine (accès aux données terrain — hauteurs)
+  cellsPerTile?: number; // ½-tuile (2) pour la grille vivante ; absent/1 = tuile (optimiseur). cf. geometry.ts
 }
 
 export interface Layout {

@@ -1,36 +1,41 @@
-// Primitives géométriques. CONVENTION 45° (cf. specs/2026-06-21-diagonal-45-foundation) :
+// Primitives géométriques. CONVENTION 45° + DEMI-TUILES (cf. specs/2026-06-21-diagonal-45) :
 //  - les rotations diagonales (45/135/225/315) rastérisent un rectangle pivoté en DIAMANT ;
-//  - à terme la grille est en ½-tuiles (1 tuile = 2 unités, tileToHT/htToTile) — la
-//    réinterprétation ×2 de def.size arrive en palier 2 (migration). Ici, additif : les
-//    rotations axis restent en unités def.size (comportement inchangé).
+//  - la grille VIVANTE (éditeur/rendu) est en ½-tuiles : 1 tuile-jeu = 2 cellules
+//    (GridShape.cellsPerTile = 2). L'optimiseur tourne en TUILES (cellsPerTile absent → 1)
+//    derrière un adaptateur (downscale/upscale). La géométrie est donc paramétrée par
+//    `scale` (= cellules par tuile) : def.size reste en TUILES, multiplié ×scale ici.
+//  - scale par défaut = 1 (tuiles) ; les consommateurs « vivants » passent scale=2.
 import type { BuildingDef, Cell, GridShape, Rotation } from "../model/types";
 
 const isDiagonal = (rot: Rotation): boolean => rot === 45 || rot === 135 || rot === 225 || rot === 315;
 
-/** Dimensions effectives après rotation. Diagonale → bbox carrée du diamant. */
-export function footprintSize(def: BuildingDef, rot: Rotation): { w: number; h: number } {
-  const { w, h } = def.size;
+/** Cellules par tuile d'une grille (½-tuile = 2 ; tuile/optimiseur = 1 par défaut). */
+export const gridScale = (g: GridShape): number => g.cellsPerTile ?? 1;
+
+/** Dimensions effectives après rotation, EN CELLULES (def.size ×scale). Diagonale → bbox carrée. */
+export function footprintSize(def: BuildingDef, rot: Rotation, scale = 1): { w: number; h: number } {
+  const w = def.size.w * scale, h = def.size.h * scale;
   if (isDiagonal(rot)) {
-    // demi-largeurs (w,h) ; bbox d'un rectangle pivoté 45° : demi = (w+h)/√2 par axe
-    const side = Math.ceil((2 * (w + h)) / Math.SQRT2);
+    // bbox d'un rectangle (w×h cellules) pivoté 45° : côté = (w+h)/√2 (diamètre du diamant)
+    const side = Math.ceil((w + h) / Math.SQRT2);
     return { w: side, h: side };
   }
   return rot === 90 || rot === 270 ? { w: h, h: w } : { w, h };
 }
 
-/** Liste des cases occupées par un bâtiment posé en (x,y). Diagonale → diamant rastérisé. */
-export function footprintCells(def: BuildingDef, x: number, y: number, rot: Rotation): Cell[] {
+/** Liste des cases occupées (EN CELLULES) par un bâtiment posé en (x,y). Diagonale → diamant rastérisé. */
+export function footprintCells(def: BuildingDef, x: number, y: number, rot: Rotation, scale = 1): Cell[] {
   const cells: Cell[] = [];
   if (!isDiagonal(rot)) {
-    const { w, h } = footprintSize(def, rot);
+    const { w, h } = footprintSize(def, rot, scale);
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) cells.push({ x: x + i, y: y + j });
     return cells;
   }
-  // diagonale : rectangle (demi-largeurs a,b) pivoté de rot, rastérisé sur la bbox carrée.
+  // diagonale : rectangle (w×h cellules, demi-largeurs a,b) pivoté de rot, rastérisé sur la bbox carrée.
   // Règle "aire" (packing serré, cf. objectif densité) : cellule bloquée si >= 50 % de son
   // aire est dans le rectangle → sous-échantillonnage SS×SS, seuil SS²/2. ~aire préservée.
-  const side = footprintSize(def, rot).w;
-  const a = def.size.w, b = def.size.h;
+  const side = footprintSize(def, rot, scale).w;
+  const a = (def.size.w * scale) / 2, b = (def.size.h * scale) / 2; // demi-largeurs en cellules
   const cx = x + side / 2, cy = y + side / 2; // centre du bâtiment
   const rad = (-rot * Math.PI) / 180; // rotation INVERSE pour passer en repère local
   const cos = Math.cos(rad), sin = Math.sin(rad);
@@ -87,6 +92,6 @@ export function neighbors8(x: number, y: number): Cell[] {
   ];
 }
 
-/** 1 tuile-jeu = 2 unités-grille (½-tuile). Conversions de coordonnées. */
+/** 1 tuile-jeu = 2 cellules (½-tuile). Conversions de coordonnées. */
 export const tileToHT = (n: number): number => n * 2;
 export const htToTile = (n: number): number => Math.floor(n / 2);

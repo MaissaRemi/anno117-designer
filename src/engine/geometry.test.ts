@@ -84,44 +84,51 @@ describe("geometry — grille", () => {
   });
 });
 
-describe("geometry 45° — rotations diagonales", () => {
+describe("geometry 45° — rotations diagonales (scale=2, grille vivante ½-tuile)", () => {
   it("footprintSize accepte les 8 rotations ; diamant = bbox carrée", () => {
     const d = makeBuildingDef({ id: "d", size: { w: 3, h: 12 } });
     for (const rot of [45, 135, 225, 315] as const) {
-      const s = footprintSize(d, rot);
+      const s = footprintSize(d, rot, 2);
       expect(s.w).toBe(s.h);
       expect(s.w).toBeGreaterThan(0);
     }
   });
 
-  it("footprintSize diamant : côté = ceil(2(w+h)/√2)", () => {
+  it("footprintSize diamant (scale=2) : côté = ceil(2(w+h)/√2)", () => {
     const d = makeBuildingDef({ id: "d", size: { w: 3, h: 3 } });
-    // demi-largeurs 3,3 ; côté = ceil(2*6/√2) = ceil(8.49) = 9
-    expect(footprintSize(d, 45)).toEqual({ w: 9, h: 9 });
-    expect(footprintSize(d, 135)).toEqual({ w: 9, h: 9 });
+    // en cellules : w=h=6 ; côté = ceil(12/√2) = ceil(8.49) = 9
+    expect(footprintSize(d, 45, 2)).toEqual({ w: 9, h: 9 });
+    expect(footprintSize(d, 135, 2)).toEqual({ w: 9, h: 9 });
   });
 
-  it("footprintCells diamant 1×1 : croix de 5 cellules (calcul manuel)", () => {
+  it("footprintSize axis ½-tuile (scale=2) : def.size ×2", () => {
+    const d = makeBuildingDef({ id: "a", size: { w: 3, h: 3 } });
+    expect(footprintSize(d, 0, 2)).toEqual({ w: 6, h: 6 });
+    expect(footprintSize(d, 90, 2)).toEqual({ w: 6, h: 6 });
+    expect(footprintCells(d, 0, 0, 0, 2).length).toBe(36); // 6×6 cellules
+  });
+
+  it("footprintCells diamant 1×1 (scale=2) : croix de 5 cellules (calcul manuel)", () => {
     const d = makeBuildingDef({ id: "u", size: { w: 1, h: 1 } });
     // côté 3, centre (1.5,1.5), |lx|<=1 && |ly|<=1 → la croix centrale
-    const cells = footprintCells(d, 0, 0, 45).map((c) => `${c.x},${c.y}`).sort();
+    const cells = footprintCells(d, 0, 0, 45, 2).map((c) => `${c.x},${c.y}`).sort();
     expect(cells).toEqual(["0,1", "1,0", "1,1", "1,2", "2,1"].sort());
   });
 
-  it("footprintCells axis inchangé (régression)", () => {
+  it("footprintCells axis inchangé (régression, scale=1 = tuile)", () => {
     const d = makeBuildingDef({ id: "r", size: { w: 2, h: 3 } });
     expect(footprintCells(d, 5, 7, 0).length).toBe(6);
     expect(footprintCells(d, 5, 7, 90).length).toBe(6);
   });
 
-  it("footprintCells diamant SERRÉ (règle ≥50% aire) : ~ aire préservée, pas gonflé", () => {
+  it("footprintCells diamant SERRÉ (règle ≥50% aire, scale=2) : ~ aire préservée, pas gonflé", () => {
     // carré 3×3 (axe = 36 ½-tuiles) → diamant serré ≈ 37 (et NON 41 de la règle "centre")
     const d33 = makeBuildingDef({ id: "d33", size: { w: 3, h: 3 } });
-    expect(footprintCells(d33, 0, 0, 45).length).toBe(37);
+    expect(footprintCells(d33, 0, 0, 45, 2).length).toBe(37);
     // borne générale : jamais beaucoup plus que l'aire axis (sinon packing dégradé)
     for (const [w, h] of [[2, 2], [3, 3], [2, 4]] as const) {
       const d = makeBuildingDef({ id: `s${w}${h}`, size: { w, h } });
-      const n = footprintCells(d, 0, 0, 45).length;
+      const n = footprintCells(d, 0, 0, 45, 2).length;
       const area = 2 * w * 2 * h;
       expect(n).toBeLessThanOrEqual(Math.ceil(area * 1.15)); // serré (≤ +15%)
       expect(n).toBeGreaterThan(0);
@@ -129,7 +136,7 @@ describe("geometry 45° — rotations diagonales", () => {
   });
 
   const fpSet = (def: ReturnType<typeof makeBuildingDef>, rot: 0 | 45 | 90 | 135 | 180 | 225 | 270 | 315) =>
-    new Set(footprintCells(def, 0, 0, rot).map((c) => `${c.x},${c.y}`));
+    new Set(footprintCells(def, 0, 0, rot, 2).map((c) => `${c.x},${c.y}`));
 
   it("symétrie 180° du rectangle : 45 ≡ 225 et 135 ≡ 315", () => {
     const rect = makeBuildingDef({ id: "rect", size: { w: 2, h: 4 } });
