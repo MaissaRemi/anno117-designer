@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { upscale2x } from "../data/islands";
+import { makeBuildingDef } from "../model/factories";
+import { makeLookup } from "../engine/rules";
 import type { GridShape } from "../model/types";
-import { downscaleGrid, scaleResultToHalfTile, upscaleBuildings, upscaleTiles } from "./halfTileAdapter";
+import { downscaleGrid, gridWithObstacles, scaleResultToHalfTile, upscaleBuildings, upscaleTiles } from "./halfTileAdapter";
 
 describe("downscaleGrid — ½-tuile → tuile (inverse de upscale2x)", () => {
   it("round-trip upscale2x → downscaleGrid récupère le masque tuile", () => {
@@ -47,6 +49,24 @@ describe("scaleResultToHalfTile — reprojection tuile → ½-tuile", () => {
 
   it("halfTile=false : identité", () => {
     expect(scaleResultToHalfTile(result, false)).toBe(result);
+  });
+});
+
+describe("gridWithObstacles — bâtiments verrouillés = obstacles (diamants 45° inclus)", () => {
+  it("un diamant 45° marque sa croix non constructible (½-tuile)", () => {
+    const dia = makeBuildingDef({ id: "dia", size: { w: 1, h: 1 } });
+    const lk = makeLookup([dia]);
+    const grid: GridShape = { w: 10, h: 10, usable: new Array(100).fill(true), cellsPerTile: 2 };
+    const out = gridWithObstacles(grid, [{ uid: "b", defId: "dia", x: 0, y: 0, rotation: 45, locked: true }], lk);
+    // croix de 5 (0,1)(1,0)(1,1)(1,2)(2,1) → non constructible
+    for (const [x, y] of [[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]] as const) expect(out.usable[y * 10 + x]).toBe(false);
+    expect(out.usable[0]).toBe(true); // (0,0) hors diamant reste constructible
+    expect(grid.usable[5]).toBe(true); // grille d'origine non mutée
+  });
+
+  it("aucun bâtiment → grille identique (pas de copie)", () => {
+    const grid: GridShape = { w: 2, h: 2, usable: [true, true, true, true] };
+    expect(gridWithObstacles(grid, [], makeLookup([]))).toBe(grid);
   });
 });
 

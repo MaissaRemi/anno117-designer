@@ -1,4 +1,6 @@
 import type { GridShape, PlacedBuilding } from "../model/types";
+import { footprintCells, gridScale } from "../engine/geometry";
+import type { DefLookup } from "../engine/rules";
 
 /**
  * Adaptateur ½-tuile ⇄ tuile pour l'optimiseur. La grille VIVANTE est en ½-tuiles
@@ -10,6 +12,26 @@ import type { GridShape, PlacedBuilding } from "../model/types";
  *  - upscale du résultat : bâtiments ×2 (l'emprise re-double via cellsPerTile=2) ;
  *    routes/champs/aqueducs → bloc 2×2 (1 tuile = 2×2 cellules → route large 1 tuile).
  */
+
+/**
+ * Marque l'emprise des bâtiments donnés comme NON constructible (obstacle) sur une
+ * copie de la grille. Sert à faire CONTOURNER l'optimiseur autour des bâtiments
+ * verrouillés posés à la main — y compris les diamants 45° (footprintCells gère la
+ * rotation). Sans bâtiments → grille inchangée (pas de copie inutile).
+ */
+export function gridWithObstacles(grid: GridShape, buildings: PlacedBuilding[], lookup: DefLookup): GridShape {
+  if (!buildings.length) return grid;
+  const scale = gridScale(grid);
+  const usable = grid.usable.slice();
+  for (const b of buildings) {
+    const def = lookup(b.defId);
+    if (!def) continue;
+    for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) {
+      if (c.x >= 0 && c.y >= 0 && c.x < grid.w && c.y < grid.h) usable[c.y * grid.w + c.x] = false;
+    }
+  }
+  return { ...grid, usable };
+}
 
 /** Inverse de upscale2x : ½-tuile → tuile (coin haut-gauche de chaque bloc 2×2). */
 export function downscaleGrid(g: GridShape): GridShape {

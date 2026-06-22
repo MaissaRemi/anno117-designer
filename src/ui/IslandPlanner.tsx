@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { economy, tiers } from "../economy/economy";
 import { runIslandPlan, type AnyIslandPlanResult } from "../optimizer/runIslandPlan";
+import { gridWithObstacles } from "../optimizer/halfTileAdapter";
+import { makeLookup } from "../engine/rules";
 import { Modal } from "./Modal";
 
 interface Props {
@@ -73,9 +75,13 @@ export function IslandPlanner({ onClose }: Props) {
     setProgress(null);
     setError(null);
     cancelRef.current?.(); // annule un éventuel calcul précédent
+    // les bâtiments VERROUILLÉS posés à la main (axis ou diamants 45°) deviennent des
+    // obstacles → l'optimiseur contourne, applyOptimization les conserve (pas de chevauchement)
+    const locked = s.layout.buildings.filter((b) => b.locked);
+    const grid = gridWithObstacles(s.layout.grid, locked, makeLookup(s.catalog));
     const { promise, cancel } = runIslandPlan(
       {
-        catalog: s.catalog, grid: s.layout.grid, mode, tierGuid,
+        catalog: s.catalog, grid, mode, tierGuid,
         coverageFloor: floor / 100, needMode,
         // params production joints seulement quand ils servent
         ...(mode === "production"
