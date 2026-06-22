@@ -7,7 +7,8 @@
 //  - scale par défaut = 1 (tuiles) ; les consommateurs « vivants » passent scale=2.
 import type { BuildingDef, Cell, GridShape, Rotation } from "../model/types";
 
-const isDiagonal = (rot: Rotation): boolean => rot === 45 || rot === 135 || rot === 225 || rot === 315;
+/** Rotation diagonale (diamant) ? */
+export const isDiagonal = (rot: Rotation): boolean => rot === 45 || rot === 135 || rot === 225 || rot === 315;
 
 /** Cellules par tuile d'une grille (½-tuile = 2 ; tuile/optimiseur = 1 par défaut). */
 export const gridScale = (g: GridShape): number => g.cellsPerTile ?? 1;
@@ -34,8 +35,9 @@ export function footprintCells(def: BuildingDef, x: number, y: number, rot: Rota
   // diagonale : rectangle (w×h cellules, demi-largeurs a,b) pivoté de rot, rastérisé sur la bbox carrée.
   // Règle "aire" (packing serré, cf. objectif densité) : cellule bloquée si >= 50 % de son
   // aire est dans le rectangle → sous-échantillonnage SS×SS, seuil SS²/2. ~aire préservée.
-  const side = footprintSize(def, rot, scale).w;
-  const a = (def.size.w * scale) / 2, b = (def.size.h * scale) / 2; // demi-largeurs en cellules
+  const w = def.size.w * scale, h = def.size.h * scale;
+  const side = Math.ceil((w + h) / Math.SQRT2); // = footprintSize diagonal, recalculé inline
+  const a = w / 2, b = h / 2; // demi-largeurs en cellules
   const cx = x + side / 2, cy = y + side / 2; // centre du bâtiment
   const rad = (-rot * Math.PI) / 180; // rotation INVERSE pour passer en repère local
   const cos = Math.cos(rad), sin = Math.sin(rad);
@@ -73,6 +75,12 @@ export const isBuildable = (g: GridShape, x: number, y: number, placement?: "lan
   placement === "water" ? isWater(g, x, y) : isUsable(g, x, y);
 
 export const cellKey = (x: number, y: number): string => `${x},${y}`;
+
+/** Décode une clé "x,y" en cellule (inverse de cellKey ; sans alloc de tableau). */
+export const parseCellKey = (key: string): Cell => {
+  const i = key.indexOf(",");
+  return { x: +key.slice(0, i), y: +key.slice(i + 1) };
+};
 
 /** Voisins orthogonaux (4-connexité). */
 export function orthoNeighbors(x: number, y: number): Cell[] {

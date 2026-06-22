@@ -1,4 +1,4 @@
-import { footprintCells, footprintSize, gridScale } from "../engine/geometry";
+import { footprintCells, footprintSize, gridScale, isDiagonal, parseCellKey } from "../engine/geometry";
 import type { BuildingIssues } from "../engine/rules";
 import type { BuildingDef, Layout, Rotation } from "../model/types";
 
@@ -93,8 +93,7 @@ function drawCoverageHighlight(ctx: CanvasRenderingContext2D, o: DrawOpts): void
   ctx.strokeStyle = "rgba(255, 80, 80, 0.9)";
   ctx.lineWidth = 1;
   for (const key of o.coverageHighlight!) {
-    const ci = key.indexOf(",");
-    const x = +key.slice(0, ci), y = +key.slice(ci + 1);
+    const { x, y } = parseCellKey(key);
     if (x < cx0 || x >= cx1 || y < cy0 || y >= cy1) continue;
     const [sx, sy] = gridToScreen(v, x, y);
     ctx.fillRect(sx, sy, v.cell, v.cell);
@@ -172,8 +171,7 @@ function drawCoverage(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   ctx.fillStyle = "rgba(124,179,66,0.15)";
   for (const set of o.coverage.values()) {
     for (const key of set) {
-      const ci = key.indexOf(",");
-      const x = +key.slice(0, ci), y = +key.slice(ci + 1);
+      const { x, y } = parseCellKey(key);
       if (x < cx0 || x >= cx1 || y < cy0 || y >= cy1) continue; // hors viewport
       const [sx, sy] = gridToScreen(v, x, y);
       ctx.fillRect(sx, sy, v.cell, v.cell);
@@ -221,8 +219,6 @@ interface BuildingStyle {
   name: string;
 }
 
-const isDiagonalRot = (rot: Rotation): boolean => rot === 45 || rot === 135 || rot === 225 || rot === 315;
-
 function drawBuilding(
   ctx: CanvasRenderingContext2D,
   v: View,
@@ -237,26 +233,23 @@ function drawBuilding(
   const [sx, sy] = gridToScreen(v, x, y);
   const pw = w * v.cell;
   const ph = h * v.cell;
-  const hasIssue = style.issue && !style.issue.ok;
-  const stroke = hasIssue ? "#e53935" : style.selected ? "#ffffff" : "rgba(0,0,0,0.5)";
 
-  if (isDiagonalRot(rot)) {
-    // 45° : on peint l'emprise DIAMANT réelle (cellules), pas la bbox carrée
-    ctx.fillStyle = def.color;
+  // remplissage : diamant réel (cellules) en 45°, sinon rectangle bbox
+  ctx.fillStyle = def.color;
+  if (isDiagonal(rot)) {
     for (const c of footprintCells(def, x, y, rot, scale)) {
       const [cx, cy] = gridToScreen(v, c.x, c.y);
       ctx.fillRect(cx, cy, v.cell + 0.5, v.cell + 0.5);
     }
-    ctx.lineWidth = style.selected ? 3 : 2;
-    ctx.strokeStyle = stroke;
-    ctx.strokeRect(sx + 1.5, sy + 1.5, pw - 3, ph - 3); // bbox indicatif
   } else {
-    ctx.fillStyle = def.color;
     ctx.fillRect(sx + 1, sy + 1, pw - 2, ph - 2);
-    ctx.lineWidth = style.selected ? 3 : 2;
-    ctx.strokeStyle = stroke;
-    ctx.strokeRect(sx + 1.5, sy + 1.5, pw - 3, ph - 3);
   }
+
+  // bordure commune : bbox carrée (rouge si problème, blanc si sélection, sinon sombre)
+  const hasIssue = style.issue && !style.issue.ok;
+  ctx.lineWidth = style.selected ? 3 : 2;
+  ctx.strokeStyle = hasIssue ? "#e53935" : style.selected ? "#ffffff" : "rgba(0,0,0,0.5)";
+  ctx.strokeRect(sx + 1.5, sy + 1.5, pw - 3, ph - 3);
 
   // cadenas si verrouillé
   if (style.locked) {
@@ -266,7 +259,7 @@ function drawBuilding(
   }
 
   // nom si la place le permet (axis seulement — le diamant n'a pas de bande nette)
-  if (!isDiagonalRot(rot) && pw > 34 && v.cell >= 8) {
+  if (!isDiagonal(rot) && pw > 34 && v.cell >= 8) {
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.font = "11px sans-serif";
     ctx.textBaseline = "middle";

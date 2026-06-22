@@ -4,10 +4,8 @@ import type {
   BuildingDef,
   Catalog,
   Layout,
-  PlacedBuilding,
   Rotation,
 } from "../model/types";
-import { cellKey, footprintCells } from "../engine/geometry";
 import { makeLookup } from "../engine/rules";
 import { seedCatalog } from "../data/seed";
 import { loadState, saveState } from "../persist/local";
@@ -310,11 +308,6 @@ function rotateStep(r: Rotation, step: 45 | 90): Rotation {
 /** Resnap au multiple de 90° le plus proche (retour en mode axe depuis une pose 45°). */
 function snapTo90(r: Rotation): 0 | 90 | 180 | 270 {
   return ((Math.round(r / 90) * 90) % 360) as 0 | 90 | 180 | 270;
-}
-
-/** Cellules occupées par un bâtiment donné — réexport pratique pour l'UI. */
-export function cellsOf(def: BuildingDef, b: PlacedBuilding, scale = 1): string[] {
-  return footprintCells(def, b.x, b.y, b.rotation, scale).map((c) => cellKey(c.x, c.y));
 }
 
 export { uid };

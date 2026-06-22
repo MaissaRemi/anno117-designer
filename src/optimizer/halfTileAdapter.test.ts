@@ -53,15 +53,18 @@ describe("scaleResultToHalfTile — reprojection tuile → ½-tuile", () => {
 });
 
 describe("gridWithObstacles — bâtiments verrouillés = obstacles (diamants 45° inclus)", () => {
-  it("un diamant 45° marque sa croix non constructible (½-tuile)", () => {
+  it("un diamant 45° bloque les TUILES de sa croix (½-tuile, survit au downscale)", () => {
     const dia = makeBuildingDef({ id: "dia", size: { w: 1, h: 1 } });
     const lk = makeLookup([dia]);
     const grid: GridShape = { w: 10, h: 10, usable: new Array(100).fill(true), cellsPerTile: 2 };
     const out = gridWithObstacles(grid, [{ uid: "b", defId: "dia", x: 0, y: 0, rotation: 45, locked: true }], lk);
     // croix de 5 (0,1)(1,0)(1,1)(1,2)(2,1) → non constructible
     for (const [x, y] of [[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]] as const) expect(out.usable[y * 10 + x]).toBe(false);
-    expect(out.usable[0]).toBe(true); // (0,0) hors diamant reste constructible
-    expect(grid.usable[5]).toBe(true); // grille d'origine non mutée
+    // bloc-tuile : le coin haut-gauche (0,0) de la tuile touchée est aussi bloqué (sinon le
+    // downscale, qui n'échantillonne que ce coin, perdrait l'obstacle)
+    expect(out.usable[0]).toBe(false);
+    expect(out.usable[9 * 10 + 9]).toBe(true); // tuile loin du diamant : constructible
+    expect(grid.usable[0]).toBe(true); // grille d'origine non mutée
   });
 
   it("aucun bâtiment → grille identique (pas de copie)", () => {

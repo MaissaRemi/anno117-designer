@@ -21,13 +21,20 @@ import type { DefLookup } from "../engine/rules";
  */
 export function gridWithObstacles(grid: GridShape, buildings: PlacedBuilding[], lookup: DefLookup): GridShape {
   if (!buildings.length) return grid;
-  const scale = gridScale(grid);
+  const cpt = gridScale(grid); // cellules par tuile (½-tuile = 2)
   const usable = grid.usable.slice();
+  const block = (x: number, y: number) => {
+    if (x >= 0 && y >= 0 && x < grid.w && y < grid.h) usable[y * grid.w + x] = false;
+  };
   for (const b of buildings) {
     const def = lookup(b.defId);
     if (!def) continue;
-    for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) {
-      if (c.x >= 0 && c.y >= 0 && c.x < grid.w && c.y < grid.h) usable[c.y * grid.w + c.x] = false;
+    // On bloque la TUILE entière touchée (bloc cpt×cpt), pas la seule cellule : downscaleGrid
+    // n'échantillonne que le coin haut-gauche de chaque tuile → un diamant qui rate ce coin
+    // disparaîtrait sinon, et l'optimiseur passerait à travers le bâtiment verrouillé.
+    for (const c of footprintCells(def, b.x, b.y, b.rotation, cpt)) {
+      const bx = c.x - (c.x % cpt), by = c.y - (c.y % cpt);
+      for (let dy = 0; dy < cpt; dy++) for (let dx = 0; dx < cpt; dx++) block(bx + dx, by + dy);
     }
   }
   return { ...grid, usable };
