@@ -310,17 +310,24 @@ def parse_ifo_size(data):
             root = ET.fromstring(data.decode("latin-1"))
         except Exception:
             return None
-    bb = root.find("./BoundingBox")
-    if bb is None:
-        return None
-    ext = bb.find("./Extents")
+    # BuildBlocker = VRAIE grille de pose (polygone de coins en tuiles) → span min..max.
+    # (BoundingBox/Extents = demi-taille de l'AABB du MESH visuel, toit/debord inclus →
+    #  sur-dimensionne ~74% des batiments de +1 tuile/axe. cf. audit 2026.)
+    bb = root.find("./BuildBlocker")
+    if bb is not None:
+        xs = [float(p.findtext("xf") or 0) for p in bb.findall("./Position")]
+        zs = [float(p.findtext("zf") or 0) for p in bb.findall("./Position")]
+        if xs and zs:
+            w = max(1, round(max(xs) - min(xs)))
+            h = max(1, round(max(zs) - min(zs)))
+            return {"w": w, "h": h}
+    # repli : Extents (demi-taille du mesh, ×2) si pas de BuildBlocker
+    ext = root.find("./BoundingBox/Extents")
     if ext is None:
         return None
     xf = float(ext.findtext("xf") or 0)
     zf = float(ext.findtext("zf") or 0)
-    w = max(1, round(xf * 2))
-    h = max(1, round(zf * 2))
-    return {"w": w, "h": h}
+    return {"w": max(1, round(xf * 2)), "h": max(1, round(zf * 2))}
 
 
 def resolve_sizes(buildings):
