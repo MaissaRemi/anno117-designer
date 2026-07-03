@@ -288,6 +288,7 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
       const direct = computeProduction(pop);
       goodsDemand = direct.demand;
       production = direct.counts;
+      goodsImports = direct.imports; // sinon manifeste d'import périmé (dernière itér divergée)
       break;
     }
   }

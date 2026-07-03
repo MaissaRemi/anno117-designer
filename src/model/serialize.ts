@@ -2,13 +2,13 @@ import type { Catalog, Layout } from "./types";
 
 export interface SaveFile {
   app: "anno117-designer";
-  version: 1;
+  version: number; // 8 = grille ½-tuile (cellsPerTile). Un fichier tuile (v≤7) est migré ×2 à l'import.
   catalog: Catalog;
   layout: Layout;
 }
 
 export function toSaveFile(catalog: Catalog, layout: Layout): SaveFile {
-  return { app: "anno117-designer", version: 1, catalog, layout };
+  return { app: "anno117-designer", version: 8, catalog, layout };
 }
 
 export function serialize(catalog: Catalog, layout: Layout): string {

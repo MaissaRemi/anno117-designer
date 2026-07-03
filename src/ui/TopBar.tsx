@@ -3,6 +3,7 @@ import { useStore } from "../state/store";
 import { exportJson, importJson } from "../persist/json";
 import { exportPng } from "../persist/png";
 import { findOrphanRefs } from "../model/serialize";
+import { migrateV7toV8 } from "../persist/local";
 import { renderFullCanvas } from "../render/exportImage";
 import { IslandPicker } from "./IslandPicker";
 import { RoadAudit } from "./RoadAudit";
@@ -26,7 +27,10 @@ export function TopBar() {
 
   const onImport = async () => {
     try {
-      const file = await importJson();
+      const raw = await importJson();
+      // fichier tuile (export d'un ancien build, sans cellsPerTile) → migrer ×2 en ½-tuile,
+      // sinon la grille cohabite en scale 1 dans une app ½-tuile (bâtiments/portées à moitié)
+      const file = (raw.layout.grid.cellsPerTile ?? 1) === 2 ? raw : migrateV7toV8(raw);
       const issues = findOrphanRefs(file.catalog, file.layout);
       if (issues.orphanDefs.length || issues.orphanFieldOwners) {
         const preview = issues.orphanDefs.slice(0, 5).join(", ") + (issues.orphanDefs.length > 5 ? "…" : "");

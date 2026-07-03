@@ -63,6 +63,7 @@ export function loadState(): Persisted | null {
     if (!dataV7.catalog || !dataV7.layout) return null;
     const migrated = migrateV7toV8(dataV7);
     saveState(migrated.catalog, migrated.layout); // persiste la version migrée
+    try { localStorage.removeItem(KEY_V7); } catch { /* ignore */ } // évite de re-migrer chaque chargement
     return migrated;
   } catch {
     return null;

@@ -44,18 +44,26 @@ export function gridWithObstacles(grid: GridShape, buildings: PlacedBuilding[], 
 export function downscaleGrid(g: GridShape): GridShape {
   if ((g.cellsPerTile ?? 1) === 1) return g; // déjà en tuiles
   const W = g.w, tw = Math.floor(W / 2), th = Math.floor(g.h / 2);
-  const pick = (src: boolean[] | undefined): boolean[] | undefined => {
+  // Réduction par bloc 2×2 (pas d'échantillonnage du seul coin haut-gauche, qui perdrait
+  // une feature fine décalée) : usable = ET (une tuile n'est constructible que si ses 4
+  // cellules le sont → jamais poser sur une eau/rivière partielle), water/rivers = OU
+  // (conservateur : la tuile est eau/rivière dès qu'une cellule l'est).
+  const reduce = (src: boolean[] | undefined, mode: "and" | "or"): boolean[] | undefined => {
     if (!src) return undefined;
     const out = new Array<boolean>(tw * th);
-    for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) out[y * tw + x] = src[2 * y * W + 2 * x];
+    for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) {
+      const a = src[2 * y * W + 2 * x], b = src[2 * y * W + 2 * x + 1];
+      const c = src[(2 * y + 1) * W + 2 * x], d = src[(2 * y + 1) * W + 2 * x + 1];
+      out[y * tw + x] = mode === "and" ? a && b && c && d : a || b || c || d;
+    }
     return out;
   };
   return {
     w: tw,
     h: th,
-    usable: pick(g.usable)!,
-    water: pick(g.water),
-    rivers: pick(g.rivers),
+    usable: reduce(g.usable, "and")!,
+    water: reduce(g.water, "or"),
+    rivers: reduce(g.rivers, "or"),
     slots: g.slots?.map((s) => ({ ...s, x: Math.floor(s.x / 2), y: Math.floor(s.y / 2) })),
     islandId: g.islandId,
     // cellsPerTile absent → tuile (scale 1) côté moteurs/coverage

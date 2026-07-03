@@ -17,6 +17,19 @@ describe("downscaleGrid — ½-tuile → tuile (inverse de upscale2x)", () => {
     expect(back.cellsPerTile).toBeUndefined(); // tuile (scale 1)
   });
 
+  it("bloc 2×2 MIXTE : usable = ET (false si 1 cellule non-usable), water = OU", () => {
+    // tuile (0,0) = bloc {(0,0),(1,0),(0,1),(1,1)} ; on rend (1,1) non-usable + eau
+    const W = 4;
+    const usable = new Array(16).fill(true);
+    const water = new Array(16).fill(false);
+    usable[1 * W + 1] = false; water[1 * W + 1] = true; // cellule (1,1)
+    const ht: GridShape = { w: 4, h: 4, usable, water, cellsPerTile: 2 };
+    const back = downscaleGrid(ht);
+    expect(back.usable[0]).toBe(false); // ET : bloc partiellement bloqué → tuile non constructible
+    expect(back.water![0]).toBe(true); // OU : bloc touche l'eau → tuile eau
+    expect(back.usable[1 * 2 + 1]).toBe(true); // tuile (1,1) : bloc plein → constructible
+  });
+
   it("slots ÷2, grille déjà tuile inchangée", () => {
     const ht: GridShape = {
       w: 4, h: 4, usable: new Array(16).fill(true),
