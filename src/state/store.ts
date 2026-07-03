@@ -7,6 +7,7 @@ import type {
   Rotation,
 } from "../model/types";
 import { makeLookup } from "../engine/rules";
+import { gridScale } from "../engine/geometry";
 import { seedCatalog } from "../data/seed";
 import { loadState, saveState } from "../persist/local";
 import type { OptimizeResult } from "../optimizer/types";
@@ -180,14 +181,24 @@ export const useStore = create<State>((set, get) => {
         if (!owner) return;
         const def = lk(owner.defId);
         if (!def?.field) return;
-        if (l.fields.some((f) => f.x === x && f.y === y)) return;
-        l.fields.push({ x, y, ownerUid: fieldOwnerUid, fieldType: def.field.fieldType });
+        // 1 clic = 1 TUILE-jeu = bloc scale×scale de cellules (cohérent avec validateFields
+        // qui exige def.field.tiles × scale² cellules ; à scale 1 = 1 cellule, inchangé)
+        const s = gridScale(l.grid);
+        const bx = x - (x % s), by = y - (y % s);
+        for (let dy = 0; dy < s; dy++) for (let dx = 0; dx < s; dx++) {
+          const cx = bx + dx, cy = by + dy;
+          if (cx < 0 || cy < 0 || cx >= l.grid.w || cy >= l.grid.h) continue;
+          if (l.fields.some((f) => f.x === cx && f.y === cy)) continue;
+          l.fields.push({ x: cx, y: cy, ownerUid: fieldOwnerUid, fieldType: def.field!.fieldType });
+        }
       });
     },
 
     eraseFieldAt: (x, y) =>
       commit((l) => {
-        l.fields = l.fields.filter((f) => !(f.x === x && f.y === y));
+        const s = gridScale(l.grid);
+        const bx = x - (x % s), by = y - (y % s); // efface la TUILE entière
+        l.fields = l.fields.filter((f) => !(f.x >= bx && f.x < bx + s && f.y >= by && f.y < by + s));
       }),
 
     setUsable: (x, y, usable) =>

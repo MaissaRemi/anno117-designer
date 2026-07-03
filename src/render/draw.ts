@@ -122,6 +122,7 @@ function drawGrid(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   // slots de ressource (mines / argile / marais / source d'aqueduc) : marqueurs
   if (grid.slots) {
     for (const s of grid.slots) {
+      if (s.x < cx0 || s.x >= cx1 || s.y < cy0 || s.y >= cy1) continue; // hors viewport
       const [sx, sy] = gridToScreen(v, s.x, s.y);
       const cx = sx + v.cell / 2, cy = sy + v.cell / 2;
       const r = Math.max(4, v.cell * 1.2);

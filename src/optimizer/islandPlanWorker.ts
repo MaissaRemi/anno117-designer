@@ -19,14 +19,18 @@ self.onmessage = async (e: MessageEvent<IslandPlanRequest>) => {
     // (moteurs inchangés, routes 1 tuile = constructibles) puis on reprojette ×2.
     const halfTile = (e.data.grid.cellsPerTile ?? 1) === 2;
     const tileGrid = downscaleGrid(e.data.grid);
+    // hauteurs valides seulement si leurs dims == la grille tuile. Après un RESIZE, islandId
+    // reste mais grid.w/h changent → sans cette garde, waterPlan indexe heights[y*W+x] avec un
+    // W décalé → lectures faussées voire HORS-BORNE (chemins d'aqueduc supprimés silencieusement).
+    const heightsOk = heights && heights.length === tileGrid.w * tileGrid.h ? heights : null;
     const planned = planIsland(
-      { ...e.data, grid: tileGrid, heights: heights ?? undefined },
+      { ...e.data, grid: tileGrid, heights: heightsOk ?? undefined },
       (step, total) => post({ type: "progress", step, total }),
     );
     const result = scaleResultToHalfTile(planned, halfTile);
-    // hauteurs attendues mais non décodables (navigateur sans DecompressionStream) :
-    // la pente d'aqueduc n'a pas pu être vérifiée → on le signale honnêtement.
-    if (wantHeights && !heights && "gaps" in result && Array.isArray(result.gaps)) {
+    // hauteurs attendues mais indisponibles (navigateur sans DecompressionStream, OU dims
+    // désync après resize) : la pente d'aqueduc n'a pas pu être vérifiée → on le signale.
+    if (wantHeights && !heightsOk && "gaps" in result && Array.isArray(result.gaps)) {
       result.gaps.push(
         "⚠ Hauteurs de terrain indisponibles dans ce navigateur — pente des aqueducs non vérifiée (réseau d'eau possiblement optimiste).",
       );
