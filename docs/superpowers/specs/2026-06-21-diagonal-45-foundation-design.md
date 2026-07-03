@@ -16,11 +16,14 @@ Source : agent de recherche 2026-06-21 (dump dans le transcript). Verdicts [FICH
 
 - **[FICHIERS+WEB]** 45° **par crans, 8 directions** (4 cardinales + 4 diagonales), pas de
   rotation libre. Toggle global `DiagonalBuildEnabled` (templates.xml, défaut on).
-- **[FICHIERS+WEB]** **Sous-tuiles : chaque tuile = 4 sous-tuiles (½-tuile, 2× plus fin/axe).**
-  1 tuile = 2 unités-monde (confirmé : `build_catalog.py` fait `round(xf*2)` sur les `.ifo`).
+- **[WEB]** **Sous-tuiles : ½-tuile (2× plus fin/axe)** pour rendre les diamants/wedges.
+  ⚠ CORRECTION AUDIT 2026 : le `round(xf*2)` de `build_catalog.py` = demi-extent → tuile
+  ENTIÈRE (1 unité-monde = 1 TUILE), PAS ½-tuile. La grille ½-tuile (`cellsPerTile=2`) est un
+  choix RUNTIME du planner pour représenter le 45°, pas une granularité prouvée par ce ×2.
 - **[FICHIERS+WEB]** Routes = **graphe + tuiles "wedge"** (triangles diagonaux). Asset
   `Street` GUID 23996 avec `<WedgeConfig>` (`..._diagonal.cfg`). Connexion **au coin =
-  8-adjacence**.
+  8-adjacence** — ⚠ **[WEB/devblog seul, ZÉRO preuve fichier** (audit : pas de
+  `StreetAdjacency`/`ConnectionType`)**]** : implémentée en SP3 sur cette base, non confirmée.
 - **[WEB+FICHIERS]** Bâtiment à 45° = **diamant**, snappé à l'aire-bloquée la plus proche
   (peut grossir/rétrécir un peu). Le mesh ne change pas, l'emprise oui. Masque diamant `AQ`
   dans `res01.ifo`.

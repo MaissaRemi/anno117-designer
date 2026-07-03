@@ -278,3 +278,23 @@ Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
 - [Calculateur communautaire anno-117-calculator](https://anno-mods.github.io/anno-117-calculator/) — validation croisée des chaînes.
 - [Mod workforce inter-île](https://mod.io/g/anno-117-pax-romana/m/workforce-transfer-between-islands-crash-fixed) — confirme pas de navettage vanilla.
 - Historique v1 (notes détaillées NeedsList/capacités/solveur) : voir git history de ce fichier.
+
+## 16. Corrections audit (2026, branche feature/diagonal-45)
+
+Audit croisé code × fichiers jeu (4 agents). L'ÉCONOMIE/EAU/PROD sont vérifiées exactes
+(conso Colisée 50/Bains 25/Forum 15/citerne 10, seuils upgrade, capacités, débit, workforce,
+MaxTransporterRange — tous confirmés GUID+propriété). Corrigé :
+- **[FICHIERS] Tailles bâtiments = `BuildBlocker` (vraie emprise), plus `BoundingBox/Extents`
+  (AABB mesh visuel).** Extents sur-dimensionnait ~74 % (+1 tuile/axe) → planner sur-occupait.
+  `build_catalog.parse_ifo_size` lit désormais le span du polygone `BuildBlocker`. **Résidences
+  4×4→3×3**, Marché 6×8→5×6, Théâtre 16×12→14×11, Bains 12×21→11×20. 241/343 corrigés.
+- **8-adjacence (connexion coin)** : IMPLÉMENTÉE en SP3 (grille ½-tuile) mais **sur base
+  WEB/devblog uniquement — zéro preuve fichier** (pas de `StreetAdjacency`/`ConnectionType`).
+  Reste [OUVERT in-game #3]. Traversée réseau = 8-adj (runs diagonaux) ; le served-set live
+  compte le coin (optimiste vs l'optimiseur tuile 4-adj — écart assumé, l'optimiseur est
+  conservateur).
+- Correctifs adaptateur ½-tuile : `downscaleGrid` réduit par bloc 2×2 (usable=ET, water/rivers=OU,
+  plus d'échantillonnage coin) ; garde hauteurs vs dims après resize ; obstacles verrouillés
+  bloquent la tuile entière. Champs peints par bloc (1 clic = 1 tuile). Import JSON tuile migré ×2.
+- Doc : le `round(xf*2)` = demi-extent→TUILE entière (pas ½-tuile) ; la grille ½-tuile est un
+  choix runtime du planner, pas une granularité jeu prouvée.
