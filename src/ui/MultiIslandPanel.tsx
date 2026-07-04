@@ -5,14 +5,27 @@ import { useStore } from "../state/store";
 import { economy, tiers } from "../economy/economy";
 import { emptyProfile } from "../economy/resources";
 import { ResourceSelector } from "./ResourceSelector";
+import { RunPanel } from "./components/RunPanel";
 import { runMultiIslandPlan } from "../optimizer/runMultiIslandPlan";
-import type { IslandInput, MultiIslandResult, Role } from "../optimizer/multiIslandPlan";
+import type { Assignment, IslandInput, MultiIslandResult, Role } from "../optimizer/multiIslandPlan";
+import type { OptimizeResult } from "../optimizer/types";
 
 const targetTiers = tiers.filter((t) => t.residenceId);
+const goodName = (g: string) => economy.goodNames[g] || g;
 
-/** Onglet MULTI-ÎLES : déclare ses îles + ressources, laisse le programme assigner les
- *  rôles (population/production) et dimensionner/placer. Réutilise le store party (SP-A),
- *  ResourceSelector, buildIslandGrid et le planner mono-île — zéro duplication. */
+/** Mappe un plan d'île (import ou production) vers un OptimizeResult applicable à l'éditeur. */
+function planToOptimizeResult(plan: NonNullable<Assignment["plan"]>): OptimizeResult {
+  const aqueducts = "aqueducts" in plan ? plan.aqueducts : undefined;
+  return {
+    buildings: plan.buildings, roads: plan.roads, fields: plan.fields, aqueducts,
+    placed: plan.buildings.length, requested: plan.buildings.length,
+    placedByDef: {}, score: 0,
+    breakdown: { count: plan.buildings.length, roadLen: plan.roads.length, bboxArea: 0, coverage: 0 },
+  };
+}
+
+/** Mode MULTI-ÎLES : party board (îles + ressources à chips) → assignation des rôles +
+ *  dimensionnement/placement (RunPanel partagé) + drill-down « Voir » vers l'éditeur. */
 export function MultiIslandPanel() {
   const catalog = useStore((s) => s.catalog);
   const partyIslands = useStore((s) => s.partyIslands);
@@ -20,6 +33,9 @@ export function MultiIslandPanel() {
   const addPartyIsland = useStore((s) => s.addPartyIsland);
   const removePartyIsland = useStore((s) => s.removePartyIsland);
   const setIslandProfile = useStore((s) => s.setIslandProfile);
+  const loadIsland = useStore((s) => s.loadIsland);
+  const applyOptimization = useStore((s) => s.applyOptimization);
+  const setUiMode = useStore((s) => s.setUiMode);
 
   const [tierGuid, setTierGuid] = useState(targetTiers[targetTiers.length - 1]?.guid ?? "");
   const [pins, setPins] = useState<Record<string, Role | "auto">>({});
@@ -30,6 +46,7 @@ export function MultiIslandPanel() {
 
   const available = useMemo(() => islands.filter((i) => !partyIslands.includes(i.id)), [partyIslands]);
   const nameOf = (id: string) => islands.find((i) => i.id === id)?.name ?? id;
+  const sizeOf = (id: string) => { const i = islands.find((x) => x.id === id); return i ? `${i.size.w}×${i.size.h}` : ""; };
 
   const run = (mode: "dimension" | "place") => {
     setRunning(true); setError(null); setResult(null);
@@ -39,10 +56,7 @@ export function MultiIslandPanel() {
         const grid = buildIslandGrid(id);
         if (!grid) return null;
         const pin = pins[id];
-        return {
-          islandId: id, grid, profile: islandProfiles[id] ?? emptyProfile(),
-          ...(pin && pin !== "auto" ? { pinnedRole: pin } : {}),
-        } satisfies IslandInput;
+        return { islandId: id, grid, profile: islandProfiles[id] ?? emptyProfile(), ...(pin && pin !== "auto" ? { pinnedRole: pin } : {}) } satisfies IslandInput;
       })
       .filter((i): i is IslandInput => i !== null);
     const { promise, cancel } = runMultiIslandPlan({ catalog, tierGuid, mode, islands: islandInputs });
@@ -53,83 +67,90 @@ export function MultiIslandPanel() {
       .finally(() => { setRunning(false); cancelRef.current = null; });
   };
 
+  const drillDown = (a: Assignment) => {
+    if (!a.plan) return;
+    loadIsland(a.islandId);
+    applyOptimization(planToOptimizeResult(a.plan));
+    setUiMode("editor");
+  };
+
   return (
-    <div className="multi-island" style={{ padding: 16, overflow: "auto" }}>
-      <h3>🏝🏝 Multi-îles</h3>
-      <p className="muted">
+    <div className="pane-full">
+      <h3>🏝 Multi-îles</h3>
+      <p className="muted" style={{ marginTop: 4 }}>
         Déclare les îles de ta partie et leurs ressources. Le programme assigne les rôles
-        (population / production) pour maximiser la population totale, la production étant
-        contrainte par les ressources déclarées de chaque île.
+        (population / production, contrainte par les ressources déclarées) pour maximiser la
+        population totale.
       </p>
 
-      <div className="row">
-        <label style={{ flex: 2 }}>
-          Ajouter une île
-          <select value="" onChange={(e) => { if (e.target.value) addPartyIsland(e.target.value); }} style={{ width: "100%" }}>
+      <div className="row" style={{ marginTop: 12 }}>
+        <label className="field" style={{ flex: 2 }}>
+          <span>Ajouter une île</span>
+          <select value="" onChange={(e) => { if (e.target.value) addPartyIsland(e.target.value); }}>
             <option value="">— choisir —</option>
             {available.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.size.w}×{i.size.h})</option>)}
           </select>
         </label>
-        <label style={{ flex: 1 }}>
-          Tier-cible
-          <select value={tierGuid} onChange={(e) => setTierGuid(e.target.value)} style={{ width: "100%" }}>
+        <label className="field" style={{ flex: 1 }}>
+          <span>Tier-cible</span>
+          <select value={tierGuid} onChange={(e) => setTierGuid(e.target.value)}>
             {targetTiers.map((t) => <option key={t.guid} value={t.guid}>{t.name}</option>)}
           </select>
         </label>
       </div>
 
-      {partyIslands.length === 0 && <p className="muted">Aucune île dans la partie — ajoute-en une.</p>}
+      {partyIslands.length === 0 && <p className="muted">Aucune île dans la partie — ajoute-en une ci-dessus.</p>}
       {partyIslands.map((id) => (
-        <div key={id} className="island-card" style={{ border: "1px solid var(--border,#333)", borderRadius: 8, padding: 8, margin: "8px 0" }}>
-          <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-            <b>{nameOf(id)}</b>
-            <span>
+        <div key={id} className="party-card">
+          <div className="party-head">
+            <b>{nameOf(id)} <span className="muted">{sizeOf(id)}</span></b>
+            <span style={{ display: "flex", gap: 8 }}>
               <select value={pins[id] ?? "auto"} onChange={(e) => setPins((p) => ({ ...p, [id]: e.target.value as Role | "auto" }))}>
                 <option value="auto">rôle auto</option>
                 <option value="population">forcer population</option>
                 <option value="production">forcer production</option>
                 <option value="unused">exclure</option>
               </select>
-              <button onClick={() => removePartyIsland(id)} title="Retirer de la partie" style={{ marginLeft: 6 }}>✕</button>
+              <button className="btn-ghost" onClick={() => removePartyIsland(id)} title="Retirer de la partie" aria-label="Retirer">✕</button>
             </span>
           </div>
           <ResourceSelector value={islandProfiles[id] ?? emptyProfile()} onChange={(pr) => setIslandProfile(id, pr)} />
         </div>
       ))}
 
-      <div className="modal-actions" style={{ marginTop: 8 }}>
-        <button onClick={() => run("dimension")} disabled={running || !partyIslands.length}>Dimensionner</button>
-        <button className="primary" onClick={() => run("place")} disabled={running || !partyIslands.length}>Placer tout</button>
-      </div>
+      <RunPanel running={running} error={error} actions={[
+        { label: "Dimensionner", onClick: () => run("dimension"), disabled: !partyIslands.length },
+        { label: "Placer tout", primary: true, onClick: () => run("place"), disabled: !partyIslands.length },
+      ]} />
 
-      {running && <div className="opt-progress">Calcul multi-îles…</div>}
-      {error && <div className="warn">⚠ {error}</div>}
       {result && !running && (
-        <div className="opt-result" style={{ marginTop: 8 }}>
-          <b>Population totale : {result.totalPopulation.toLocaleString("fr")} habitants</b>
-          <table style={{ width: "100%", marginTop: 6 }}>
-            <thead><tr><th style={{ textAlign: "left" }}>Île</th><th>Rôle</th><th style={{ textAlign: "left" }}>Détail</th></tr></thead>
+        <div className="result">
+          <div className="metric-grid">
+            <div className="metric">
+              <div className="metric-label">Population totale</div>
+              <div className="metric-val good">{result.totalPopulation.toLocaleString("fr")}</div>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Île</th><th>Rôle</th><th>Détail</th><th></th></tr></thead>
             <tbody>
               {result.assignments.map((a) => (
                 <tr key={a.islandId}>
                   <td>{nameOf(a.islandId)}</td>
-                  <td style={{ textAlign: "center" }}>{a.role}</td>
+                  <td><span className={"role-pill role-" + a.role}>{a.role}</span></td>
                   <td>{a.role === "population"
                     ? `${(a.residents ?? 0).toLocaleString("fr")} hab.`
                     : a.role === "production"
-                      ? (a.producedGoods ?? []).map((g) => economyGoodName(g)).join(", ") || "—"
+                      ? ((a.producedGoods ?? []).map(goodName).join(", ") || "—")
                       : "—"}</td>
+                  <td>{a.plan && <button className="btn-ghost" onClick={() => drillDown(a)} title="Charger le layout dans l'éditeur">Voir →</button>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {result.gaps.length > 0 && (
-            <div className="warn" style={{ marginTop: 6 }}>⚠ {result.gaps.join(" · ")}</div>
-          )}
+          {result.gaps.length > 0 && <ul className="gap-list">{result.gaps.map((g, i) => <li key={i}>{g}</li>)}</ul>}
         </div>
       )}
     </div>
   );
 }
-
-const economyGoodName = (g: string) => economy.goodNames[g] || g;

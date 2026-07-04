@@ -2,6 +2,7 @@ import type { BuildingDef, GridShape } from "../model/types";
 import type { ResourceProfile } from "../economy/resources";
 import { canProduce } from "../economy/resources";
 import { makeLookup } from "../engine/rules";
+import { downscaleGrid, scaleResultToHalfTile } from "./halfTileAdapter";
 import { planIslandImport, type ImportGood, type IslandPlanResult } from "./islandPlan";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 
@@ -57,13 +58,17 @@ export function multiIslandPlan(req: MultiIslandRequest): MultiIslandResult {
   const popResult: Record<string, IslandPlanResult> = {};
   const prodPrimaryPlan: Record<string, ProdPlanResult> = {};
 
-  // 1. analyse population des îles non épinglées prod/unused (réutilise planIslandImport)
+  // 1. analyse population des îles non épinglées prod/unused (réutilise planIslandImport via
+  //    l'adaptateur ½-tuile : downscale grille → moteurs en tuiles → upscale ×2 du résultat,
+  //    comme le worker mono-île — sinon les moteurs tournent au mauvais scale).
   const popCandidates = req.islands.filter((i) => i.pinnedRole !== "production" && i.pinnedRole !== "unused");
   for (const isl of popCandidates) {
-    popResult[isl.islandId] = planIslandImport({
-      catalog: req.catalog, grid: isl.grid, tierGuid: req.tierGuid,
+    const halfTile = (isl.grid.cellsPerTile ?? 1) === 2;
+    const r = planIslandImport({
+      catalog: req.catalog, grid: downscaleGrid(isl.grid), tierGuid: req.tierGuid,
       needMode: req.needMode, coverageFloor: 0.8,
     });
+    popResult[isl.islandId] = scaleResultToHalfTile(r, halfTile);
   }
 
   // 2. panier de demande agrégé (biens/min) sur les candidates-pop
@@ -108,10 +113,12 @@ export function multiIslandPlan(req: MultiIslandRequest): MultiIslandResult {
       const goods = producedGoods[isl.islandId];
       if (!goods?.length) continue;
       const primary = goods[0];
-      prodPrimaryPlan[isl.islandId] = planIslandProduction(
-        req.catalog, isl.grid, makeLookup(req.catalog), primary, basket[primary] || 10,
+      const halfTile = (isl.grid.cellsPerTile ?? 1) === 2;
+      const p = planIslandProduction(
+        req.catalog, downscaleGrid(isl.grid), makeLookup(req.catalog), primary, basket[primary] || 10,
         { islandFertilities: isl.profile.fertilities },
       );
+      prodPrimaryPlan[isl.islandId] = scaleResultToHalfTile(p, halfTile);
     }
   }
 

@@ -288,5 +288,4 @@ label { font-size: 13px; }
 .editor-root { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .main { flex: 1; display: flex; min-height: 0; }
 .canvas-host { position: relative; flex: 1; display: flex; min-width: 0; }
-.multi-island { flex: 1; }
 .panel-head h3, .panel h3 { font-size: 13px; }
