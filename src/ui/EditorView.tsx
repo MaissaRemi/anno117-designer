@@ -6,7 +6,7 @@ import { Toolbar } from "./Toolbar";
 /** Vue ÉDITEUR (canvas + catalogue + panneau). Extraite d'App pour la bascule d'onglets. */
 export function EditorView() {
   return (
-    <>
+    <div className="editor-root">
       <Toolbar />
       <div className="main">
         <aside className="left">
@@ -17,6 +17,6 @@ export function EditorView() {
           <SidePanel />
         </aside>
       </div>
-    </>
+    </div>
   );
 }

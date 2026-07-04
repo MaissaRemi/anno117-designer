@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useStore } from "../state/store";
+import { islands } from "../data/islands";
 import { exportJson, importJson } from "../persist/json";
 import { exportPng } from "../persist/png";
 import { findOrphanRefs } from "../model/serialize";
@@ -8,7 +9,6 @@ import { renderFullCanvas } from "../render/exportImage";
 import { IslandPicker } from "./IslandPicker";
 import { RoadAudit } from "./RoadAudit";
 import { CoveragePanel } from "./CoveragePanel";
-import { IslandPlanner } from "./IslandPlanner";
 
 export function TopBar() {
   const catalog = useStore((s) => s.catalog);
@@ -20,16 +20,17 @@ export function TopBar() {
   const resizeGrid = useStore((s) => s.resizeGrid);
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
+  const [menu, setMenu] = useState(false);
   const [islOpen, setIslOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [covOpen, setCovOpen] = useState(false);
-  const [planOpen, setPlanOpen] = useState(false);
+
+  const islandName = layout.grid.islandId ? islands.find((i) => i.id === layout.grid.islandId)?.name : null;
+  const close = () => setMenu(false);
 
   const onImport = async () => {
     try {
       const raw = await importJson();
-      // fichier tuile (export d'un ancien build, sans cellsPerTile) → migrer ×2 en ½-tuile,
-      // sinon la grille cohabite en scale 1 dans une app ½-tuile (bâtiments/portées à moitié)
       const file = (raw.layout.grid.cellsPerTile ?? 1) === 2 ? raw : migrateV7toV8(raw);
       const issues = findOrphanRefs(file.catalog, file.layout);
       if (issues.orphanDefs.length || issues.orphanFieldOwners) {
@@ -48,64 +49,50 @@ export function TopBar() {
     }
   };
 
-  const onPng = () => {
-    // rend l'île ENTIÈRE hors-écran (plus le viewport visible → fin du crop au zoom/pan)
-    exportPng(renderFullCanvas(layout, catalog));
-  };
+  const onPng = () => exportPng(renderFullCanvas(layout, catalog));
 
   return (
     <div className="topbar">
-      <strong className="brand">Anno 117 · Designer</strong>
-
-      <button onClick={() => canUndo && undo()} disabled={!canUndo} title="Annuler (Ctrl+Z)">
-        ↶ Annuler
-      </button>
-      <button onClick={() => canRedo && redo()} disabled={!canRedo} title="Rétablir (Ctrl+Y)">
-        ↷ Rétablir
-      </button>
-
-      <span className="sep" />
-
-      <label className="grid-size">
-        Grille
-        <input
-          type="number"
-          min={10}
-          max={400}
-          value={layout.grid.w}
-          onChange={(e) => resizeGrid(clamp(e.target.value, layout.grid.w), layout.grid.h)}
-        />
-        ×
-        <input
-          type="number"
-          min={10}
-          max={400}
-          value={layout.grid.h}
-          onChange={(e) => resizeGrid(layout.grid.w, clamp(e.target.value, layout.grid.h))}
-        />
-      </label>
+      <span className="tb-title">Anno 117 · Designer</span>
+      {islandName && <span className="tb-island">— {islandName}</span>}
 
       <span className="spacer" />
 
-      <button onClick={() => setIslOpen(true)}>🏝 Île</button>
-      <button className="primary" onClick={() => setPlanOpen(true)} title="Maximiser un tier sur l'île chargée">
-        🏛 Plan d'île
-      </button>
-      <button onClick={() => setCovOpen(true)} title="Diagnostic : % de résidences couvertes par service">
-        📡 Couverture
-      </button>
-      <button onClick={() => setAuditOpen(true)} title="Vérifier les bâtiments sans route">
-        🛣 Audit
-      </button>
-      <button onClick={() => confirm("Nouvelle disposition vide ?") && newLayout()}>Nouveau</button>
-      <button onClick={() => exportJson(catalog, layout)}>⬇ JSON</button>
-      <button onClick={onImport}>⬆ JSON</button>
-      <button onClick={onPng}>🖼 PNG</button>
+      <button className="icon-btn" onClick={() => canUndo && undo()} disabled={!canUndo} title="Annuler (Ctrl+Z)" aria-label="Annuler">↶</button>
+      <button className="icon-btn" onClick={() => canRedo && redo()} disabled={!canRedo} title="Rétablir (Ctrl+Y)" aria-label="Rétablir">↷</button>
+      <span className="sep" />
+      <button onClick={() => setIslOpen(true)}>🏝 Charger une île</button>
+
+      <div className="menu">
+        <button className="icon-btn" onClick={() => setMenu((m) => !m)} aria-label="Menu fichier">⋯</button>
+        {menu && (
+          <>
+            <div style={{ position: "fixed", inset: 0, zIndex: 39 }} onClick={close} />
+            <div className="menu-pop">
+              <label>
+                Grille
+                <input type="number" min={10} max={400} value={layout.grid.w}
+                  onChange={(e) => resizeGrid(clamp(e.target.value, layout.grid.w), layout.grid.h)} style={{ width: 60 }} />
+                ×
+                <input type="number" min={10} max={400} value={layout.grid.h}
+                  onChange={(e) => resizeGrid(layout.grid.w, clamp(e.target.value, layout.grid.h))} style={{ width: 60 }} />
+              </label>
+              <div className="sep-h" />
+              <button onClick={() => { close(); if (confirm("Nouvelle disposition vide ?")) newLayout(); }}>🗑 Nouveau</button>
+              <button onClick={() => { close(); onImport(); }}>⬆ Importer JSON</button>
+              <button onClick={() => { close(); exportJson(catalog, layout); }}>⬇ Exporter JSON</button>
+              <button onClick={() => { close(); onPng(); }}>🖼 Exporter PNG</button>
+              <div className="sep-h" />
+              <button onClick={() => { close(); setCovOpen(true); }}>📡 Couverture</button>
+              <button onClick={() => { close(); setAuditOpen(true); }}>🛣 Audit routes</button>
+            </div>
+          </>
+        )}
+      </div>
 
       {islOpen && <IslandPicker onClose={() => setIslOpen(false)} />}
       {auditOpen && <RoadAudit onClose={() => setAuditOpen(false)} />}
       {covOpen && <CoveragePanel onClose={() => setCovOpen(false)} />}
-      {planOpen && <IslandPlanner onClose={() => setPlanOpen(false)} />}
     </div>
   );
 }
@@ -113,5 +100,5 @@ export function TopBar() {
 function clamp(v: string, fallback: number): number {
   const n = parseInt(v, 10);
   if (!Number.isFinite(n)) return fallback;
-  return Math.max(10, Math.min(400, n)); // bornes ½-tuile (cf. inputs Grille)
+  return Math.max(10, Math.min(400, n));
 }

@@ -10,6 +10,7 @@ import { Modal } from "./Modal";
 
 interface Props {
   onClose: () => void;
+  asView?: boolean; // true = rendu en MODE plein écran (sans Modal)
 }
 
 const ATTR_FR: Record<string, string> = {
@@ -25,7 +26,7 @@ const ATTR_FR: Record<string, string> = {
 // tiers ayant une résidence = cibles valides
 const targetTiers = tiers.filter((t) => t.residenceId);
 
-export function IslandPlanner({ onClose }: Props) {
+export function IslandPlanner({ onClose, asView }: Props) {
   const applyOptimization = useStore((s) => s.applyOptimization);
 
   const [tierGuid, setTierGuid] = useState(targetTiers[targetTiers.length - 1]?.guid ?? "");
@@ -122,8 +123,8 @@ export function IslandPlanner({ onClose }: Props) {
 
   const color = (pct: number) => (pct >= 100 ? "#8bc34a" : pct >= 75 ? "#ffcc66" : "#ff8a85");
 
-  return (
-    <Modal className="opt" onClose={onClose} closeDisabled={running}>
+  const body = (
+    <>
       <h3>🏛 Plan d'île</h3>
         <p className="muted">
           Cale le <b>maximum d'habitants</b> du tier-cible sur l'île chargée ({usable} cases de terre),
@@ -337,6 +338,9 @@ export function IslandPlanner({ onClose }: Props) {
             Placer sur l'île
           </button>
         </div>
-    </Modal>
+    </>
   );
+  return asView
+    ? <div className="pane-full">{body}</div>
+    : <Modal className="opt" onClose={onClose} closeDisabled={running}>{body}</Modal>;
 }

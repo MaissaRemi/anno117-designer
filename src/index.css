@@ -280,3 +280,15 @@ label { font-size: 13px; }
 .opt-result, .opt-progress { margin-top: var(--sp-3); padding: var(--sp-2); border-radius: var(--r-sm); font-size: 13px; }
 .opt-progress { background: var(--accent-soft); }
 .opt-result { background: rgba(134,192,74,0.14); }
+.opt-items { display: flex; flex-direction: column; gap: 4px; margin: var(--sp-2) 0; }
+.opt-item { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--r-sm); font-size: 13px; }
+.opt-item span:first-child { flex: 1; }
+
+/* ---- transitoire (EditorView/Toolbar avant refonte SP-2) ---- */
+.editor-root { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.multi-island { flex: 1; }
+.toolbar { display: flex; align-items: center; gap: 6px; padding: var(--sp-2) var(--sp-3); background: var(--s1); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.main { flex: 1; display: flex; min-height: 0; }
+.left, .right { width: 264px; flex-shrink: 0; background: var(--s1); overflow-y: auto; padding: var(--sp-3); border-right: 1px solid var(--line); }
+.right { border-right: none; border-left: 1px solid var(--line); }
+.panel-head h3, .panel h3 { font-size: 13px; }
