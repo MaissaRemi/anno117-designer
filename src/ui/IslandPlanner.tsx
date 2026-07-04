@@ -4,6 +4,8 @@ import { economy, tiers } from "../economy/economy";
 import { runIslandPlan, type AnyIslandPlanResult } from "../optimizer/runIslandPlan";
 import { gridWithObstacles } from "../optimizer/halfTileAdapter";
 import { makeLookup } from "../engine/rules";
+import { producibleGoods as producibleGoodsSet } from "../economy/resources";
+import { ResourceSelector } from "./ResourceSelector";
 import { Modal } from "./Modal";
 
 interface Props {
@@ -40,7 +42,6 @@ export function IslandPlanner({ onClose }: Props) {
     return first?.guid ?? "";
   });
   const [prodRate, setProdRate] = useState(10);
-  const [islandFerts, setIslandFerts] = useState<string[]>([]); // fertilités déclarées de l'île
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ step: number; total: number } | null>(null);
   const [result, setResult] = useState<AnyIslandPlanResult | null>(null);
@@ -49,18 +50,23 @@ export function IslandPlanner({ onClose }: Props) {
 
   const usable = useStore((s) => s.layout.grid.usable.filter(Boolean).length);
 
-  // biens produisibles (un producteur connu), triés par nom FR
-  const producibleGoods = useMemo(
-    () => Object.keys(economy.producers)
+  // profil de ressources PERSISTANT de l'île chargée (contrainte dure de producibilité)
+  const islandId = useStore((s) => s.layout.grid.islandId);
+  const storedProfile = useStore((s) => (islandId ? s.islandProfiles[islandId] : undefined));
+  const setIslandProfile = useStore((s) => s.setIslandProfile);
+  const effProfile = storedProfile ?? { fertilities: [], mountainSlots: 0 };
+  const islandRegion = islandId?.includes("celtic") ? "Celtic" : "Roman";
+
+  // biens produisibles = ceux dont TOUTES les fertilités de chaîne sont présentes sur l'île
+  // (profil vide = permissif : tous les biens sans fertilité requise)
+  const producibleGoodsList = useMemo(() => {
+    const set = producibleGoodsSet(effProfile, islandRegion);
+    return Object.keys(economy.producers)
+      .filter((g) => set.has(g))
       .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [],
-  );
-  const allFertilities = useMemo(
-    () => Object.entries(economy.fertilities).map(([guid, name]) => ({ guid, name }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [],
-  );
+      .sort((a, b) => a.name.localeCompare(b.name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effProfile.fertilities.join(","), islandRegion]);
 
   // handle d'annulation du worker en cours → évite un worker orphelin si le panel
   // est démonté pendant un calcul (I8).
@@ -85,7 +91,7 @@ export function IslandPlanner({ onClose }: Props) {
         coverageFloor: floor / 100, needMode,
         // params production joints seulement quand ils servent
         ...(mode === "production"
-          ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: islandFerts.length ? islandFerts : undefined }
+          ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: effProfile.fertilities.length ? effProfile.fertilities : undefined }
           : {}),
       },
       (step, total) => setProgress({ step, total }),
@@ -176,7 +182,7 @@ export function IslandPlanner({ onClose }: Props) {
             <label style={{ flex: 2 }}>
               Bien à produire
               <select value={prodGood} onChange={(e) => setProdGood(e.target.value)} style={{ width: "100%" }}>
-                {producibleGoods.map((g) => (
+                {producibleGoodsList.map((g) => (
                   <option key={g.guid} value={g.guid}>{g.name}</option>
                 ))}
               </select>
@@ -192,16 +198,10 @@ export function IslandPlanner({ onClose }: Props) {
           </div>
         )}
 
-        {mode === "production" && (
+        {mode === "production" && islandId && (
           <label style={{ display: "block", marginTop: 6 }}>
-            Fertilités/gisements de l'île <span className="muted">(vide = ne pas vérifier)</span>
-            <select
-              multiple value={islandFerts}
-              onChange={(e) => setIslandFerts([...e.target.selectedOptions].map((o) => o.value))}
-              style={{ width: "100%", height: 90 }}
-            >
-              {allFertilities.map((f) => <option key={f.guid} value={f.guid}>{f.name}</option>)}
-            </select>
+            Ressources de l'île <span className="muted">(persistées ; contraignent les biens produisibles)</span>
+            <ResourceSelector value={effProfile} onChange={(p) => setIslandProfile(islandId, p)} />
           </label>
         )}
 
