@@ -7,8 +7,6 @@ import { findOrphanRefs } from "../model/serialize";
 import { migrateV7toV8 } from "../persist/local";
 import { renderFullCanvas } from "../render/exportImage";
 import { IslandPicker } from "./IslandPicker";
-import { RoadAudit } from "./RoadAudit";
-import { CoveragePanel } from "./CoveragePanel";
 
 export function TopBar() {
   const catalog = useStore((s) => s.catalog);
@@ -22,8 +20,6 @@ export function TopBar() {
   const canRedo = useStore((s) => s.future.length > 0);
   const [menu, setMenu] = useState(false);
   const [islOpen, setIslOpen] = useState(false);
-  const [auditOpen, setAuditOpen] = useState(false);
-  const [covOpen, setCovOpen] = useState(false);
 
   const islandName = layout.grid.islandId ? islands.find((i) => i.id === layout.grid.islandId)?.name : null;
   const close = () => setMenu(false);
@@ -82,17 +78,12 @@ export function TopBar() {
               <button onClick={() => { close(); onImport(); }}>⬆ Importer JSON</button>
               <button onClick={() => { close(); exportJson(catalog, layout); }}>⬇ Exporter JSON</button>
               <button onClick={() => { close(); onPng(); }}>🖼 Exporter PNG</button>
-              <div className="sep-h" />
-              <button onClick={() => { close(); setCovOpen(true); }}>📡 Couverture</button>
-              <button onClick={() => { close(); setAuditOpen(true); }}>🛣 Audit routes</button>
             </div>
           </>
         )}
       </div>
 
       {islOpen && <IslandPicker onClose={() => setIslOpen(false)} />}
-      {auditOpen && <RoadAudit onClose={() => setAuditOpen(false)} />}
-      {covOpen && <CoveragePanel onClose={() => setCovOpen(false)} />}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Modal } from "./Modal";
 
 interface Props {
   onClose: () => void;
+  asPanel?: boolean; // true = rendu en panneau latéral (sans Modal)
 }
 
 /**
@@ -13,7 +14,7 @@ interface Props {
  * (% de résidences servies) et surlignage des maisons hors rayon.
  * Lecture seule — le placement optimisé se fait via « 🏛 Plan d'île ».
  */
-export function CoveragePanel({ onClose }: Props) {
+export function CoveragePanel({ onClose, asPanel }: Props) {
   const layout = useStore((s) => s.layout);
   const catalog = useStore((s) => s.catalog);
   const setHighlight = useStore((s) => s.setCoverageHighlight);
@@ -34,8 +35,8 @@ export function CoveragePanel({ onClose }: Props) {
 
   const color = (pct: number) => (pct >= 100 ? "#8bc34a" : pct >= 75 ? "#ffcc66" : "#ff8a85");
 
-  return (
-    <Modal className="opt" onClose={onClose}>
+  const body = (
+    <>
       <h3>📡 Couverture des services publics</h3>
         <p className="muted">
           {report.housesTotal} résidence(s) posée(s). <b>{report.housesFullyCovered}</b> couverte(s) par
@@ -70,6 +71,9 @@ export function CoveragePanel({ onClose }: Props) {
         <div className="modal-actions">
           <button onClick={onClose}>Fermer</button>
         </div>
-    </Modal>
+    </>
   );
+  return asPanel
+    ? <div className="panel-body">{body}</div>
+    : <Modal className="opt" onClose={onClose}>{body}</Modal>;
 }

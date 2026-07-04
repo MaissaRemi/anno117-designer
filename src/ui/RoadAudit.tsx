@@ -5,6 +5,7 @@ import { Modal } from "./Modal";
 
 interface Props {
   onClose: () => void;
+  asPanel?: boolean; // true = rendu en panneau latéral (sans Modal)
 }
 
 /**
@@ -13,7 +14,7 @@ interface Props {
  * (« non, celui-ci a besoin d'une route ») → `needsRoad = true`. Le bâtiment
  * disparaît alors de la liste. Sert à vérifier l'extraction `<StreetActivation/>`.
  */
-export function RoadAudit({ onClose }: Props) {
+export function RoadAudit({ onClose, asPanel }: Props) {
   const catalog = useStore((s) => s.catalog);
   const updateDef = useStore((s) => s.updateDef);
   const [query, setQuery] = useState("");
@@ -34,8 +35,8 @@ export function RoadAudit({ onClose }: Props) {
     setFixedCount((c) => c + 1);
   };
 
-  return (
-    <Modal className="opt" onClose={onClose}>
+  const body = (
+    <>
       <h3>🛣 Audit : bâtiments sans route</h3>
         <p className="muted">
           {list.length} bâtiment(s) marqué(s) <b>sans route</b> (donnée <code>needsRoad=false</code>,
@@ -85,6 +86,9 @@ export function RoadAudit({ onClose }: Props) {
         <div className="modal-actions">
           <button onClick={onClose}>Fermer</button>
         </div>
-    </Modal>
+    </>
   );
+  return asPanel
+    ? <div className="panel-body">{body}</div>
+    : <Modal className="opt" onClose={onClose}>{body}</Modal>;
 }
