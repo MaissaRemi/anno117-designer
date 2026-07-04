@@ -10,6 +10,8 @@ import { makeLookup } from "../engine/rules";
 import { gridScale } from "../engine/geometry";
 import { seedCatalog } from "../data/seed";
 import { loadState, saveState } from "../persist/local";
+import { loadParty, saveParty, type PartyState } from "../persist/party";
+import type { ResourceProfile } from "../economy/resources";
 import type { OptimizeResult } from "../optimizer/types";
 import { decodeMask, islandById, upscale2x } from "../data/islands";
 import { riversOf, slotsOf } from "../data/terrain";
@@ -76,10 +78,19 @@ interface State {
   applyOptimization: (result: OptimizeResult) => void;
   setCoverageHighlight: (cells: string[] | null) => void;
 
+  // --- config de partie (îles + profils de ressources, persistés à part) ---
+  partyIslands: string[];
+  islandProfiles: Record<string, ResourceProfile>;
+  setPartyIslands: (ids: string[]) => void;
+  addPartyIsland: (id: string) => void;
+  removePartyIsland: (id: string) => void;
+  setIslandProfile: (id: string, profile: ResourceProfile) => void;
+
   lookup: () => (id: string) => BuildingDef | undefined;
 }
 
 const persisted = loadState();
+const persistedParty = loadParty();
 
 export const useStore = create<State>((set, get) => {
   // Pousse un instantané du layout courant dans l'historique, applique `mutate`.
@@ -97,6 +108,11 @@ export const useStore = create<State>((set, get) => {
     saveState(s.catalog, s.layout);
   }
 
+  function persistParty(): void {
+    const s = get();
+    saveParty({ partyIslands: s.partyIslands, islandProfiles: s.islandProfiles } satisfies PartyState);
+  }
+
   return {
     catalog: persisted?.catalog ?? seedCatalog(),
     layout: persisted?.layout ?? emptyLayout(40, 40),
@@ -108,6 +124,8 @@ export const useStore = create<State>((set, get) => {
     showRadius: true,
     diagonalBuild: false,
     coverageHighlight: null,
+    partyIslands: persistedParty.partyIslands,
+    islandProfiles: persistedParty.islandProfiles,
     past: [],
     future: [],
 
@@ -306,6 +324,20 @@ export const useStore = create<State>((set, get) => {
       }),
 
     setCoverageHighlight: (cells) => set({ coverageHighlight: cells }),
+
+    setPartyIslands: (ids) => { set({ partyIslands: ids }); persistParty(); },
+    addPartyIsland: (id) => {
+      set((s) => (s.partyIslands.includes(id) ? s : { partyIslands: [...s.partyIslands, id] }));
+      persistParty();
+    },
+    removePartyIsland: (id) => {
+      set((s) => ({ partyIslands: s.partyIslands.filter((x) => x !== id) }));
+      persistParty();
+    },
+    setIslandProfile: (id, profile) => {
+      set((s) => ({ islandProfiles: { ...s.islandProfiles, [id]: profile } }));
+      persistParty();
+    },
 
     lookup: () => makeLookup(get().catalog),
   };
