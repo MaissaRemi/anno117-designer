@@ -13,8 +13,7 @@ import { loadState, saveState } from "../persist/local";
 import { loadParty, saveParty, type PartyState } from "../persist/party";
 import type { ResourceProfile } from "../economy/resources";
 import type { OptimizeResult } from "../optimizer/types";
-import { decodeMask, islandById, upscale2x } from "../data/islands";
-import { riversOf, slotsOf } from "../data/terrain";
+import { buildIslandGrid } from "../data/islandGrid";
 
 export type Tool =
   | "select"
@@ -281,23 +280,10 @@ export const useStore = create<State>((set, get) => {
     },
 
     loadIsland: (id) => {
-      const isl = islandById(id);
-      if (!isl) return;
-      // île décodée en TUILES, puis suréchantillonnée ×2 → grille VIVANTE ½-tuile
-      // (cellsPerTile=2) : la résolution requise pour la construction 45° (cf. geometry.ts).
-      const tw = isl.size.w, th = isl.size.h;
-      const usableT = decodeMask(isl.mask, tw, th);
-      const riversT = riversOf(id, tw, th);
-      if (riversT) for (let i = 0; i < riversT.length; i++) if (riversT[i]) usableT[i] = false; // rivière non constructible
-      const usable = upscale2x(usableT, tw, th);
-      const water = usable.map((land) => !land); // mer = non-terre
-      const rivers = riversT ? upscale2x(riversT, tw, th) : undefined;
-      const slots = slotsOf(id).map((s) => ({ type: s.type, x: Math.round(s.x) * 2, y: Math.round(s.y) * 2 }));
+      const grid = buildIslandGrid(id); // grille ½-tuile partagée (éditeur + multi-îles)
+      if (!grid) return;
       set({
-        layout: {
-          grid: { w: tw * 2, h: th * 2, usable, water, rivers, slots: slots.length ? slots : undefined, islandId: id, cellsPerTile: 2 },
-          buildings: [], fields: [], roads: [],
-        },
+        layout: { grid, buildings: [], fields: [], roads: [] },
         past: [],
         future: [],
         selectedUid: null,
