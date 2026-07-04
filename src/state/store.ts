@@ -77,6 +77,12 @@ interface State {
   applyOptimization: (result: OptimizeResult) => void;
   setCoverageHighlight: (cells: string[] | null) => void;
 
+  // --- navigation UI (session, non persistée) ---
+  uiMode: "editor" | "island" | "multi";
+  diagnostic: "none" | "coverage" | "audit";
+  setUiMode: (m: "editor" | "island" | "multi") => void;
+  setDiagnostic: (d: "none" | "coverage" | "audit") => void;
+
   // --- config de partie (îles + profils de ressources, persistés à part) ---
   partyIslands: string[];
   islandProfiles: Record<string, ResourceProfile>;
@@ -123,6 +129,8 @@ export const useStore = create<State>((set, get) => {
     showRadius: true,
     diagonalBuild: false,
     coverageHighlight: null,
+    uiMode: "editor",
+    diagnostic: "none",
     partyIslands: persistedParty.partyIslands,
     islandProfiles: persistedParty.islandProfiles,
     past: [],
@@ -310,6 +318,9 @@ export const useStore = create<State>((set, get) => {
       }),
 
     setCoverageHighlight: (cells) => set({ coverageHighlight: cells }),
+
+    setUiMode: (m) => set({ uiMode: m }),
+    setDiagnostic: (d) => set({ diagnostic: d }),
 
     setPartyIslands: (ids) => { set({ partyIslands: ids }); persistParty(); },
     addPartyIsland: (id) => {
