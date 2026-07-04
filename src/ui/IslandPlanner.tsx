@@ -6,11 +6,11 @@ import { gridWithObstacles } from "../optimizer/halfTileAdapter";
 import { makeLookup } from "../engine/rules";
 import { producibleGoods as producibleGoodsSet } from "../economy/resources";
 import { ResourceSelector } from "./ResourceSelector";
-import { Modal } from "./Modal";
+import { RunPanel } from "./components/RunPanel";
 
 interface Props {
   onClose: () => void;
-  asView?: boolean; // true = rendu en MODE plein écran (sans Modal)
+  asView?: boolean; // conservé pour compat ; le Plan d'île est désormais toujours un MODE
 }
 
 const ATTR_FR: Record<string, string> = {
@@ -23,19 +23,15 @@ const ATTR_FR: Record<string, string> = {
   FireSafety: "🔥 Sécurité incendie",
 };
 
-// tiers ayant une résidence = cibles valides
 const targetTiers = tiers.filter((t) => t.residenceId);
 
-export function IslandPlanner({ onClose, asView }: Props) {
+export function IslandPlanner({ onClose }: Props) {
   const applyOptimization = useStore((s) => s.applyOptimization);
 
   const [tierGuid, setTierGuid] = useState(targetTiers[targetTiers.length - 1]?.guid ?? "");
   const [mode, setMode] = useState<"population" | "production">("population");
   const [needMode, setNeedMode] = useState<"all" | "thresholds">("all");
-  // 80 % par défaut : sur les vrais contours d'île, exiger 100 % des 11 services
-  // T4 partout coûte ~3× moins de maisons (le rim n'a pas la place pour les wonders)
   const [floor, setFloor] = useState(80);
-  // défaut = premier bien produisible, fixé UNE fois (l'affiché == l'envoyé)
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
       .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
@@ -50,16 +46,12 @@ export function IslandPlanner({ onClose, asView }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const usable = useStore((s) => s.layout.grid.usable.filter(Boolean).length);
-
-  // profil de ressources PERSISTANT de l'île chargée (contrainte dure de producibilité)
   const islandId = useStore((s) => s.layout.grid.islandId);
   const storedProfile = useStore((s) => (islandId ? s.islandProfiles[islandId] : undefined));
   const setIslandProfile = useStore((s) => s.setIslandProfile);
   const effProfile = storedProfile ?? { fertilities: [], mountainSlots: 0 };
   const islandRegion = islandId?.includes("celtic") ? "Celtic" : "Roman";
 
-  // biens produisibles = ceux dont TOUTES les fertilités de chaîne sont présentes sur l'île
-  // (profil vide = permissif : tous les biens sans fertilité requise)
   const producibleGoodsList = useMemo(() => {
     const set = producibleGoodsSet(effProfile, islandRegion);
     return Object.keys(economy.producers)
@@ -69,28 +61,18 @@ export function IslandPlanner({ onClose, asView }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effProfile.fertilities.join(","), islandRegion]);
 
-  // handle d'annulation du worker en cours → évite un worker orphelin si le panel
-  // est démonté pendant un calcul (I8).
   const cancelRef = useRef<(() => void) | null>(null);
   useEffect(() => () => cancelRef.current?.(), []);
 
   const run = () => {
     const s = useStore.getState();
-    setRunning(true);
-    setResult(null);
-    setPlaceMsg(null);
-    setProgress(null);
-    setError(null);
-    cancelRef.current?.(); // annule un éventuel calcul précédent
-    // les bâtiments VERROUILLÉS posés à la main (axis ou diamants 45°) deviennent des
-    // obstacles → l'optimiseur contourne, applyOptimization les conserve (pas de chevauchement)
+    setRunning(true); setResult(null); setPlaceMsg(null); setProgress(null); setError(null);
+    cancelRef.current?.();
     const locked = s.layout.buildings.filter((b) => b.locked);
     const grid = gridWithObstacles(s.layout.grid, locked, makeLookup(s.catalog));
     const { promise, cancel } = runIslandPlan(
       {
-        catalog: s.catalog, grid, mode, tierGuid,
-        coverageFloor: floor / 100, needMode,
-        // params production joints seulement quand ils servent
+        catalog: s.catalog, grid, mode, tierGuid, coverageFloor: floor / 100, needMode,
         ...(mode === "production"
           ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: effProfile.fertilities.length ? effProfile.fertilities : undefined }
           : {}),
@@ -108,239 +90,147 @@ export function IslandPlanner({ onClose, asView }: Props) {
     if (!result) return;
     const coverage = result.mode === "import" ? result.coverageMin / 100 : result.prodsCovered / Math.max(1, result.prodsTotal);
     applyOptimization({
-      buildings: result.buildings,
-      roads: result.roads,
-      fields: result.fields,
+      buildings: result.buildings, roads: result.roads, fields: result.fields,
       aqueducts: result.mode === "import" ? result.aqueducts : undefined,
-      placed: result.buildings.length,
-      requested: result.buildings.length,
-      placedByDef: {},
-      score: 0,
+      placed: result.buildings.length, requested: result.buildings.length,
+      placedByDef: {}, score: 0,
       breakdown: { count: result.buildings.length, roadLen: result.roads.length, bboxArea: 0, coverage },
     });
-    setPlaceMsg("✓ Placé sur l'île.");
+    onClose(); // → bascule vers l'éditeur pour voir le layout
   };
 
   const color = (pct: number) => (pct >= 100 ? "#8bc34a" : pct >= 75 ? "#ffcc66" : "#ff8a85");
+  const noIsland = !islandId;
 
-  const body = (
-    <>
-      <h3>🏛 Plan d'île</h3>
-        <p className="muted">
-          Cale le <b>maximum d'habitants</b> du tier-cible sur l'île chargée ({usable} cases de terre),
-          en plaçant tous les services publics pour les couvrir (best-effort). En mode import, les biens
-          sont produits ailleurs : la sortie liste le <b>débit à acheminer</b> (u/min).
+  return (
+    <div className="mode-pane">
+      <div className="pane-config">
+        <h3>🏛 Plan d'île</h3>
+        <p className="muted" style={{ marginTop: 4 }}>
+          Cale le maximum d'habitants du tier-cible sur l'île chargée ({usable} cases de terre).
+          En mode import, la sortie liste le débit de biens à acheminer.
         </p>
+        {noIsland && <div className="warn">Charge une île d'abord (bouton « Charger une île » en haut).</div>}
 
-        <div className="row">
-          <label style={{ flex: 1 }}>
-            Archetype d'île
-            <select value={mode} onChange={(e) => setMode(e.target.value as "population" | "production")} style={{ width: "100%" }}>
-              <option value="population">🏠 Population (import des biens)</option>
-              <option value="production">🏭 Production (export, main-d'œuvre locale)</option>
-            </select>
-          </label>
-          {mode === "population" && (
-            <label style={{ flex: 1 }}>
-              Tier-cible
-              <select value={tierGuid} onChange={(e) => setTierGuid(e.target.value)} style={{ width: "100%" }}>
-                {targetTiers.map((t) => (
-                  <option key={t.guid} value={t.guid}>
-                    {t.name} ({t.region}) · cap {t.capacityDefault}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+        <div className="field">
+          <span>Archetype d'île</span>
+          <select value={mode} onChange={(e) => setMode(e.target.value as "population" | "production")}>
+            <option value="population">🏠 Population (import des biens)</option>
+            <option value="production">🏭 Production (export, main-d'œuvre locale)</option>
+          </select>
         </div>
 
         {mode === "population" && (
           <>
-            <div className="row">
-              <label style={{ flex: 1 }}>
-                Besoins
-                <select value={needMode} onChange={(e) => setNeedMode(e.target.value as "all" | "thresholds")} style={{ width: "100%" }}>
-                  <option value="all">Complets (max bonus/maison)</option>
-                  <option value="thresholds">Seuils d'upgrade (min services → + de maisons)</option>
-                </select>
-              </label>
+            <div className="field">
+              <span>Tier-cible</span>
+              <select value={tierGuid} onChange={(e) => setTierGuid(e.target.value)}>
+                {targetTiers.map((t) => <option key={t.guid} value={t.guid}>{t.name} ({t.region}) · cap {t.capacityDefault}</option>)}
+              </select>
             </div>
-
+            <div className="field">
+              <span>Besoins</span>
+              <select value={needMode} onChange={(e) => setNeedMode(e.target.value as "all" | "thresholds")}>
+                <option value="all">Complets (max bonus/maison)</option>
+                <option value="thresholds">Seuils d'upgrade (min services → + de maisons)</option>
+              </select>
+            </div>
             <label className="slider">
-              <span>% maisons au tier-cible</span>
+              <span style={{ color: "var(--muted)", fontSize: 12 }}>% maisons au tier</span>
               <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
               <span className="muted">{floor}%</span>
             </label>
-            <p className="muted" style={{ fontSize: "0.8em", margin: "2px 0 0" }}>
-              Fraction des maisons recevant TOUS leurs besoins (montent au tier) ; le reste tient
-              au tier inférieur. 100 % = densité moindre (le bord d'île ne loge pas tous les services).
-            </p>
           </>
         )}
 
         {mode === "production" && (
-          <div className="row">
-            <label style={{ flex: 2 }}>
-              Bien à produire
-              <select value={prodGood} onChange={(e) => setProdGood(e.target.value)} style={{ width: "100%" }}>
-                {producibleGoodsList.map((g) => (
-                  <option key={g.guid} value={g.guid}>{g.name}</option>
-                ))}
+          <>
+            <div className="field">
+              <span>Bien à produire</span>
+              <select value={prodGood} onChange={(e) => setProdGood(e.target.value)}>
+                {producibleGoodsList.map((g) => <option key={g.guid} value={g.guid}>{g.name}</option>)}
               </select>
-            </label>
-            <label style={{ flex: 1 }}>
-              Débit (u/min)
-              <input
-                type="number" min={0.5} step={0.5} value={prodRate}
-                onChange={(e) => setProdRate(parseFloat(e.target.value) || 1)}
-                style={{ width: "100%" }}
-              />
-            </label>
-          </div>
+            </div>
+            <div className="field">
+              <span>Débit (u/min)</span>
+              <input type="number" min={0.5} step={0.5} value={prodRate} onChange={(e) => setProdRate(parseFloat(e.target.value) || 1)} />
+            </div>
+            {islandId && (
+              <div className="field">
+                <span>Ressources de l'île <span className="muted">(contraignent les biens produisibles)</span></span>
+                <ResourceSelector value={effProfile} onChange={(p) => setIslandProfile(islandId, p)} />
+              </div>
+            )}
+          </>
         )}
 
-        {mode === "production" && islandId && (
-          <label style={{ display: "block", marginTop: 6 }}>
-            Ressources de l'île <span className="muted">(persistées ; contraignent les biens produisibles)</span>
-            <ResourceSelector value={effProfile} onChange={(p) => setIslandProfile(islandId, p)} />
-          </label>
-        )}
+        <RunPanel running={running} progress={progress} error={error}
+          actions={[{ label: running ? "Calcul…" : "Calculer", primary: true, onClick: run, disabled: !tierGuid || noIsland }]} />
+      </div>
 
-        {running && (
-          <div className="opt-progress">
-            Recherche du maximum… {progress ? `${progress.step}/${progress.total}` : ""}
-          </div>
-        )}
-
-        {error && !running && <div className="warn">⚠ Échec du calcul : {error}</div>}
+      <div className="pane-result">
+        {!result && !running && <p className="muted">Lance un calcul pour voir le résultat ici.</p>}
         {result && !running && result.buildings.length === 0 && (
-          <div className="warn">
-            Aucun plan trouvé{result.gaps?.length ? ` — ${result.gaps[0]}` : " (île trop petite ou fragmentée)"}.
-          </div>
+          <div className="warn">Aucun plan trouvé{result.gaps?.length ? ` — ${result.gaps[0]}` : " (île trop petite ou fragmentée)"}.</div>
         )}
 
         {result && !running && result.mode === "import" && (
           <div className="opt-result">
             <div style={{ marginBottom: 6 }}>
               <b>{result.residents.toLocaleString("fr")} habitants</b> ({result.tierName}) ·{" "}
-              <b style={{ color: color(result.fullyCoveredPct) }}>{result.fullyCovered}</b>/{result.houses} maisons
-              {" "}au tier ({result.fullyCoveredPct}% complètes)
+              <b style={{ color: color(result.fullyCoveredPct) }}>{result.fullyCovered}</b>/{result.houses} maisons au tier ({result.fullyCoveredPct}%)
               {!result.feasible && <span style={{ color: "#ffcc66" }}> (best-effort)</span>}
               <div className="muted" style={{ fontSize: "0.85em" }}>
-                couverture min par service {result.coverageMin}% · {result.houses - result.fullyCovered} maisons
-                partielles (tier inférieur, non chiffrées : revenu/import = tier-cible seul)
+                couverture min {result.coverageMin}% · {result.houses - result.fullyCovered} maisons partielles (tier inférieur)
               </div>
             </div>
             <div style={{ marginBottom: 6 }}>
-              💰 net <span style={{ color: result.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>
-                {result.money.net >= 0 ? "+" : ""}{result.money.net.toLocaleString("fr")}/min
-              </span>{" "}
+              💰 net <span style={{ color: result.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>{result.money.net >= 0 ? "+" : ""}{result.money.net.toLocaleString("fr")}/min</span>{" "}
               <span className="muted">(taxe {result.money.gross.toLocaleString("fr")} − entretien {result.money.upkeep.toLocaleString("fr")})</span>
             </div>
-
             {result.water && (
               <div style={{ marginBottom: 6 }}>
-                💧 Eau : {result.water.sources} source{result.water.sources > 1 ? "s" : ""} ·{" "}
-                {result.water.used}/{result.water.capacity} u ·{" "}
+                💧 Eau : {result.water.sources} source{result.water.sources > 1 ? "s" : ""} · {result.water.used}/{result.water.capacity} u ·{" "}
                 {result.water.consumers.filter((c) => c.connected).length}/{result.water.consumers.length} raccordés
-                {result.aqueducts.length > 0 && (
-                  <span className="muted"> · {result.aqueducts.length} cases de conduite</span>
-                )}
               </div>
             )}
-
             <b>📦 À acheminer ({result.importGoods.length} biens)</b>
-            <ul className="bilan">
-              {result.importGoods.slice(0, 30).map((g) => (
-                <li key={g.good}>
-                  {g.perMin.toLocaleString("fr")}/min · {g.name}
-                </li>
-              ))}
-            </ul>
-
+            <ul className="bilan">{result.importGoods.slice(0, 30).map((g) => <li key={g.good}>{g.perMin.toLocaleString("fr")}/min · {g.name}</li>)}</ul>
             {Object.keys(result.attributes).length > 0 && (
               <>
                 <b>Bonus cumulés</b>
-                <ul className="bilan">
-                  {Object.entries(ATTR_FR).map(([k, label]) =>
-                    result.attributes[k] ? (
-                      <li key={k}>
-                        {label} : {result.attributes[k].toLocaleString("fr")}{k === "Money" ? "/min" : ""}
-                      </li>
-                    ) : null,
-                  )}
-                </ul>
+                <ul className="bilan">{Object.entries(ATTR_FR).map(([k, label]) => result.attributes[k] ? <li key={k}>{label} : {result.attributes[k].toLocaleString("fr")}{k === "Money" ? "/min" : ""}</li> : null)}</ul>
               </>
             )}
-
-            {result.gaps.length > 0 && (
-              <div className="warn">
-                ⚠ Trous : {result.gaps.join(" · ")}
-              </div>
-            )}
-            {placeMsg && <div style={{ marginTop: 6 }}>{placeMsg}</div>}
+            {result.gaps.length > 0 && <div className="warn">⚠ Trous : {result.gaps.join(" · ")}</div>}
           </div>
         )}
 
         {result && !running && result.mode === "production" && (
           <div className="opt-result">
             <div style={{ marginBottom: 6 }}>
-              <b>{result.ratePerMin.toLocaleString("fr")}/min · {economy.goodNames[result.good] || result.good}</b>{" "}
-              · {result.prodsTotal} bâtiments de prod · {result.houses} maisons ouvrières
+              <b>{result.ratePerMin.toLocaleString("fr")}/min · {economy.goodNames[result.good] || result.good}</b> · {result.prodsTotal} prods · {result.houses} maisons ouvrières
             </div>
             <div style={{ marginBottom: 6 }}>
-              🚚 Entrepôts : {result.warehousesPlaced} ·{" "}
-              <b style={{ color: color((100 * result.prodsCovered) / Math.max(1, result.prodsTotal)) }}>
-                {result.prodsCovered}/{result.prodsTotal}
-              </b>{" "}
-              prods à portée de charrette
+              🚚 Entrepôts : {result.warehousesPlaced} · <b style={{ color: color((100 * result.prodsCovered) / Math.max(1, result.prodsTotal)) }}>{result.prodsCovered}/{result.prodsTotal}</b> prods couvertes
             </div>
             <div style={{ marginBottom: 6 }}>
-              💰 profit export <b style={{ color: result.exportNet >= 0 ? "#8bc34a" : "#ff8a85" }}>
-                {result.exportNet >= 0 ? "+" : ""}{result.exportNet.toLocaleString("fr")}/min
-              </b>{" "}
-              <span className="muted">
-                (vente {result.exportValue.toLocaleString("fr")} + exploitation{" "}
-                {result.solution.money.net >= 0 ? "+" : ""}{Math.round(result.solution.money.net).toLocaleString("fr")}
-                {result.solution.importCost > 0 ? ` − import ${result.solution.importCost.toLocaleString("fr")}` : ""})
-              </span>
-              {" "}· posés {result.placed}/{result.requested}
+              💰 profit export <b style={{ color: result.exportNet >= 0 ? "#8bc34a" : "#ff8a85" }}>{result.exportNet >= 0 ? "+" : ""}{result.exportNet.toLocaleString("fr")}/min</b> · posés {result.placed}/{result.requested}
             </div>
             <b>👷 Population requise</b>
-            <ul className="bilan">
-              {Object.entries(result.solution.populationByTier).filter(([, p]) => p > 0).map(([t, p]) => (
-                <li key={t}>{tiers.find((x) => x.guid === t)?.name ?? t} : {Math.ceil(p).toLocaleString("fr")}</li>
-              ))}
-            </ul>
+            <ul className="bilan">{Object.entries(result.solution.populationByTier).filter(([, p]) => p > 0).map(([t, p]) => <li key={t}>{tiers.find((x) => x.guid === t)?.name ?? t} : {Math.ceil(p).toLocaleString("fr")}</li>)}</ul>
             {result.requiredFertilities.length > 0 && (
-              <div style={{ marginBottom: 6 }}>
-                🌱 Fertilités requises :{" "}
-                {result.requiredFertilities.map((f) => (
-                  <span key={f.guid} style={{ color: f.available ? "#8bc34a" : "#ff8a85" }}>
-                    {f.available ? "✓" : "✗"} {f.name}{" "}
-                  </span>
-                ))}
-              </div>
+              <div style={{ marginBottom: 6 }}>🌱 Fertilités : {result.requiredFertilities.map((f) => <span key={f.guid} style={{ color: f.available ? "#8bc34a" : "#ff8a85" }}>{f.available ? "✓" : "✗"} {f.name} </span>)}</div>
             )}
-            {result.gaps.length > 0 && (
-              <div className="warn">⚠ {result.gaps.join(" · ")}</div>
-            )}
-            {placeMsg && <div style={{ marginTop: 6 }}>{placeMsg}</div>}
+            {result.gaps.length > 0 && <div className="warn">⚠ {result.gaps.join(" · ")}</div>}
           </div>
         )}
 
-        <div className="modal-actions">
-          <button onClick={onClose} disabled={running}>Fermer</button>
-          <button onClick={run} disabled={running || !tierGuid}>
-            {running ? "Calcul…" : "Calculer"}
-          </button>
-          <button className="primary" onClick={place} disabled={!result || running || result.buildings.length === 0}>
-            Placer sur l'île
-          </button>
-        </div>
-    </>
+        {result && !running && result.buildings.length > 0 && (
+          <button className="primary" onClick={place} style={{ marginTop: 12 }}>Placer sur l'île →</button>
+        )}
+        {placeMsg && <div className="muted" style={{ marginTop: 6 }}>{placeMsg}</div>}
+      </div>
+    </div>
   );
-  return asView
-    ? <div className="pane-full">{body}</div>
-    : <Modal className="opt" onClose={onClose} closeDisabled={running}>{body}</Modal>;
 }
