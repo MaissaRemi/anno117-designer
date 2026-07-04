@@ -1,12 +1,12 @@
-import { useEffect } from "react";
-import { GridCanvas } from "./ui/GridCanvas";
-import { Toolbar } from "./ui/Toolbar";
-import { Catalog } from "./ui/Catalog";
-import { SidePanel } from "./ui/SidePanel";
+import { useEffect, useState } from "react";
 import { TopBar } from "./ui/TopBar";
+import { EditorView } from "./ui/EditorView";
+import { MultiIslandPanel } from "./ui/MultiIslandPanel";
 import { useStore } from "./state/store";
 
 export default function App() {
+  const [tab, setTab] = useState<"editor" | "multi">("editor");
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -35,16 +35,11 @@ export default function App() {
   return (
     <div className="app">
       <TopBar />
-      <Toolbar />
-      <div className="main">
-        <aside className="left">
-          <Catalog />
-        </aside>
-        <GridCanvas />
-        <aside className="right">
-          <SidePanel />
-        </aside>
+      <div className="tabs">
+        <button className={tab === "editor" ? "active" : ""} onClick={() => setTab("editor")}>🗺 Éditeur</button>
+        <button className={tab === "multi" ? "active" : ""} onClick={() => setTab("multi")}>🏝🏝 Multi-îles</button>
       </div>
+      {tab === "editor" ? <EditorView /> : <MultiIslandPanel />}
     </div>
   );
 }
