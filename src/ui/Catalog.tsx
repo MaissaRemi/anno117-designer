@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../state/store";
 import { CatalogEditor } from "./CatalogEditor";
+import { BuildingIcon } from "./BuildingIcon";
 import type { BuildingDef } from "../model/types";
 
 const CATS = ["production", "public", "residentiel", "ornement", "militaire"];
@@ -73,11 +74,12 @@ export function Catalog() {
             onClick={() => setSelectedDef(d.id)}
             title={d.nameInternal ?? d.name}
           >
-            {d.icon ? (
-              <img className="ci-icon" src={`/${d.icon}`} alt="" loading="lazy" />
-            ) : (
-              <span className="swatch" style={{ background: d.color }} />
-            )}
+            <BuildingIcon
+              icon={d.icon}
+              color={d.color}
+              className="ci-icon"
+              fallbackClassName="ci-swatch"
+            />
             <span className="ci-name">
               {d.name}
               <small>

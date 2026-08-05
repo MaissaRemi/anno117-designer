@@ -235,6 +235,12 @@ label { font-size: 13px; }
 .catalog-item.active { border-color: var(--accent); background: var(--accent-soft); }
 .ci-icon { width: 28px; height: 28px; flex-shrink: 0; object-fit: contain; }
 .swatch { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+/* Replis de BuildingIcon : mêmes gabarits que les icônes qu'ils remplacent,
+   utilisés tant que public/icons/ n'a pas été généré. */
+.ci-swatch { width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0; }
+.sp-swatch { width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0; }
+.audit-icon { width: 24px; height: 24px; flex-shrink: 0; object-fit: contain; }
+.audit-swatch { width: 24px; height: 24px; border-radius: 4px; flex-shrink: 0; }
 .ci-name { flex: 1; font-size: 13px; }
 .ci-name small { color: var(--muted); font-size: 11px; }
 .ci-actions { display: flex; gap: 2px; }

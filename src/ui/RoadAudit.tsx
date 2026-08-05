@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useStore } from "../state/store";
 import type { BuildingDef } from "../model/types";
 import { Modal } from "./Modal";
+import { BuildingIcon } from "./BuildingIcon";
 
 interface Props {
   onClose: () => void;
@@ -66,7 +67,12 @@ export function RoadAudit({ onClose, asPanel }: Props) {
           {list.length === 0 && <p className="muted">Aucun bâtiment sans route (ou tous filtrés).</p>}
           {list.map((d) => (
             <div key={d.id} className="audit-row">
-              {d.icon && <img src={d.icon} alt="" width={24} height={24} />}
+              <BuildingIcon
+                icon={d.icon}
+                color={d.color}
+                className="audit-icon"
+                fallbackClassName="audit-swatch"
+              />
               <span className="audit-name">{d.name}</span>
               <span className="muted">
                 {d.size.w}×{d.size.h}

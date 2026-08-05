@@ -1,5 +1,6 @@
 import { makeLookup, validateFields, validateLayout } from "../engine/rules";
 import { useStore } from "../state/store";
+import { BuildingIcon } from "./BuildingIcon";
 
 export function SidePanel() {
   const layout = useStore((s) => s.layout);
@@ -35,7 +36,12 @@ export function SidePanel() {
   return (
     <div className="panel">
       <div className="sp-head">
-        {def.icon && <img className="sp-icon" src={`/${def.icon}`} alt="" />}
+        <BuildingIcon
+          icon={def.icon}
+          color={def.color}
+          className="sp-icon"
+          fallbackClassName="sp-swatch"
+        />
         <h3>{def.name}</h3>
       </div>
       <p className="muted">
