@@ -1,144 +1,176 @@
-# Anno 117 — Designer
+# Anno 117 Designer
 
-Outil web pour concevoir et (à terme) optimiser la disposition de bâtiments d'Anno 117 sur une grille.
+A web tool to plan and optimise building layouts for **Anno 117: Pax Romana** — running on the game's real data, extracted straight from its own archives.
 
-## Lancer
+---
+
+## Why this exists
+
+In Anno, every building comes with strings attached. It needs road access. It projects an influence radius that has to cover the right neighbours. Farms need a connected field of an exact size. And the island you are building on has an irregular coastline that refuses to cooperate.
+
+Planning a district that satisfies all of that at once is a genuinely interesting packing problem. Solving it *inside* the game is not: you place, you check, you tear down, you place again.
+
+So I moved the problem outside the game — and set myself one rule that shaped everything after it: **no hand-typed numbers**. Not values copied off a wiki, not approximations. The actual figures Ubisoft ships in the game files. Which meant that before writing a single line of the editor, I had to be able to read Anno's archives.
+
+That constraint turned a layout tool into three problems worth solving.
+
+## Three problems worth solving
+
+**Reading an undocumented binary format.** Anno stores its data in `.rda` archives — *Resource File V2.2*. A 792-byte header, a file directory that lives *before* the block header pointing at it, zlib-compressed payloads, UTF-16LE paths in 560-byte records. There is no official spec. [`tools/rda_extract.py`](tools/rda_extract.py) is a from-scratch implementation, and it is the foundation everything else stands on.
+
+**Modelling an economy that feeds itself.** Population consumes goods; producing those goods costs workforce; workforce comes from population. It is a circular dependency, so it cannot be computed in one pass. The population planner resolves it as a **fixed-point iteration** — population → needs → production → workforce → more population → … — with a convergence guarantee that hinges on one detail: `NeedConsumptionRate` is defined *per house*, not per inhabitant. Get that wrong and the cascade diverges. There is a fallback and a warning if it ever does.
+
+**Packing shapes under constraints.** Placement is 2D bin packing with side conditions — roads have to exist and connect, radii have to overlap the right things, fields need contiguous free space. The optimiser combines a **greedy macro-tile decoder** with **simulated annealing** over placement order and road-band offsets, running in a **Web Worker** so the interface never freezes.
+
+## What it does
+
+- **Real building catalogue** — 338 buildings with their true dimensions, rotation, road requirement, radius, field size, production chain and region. Searchable, filterable, and editable in-app.
+- **Real islands** — load any of the **55 islands** in the game at its exact size and coastline shape.
+- **Free-form grid** — or paint your own buildable area.
+- **Placement with live validation** — valid/invalid preview, rotation, moving, locking. Broken rules are outlined in red and explained in the side panel.
+- **Roads and fields** painted by hand, checked against the real rules: road adjacency, field size, connectivity and contact with its building.
+- **Influence radii** drawn as overlays.
+- **Population planner** — set a target population per tier and get the full building plan back.
+- **Automatic optimiser** — hand it a shopping list and weighted goals, get a layout.
+- **Persistence** — browser autosave, JSON import/export, PNG export.
+
+---
+
+## Installation
+
+### Prerequisites
+
+- **Node.js 18+** and npm
+- **Python 3.10+** — only if you want to regenerate the game data
+- A legal copy of **Anno 117: Pax Romana** — same caveat
+
+### Run the app
 
 ```bash
+git clone https://github.com/MaissaRemi/anno117-designer.git
+cd anno117-designer
 npm install
-npm run dev      # serveur de dev (http://localhost:5173)
-npm run build    # build production (dist/)
-npm test         # tests unitaires du moteur de règles
+npm run dev          # http://localhost:5173
 ```
 
-## Données du jeu (pipeline d'extraction)
+That is enough to use the tool. The extracted game data is committed, so the catalogue, the islands and the economy all work out of the box.
 
-L'outil ne code aucune donnée en dur : tout ce qu'il manipule — 338 bâtiments, 55 îles, chaînes de
-production, reliefs — est produit par un **pipeline d'extraction** qui lit directement les archives
-du jeu. C'est le cœur technique du projet autant que l'éditeur lui-même : `tools/rda_extract.py`
-implémente le format d'archive propriétaire *Resource File V2.2* (en-têtes, répertoire, blocs zlib),
-et les scripts au-dessus en tirent des JSON exploitables par l'application.
+Building icons are the exception — see below. Without them the interface falls back to a coloured tile per building, and everything else behaves normally.
 
-Conséquence directe : quand le jeu est mis à jour, il suffit de relancer le pipeline.
-
-### Les icônes ne sont pas fournies
-
-Les 222 icônes de bâtiments sont des illustrations Ubisoft : elles **ne sont pas versionnées** et
-`public/icons/` est ignoré par git. En leur absence, l'interface affiche une pastille de la couleur
-du bâtiment — l'application reste pleinement fonctionnelle. Pour les obtenir, lance le pipeline
-ci-dessous depuis ta propre installation du jeu.
-
-### Régénération
+### Other commands
 
 ```bash
-export ANNO_GAME_DIR="<...>/Anno 117 - Pax Romana/maindata"   # Windows : set ANNO_GAME_DIR=...
+npm run build        # type-check then production build into dist/
+npm test             # unit tests for the rule engine and the optimiser
+npm run lint
+```
 
-python tools/rda_extract.py get "$ANNO_GAME_DIR/config.rda" data/base/config/export/assets.xml .gamedata/assets_base.xml
+### Regenerate the game data (optional)
+
+```bash
+pip install -r tools/requirements.txt
+export ANNO_GAME_DIR="<...>/Anno 117 - Pax Romana/maindata"   # Windows: set ANNO_GAME_DIR=...
+python tools/extract_icons.py
+```
+
+---
+
+## The game data pipeline
+
+Nothing in this tool is hard-coded. All 338 buildings, 55 islands, production chains and terrain heights are produced by an extraction pipeline that reads the game's archives directly. When the game gets patched, you re-run the pipeline.
+
+### Icons are not bundled
+
+The 222 building icons are Ubisoft artwork. They are **not committed** — `public/icons/` is gitignored — and they are not redistributed here. Run `python tools/extract_icons.py` against your own installation to generate them.
+
+### Full regeneration
+
+```bash
+export ANNO_GAME_DIR="<...>/Anno 117 - Pax Romana/maindata"
+
+python tools/rda_extract.py get "$ANNO_GAME_DIR/config.rda" data/base/config/export/assets.xml   .gamedata/assets_base.xml
 python tools/rda_extract.py get "$ANNO_GAME_DIR/config.rda" data/base/config/gui/texts_french.xml .gamedata/texts_french.xml
 
 python tools/build_catalog.py     # -> src/data/catalog.generated.json
 python tools/build_economy.py     # -> src/data/economy.generated.json
 python tools/build_islands.py     # -> src/data/islands.generated.json
 python tools/build_terrain.py     # -> src/data/terrain*.generated.json
-python tools/extract_icons.py     # -> public/icons/*.png   (non versionné)
+python tools/extract_icons.py     # -> public/icons/*.png   (not committed)
 ```
 
-| Script | Rôle |
+| Script | Role |
 |---|---|
-| `rda_extract.py` | Extracteur d'archives RDA « Resource File V2.2 » |
-| `build_catalog.py` | `assets.xml` + textes FR + tailles (`.ifo` BoundingBox) → catalogue |
-| `build_economy.py` | Besoins, chaînes de production, main-d'œuvre |
-| `build_islands.py` | Tailles et masques terre/mer des 55 îles |
-| `build_terrain.py` | Relief et hauteurs |
-| `extract_icons.py` | Icônes DDS 4k → PNG 64px |
+| `rda_extract.py` | RDA "Resource File V2.2" archive extractor |
+| `build_catalog.py` | `assets.xml` + localised text + sizes (`.ifo` BoundingBox) → catalogue |
+| `build_economy.py` | Needs, production chains, workforce |
+| `build_islands.py` | Sizes and land/sea masks for the 55 islands |
+| `build_terrain.py` | Relief and heightmaps |
+| `extract_icons.py` | Building icons, 4K DDS → 64px PNG |
 
-**Exact** : routes, rayons, champs, production, noms FR. **Approx ±1** : tailles (BoundingBox `.ifo`),
-corrigeables via l'éditeur de catalogue.
+**Exact**: roads, radii, fields, production, names. **±1 tile**: building sizes, read from `.ifo` bounding boxes — correctable in the in-app catalogue editor.
 
-## Planificateur de population (objectif d'habitants)
+---
 
-Bouton **👥 Population** : fixer une population cible par classe (tier) ; le modèle calcule
-automatiquement le plan.
+## Population planner
 
-- **Besoins** : chaque résidence a une `NeedsList` (biens consommés avec taux + services).
-- **Cascade main-d'œuvre** : la main-d'œuvre est un « bien » par tier (`ConnectedWorkforce`,
-  `PopulationToWorkforceFactor`) consommé par les bâtiments → solveur **point-fixe** (population →
-  besoins → production → main-d'œuvre → population supplémentaire → …).
-- **Bilan** : population/résidences par tier, bâtiments de production (chaînes complètes) et
-  d'influence (services). Bouton **Placer sur l'île** → réutilise l'optimiseur.
-- Données : `tools/build_economy.py` → `src/data/economy.generated.json`. Solveur `src/economy/`.
-- Calibration : `NeedConsumptionRate` est **par maison** (résidence), pas par habitant → la cascade
-  converge (ratio < 1). Repli automatique sur les besoins directs + avertissement si jamais instable.
-  Capacité/maison par tier = défaut éditable.
+Press **👥 Population**, set a target population per tier, and the model works out the plan.
 
-## Îles du jeu (formes réelles)
+- **Needs** — each residence carries a `NeedsList`: goods consumed at a given rate, plus services.
+- **Workforce cascade** — workforce is treated as a per-tier good (`ConnectedWorkforce`, `PopulationToWorkforceFactor`) consumed by buildings, resolved by the fixed-point solver described above.
+- **Output** — population and residences per tier, production buildings with their full chains, and service buildings. **Place on island** hands the result to the optimiser.
+- Data: `tools/build_economy.py` → `src/data/economy.generated.json`. Solver: `src/economy/`.
 
-Bouton **🏝 Île** : charger une des **55 îles** d'Anno 117 comme grille (taille + forme exactes).
+## Real island shapes
 
-- Taille en cases lue dans le `.a7minfo` de chaque île (offset 8 : largeur, hauteur).
-- Forme = masque terre/mer extrait du rendu `mapimage.png`, redimensionné à la taille réelle.
-- Génération : `python tools/build_islands.py` → `src/data/islands.generated.json` (masque RLE).
-- Aperçus miniatures dans le sélecteur ; charger une île remplace la grille courante.
+Press **🏝 Island** to load one of the game's 55 islands as your grid.
 
-## Fonctionnalités (MVP — éditeur manuel)
+- Grid size read from each island's `.a7minfo` (width and height at offset 8).
+- Shape derived from the land/sea mask of the rendered `mapimage.png`, resampled to the real grid size and stored RLE-encoded.
+- Thumbnails in the picker; loading an island replaces the current grid.
 
-- **Catalogue de bâtiments** réel + éditable (dimensions, rotation, route requise, rayon, champ,
-  production, région, icône). Filtres recherche / catégorie / région. Ajout via **+ Bâtiment**.
-- **Grille de forme libre** : outils *Dessiner* / *Masquer* pour peindre les cases utilisables.
-- **Placement** de bâtiments (aperçu valide/invalide), **rotation** (R), **déplacement**,
-  **verrouillage** (🔒 = fixe, ignoré par le futur optimiseur).
-- **Routes** et **champs** peints à la souris, avec validation des règles :
-  - accès routier (case adjacente à une route),
-  - champ suffisant, connecté, et touchant le bâtiment.
-- **Rayons** de service/boost affichés en overlay.
-- **Validation visuelle** : bordure rouge + détail des problèmes dans le panneau de droite.
-- **Sauvegarde** : autosave navigateur, import/export **JSON**, export **PNG**.
+## Automatic optimiser
 
-## Raccourcis
+Press **⚙ Optimise**, list the buildings you want with quantities, weight the goals (building count / radius coverage / compactness / minimal roads), set a time budget, run.
 
-| Touche | Action |
-|--------|--------|
-| `R` | Pivoter (la pose, ou le bâtiment sélectionné) |
-| `Suppr` | Supprimer le bâtiment sélectionné |
-| `Ctrl+Z` / `Ctrl+Y` | Annuler / Rétablir |
-| `Échap` | Désélectionner |
-| molette | Zoom · clic droit = déplacer la vue |
+- **Road generation** — horizontal bands plus a vertical spine, so road access holds by construction.
+- **Fields** — farms get their free area as a connected block under the building, with the exact tile count.
+- **Locked buildings** are preserved and the algorithm fills around them. Hand-drawn roads are kept; generated ones are replaced on each run (`gen` flag).
+- **Algorithm** — greedy macro-tile packing decoder, then simulated annealing over order and band offset, in a Web Worker, scored through `engine/`.
+
+Code: `src/optimizer/` (`types`, `greedy`, `anneal`, `score`, `worker`, `runOptimizer`). Tests: `src/optimizer/optimizer.test.ts`.
+
+## Keyboard shortcuts
+
+| Key | Action |
+|---|---|
+| `R` | Rotate the pending placement, or the selected building |
+| `Del` | Delete the selected building |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
+| `Esc` | Deselect |
+| Wheel | Zoom · right-click drag to pan |
 
 ## Architecture
 
 ```
 src/
-  model/    types + factories + (dé)sérialisation
-  engine/   règles pures + tests (placement, routes, champs, rayons, validation)
-  state/    store Zustand (layout, sélection, mode, undo/redo)
-  render/   couche de dessin Canvas 2D
-  ui/       composants React (TopBar, Toolbar, Catalog, SidePanel, GridCanvas)
-  data/     catalogue d'exemple (seed)
-  persist/  localStorage, import/export JSON, export PNG
+  model/      types, factories, (de)serialisation
+  engine/     pure rules + tests (placement, roads, fields, radii, validation)
+  economy/    fixed-point workforce and needs solver
+  optimizer/  greedy decoder, simulated annealing, Web Worker
+  state/      Zustand store (layout, selection, mode, undo/redo)
+  render/     Canvas 2D drawing layer
+  ui/         React components
+  data/       generated game data + seed
+  persist/    localStorage, JSON import/export, PNG export
+tools/        Python extraction pipeline
 ```
 
-## Optimiseur automatique (phase 2 — fait)
+The rule engine is deliberately kept as **pure functions with no React dependency**. That is what makes it testable — **31 test files** cover geometry, placement rules, road and field validation, the economy solver and the optimiser — and what lets the optimiser reuse the exact same scoring code as the live editor, rather than a reimplementation that drifts.
 
-Bouton **⚙ Optimiser** : définir une liste de bâtiments (quantités), pondérer les objectifs
-(max bâtiments / couverture rayon / compacité / routes min), choisir un budget temps, lancer.
+---
 
-- **Auto-génération des routes** : réseau (bandes horizontales + épine verticale) garantissant
-  l'accès route par construction.
-- **Champs** : les fermes reçoivent leur free area (bloc connecté sous le bâtiment, nb de cases exact).
-- **Bâtiments verrouillés** conservés ; l'algo remplit autour. Routes dessinées par l'utilisateur
-  conservées ; routes auto remplacées à chaque re-calcul (flag `gen`).
-- **Algo** : décodeur glouton (packing macro-tuiles) + **recuit simulé** (ordre, décalage de bande)
-  dans un **Web Worker** (UI non bloquée), score via `engine/`.
+## Legal notice
 
-Code : `src/optimizer/` (`types`, `greedy`, `anneal`, `score`, `worker`, `runOptimizer`).
-Tests : `src/optimizer/optimizer.test.ts`.
+Unofficial personal project, **not affiliated with Ubisoft** in any way. *Anno* is a registered trademark of Ubisoft Entertainment.
 
-## Mentions légales
-
-Projet personnel non officiel, **sans aucun lien avec Ubisoft**. *Anno* est une marque déposée
-d'Ubisoft Entertainment.
-
-Les données manipulées par l'outil sont extraites d'une installation du jeu et restent la propriété
-d'Ubisoft. Les icônes des bâtiments ne sont pas redistribuées : elles se génèrent depuis tes propres
-fichiers via `tools/extract_icons.py`. Une copie légale d'Anno 117 est nécessaire pour exécuter le
-pipeline d'extraction.
+The game data used by this tool is extracted from a local installation and remains the property of Ubisoft. Building icons are not redistributed: generate them from your own files with `tools/extract_icons.py`. A legal copy of Anno 117 is required to run the extraction pipeline.

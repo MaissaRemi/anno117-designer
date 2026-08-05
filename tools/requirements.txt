@@ -1,0 +1,4 @@
+# Dependencies for the game-data extraction pipeline (tools/*.py).
+# Install with:  pip install -r tools/requirements.txt
+Pillow>=10.0
+numpy>=1.24
