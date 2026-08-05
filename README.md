@@ -186,7 +186,7 @@ src/
 tools/        Python extraction pipeline
 ```
 
-The rule engine is deliberately kept as **pure functions with no React dependency**. That is what makes it testable — **31 test files** cover geometry, placement rules, road and field validation, the economy solver and the optimiser — and what lets the optimiser reuse the exact same scoring code as the live editor, rather than a reimplementation that drifts.
+The rule engine is deliberately kept as **pure functions with no React dependency**. That is what makes it testable — **167 tests across 31 files** cover geometry, placement rules, road and field validation, the economy solver and the optimiser — and what lets the optimiser reuse the exact same scoring code as the live editor, rather than a reimplementation that drifts.
 
 ---
 
