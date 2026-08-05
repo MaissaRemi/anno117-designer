@@ -6,3 +6,6 @@ dist
 __pycache__/
 *.pyc
 *.tsbuildinfo
+
+# Assets extraits du jeu (Ubisoft) : regenerables via tools/extract_icons.py
+public/icons/
