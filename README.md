@@ -4,6 +4,12 @@
 
 A web tool to plan and optimise building layouts for **Anno 117: Pax Romana** — running on the game's real data, extracted straight from its own archives.
 
+> ⚠️ **Work in progress — not validated yet.**
+> The tool runs end to end, but its output has not been verified against the game: layouts it
+> produces have not been rebuilt in-game to confirm they are legal and behave as predicted, and
+> building footprints are read from `.ifo` bounding boxes with a ±1 tile margin of error.
+> Treat it as a planning aid and a technical exercise, not as a reference for optimal builds.
+
 ---
 
 ## Why this exists
@@ -189,6 +195,22 @@ tools/        Python extraction pipeline
 The rule engine is deliberately kept as **pure functions with no React dependency**. That is what makes it testable — **167 tests across 31 files** cover geometry, placement rules, road and field validation, the economy solver and the optimiser — and what lets the optimiser reuse the exact same scoring code as the live editor, rather than a reimplementation that drifts.
 
 ---
+
+## Where it stands
+
+What works: the extraction pipeline, the rule engine and its 167 tests, the editor, the population
+planner, the optimiser, and the Docker build.
+
+What is missing before this can be called finished:
+
+- **In-game validation** — no layout produced by the optimiser has been rebuilt in Anno 117 to
+  confirm the placement rules and radii match the game's actual behaviour.
+- **Exact footprints** — sizes come from `.ifo` bounding boxes and are accurate to ±1 tile. They are
+  editable in-app, but they are not yet correct by default for every building.
+- **Coverage across regions** — most testing was done on Latium content.
+
+The rule engine is tested against itself, not against the game. That distinction matters, and it is
+the main reason this is still marked as in progress.
 
 ## Legal notice
 
