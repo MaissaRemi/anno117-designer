@@ -178,19 +178,72 @@ Code: `src/optimizer/` (`types`, `greedy`, `anneal`, `score`, `worker`, `runOpti
 
 ## Architecture
 
+The diagram below is **generated from the real imports** by
+[`tools/gen_architecture_diagram.py`](tools/gen_architecture_diagram.py), so it cannot drift away
+from the code. Re-run it after any refactor:
+
+```bash
+python tools/gen_architecture_diagram.py
 ```
-src/
-  model/      types, factories, (de)serialisation
-  engine/     pure rules + tests (placement, roads, fields, radii, validation)
-  economy/    fixed-point workforce and needs solver
-  optimizer/  greedy decoder, simulated annealing, Web Worker
-  state/      Zustand store (layout, selection, mode, undo/redo)
-  render/     Canvas 2D drawing layer
-  ui/         React components
-  data/       generated game data + seed
-  persist/    localStorage, JSON import/export, PNG export
-tools/        Python extraction pipeline
+
+<!-- ARCHITECTURE:START -->
+
+```mermaid
+flowchart TD
+  RDA["Anno 117 archives<br/>.rda"]
+  PY["tools/ — Python pipeline<br/>rda_extract + build_*"]
+
+  subgraph app_["src/"]
+    direction TB
+    model["model/<br/>types, factories, serialisation<br/>3 files"]
+    engine["engine/<br/>pure rules<br/>2 files"]
+    economy["economy/<br/>fixed-point solver<br/>4 files"]
+    optimizer["optimizer/<br/>greedy + annealing<br/>16 files"]
+    data["data/<br/>generated game data<br/>4 files"]
+    state["state/<br/>Zustand store<br/>1 file"]
+    render["render/<br/>Canvas 2D<br/>2 files"]
+    persist["persist/<br/>save / import / export<br/>4 files"]
+    ui["ui/<br/>React components<br/>20 files"]
+    app["app/<br/>entry point<br/>2 files"]
+  end
+
+  RDA --> PY --> data
+  optimizer --> |"16"| model
+  optimizer --> |"15"| engine
+  ui --> |"14"| state
+  optimizer --> |"9"| economy
+  ui --> economy
+  ui --> model
+  ui --> engine
+  ui --> optimizer
+  ui --> data
+  persist --> model
+  render --> engine
+  ui --> persist
+  data --> model
+  economy --> engine
+  engine --> model
+  render --> model
+  state --> data
+  state --> engine
+  state --> model
+  state --> persist
+  ui --> render
+  app --> state
+  app --> ui
+  economy --> data
+  economy --> model
+  optimizer --> data
+  persist --> data
+  persist --> economy
+  state --> economy
+  state --> optimizer
+
+  classDef ext fill:#2b2b33,stroke:#55555f,color:#d8d6df;
+  class RDA,PY ext;
 ```
+
+<!-- ARCHITECTURE:END -->
 
 The rule engine is deliberately kept as **pure functions with no React dependency**. That is what makes it testable — **167 tests across 31 files** cover geometry, placement rules, road and field validation, the economy solver and the optimiser — and what lets the optimiser reuse the exact same scoring code as the live editor, rather than a reimplementation that drifts.
 
