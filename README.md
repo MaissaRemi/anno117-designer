@@ -1,5 +1,7 @@
 # Anno 117 Designer
 
+[![CI](https://github.com/MaissaRemi/anno117-designer/actions/workflows/ci.yml/badge.svg)](https://github.com/MaissaRemi/anno117-designer/actions/workflows/ci.yml)
+
 A web tool to plan and optimise building layouts for **Anno 117: Pax Romana** — running on the game's real data, extracted straight from its own archives.
 
 ---
@@ -38,13 +40,31 @@ That constraint turned a layout tool into three problems worth solving.
 
 ## Installation
 
-### Prerequisites
+The extracted game data is committed, so the catalogue, the islands and the economy all work out of the box — no game installation needed just to try the tool.
 
-- **Node.js 18+** and npm
-- **Python 3.10+** — only if you want to regenerate the game data
-- A legal copy of **Anno 117: Pax Romana** — same caveat
+Building icons are the one exception, see [below](#icons-are-not-bundled). Without them the interface falls back to a coloured tile per building; everything else behaves normally.
 
-### Run the app
+### With Docker
+
+Nothing to install but Docker itself.
+
+```bash
+git clone https://github.com/MaissaRemi/anno117-designer.git
+cd anno117-designer
+docker compose up
+```
+
+Open **http://localhost:8080**.
+
+The image is a multi-stage build: `node:20-alpine` compiles and type-checks, then only the static bundle is copied into `nginx:alpine`. The final image carries no toolchain and no source.
+
+For hot reload while developing:
+
+```bash
+docker compose --profile dev up dev     # http://localhost:5173
+```
+
+### With Node
 
 ```bash
 git clone https://github.com/MaissaRemi/anno117-designer.git
@@ -53,9 +73,7 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-That is enough to use the tool. The extracted game data is committed, so the catalogue, the islands and the economy all work out of the box.
-
-Building icons are the exception — see below. Without them the interface falls back to a coloured tile per building, and everything else behaves normally.
+Requires **Node.js 18+**.
 
 ### Other commands
 
@@ -63,7 +81,10 @@ Building icons are the exception — see below. Without them the interface falls
 npm run build        # type-check then production build into dist/
 npm test             # unit tests for the rule engine and the optimiser
 npm run lint
+npm run typecheck
 ```
+
+The same four steps run on every push and pull request through GitHub Actions — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ### Regenerate the game data (optional)
 
