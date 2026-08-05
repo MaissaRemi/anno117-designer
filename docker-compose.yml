@@ -1,0 +1,23 @@
+services:
+  # Build de production servi par nginx. `docker compose up` suffit.
+  app:
+    build: .
+    image: anno117-designer:latest
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  # Serveur de developpement avec rechargement a chaud.
+  # `docker compose --profile dev up dev`
+  dev:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      # Volume anonyme : garde les node_modules du conteneur (binaires Linux)
+      # au lieu de ceux de l'hote, qui peuvent etre compiles pour un autre OS.
+      - /app/node_modules
+    profiles: ["dev"]

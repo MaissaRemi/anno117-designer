@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+dist
+.gamedata
+public/icons
+*.local
+__pycache__/
+*.pyc
+*.tsbuildinfo
+.claude
+docs
