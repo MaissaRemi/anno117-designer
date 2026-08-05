@@ -11,23 +11,49 @@ npm run build    # build production (dist/)
 npm test         # tests unitaires du moteur de règles
 ```
 
-## Données du jeu (extraction)
+## Données du jeu (pipeline d'extraction)
 
-Le catalogue par défaut (`src/data/catalog.generated.json`, 338 bâtiments) est **extrait des fichiers
-d'Anno 117** : noms FR, routes, rayons, champs (free area), production, icônes. Régénération :
+L'outil ne code aucune donnée en dur : tout ce qu'il manipule — 338 bâtiments, 55 îles, chaînes de
+production, reliefs — est produit par un **pipeline d'extraction** qui lit directement les archives
+du jeu. C'est le cœur technique du projet autant que l'éditeur lui-même : `tools/rda_extract.py`
+implémente le format d'archive propriétaire *Resource File V2.2* (en-têtes, répertoire, blocs zlib),
+et les scripts au-dessus en tirent des JSON exploitables par l'application.
+
+Conséquence directe : quand le jeu est mis à jour, il suffit de relancer le pipeline.
+
+### Les icônes ne sont pas fournies
+
+Les 222 icônes de bâtiments sont des illustrations Ubisoft : elles **ne sont pas versionnées** et
+`public/icons/` est ignoré par git. En leur absence, l'interface affiche une pastille de la couleur
+du bâtiment — l'application reste pleinement fonctionnelle. Pour les obtenir, lance le pipeline
+ci-dessous depuis ta propre installation du jeu.
+
+### Régénération
 
 ```bash
-python tools/rda_extract.py get "<...>/maindata/config.rda" data/base/config/export/assets.xml .gamedata/assets_base.xml
-python tools/rda_extract.py get "<...>/maindata/config.rda" data/base/config/gui/texts_french.xml .gamedata/texts_french.xml
+export ANNO_GAME_DIR="<...>/Anno 117 - Pax Romana/maindata"   # Windows : set ANNO_GAME_DIR=...
+
+python tools/rda_extract.py get "$ANNO_GAME_DIR/config.rda" data/base/config/export/assets.xml .gamedata/assets_base.xml
+python tools/rda_extract.py get "$ANNO_GAME_DIR/config.rda" data/base/config/gui/texts_french.xml .gamedata/texts_french.xml
+
 python tools/build_catalog.py     # -> src/data/catalog.generated.json
-python tools/extract_icons.py     # -> public/icons/*.png
+python tools/build_economy.py     # -> src/data/economy.generated.json
+python tools/build_islands.py     # -> src/data/islands.generated.json
+python tools/build_terrain.py     # -> src/data/terrain*.generated.json
+python tools/extract_icons.py     # -> public/icons/*.png   (non versionné)
 ```
 
-- `tools/rda_extract.py` : extracteur d'archives RDA "Resource File V2.2".
-- `tools/build_catalog.py` : assets.xml + textes FR + tailles (.ifo BoundingBox) → catalog.json.
-- `tools/extract_icons.py` : icônes DDS 4k → PNG 64px.
-- **Exact** : routes, rayons, champs, production, noms FR. **Approx ±1** : tailles (BoundingBox `.ifo`),
-  corrigeables via l'éditeur de catalogue.
+| Script | Rôle |
+|---|---|
+| `rda_extract.py` | Extracteur d'archives RDA « Resource File V2.2 » |
+| `build_catalog.py` | `assets.xml` + textes FR + tailles (`.ifo` BoundingBox) → catalogue |
+| `build_economy.py` | Besoins, chaînes de production, main-d'œuvre |
+| `build_islands.py` | Tailles et masques terre/mer des 55 îles |
+| `build_terrain.py` | Relief et hauteurs |
+| `extract_icons.py` | Icônes DDS 4k → PNG 64px |
+
+**Exact** : routes, rayons, champs, production, noms FR. **Approx ±1** : tailles (BoundingBox `.ifo`),
+corrigeables via l'éditeur de catalogue.
 
 ## Planificateur de population (objectif d'habitants)
 
@@ -106,3 +132,13 @@ Bouton **⚙ Optimiser** : définir une liste de bâtiments (quantités), pondé
 
 Code : `src/optimizer/` (`types`, `greedy`, `anneal`, `score`, `worker`, `runOptimizer`).
 Tests : `src/optimizer/optimizer.test.ts`.
+
+## Mentions légales
+
+Projet personnel non officiel, **sans aucun lien avec Ubisoft**. *Anno* est une marque déposée
+d'Ubisoft Entertainment.
+
+Les données manipulées par l'outil sont extraites d'une installation du jeu et restent la propriété
+d'Ubisoft. Les icônes des bâtiments ne sont pas redistribuées : elles se génèrent depuis tes propres
+fichiers via `tools/extract_icons.py`. Une copie légale d'Anno 117 est nécessaire pour exécuter le
+pipeline d'extraction.
