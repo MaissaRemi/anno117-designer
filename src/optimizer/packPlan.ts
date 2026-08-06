@@ -4,6 +4,7 @@ import { economy, residentialChain } from "../economy/economy";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { VITAL_ATTRS } from "../economy/attributes";
 import type { DefLookup } from "../engine/rules";
+import type { HousePlot } from "./planLattice";
 import { makeStreetGrid } from "./streetGrid";
 
 const SMALL_RANGE_MAX = 40; // services portée <= 40 = locaux
@@ -21,6 +22,10 @@ export interface PackOpts {
 
 export interface PackResult {
   buildings: PlacedBuilding[]; // services + maisons
+  /** Parcelles et paliers atteignables — interface commune avec planLattice. packPlan ne
+   *  produit pas cette information : la cascade de main-d'œuvre ne s'applique donc pas aux
+   *  plans qu'il génère, et le déficit éventuel est simplement signalé. */
+  plots?: HousePlot[];
   roads: RoadTile[];
   fields: FieldTile[];
   houses: number;

@@ -65,8 +65,14 @@ describe("exploitation des emplacements dans le plan d'île", () => {
   });
 
   it("L'EAU RESTE PRIORITAIRE : le réseau d'eau n'est pas dégradé par l'exploitation", () => {
-    const base = planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8 });
-    const withSlots = planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, exploitSlots: true });
+    // Les deux plans sont comparés sur la recette COMPLÈTE. Depuis la cascade de
+    // main-d'œuvre, exploiter les emplacements réclame des paliers ouvriers, donc des
+    // services supplémentaires (`unlockWorkerTiers`) : en mode « recette optimisée » les
+    // deux plans ne poseraient plus les mêmes bâtiments, et la comparaison ne dirait plus
+    // rien de l'eau. Sur la recette complète l'ajout est un no-op par construction.
+    const opts = { catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, needMode: "all" as const };
+    const base = planIslandImport(opts);
+    const withSlots = planIslandImport({ ...opts, exploitSlots: true });
     const ok = (x: typeof base) => (x.water ? x.water.consumers.filter((c) => c.connected).length : 0);
     expect(ok(withSlots)).toBe(ok(base));
     expect(withSlots.water?.sources).toBe(base.water?.sources);

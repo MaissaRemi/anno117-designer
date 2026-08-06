@@ -28,6 +28,19 @@ export interface LocalProdOptions {
   region?: string;
   /** Nombre maximal d'ateliers posés (garde-fou de temps). Défaut 40. */
   maxBuildings?: number;
+  /**
+   * GRAND-LIVRE DE MAIN-D'ŒUVRE. Un atelier ne coûte pas que du sol et un effet de zone : il
+   * réclame la main-d'œuvre d'un palier précis, qu'il faut produire en RÉTROGRADANT des
+   * maisons. Le budget d'attributs paie donc les deux — l'effet de zone de l'atelier ET les
+   * conversions qu'il impose. Sans ce devis, on posait des ateliers qu'aucun ouvrier ne peut
+   * faire tourner en jeu.
+   */
+  workforce?: {
+    quote(defIds: string[]): { attrs: Record<string, number>; popLost: number } | null;
+    charge(defIds: string[]): void;
+    /** attributs qu'emportent des maisons rasées */
+    razeCost(uids: string[]): Record<string, number>;
+  };
 }
 
 export interface LocalWorkshop {
@@ -184,24 +197,41 @@ export function planLocalProduction(
       const pos = place(def);
       if (!pos) break;
       const impact = zoneImpact(def, pos.x, pos.y);
-      // le budget tiendrait-il ? sinon on renonce à CE bien et on passe au suivant
-      const wouldBreak = VITAL_ATTRS.some((k) => budget[k] + (impact[k] ?? 0) < 0);
-      if (wouldBreak) break;
-      // pose : les résidences sous l'emprise sont rasées
+      // DEVIS DE MAIN-D'ŒUVRE : ce que coûterait, en attributs, la rétrogradation des maisons
+      // nécessaires pour armer cet atelier. `null` = demande insatisfiable (palier absent de
+      // l'île, ou plus aucune maison convertible) — on renonce à ce bien.
+      const wf = opts.workforce?.quote([defId]);
+      if (opts.workforce && !wf) break;
+      // Maisons qui disparaîtraient sous l'emprise — repérées AVANT de trancher : elles
+      // emportent leurs propres bonus d'attributs, et les ignorer faisait dépenser un budget
+      // déjà consommé. C'est ce qui rendait le plan non viable après coup.
       const fp = footprintSize(def, 0);
+      // Un ensemble, pas une liste : une maison 3×3 occupe jusqu'à neuf cases de l'emprise
+      // et serait sinon facturée neuf fois.
+      const doomedSet = new Set<string>();
       for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
         const cell = (pos.y + j) * W + (pos.x + i);
         const o = owner[cell];
-        if (o >= 0 && residenceIds.has(all[o].defId)) {
-          const u = all[o].uid;
-          if (!removed.has(u)) {
-            removed.add(u);
-            ws.housesLost++;
-            const h = houses.find((x) => x.uid === u);
-            if (h) h.alive = false;
-          }
-        }
+        if (o >= 0 && residenceIds.has(all[o].defId) && !removed.has(all[o].uid)) doomedSet.add(all[o].uid);
       }
+      const doomed = [...doomedSet];
+      const razed = opts.workforce?.razeCost(doomed) ?? {};
+      const total = (k: string) => (impact[k] ?? 0) + (wf?.attrs[k] ?? 0) - (razed[k] ?? 0);
+      // le budget tiendrait-il ? sinon on renonce à CE bien et on passe au suivant
+      const wouldBreak = VITAL_ATTRS.some((k) => budget[k] + total(k) < 0);
+      if (wouldBreak) break;
+      opts.workforce?.charge([defId]);
+      // pose : les résidences sous l'emprise sont rasées
+      for (const u of doomed) {
+        removed.add(u);
+        ws.housesLost++;
+        const h = houses.find((x) => x.uid === u);
+        if (h) h.alive = false;
+      }
+      // Le budget encaisse AUSSI le coût des conversions et des maisons rasées. Seul
+      // `impact` remonte dans `attrsDelta` : les deux autres sont comptés par le
+      // grand-livre au règlement final, les additionner ici les compterait deux fois.
+      for (const k of VITAL_ATTRS) budget[k] = (budget[k] ?? 0) + (wf?.attrs[k] ?? 0) - (razed[k] ?? 0);
       const b: PlacedBuilding = { uid: uid("prod"), defId, x: pos.x, y: pos.y, rotation: 0, locked: false };
       const idx = all.length;
       all.push(b);

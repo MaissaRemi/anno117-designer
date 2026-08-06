@@ -61,8 +61,30 @@ export interface LatticeOpts {
  */
 export const SPINE_STEP = 13;
 
+/**
+ * Une PARCELLE bâtie et les paliers qu'elle peut légalement accueillir, d'après les services
+ * qui la couvrent. C'est la matière première de la cascade de main-d'œuvre : rétrograder une
+ * maison vers un palier ouvrier ne déplace ni ne démolit rien, puisque les neuf résidences
+ * du jeu font toutes 3×3.
+ */
+export interface HousePlot {
+  uid: string;
+  /** palier effectivement retenu à la pose (le meilleur atteignable) */
+  guid: string;
+  opts: {
+    guid: string;
+    defId: string;
+    cap: number;
+    money: number;
+    /** attributs vitaux de la maison à ce palier, institutions comprises, hors rang de cité */
+    attrs: Record<string, number>;
+  }[];
+}
+
 export interface LatticeResult {
   buildings: PlacedBuilding[];
+  /** parcelles retenues et leurs paliers atteignables (cascade de main-d'œuvre) */
+  plots: HousePlot[];
   roads: RoadTile[];
   fields: FieldTile[];
   houses: number;
@@ -144,7 +166,7 @@ export function planLattice(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, attrsSum: {}, capByTier: {}, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], plots: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, attrsSum: {}, capByTier: {}, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
@@ -577,13 +599,20 @@ export function planLattice(
     .map((tc, i) => ({ i, id: tc.def.id, fx: effectOf(tc.def.id) }))
     .filter((e) => instIds.includes(e.id) && !!e.fx);
 
-  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsSum"> => {
+  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsSum" | "plots"> => {
     let houses = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
     const tierCounts: Record<string, number> = {};
     const capByTier: Record<string, number> = {};
     const attrsSum: Record<string, number> = {};
     for (const k of VITAL_ATTRS) attrsSum[k] = 0;
-    const placed: { b: PlacedBuilding; cap: number; money: number; guid: string; attrs: Record<string, number> }[] = [];
+    const placed: {
+      b: PlacedBuilding; cap: number; money: number; guid: string; attrs: Record<string, number>;
+      /** masque des services qui couvrent cette parcelle — sert à réévaluer la maison à un
+       *  palier INFÉRIEUR lors de la cascade de main-d'œuvre */
+      mask: number;
+      /** attributs des institutions : indépendants du palier, donc constants par conversion */
+      inst: Record<string, number>;
+    }[] = [];
     const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
     for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
       if (!fitsHouse(x, y) || !touchesRoad(x, y)) continue;
@@ -596,17 +625,19 @@ export function planLattice(
       const reach = evaluator.evaluate(coveredMask);
       // bilan d'attributs de CETTE maison : besoins remplis + institutions qui la couvrent.
       // Le malus de rang de cité s'ajoute plus bas (il dépend de la population totale).
-      const attrs: Record<string, number> = { ...evaluator.attrsOf(coveredMask) };
+      const inst: Record<string, number> = {};
       for (const e of instTypes) {
         if (!activeType[e.i] || !covArr[e.i][o]) continue;
-        for (const [k, v] of Object.entries(e.fx!.attrs)) attrs[k] = (attrs[k] ?? 0) + v;
+        for (const [k, v] of Object.entries(e.fx!.attrs)) inst[k] = (inst[k] ?? 0) + v;
       }
+      const attrs: Record<string, number> = { ...evaluator.attrsOf(coveredMask) };
+      for (const [k, v] of Object.entries(inst)) attrs[k] = (attrs[k] ?? 0) + v;
       const defId = reach.tier.residenceId ?? residenceId;
       for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
       const b: PlacedBuilding = { uid: uid("lat"), defId, x, y, rotation: 0, locked: false };
       buildings.push(b);
       markAdj(x, y, rw, rh);
-      placed.push({ b, cap: reach.cap, money: reach.money, guid: reach.tier.guid, attrs });
+      placed.push({ b, cap: reach.cap, money: reach.money, guid: reach.tier.guid, attrs, mask: coveredMask, inst });
     }
 
     // ═══ SÉLECTION SOUS CONTRAINTE DE VIABILITÉ ═══════════════════════════════════════
@@ -669,6 +700,7 @@ export function planLattice(
       }
     }
 
+    const plots: HousePlot[] = [];
     for (const p of keep) {
       houses++;
       residents += p.cap;
@@ -677,8 +709,25 @@ export function planLattice(
       capByTier[p.guid] = (capByTier[p.guid] ?? 0) + p.cap;
       if (p.guid === targetGuid) fullyCovered++;
       for (const k of VITAL_ATTRS) attrsSum[k] += p.attrs[k] ?? 0;
+
+      // PALIERS ATTEIGNABLES sur cette parcelle. Laisser une maison à un palier inférieur
+      // alors que sa desserte lui permettrait mieux est un état de jeu parfaitement légal :
+      // la montée de palier est un acte MANUEL du joueur. C'est ce qui rend la cascade de
+      // main-d'œuvre possible sans rien démolir — les 9 résidences font 3×3, une conversion
+      // n'est qu'un changement de `defId`.
+      const opts: HousePlot["opts"] = [];
+      for (let k = 0; k < chain.length; k++) {
+        const r = evaluator.evaluateAt(k, p.mask);
+        if (!r || !r.tier.residenceId) continue;
+        const attrs: Record<string, number> = {};
+        for (const key of VITAL_ATTRS) {
+          attrs[key] = (evaluator.attrsAt(k, p.mask)[key] ?? 0) + (p.inst[key] ?? 0);
+        }
+        opts.push({ guid: r.tier.guid, defId: r.tier.residenceId, cap: r.cap, money: r.money, attrs });
+      }
+      plots.push({ uid: p.b.uid, guid: p.guid, opts });
     }
-    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum };
+    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum, plots };
   };
 
   // ═══ PHASE élagage routes : adjacentes aux bâtiments + chemins maison→service ═══

@@ -201,6 +201,52 @@ Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
   moins une tuile touche le bâtiment de ferme. Planner : croissance BFS (greedy.ts
   placeFields), acceptation d'une ferme = cases ATTEIGNABLES ≥ tuiles requises.
 
+## 5 bis. MAIN-D'ŒUVRE [FICHIERS, 2026-08-06]
+
+Chaque palier fournit **un** bien de main-d'œuvre qui lui est propre
+(`PopulationLevel/ConnectedWorkforce`), en quantité `habitants × PopulationToWorkforceFactor`.
+Ces biens portent `IsWorkforce=1` et `StorageLevel=Area` : **le pool est par ÎLE**, rien ne
+circule entre îles (`WorkforceTransferConfig` ne décrit que l'animation des dockers).
+
+| monde | palier | bien | facteur |
+|---|---|---|---|
+| Latium | Liberti / Plébéiens / Equites / Patriciens | 2181 / 2184 / 2185 / 2186 | 0,5 / 0,3 / 0,2 / 0,1 |
+| Albion natif | Tourbiers / Forgerons / Aldermen | 2192 / 2196 / 2197 | 0,5 / 0,3 / 0,2 |
+| Albion romanisé | Mercators / Nobles | 2198 / 2199 | 0,3 / 0,2 |
+
+⚠ **AUCUNE SUBSTITUTION ENTRE PALIERS.** Aucune table de conversion n'existe dans les
+fichiers. Un palier supérieur ne remplace **jamais** un palier inférieur : une île de
+Patriciens purs ne fait tourner **aucun** atelier réclamant des Plébéiens, quelle que soit
+sa population. Le coût est déclaré par `Maintenance/Maintenances/Item` dont le `Product` est
+un bien de main-d'œuvre — et sur les 151 bâtiments extraits, **aucun n'en réclame deux**.
+La contrainte est donc un simple système d'inégalités, une par palier.
+
+**MAIN-D'ŒUVRE OFFERTE.** Le comptoir alimente le pool sans aucune maison, via
+`Distribution/Deltas`. Le net n'est pas monotone en niveau, le comptoir se prélevant sa part :
+
+| comptoir | offert (Medium) | prélevé | **net** |
+|---|---|---|---|
+| niveau 1 (3402 / 7037) | 25 | 0 | **+25** |
+| niveau 2 (3403 / 7038) | 35 | 8 | **+27** |
+| niveau 3 (3406 / 7039) | 50 | 12 | **+38** |
+
+Les comptoirs d'Albion 7037/7038/7039 sont des assets **dérivés** : pas de `<Template>`, tout
+hérité de `BaseAssetGUID`, seul le bien de main-d'œuvre est surchargé (2181 → 2192).
+
+**PÉNURIE — [OUVERT].** `WorkforceThresholdInPercent=10` n'est PAS une règle de production :
+c'est le seuil de la notification 501310. Les fichiers ne disent nulle part comment la
+productivité cible est calculée quand la main-d'œuvre manque. Deux indices contradictoires :
+`InfolayerBalancing` (140695) définit deux seuils d'affichage (Low 90 %, Critical 50 %) qui
+suggèrent une variable **continue**, tandis que l'allocation réelle suit `ConsumerPriority`
+(1 à 9, Kontor = 9). L'optimiseur impose donc `offre ≥ demande` par palier — hypothèse sûre.
+
+⚠ **PIÈGE DE PLANIFICATION.** Les listes de services sont emboîtées, mais les scores ne le
+sont pas : chaque palier ne compte que les services de **sa propre** liste. Une recette qui
+ne garde que les services lourds donne Public 8 ≥ 7 aux Equites et Public **0** aux
+Plébéiens, dont la liste s'arrête au marché et à la taverne. Mesuré : le vivier de conversion
+contenait 799 Liberti, 688 Equites, 617 Patriciens et **zéro** Plébéien. Cf.
+`optimizer/recipes.ts → unlockWorkerTiers`.
+
 ## 6. Logistique & entrepôts [FICHIERS]
 
 - **Entrepôts TERRESTRES : `StorageMax = 0`** — ils n'ajoutent AUCUNE capacité de

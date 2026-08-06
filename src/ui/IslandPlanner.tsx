@@ -269,6 +269,36 @@ export function IslandPlanner({ onClose }: Props) {
                 total sur toutes les maisons, malus de rang de cité compris
               </div>
             </div>
+            {/* MAIN-D'ŒUVRE. Un atelier réclame la main-d'œuvre d'un palier précis, sans
+                substitution possible : le plan rétrograde donc une part des maisons. Rien
+                n'est démoli — les neuf résidences du jeu font toutes 3×3. */}
+            {result.mode === "import" && Object.keys(result.workforce.demand).length > 0 && (
+              <div style={{ marginBottom: 6 }}>
+                {Object.keys(result.workforce.deficit).length || Object.keys(result.workforce.alien).length
+                  ? <span style={{ color: "#ff8a85" }}>✘ Main-d'œuvre insuffisante</span>
+                  : <span style={{ color: "#8bc34a" }}>✔ Main-d'œuvre couverte</span>}
+                <div className="muted" style={{ fontSize: "0.85em" }}>
+                  {Object.entries(result.workforce.demand)
+                    .map(([g, d]) => {
+                      const t = tiers.find((x) => x.guid === g);
+                      const o = result.workforce.offer[g] ?? 0;
+                      return `${t?.name ?? g} ${Math.round(d)}/${Math.round(o)}`;
+                    })
+                    .join(" · ")}
+                  {result.workforce.conversions.length > 0 && (
+                    <>
+                      <br />
+                      {result.workforce.conversions.map((c) => {
+                        const a = tiers.find((x) => x.guid === c.from)?.name ?? c.from;
+                        const b = tiers.find((x) => x.guid === c.to)?.name ?? c.to;
+                        return `${c.houses} ${a} → ${b}`;
+                      }).join(" · ")}
+                      {" — maisons ouvrières"}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             <div style={{ marginBottom: 6 }}>
               💰 net <span style={{ color: result.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>{result.money.net >= 0 ? "+" : ""}{result.money.net.toLocaleString("fr")}/min</span>{" "}
               <span className="muted">(taxe {result.money.gross.toLocaleString("fr")} − entretien {result.money.upkeep.toLocaleString("fr")})</span>
