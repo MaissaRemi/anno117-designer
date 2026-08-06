@@ -1,10 +1,11 @@
 services:
   # Build de production servi par nginx. `docker compose up` suffit.
+  # Port hote surchargeable si 8080 est deja pris : ANNO_PORT=8090 docker compose up
   app:
     build: .
     image: anno117-designer:latest
     ports:
-      - "8080:80"
+      - "${ANNO_PORT:-8080}:80"
     restart: unless-stopped
 
   # Serveur de developpement avec rechargement a chaud.
