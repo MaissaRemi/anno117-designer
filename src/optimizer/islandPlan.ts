@@ -3,6 +3,8 @@ import type { AqueductTile, BuildingDef, FieldTile, GridShape, Layout, PlacedBui
 import { economy, residentialChain, upkeepOf } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
 import { compileTierEvaluator } from "../economy/needsModel";
+import { cityStatusAttrs } from "../economy/economy";
+import { institutionDefs, isViable, VITAL_ATTRS, worstAttr } from "../economy/attributes";
 import { candidateRecipes } from "./recipes";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { planLattice, type LatticeResult } from "./planLattice";
@@ -77,6 +79,11 @@ export interface IslandPlanResult {
   importGoods: ImportGood[];
   /** Emplacements de terrain exploités (option `exploitSlots`) — vide si l'option est off. */
   exploited: ExploitedSlot[];
+  /** Bilan des attributs VITAUX de la maison la moins bien lotie, malus de rang de cité
+   *  compris. Toutes les maisons tiennent si ces quatre valeurs sont ≥ 0. */
+  attrsWorst: Record<string, number>;
+  /** Toutes les maisons gardent-elles Bonheur, Argent, Santé et Incendie ≥ 0 ? */
+  viable: boolean;
   coverage: CoverageReport;
   coverageMin: number; // min % parmi les services à rayon (métrique de faisabilité)
   money: { gross: number; upkeep: number; net: number };
@@ -159,6 +166,13 @@ export function planIslandImport(
   // 27 biens transitent par le port. On retire l'emprise du masque constructible pour que
   // les moteurs bâtissent autour, plutôt que d'avoir à raser un quartier après coup.
   const islandRegion = req.grid.islandId?.includes("celtic") ? "Celtic" : "Roman";
+  // INSTITUTIONS anti-incidents : elles ne remplissent aucun besoin, l'optimiseur ne les
+  // posait donc jamais — alors qu'elles sont le seul contrepoids au malus de rang de cité.
+  // Mesuré : sans elles aucune ville ne dépasse 3 000 habitants avec tous ses attributs
+  // positifs ; avec elles la recette complète tient jusqu'à 260 000.
+  const institutions = institutionDefs(islandRegion)
+    .filter((i) => lookup(i.defId))
+    .map((i) => i.defId);
   const kontorDef = pickKontorDef(req.catalog, islandRegion);
   const kontor = kontorDef ? reserveKontor(req.grid, kontorDef) : null;
 
@@ -192,6 +206,10 @@ export function planIslandImport(
     houseMoney: number;
     /** part des consommateurs d'eau réellement raccordés (0..1 ; 1 si aucun) */
     waterPct: number;
+    /** attributs vitaux de la maison la moins bien lotie, rang de cité compris */
+    attrsWorst: Record<string, number>;
+    /** toutes les maisons tiennent-elles ? */
+    viable: boolean;
   }
   const evaluate = (cand: Cand, relevant: Set<string> | null): Evaluated => {
     // évaluateur scopé à CE jeu de services : un service hors recette ne compte ni pour
@@ -248,10 +266,19 @@ export function planIslandImport(
     }
     const nCons = water.consumers.length;
     const nOk = water.consumers.filter((c) => c.connected).length;
+    const residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
+    // Bilan de la maison la moins bien lotie : le pire par attribut relevé par le moteur,
+    // auquel s'ajoute le malus de RANG DE CITÉ — qui dépend de la population totale, et
+    // n'est donc connu qu'ici. Prendre le minimum attribut par attribut est conservateur.
+    const rank = cityStatusAttrs(residents, islandRegion);
+    const attrsWorst: Record<string, number> = {};
+    for (const k of VITAL_ATTRS) attrsWorst[k] = (cand.attrsMin[k] ?? 0) + (rank[k] ?? 0);
     return {
       cand, relevant, water, buildings, tierCounts, capByTier, deadTypes, houseMoney,
-      residents: Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0)),
+      residents,
       waterPct: nCons ? nOk / nCons : 1,
+      attrsWorst,
+      viable: isViable(attrsWorst),
     };
   };
   // Critère LEXICOGRAPHIQUE, faisabilité d'abord.
@@ -275,6 +302,13 @@ export function planIslandImport(
   const viable = (e: Evaluated): boolean => e.waterPct >= WATER_VIABLE;
   const better = (a: Evaluated, b: Evaluated): boolean => {
     if (viable(a) !== viable(b)) return viable(a);
+    // VIABILITÉ DES MAISONS avant la population : un plan dont une maison passe sous zéro
+    // en Bonheur, Argent, Santé ou Sécurité incendie déclenche émeutes, incendies et
+    // maladies. Mesuré : la recette la plus dense (Temple+Bibliothèque+Forum+Amphithéâtre)
+    // est non viable dès la première maison — la Bibliothèque vaut −2 en Sécurité incendie
+    // et rien ne la compense. Maximiser la population sans cette contrainte revenait à
+    // optimiser une ville que le jeu punit.
+    if (a.viable !== b.viable) return a.viable;
     const close = Math.abs(a.residents - b.residents) <= 0.02 * Math.max(a.residents, b.residents, 1);
     if (!close) return a.residents > b.residents;
     if (a.waterPct !== b.waterPct) return a.waterPct > b.waterPct;
@@ -292,7 +326,7 @@ export function planIslandImport(
   let pick: Evaluated | null = null;
   const runLattice = (serviceIds: string[] | undefined, floor: number): Evaluated =>
     evaluate(
-      planLattice(planGrid, req.tierGuid, lookup, { coverageFloor: floor, serviceIds, water: true, heights: req.heights }),
+      planLattice(planGrid, req.tierGuid, lookup, { coverageFloor: floor, serviceIds, water: true, heights: req.heights, institutions }),
       serviceIds ? new Set(serviceIds) : null,
     );
   let bestTrial: string[] | undefined;
@@ -325,6 +359,7 @@ export function planIslandImport(
   const dist = chosen.cand;
   const water = chosen.water;
   const deadTypes = chosen.deadTypes;
+  const attrsWorst = chosen.attrsWorst;
   // capacité de référence d'une maison au palier cible SOUS LA RECETTE RETENUE : c'est ce
   // que le panneau affiche, et ce n'est plus `capacityDefault` — une recette maigre héberge
   // moins par maison mais bien plus de maisons.
@@ -489,6 +524,15 @@ export function planIslandImport(
     }
   }
   if (removedHouses) gaps.push(`${removedHouses} maison(s) rasée(s) pour raccorder le comptoir`);
+  {
+    const w = worstAttr(attrsWorst);
+    if (w) {
+      const label: Record<string, string> = {
+        Happiness: "Bonheur", Money: "Argent", Health: "Santé", FireSafety: "Sécurité incendie",
+      };
+      gaps.push(`${label[w.attr] ?? w.attr} négatif (${w.value.toFixed(1)}) sur la maison la moins bien lotie — émeutes/incendies/maladies en jeu`);
+    }
+  }
   for (const s of analyzable) {
     if (s.pct < 100) gaps.push(`${s.name} : ${s.pct}% des maisons couvertes (distance-rue)`);
   }
@@ -512,6 +556,8 @@ export function planIslandImport(
       : null,
     importGoods,
     exploited,
+    attrsWorst,
+    viable: chosen.viable,
     tierCounts,
     coverage,
     coverageMin,

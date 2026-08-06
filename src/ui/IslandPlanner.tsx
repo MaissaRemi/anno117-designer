@@ -230,6 +230,24 @@ export function IslandPlanner({ onClose }: Props) {
               </div>
             </div>
             <div style={{ marginBottom: 6 }}>
+              {result.viable
+                ? <span style={{ color: "#8bc34a" }}>✔ Toutes les maisons tiennent</span>
+                : <span style={{ color: "#ff8a85" }}>✘ Des maisons sont en déficit</span>}
+              <span className="muted"> — </span>
+              {["Happiness", "Money", "Health", "FireSafety"].map((k) => {
+                const v = result.attrsWorst[k] ?? 0;
+                const lbl: Record<string, string> = { Happiness: "🙂", Money: "💰", Health: "❤", FireSafety: "🔥" };
+                return (
+                  <span key={k} style={{ color: v >= 0 ? "#8bc34a" : "#ff8a85", marginRight: 8 }}>
+                    {lbl[k]} {v >= 0 ? "+" : ""}{v.toFixed(1)}
+                  </span>
+                );
+              })}
+              <div className="muted" style={{ fontSize: "0.85em" }}>
+                pire maison, malus de rang de cité compris
+              </div>
+            </div>
+            <div style={{ marginBottom: 6 }}>
               💰 net <span style={{ color: result.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>{result.money.net >= 0 ? "+" : ""}{result.money.net.toLocaleString("fr")}/min</span>{" "}
               <span className="muted">(taxe {result.money.gross.toLocaleString("fr")} − entretien {result.money.upkeep.toLocaleString("fr")})</span>
             </div>
