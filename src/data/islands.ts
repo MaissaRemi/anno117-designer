@@ -30,6 +30,34 @@ export function islandById(id: string): Island | undefined {
 }
 
 /**
+ * MONDES du jeu. Le Latium (romain) et l'Albion (celtique) n'ont ni les mêmes bâtiments,
+ * ni les mêmes paliers de population, ni les mêmes chaînes de production. Mélanger les deux
+ * dans une même liste n'a aucun sens de jeu.
+ */
+export const WORLDS = [
+  { region: "Roman", label: "Latium" },
+  { region: "Celtic", label: "Albion" },
+] as const;
+export type WorldRegion = (typeof WORLDS)[number]["region"];
+
+/** Libellé du monde correspondant à une région (« Latium » / « Albion »). */
+export const worldLabel = (region: string): string =>
+  WORLDS.find((w) => w.region === region)?.label ?? region;
+
+/**
+ * Région d'une île, lue dans les données extraites — et non devinée à partir de son
+ * identifiant. Le test `id.includes("celtic")` qui traînait dans quatre fichiers cassait
+ * silencieusement sur les îles DLC et sur tout renommage d'asset côté éditeur.
+ * Les îles DLC sont romaines (`roman_dlc01_*`) ; le repli suit cette règle.
+ */
+export function regionOfIsland(id: string | undefined): WorldRegion {
+  if (!id) return "Roman";
+  const r = islandById(id)?.region;
+  if (r === "Celtic" || r === "Roman") return r;
+  return id.includes("celtic") ? "Celtic" : "Roman";
+}
+
+/**
  * Suréchantillonne un masque booléen ×2 (chaque tuile → bloc 2×2, plus proche voisin) :
  * conversion tuile → ½-tuile pour la grille vivante (cf. geometry.ts cellsPerTile).
  * `(2w)×(2h)` cellules ; `out[(2y+dy)·2w + 2x+dx] = src[y·w + x]`.

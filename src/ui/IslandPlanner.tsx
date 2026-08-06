@@ -8,6 +8,7 @@ import { producibleGoods as producibleGoodsSet } from "../economy/resources";
 import { ResourceSelector } from "./ResourceSelector";
 import { RunPanel } from "./components/RunPanel";
 import { PlanPreview, PlanPreviewLegend } from "./components/PlanPreview";
+import { regionOfIsland } from "../data/islands";
 
 interface Props {
   onClose: () => void;
@@ -24,16 +25,24 @@ const ATTR_FR: Record<string, string> = {
   FireSafety: "🔥 Sécurité incendie",
 };
 
-// paliers visés, du plus dense au moins dense — le défaut de l'UI est le premier, donc
-// le palier le plus haut (l'ordre brut de `tiers` suit les GUID et tombait sur « Nobles »)
-const targetTiers = tiers.filter((t) => t.residenceId).sort((a, b) => b.capacityDefault - a.capacityDefault);
+// paliers visés du monde courant, du plus dense au moins dense — le défaut de l'UI est le
+// premier (l'ordre brut de `tiers` suit les GUID et tombait sur « Nobles »)
+const tiersOfWorld = (world: string) =>
+  tiers.filter((t) => t.residenceId && t.region === world)
+    .sort((a, b) => b.capacityDefault - a.capacityDefault);
 
 type NeedMode = "auto" | "all";
 
 export function IslandPlanner({ onClose }: Props) {
   const applyOptimization = useStore((s) => s.applyOptimization);
 
-  const [tierGuid, setTierGuid] = useState(targetTiers[0]?.guid ?? "");
+  const world = useStore((s) => s.world);
+  const targetTiers = useMemo(() => tiersOfWorld(world), [world]);
+  const [tierGuid, setTierGuid] = useState(() => tiersOfWorld(world)[0]?.guid ?? "");
+  // changer de monde change les paliers disponibles : on retombe sur le plus dense
+  useEffect(() => {
+    if (!targetTiers.some((t) => t.guid === tierGuid)) setTierGuid(targetTiers[0]?.guid ?? "");
+  }, [targetTiers, tierGuid]);
   const [mode, setMode] = useState<"population" | "production">("population");
   const [needMode, setNeedMode] = useState<NeedMode>("auto");
   const [exploitSlots, setExploitSlots] = useState(false);
@@ -60,7 +69,7 @@ export function IslandPlanner({ onClose }: Props) {
   const storedProfile = useStore((s) => (islandId ? s.islandProfiles[islandId] : undefined));
   const setIslandProfile = useStore((s) => s.setIslandProfile);
   const effProfile = storedProfile ?? { fertilities: [], mountainSlots: 0 };
-  const islandRegion = islandId?.includes("celtic") ? "Celtic" : "Roman";
+  const islandRegion = regionOfIsland(islandId);
 
   const producibleGoodsList = useMemo(() => {
     const set = producibleGoodsSet(effProfile, islandRegion);
@@ -137,7 +146,7 @@ export function IslandPlanner({ onClose }: Props) {
             <div className="field">
               <span>Tier-cible</span>
               <select value={tierGuid} onChange={(e) => setTierGuid(e.target.value)}>
-                {targetTiers.map((t) => <option key={t.guid} value={t.guid}>{t.name} ({t.region}) · cap {t.capacityDefault}</option>)}
+                {targetTiers.map((t) => <option key={t.guid} value={t.guid}>{t.name} · cap {t.capacityDefault}</option>)}
               </select>
             </div>
             <div className="field">

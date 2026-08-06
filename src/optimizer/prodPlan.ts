@@ -7,6 +7,7 @@ import { solve, type SolveResult } from "../economy/solve";
 import { anneal } from "./anneal";
 import { DEFAULT_WEIGHTS } from "./types";
 import { blockMountains, MOUNTAIN_BLOCK_RADIUS } from "./waterPlan";
+import { regionOfIsland } from "../data/islands";
 
 // zone posable/traversable autour d'un slot montagne (alignée sur waterPlan)
 const MOUNTAIN_ZONE = MOUNTAIN_BLOCK_RADIUS + 2;
@@ -66,7 +67,7 @@ export function planIslandProduction(
 
   // --- 1. solveur : chaîne + workforce locale + services ouvriers ---
   // région de l'île → préférence de producteur (pas de chaîne celtique sur île romaine)
-  const islandRegion = grid.islandId?.includes("celtic") ? "Celtic" : "Roman";
+  const islandRegion = regionOfIsland(grid.islandId);
   onProgress?.(1, 4);
   const sol = solve(
     [],

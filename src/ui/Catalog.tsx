@@ -14,12 +14,11 @@ export function Catalog() {
   const [editing, setEditing] = useState<BuildingDef | "new" | null>(null);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string>("");
-  const [region, setRegion] = useState<string>("");
 
-  const regions = useMemo(
-    () => Array.from(new Set(catalog.map((d) => d.region).filter(Boolean))) as string[],
-    [catalog],
-  );
+  // Le catalogue ne montre QUE le monde actif : un bâtiment celtique n'est pas
+  // constructible en Latium, l'afficher n'apporte que de la confusion. Les bâtiments sans
+  // région déclarée sont communs aux deux mondes et restent toujours visibles.
+  const world = useStore((s) => s.world);
 
   const filtered = useMemo(() => {
     const ql = q.toLowerCase();
@@ -27,9 +26,9 @@ export function Catalog() {
       (d) =>
         (!ql || d.name.toLowerCase().includes(ql) || (d.nameInternal ?? "").toLowerCase().includes(ql)) &&
         (!cat || d.category === cat) &&
-        (!region || d.region === region),
+        (!d.region || d.region === world),
     );
-  }, [catalog, q, cat, region]);
+  }, [catalog, q, cat, world]);
 
   return (
     <div className="panel">
@@ -53,16 +52,6 @@ export function Catalog() {
             </option>
           ))}
         </select>
-        {regions.length > 0 && (
-          <select value={region} onChange={(e) => setRegion(e.target.value)}>
-            <option value="">Toutes régions</option>
-            {regions.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-        )}
       </div>
 
       <div className="catalog-list">

@@ -16,6 +16,7 @@ import { blockMountains, needsWater, planWater, type WaterConsumerReport, type W
 import { connectKontor, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
 import { planSlots, type ExploitedSlot } from "./slotPlan";
 import { planLocalProduction, type LocalWorkshop } from "./localProd";
+import { regionOfIsland } from "../data/islands";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -175,7 +176,7 @@ export function planIslandImport(
   // rootedRoadSet accepte toutes les routes) mais injouable — sur une île d'IMPORT, les
   // 27 biens transitent par le port. On retire l'emprise du masque constructible pour que
   // les moteurs bâtissent autour, plutôt que d'avoir à raser un quartier après coup.
-  const islandRegion = req.grid.islandId?.includes("celtic") ? "Celtic" : "Roman";
+  const islandRegion = regionOfIsland(req.grid.islandId);
   // INSTITUTIONS anti-incidents : elles ne remplissent aucun besoin, l'optimiseur ne les
   // posait donc jamais — alors qu'elles sont le seul contrepoids au malus de rang de cité.
   // Mesuré : sans elles aucune ville ne dépasse 3 000 habitants avec tous ses attributs
