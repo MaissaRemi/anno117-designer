@@ -289,12 +289,25 @@ label { font-size: 13px; }
 .opt-result, .opt-progress { margin-top: var(--sp-3); padding: var(--sp-2); border-radius: var(--r-sm); font-size: 13px; }
 .opt-progress { background: var(--accent-soft); }
 .opt-result { background: rgba(134,192,74,0.14); }
+/* ---- résultat d'un plan : carte à gauche, chiffres à droite ---- */
+/* La carte est l'élément à LIRE : elle prend la place disponible et reste visible pendant
+   qu'on fait défiler le bilan. Sous 1100 px de large, on empile. */
+.result-split { display: flex; align-items: flex-start; gap: var(--sp-4); }
+.result-map { flex: 0 1 auto; width: min(52%, 720px); position: sticky; top: 0; }
+.result-stats { flex: 1 1 340px; min-width: 0; }
+@media (max-width: 1100px) {
+  .result-split { flex-direction: column; }
+  .result-map { position: static; width: 100%; }
+}
+
 /* ---- carte de prévisualisation d'un plan (couleur = palier atteint) ---- */
 .plan-preview-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: var(--sp-3); }
-.plan-preview-box { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.plan-preview { display: block; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--s2); image-rendering: pixelated; cursor: grab; touch-action: none; }
+.plan-preview-box { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+/* width 100% + aspect-ratio (posé en ligne, il dépend de l'île) : le canvas suit la place
+   disponible sans mesure JS. max-height borne la carte sur les écrans bas. */
+.plan-preview { display: block; width: 100%; height: auto; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--s2); image-rendering: pixelated; cursor: grab; touch-action: none; }
 .plan-preview:active { cursor: grabbing; }
-.plan-preview-hint { font-size: 11px; color: var(--muted); text-align: center; max-width: 340px; line-height: 1.3; min-height: 2.2em; }
+.plan-preview-hint { font-size: 11px; color: var(--muted); text-align: center; max-width: 100%; line-height: 1.3; min-height: 2.2em; }
 .plan-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; font-size: 11px; color: var(--muted); }
 .plan-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .plan-legend i { width: 9px; height: 9px; border-radius: 2px; flex: 0 0 auto; }

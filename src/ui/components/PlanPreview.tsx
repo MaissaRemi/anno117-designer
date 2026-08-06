@@ -27,7 +27,7 @@ export interface PlanPreviewProps {
   roads: RoadTile[];
   aqueducts?: { x: number; y: number }[];
   lookup: DefLookup;
-  /** Côté max du rendu, en pixels CSS. */
+  /** Côté MAXIMAL du rendu, en pixels CSS. La carte s'adapte sinon à la place disponible. */
   size?: number;
 }
 
@@ -49,7 +49,17 @@ const hexToRgb = (h: string): RGB => [
 
 const rangeOf = (d: BuildingDef): number => d.streetRange || d.radius?.range || 0;
 
-export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 320 }: PlanPreviewProps) {
+/**
+ * Côté du tampon de dessin, en pixels. Volontairement DÉCORRÉLÉ de la taille affichée :
+ * le canvas est étiré par le CSS (`width: 100%` + `aspect-ratio`), ce qui le rend
+ * naturellement responsive sans mesurer quoi que ce soit en JavaScript. Une première
+ * version utilisait un `ResizeObserver` ; outre la complexité, ses rappels ne sont livrés
+ * que pendant les étapes de rendu, donc jamais dans un onglet non composité — la carte
+ * restait figée à sa taille initiale. Le CSS n'a pas ce défaut.
+ */
+const BUFFER = 1024;
+
+export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 720 }: PlanPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLCanvasElement | null>(null);
   const hlRef = useRef<HTMLCanvasElement | null>(null);
@@ -59,8 +69,11 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
 
   const W = grid.w, H = grid.h;
   const cpt = grid.cellsPerTile ?? 1;
-  const fit = Math.min(size / W, size / H);
-  const cw = Math.max(1, Math.round(W * fit)), ch = Math.max(1, Math.round(H * fit));
+  // dimensions du TAMPON (pas de l'affichage) : l'île y est inscrite en entier
+  const cw = W >= H ? BUFFER : Math.max(1, Math.round((BUFFER * W) / H));
+  const ch = H >= W ? BUFFER : Math.max(1, Math.round((BUFFER * H) / W));
+  /** px de tampon par case de grille */
+  const unit = cw / W;
 
   /** residenceId → couleur, par rang dans la chaîne (capacité croissante). */
   const colorOfResidence = useMemo(() => {
@@ -170,21 +183,17 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
     hlRef.current = off;
   }, [hovered, hoveredDef, roadSet, W, H, cpt]);
 
-  // ---- composition ----
+  // ---- composition (tout en pixels de TAMPON) ----
   const paint = useCallback(() => {
     const canvas = canvasRef.current, base = baseRef.current;
     if (!canvas || !base) return;
-    const dpr = Math.min(2, typeof devicePixelRatio === "number" ? devicePixelRatio : 1);
-    canvas.style.width = `${cw}px`;
-    canvas.style.height = `${ch}px`;
-    if (canvas.width !== Math.round(cw * dpr)) canvas.width = Math.round(cw * dpr);
-    if (canvas.height !== Math.round(ch * dpr)) canvas.height = Math.round(ch * dpr);
+    if (canvas.width !== cw) canvas.width = cw;
+    if (canvas.height !== ch) canvas.height = ch;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, cw, ch);
     ctx.translate(view.ox, view.oy);
     ctx.scale(view.z, view.z);
     ctx.drawImage(base, 0, 0, cw, ch);
@@ -192,6 +201,12 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
   }, [cw, ch, view]);
 
   useEffect(paint, [paint, hover]);
+
+  /** Coordonnées écran → pixels de tampon (le canvas est étiré par le CSS). */
+  const toBuffer = (e: { clientX: number; clientY: number }, rect: DOMRect) => ({
+    x: ((e.clientX - rect.left) / Math.max(1, rect.width)) * cw,
+    y: ((e.clientY - rect.top) / Math.max(1, rect.height)) * ch,
+  });
 
   // ---- interactions : molette = zoom au curseur, glisser = déplacement ----
   // La molette est câblée à la main en NON PASSIF : React attache `onWheel` en passif, donc
@@ -202,7 +217,8 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const mx = ((e.clientX - rect.left) / Math.max(1, rect.width)) * cw;
+      const my = ((e.clientY - rect.top) / Math.max(1, rect.height)) * ch;
       setView((v) => {
         const z = Math.min(24, Math.max(1, v.z * (e.deltaY < 0 ? 1.25 : 1 / 1.25)));
         if (z === v.z) return v;
@@ -227,16 +243,19 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
     const rect = e.currentTarget.getBoundingClientRect();
     const d = dragRef.current;
     if (d) {
+      // le déplacement écran est converti à l'échelle du tampon
+      const k = cw / Math.max(1, rect.width);
       setView((v) => ({
         z: v.z,
-        ox: Math.min(0, Math.max(cw - cw * v.z, d.ox + (e.clientX - d.x))),
-        oy: Math.min(0, Math.max(ch - ch * v.z, d.oy + (e.clientY - d.y))),
+        ox: Math.min(0, Math.max(cw - cw * v.z, d.ox + (e.clientX - d.x) * k)),
+        oy: Math.min(0, Math.max(ch - ch * v.z, d.oy + (e.clientY - d.y) * k)),
       }));
       return;
     }
-    // écran → case de grille
-    const gx = Math.floor(((e.clientX - rect.left - view.ox) / view.z) / fit);
-    const gy = Math.floor(((e.clientY - rect.top - view.oy) / view.z) / fit);
+    // écran → tampon → case de grille
+    const p = toBuffer(e, rect);
+    const gx = Math.floor(((p.x - view.ox) / view.z) / unit);
+    const gy = Math.floor(((p.y - view.oy) / view.z) / unit);
     const idx = gx >= 0 && gy >= 0 && gx < W && gy < H ? hitMap[gy * W + gx] : -1;
     setHover((h) => (h === idx ? h : idx));
   };
@@ -247,6 +266,10 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
       <canvas
         ref={canvasRef}
         className="plan-preview"
+        // Le CSS étire le tampon. Les DEUX bornes (largeur max, hauteur d'écran) sont
+        // repliées en une SEULE contrainte de largeur : appliquer un `max-height` en plus
+        // d'un `aspect-ratio` laisse le navigateur écraser l'île.
+        style={{ aspectRatio: `${cw} / ${ch}`, maxWidth: `min(${size}px, calc(62vh * ${(cw / ch).toFixed(4)}))` }}
         onMouseDown={onDown}
         onMouseUp={onUp}
         onMouseMove={onMove}
