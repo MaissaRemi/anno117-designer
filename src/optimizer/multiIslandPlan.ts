@@ -5,6 +5,7 @@ import { makeLookup } from "../engine/rules";
 import { downscaleGrid, scaleResultToHalfTile } from "./halfTileAdapter";
 import { planIslandImport, type ImportGood, type IslandPlanResult } from "./islandPlan";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
+import { regionOfIsland } from "../data/islands";
 
 export type Role = "population" | "production" | "unused";
 
@@ -39,7 +40,7 @@ export interface MultiIslandResult {
   gaps: string[];
 }
 
-const regionOf = (id: string): string => (id.includes("celtic") ? "Celtic" : "Roman");
+const regionOf = (id: string): string => regionOfIsland(id);
 const landOf = (g: GridShape): number => {
   let n = 0;
   for (const u of g.usable) if (u) n++;

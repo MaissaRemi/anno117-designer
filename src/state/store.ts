@@ -14,6 +14,7 @@ import { loadParty, saveParty, type PartyState } from "../persist/party";
 import type { ResourceProfile } from "../economy/resources";
 import type { OptimizeResult } from "../optimizer/types";
 import { buildIslandGrid } from "../data/islandGrid";
+import { regionOfIsland, type WorldRegion } from "../data/islands";
 
 export type Tool =
   | "select"
@@ -83,6 +84,12 @@ interface State {
   setUiMode: (m: "editor" | "island" | "multi") => void;
   setDiagnostic: (d: "none" | "coverage" | "audit") => void;
 
+  /** MONDE courant : Latium (romain) ou Albion (celtique). Les deux n'ont ni les mêmes
+   *  bâtiments, ni les mêmes paliers, ni les mêmes chaînes — l'interface ne montre que
+   *  celui qui est actif. */
+  world: WorldRegion;
+  setWorld: (w: WorldRegion) => void;
+
   // --- config de partie (îles + profils de ressources, persistés à part) ---
   partyIslands: string[];
   islandProfiles: Record<string, ResourceProfile>;
@@ -131,6 +138,7 @@ export const useStore = create<State>((set, get) => {
     coverageHighlight: null,
     uiMode: "editor",
     diagnostic: "none",
+    world: regionOfIsland(persisted?.layout?.grid?.islandId),
     partyIslands: persistedParty.partyIslands,
     islandProfiles: persistedParty.islandProfiles,
     past: [],
@@ -292,6 +300,8 @@ export const useStore = create<State>((set, get) => {
       if (!grid) return;
       set({
         layout: { grid, buildings: [], fields: [], roads: [] },
+        // charger une île bascule le monde : on ne planifie pas l'Albion sur une île du Latium
+        world: regionOfIsland(id),
         past: [],
         future: [],
         selectedUid: null,
@@ -319,6 +329,7 @@ export const useStore = create<State>((set, get) => {
 
     setCoverageHighlight: (cells) => set({ coverageHighlight: cells }),
 
+    setWorld: (w) => set({ world: w }),
     setUiMode: (m) => set({ uiMode: m }),
     setDiagnostic: (d) => set({ diagnostic: d }),
 

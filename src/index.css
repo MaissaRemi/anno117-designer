@@ -321,3 +321,8 @@ label { font-size: 13px; }
 .main { flex: 1; display: flex; min-height: 0; }
 .canvas-host { position: relative; flex: 1; display: flex; min-width: 0; }
 .panel-head h3, .panel h3 { font-size: 13px; }
+
+/* ---- bascule de MONDE (Latium / Albion) ---- */
+.world-switch { margin-top: auto; display: flex; flex-direction: column; gap: 3px; padding: 6px 4px; border-top: 1px solid var(--line); }
+.world-switch button { height: 24px; padding: 0 6px; font-size: 11px; justify-content: center; background: transparent; border-color: transparent; color: var(--muted); }
+.world-switch button.active { background: var(--accent); border-color: var(--accent); color: #fff; }

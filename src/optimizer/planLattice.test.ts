@@ -79,8 +79,12 @@ describe("planLattice (clusters co-localisés + gros gain-prunés)", () => {
   });
 
   it("régression île RÉELLE (medium_01, T4, floor 0.8) : densité max + ratio + accounting", () => {
+    // `viabilityGate: false` — ce test mesure la DENSITÉ du pavage, pas la viabilité. Sans
+    // institutions ni réseau d'eau (la grille brute n'a ni slots ni routage), le bilan
+    // d'attributs est forcément déficitaire et la porte de viabilité élaguerait des maisons
+    // pour une raison étrangère à ce qu'on veut vérifier ici.
     const grid = realIsland("roman_island_medium_01");
-    const r = planLattice(grid, tierRich.guid, lookup, { coverageFloor: 0.8 });
+    const r = planLattice(grid, tierRich.guid, lookup, { coverageFloor: 0.8, viabilityGate: false });
     expect(r.houses).toBeGreaterThanOrEqual(200); // districtPlan : 51 (ancien bug confetti)
     // invariant accounting mixte
     expect(sumTiers(r.tierCounts)).toBe(r.houses);

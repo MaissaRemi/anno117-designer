@@ -1,7 +1,8 @@
 import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
-import { economy, residentialChain } from "../economy/economy";
+import { cityStatusLadder, economy, effectOf, residentialChain } from "../economy/economy";
+import { VITAL_ATTRS } from "../economy/attributes";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
 import { MAX_RUN, needsWater, planWater, type WaterPlanResult } from "./waterPlan";
@@ -22,6 +23,17 @@ export interface LatticeOpts {
   heights?: Int8Array | null;
   /** Espacement des ÉPINES verticales du peigne, en tuiles. Voir `SPINE_STEP`. */
   spineStep?: number;
+  /**
+   * INSTITUTIONS à blanketer en plus des services du palier (Vigiles, Medici, Custodia,
+   * sanctuaires…). Elles ne remplissent aucun besoin — elles ne comptent donc pas pour les
+   * seuils de palier — mais leur effet de zone corrige les attributs que le rang de cité
+   * dégrade. Sans elles, aucune ville ne dépasse 3 000 habitants avec tous ses attributs
+   * positifs ; avec elles, la recette complète tient jusqu'à 260 000.
+   */
+  institutions?: string[];
+  /** Arrêter de bâtir quand le BILAN DE L'ÎLE passerait sous zéro sur un attribut vital.
+   *  Défaut true. */
+  viabilityGate?: boolean;
 }
 
 /**
@@ -64,6 +76,15 @@ export interface LatticeResult {
   residents: number;
   /** Taxe/min cumulée des maisons (Σ Money des besoins remplis). */
   houseMoney: number;
+  /**
+   * SOMME de chaque attribut VITAL sur toutes les maisons retenues, hors malus de rang de
+   * cité — que seul l'appelant connaît, puisqu'il dépend de la population totale.
+   *
+   * Le bilan se juge à l'échelle de l'ÎLE, pas de la maison : une maison en déficit
+   * compensée par ses voisines ne pose aucun problème. Le total de l'île vaut donc
+   * `attrsSum[k] + houses × rangDeCité[k]`, et c'est lui qui doit rester ≥ 0.
+   */
+  attrsSum: Record<string, number>;
   /** Capacité cumulée PAR PALIER atteint (guid → habitants). Permet de recalculer la
    *  population après une démotion sans repasser par les masques de couverture. */
   capByTier: Record<string, number>;
@@ -102,8 +123,13 @@ export function planLattice(
   const W = grid.w, H = grid.h, N = W * H;
 
   const wanted = opts.serviceIds ? new Set(opts.serviceIds) : null;
-  const svcDefs = [...new Set(tier.services.map((s) => s.building).filter((b): b is string => !!b))]
-    .filter((id) => !wanted || wanted.has(id))
+  const tierSvcIds = new Set(tier.services.map((s) => s.building).filter((b): b is string => !!b));
+  // Les institutions sont traitées comme des types de service SUPPLÉMENTAIRES : même
+  // lattice, même BFS de portée-rue. Elles n'entrent simplement pas dans l'évaluateur de
+  // palier (aucun bit), donc elles ne peuvent pas faire monter une maison de rang.
+  const instIds = (opts.institutions ?? []).filter((id) => !tierSvcIds.has(id));
+  const viabilityGate = opts.viabilityGate !== false;
+  const svcDefs = [...new Set([...tierSvcIds].filter((id) => !wanted || wanted.has(id)).concat(instIds))]
     .map((id) => lookup(id))
     .filter((d): d is BuildingDef => !!d && rangeOf(d) > 0)
     .sort((a, b) => rangeOf(b) - rangeOf(a)); // grand → petit (espace contigu d'abord)
@@ -118,7 +144,7 @@ export function planLattice(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, capByTier: {}, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, attrsSum: {}, capByTier: {}, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
@@ -544,10 +570,20 @@ export function planLattice(
   const activeType = types.map((tc) => !needsWater(tc.def) || !water || (connByDef.get(tc.def.id) ?? 0) > 0);
   const typeBit = types.map((tc) => evaluator.bitOf.get(tc.def.id)); // undefined = hors chaîne/écarté
 
-  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier"> => {
+  // Institutions RÉELLEMENT posées : leur effet de zone s'ajoute au bilan de chaque maison
+  // qu'elles couvrent. Elles ne remplissent aucun besoin, donc aucun double comptage avec
+  // les attributs des services (cf. economy/attributes.ts).
+  const instTypes = types
+    .map((tc, i) => ({ i, id: tc.def.id, fx: effectOf(tc.def.id) }))
+    .filter((e) => instIds.includes(e.id) && !!e.fx);
+
+  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsSum"> => {
     let houses = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
     const tierCounts: Record<string, number> = {};
     const capByTier: Record<string, number> = {};
+    const attrsSum: Record<string, number> = {};
+    for (const k of VITAL_ATTRS) attrsSum[k] = 0;
+    const placed: { b: PlacedBuilding; cap: number; money: number; guid: string; attrs: Record<string, number> }[] = [];
     const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
     for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
       if (!fitsHouse(x, y) || !touchesRoad(x, y)) continue;
@@ -558,18 +594,91 @@ export function planLattice(
         if (b !== undefined && activeType[t] && covArr[t][o]) coveredMask |= 1 << b;
       }
       const reach = evaluator.evaluate(coveredMask);
+      // bilan d'attributs de CETTE maison : besoins remplis + institutions qui la couvrent.
+      // Le malus de rang de cité s'ajoute plus bas (il dépend de la population totale).
+      const attrs: Record<string, number> = { ...evaluator.attrsOf(coveredMask) };
+      for (const e of instTypes) {
+        if (!activeType[e.i] || !covArr[e.i][o]) continue;
+        for (const [k, v] of Object.entries(e.fx!.attrs)) attrs[k] = (attrs[k] ?? 0) + v;
+      }
       const defId = reach.tier.residenceId ?? residenceId;
       for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
-      buildings.push({ uid: uid("lat"), defId, x, y, rotation: 0, locked: false });
+      const b: PlacedBuilding = { uid: uid("lat"), defId, x, y, rotation: 0, locked: false };
+      buildings.push(b);
       markAdj(x, y, rw, rh);
-      houses++;
-      residents += reach.cap;
-      houseMoney += reach.money;
-      tierCounts[reach.tier.guid] = (tierCounts[reach.tier.guid] ?? 0) + 1;
-      capByTier[reach.tier.guid] = (capByTier[reach.tier.guid] ?? 0) + reach.cap;
-      if (reach.tier.guid === targetGuid) fullyCovered++;
+      placed.push({ b, cap: reach.cap, money: reach.money, guid: reach.tier.guid, attrs });
     }
-    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier };
+
+    // ═══ SÉLECTION SOUS CONTRAINTE DE VIABILITÉ ═══════════════════════════════════════
+    // Une maison dont le Bonheur, l'Argent, la Santé ou la Sécurité incendie passe sous
+    // zéro déclenche émeutes, incendies et maladies. On ne la pose donc pas.
+    //
+    // Difficulté : le malus de RANG DE CITÉ dépend de la population totale, qui dépend
+    // elle-même des maisons retenues. On ne résout pas ça par itération (elle oscille) mais
+    // en balayant les paliers de rang, qui sont en nombre fini : pour chaque palier on
+    // calcule la population des maisons qui tiendraient sous CE malus, et on retient le
+    // plus haut palier COHÉRENT — celui dont la population retombe bien dans sa tranche.
+    let keep: typeof placed = placed;
+    if (viabilityGate) {
+      const ladder = cityStatusLadder(tier.region);
+      const rankAt = (pop: number): Record<string, number> => {
+        let a: Record<string, number> = {};
+        for (const st of ladder) { if (pop < st.population) break; a = st.attrs; }
+        return a;
+      };
+      // Bilan de l'ÎLE : Σ des attributs des maisons retenues, plus le malus de rang appliqué
+      // à chacune. Tant qu'un attribut vital est déficitaire, on retire les maisons qui y
+      // contribuent le plus négativement — ce sont les bordures mal desservies. Retirer
+      // baisse aussi la population, donc le malus de rang : la boucle converge.
+      // On retire par lots (2 %) pour ne pas refaire n² tours sur les grandes îles.
+      const totals = (set: typeof placed) => {
+        const pop = set.reduce((a, p) => a + p.cap, 0);
+        const rank = rankAt(pop);
+        const t: Record<string, number> = {};
+        for (const k of VITAL_ATTRS) {
+          t[k] = set.reduce((a, p) => a + (p.attrs[k] ?? 0), 0) + set.length * (rank[k] ?? 0);
+        }
+        return { t, rank };
+      };
+      for (let guard = 0; guard < 400 && keep.length; guard++) {
+        const { t, rank } = totals(keep);
+        let binding: string | null = null;
+        for (const k of VITAL_ATTRS) if (t[k] < 0 && (binding === null || t[k] < t[binding])) binding = k;
+        if (!binding) break;
+        const b = binding;
+        // tri déterministe : contribution croissante, puis position — la pire d'abord
+        const sorted = [...keep].sort((p, q) =>
+          ((p.attrs[b] ?? 0) + (rank[b] ?? 0)) - ((q.attrs[b] ?? 0) + (rank[b] ?? 0))
+          || p.b.y - q.b.y || p.b.x - q.b.x);
+        const drop = Math.max(1, Math.ceil(keep.length * 0.02));
+        keep = sorted.slice(drop);
+      }
+      if (keep.length !== placed.length) {
+        const gone = new Set(placed.filter((p) => !keep.includes(p)).map((p) => p.b.uid));
+        const kept = buildings.filter((b) => !gone.has(b.uid));
+        buildings.length = 0;
+        buildings.push(...kept);
+        // les emplacements libérés redeviennent constructibles pour l'élagage des routes
+        for (const p of placed) {
+          if (!gone.has(p.b.uid)) continue;
+          for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) {
+            const c = (p.b.y + j) * W + (p.b.x + i);
+            if (grid.usable[c]) occ[c] = 0;
+          }
+        }
+      }
+    }
+
+    for (const p of keep) {
+      houses++;
+      residents += p.cap;
+      houseMoney += p.money;
+      tierCounts[p.guid] = (tierCounts[p.guid] ?? 0) + 1;
+      capByTier[p.guid] = (capByTier[p.guid] ?? 0) + p.cap;
+      if (p.guid === targetGuid) fullyCovered++;
+      for (const k of VITAL_ATTRS) attrsSum[k] += p.attrs[k] ?? 0;
+    }
+    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum };
   };
 
   // ═══ PHASE élagage routes : adjacentes aux bâtiments + chemins maison→service ═══

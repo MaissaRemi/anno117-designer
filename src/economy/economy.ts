@@ -8,6 +8,9 @@ export interface TierGood {
   money: number; // argent accordé (Money)
   weight: number; // SupplyWeight : points apportés à la catégorie quand rempli
   category: string; // NeedCategoryType (Food/Fashion/Household/Wonders/Culture) ou "Public"
+  /** NeedAttributes COMPLETS du besoin (Bonheur, Santé, Incendie, Croyance…). Identiques à
+   *  l'effet de zone du bâtiment qui le remplit — ne jamais additionner les deux. */
+  attrs?: Record<string, number>;
 }
 export interface TierService {
   need: string;
@@ -16,6 +19,8 @@ export interface TierService {
   money: number;
   weight: number;
   category: string;
+  /** NeedAttributes complets — cf. `TierGood.attrs`. */
+  attrs?: Record<string, number>;
 }
 export interface Tier {
   guid: string;
@@ -39,8 +44,54 @@ export interface BProd {
   fertility?: string; // GUID Fertility/Deposit requis (sinon non constructible)
 }
 
+/**
+ * EFFET DE ZONE d'un bâtiment (cf. GAME_MECHANICS.md §2). Chaîne dans les fichiers du jeu :
+ * `Building/FunctionalEffects` → asset `Effect` (`EffectScope`) → `BuildingBuff` dont
+ * `BuildingUpgrade/AdditionalAttributes` porte les deltas appliqués aux résidences à portée.
+ *
+ * Deux portées de nature DIFFÉRENTE :
+ *  - `radius` : distance EUCLIDIENNE (`RadiusDistance`) — c'est celle des ateliers et des
+ *    mines. `RadiusDistance` n'est donc pas une simple prévisualisation d'interface.
+ *  - `street` : distance le long des rues (`StreetDistance`) — services et institutions.
+ *
+ * `stackable` : plusieurs copies cumulent leur effet sur la même maison (c'est le cas des
+ * malus — trois mines côte à côte valent −6 en Santé), sinon l'effet ne compte qu'une fois.
+ */
+export interface BuildingEffect {
+  scope: "radius" | "street";
+  range: number;
+  /** Delta par attribut : Population, Money, Happiness, Health, FireSafety, Knowledge… */
+  attrs: Record<string, number>;
+  stackable: boolean;
+}
+
+/**
+ * PALIER DE RANG DE CITÉ (`EconomyFeature7/CityStatusFeature`). Le rang d'une ville est
+ * déterminé par sa POPULATION TOTALE, et chaque rang applique des deltas d'attributs à
+ * TOUTES ses résidences : malus croissants en Bonheur, Santé et Sécurité incendie, bonus
+ * en Croyance, Connaissance et Prestige.
+ *
+ * C'est une contrainte de fond qu'aucun plan ne peut ignorer : à 40 000 habitants on est
+ * déjà à −15 Bonheur, −12 Santé, −7,5 Incendie sur chaque maison. Ces malus doivent être
+ * compensés par les services et les ateliers à effet positif.
+ */
+export interface CityStatusStep {
+  /** Population totale à partir de laquelle ce rang s'applique. */
+  population: number;
+  /**
+   * Effets du rang, par CULTURE de population (`Roman`, `RomanCeltic`, `Celtic`). En Latium
+   * les trois sont identiques — une seule culture y vit. En Albion elles divergent : au
+   * dernier rang, −10,6 Bonheur pour un Romain, −17,4 pour un romanisé, −12,6 pour un natif.
+   */
+  attrs: Record<string, Record<string, number>>;
+}
+
 interface EconomyData {
   tiers: Tier[];
+  /** defId → effet de zone, quand le bâtiment en porte un (140 bâtiments). */
+  buildingEffects: Record<string, BuildingEffect>;
+  /** région → échelle des rangs de cité, par population croissante. */
+  cityStatus: Record<string, CityStatusStep[]>;
   producers: Record<string, string[]>; // goodGuid -> [defId]
   buildingProd: Record<string, BProd>;
   buildingWorkforce: Record<string, { tier: string; amount: number }[]>;
@@ -89,7 +140,11 @@ export function residentialChain(tierGuid: string): Tier[] {
     new Set(t.services.map((s) => s.building).filter((b): b is string => !!b));
   const targetSvc = svcOf(target);
   return tiers
-    .filter((t) => !!t.residenceId && t.region === target.region
+    // Comparaison au niveau du MONDE, pas de la culture : en Albion, une maison romanisée
+    // (Mercators) se hisse depuis les Tourbiers natifs — il n'existe pas de palier 01
+    // romano-celtique. Le vrai garde-fou reste l'inclusion des services ci-dessous, qui
+    // interdit de compter un palier dont la ville ne dessert pas les besoins.
+    .filter((t) => !!t.residenceId && worldOf(t.region) === worldOf(target.region)
       && t.capacityDefault <= target.capacityDefault
       && [...svcOf(t)].every((b) => targetSvc.has(b)))
     .sort((a, b) => a.capacityDefault - b.capacityDefault);
@@ -100,6 +155,44 @@ export const goodName = (g: string | null): string =>
 /** Valeur marchande de référence d'un bien (BasePrice), 0 si inconnu. */
 export const priceOf = (good: string | null): number =>
   (good && economy.goodPrices[good]) || 0;
+
+/** Effet de zone d'un bâtiment, ou undefined s'il n'en porte pas. */
+export const effectOf = (defId: string): BuildingEffect | undefined =>
+  economy.buildingEffects?.[defId];
+
+/**
+ * Malus/bonus de RANG DE CITÉ pour une population donnée, appliqués à chaque résidence.
+ * Renvoie le dernier palier dont le seuil est atteint.
+ */
+export function cityStatusAttrs(population: number, region = "Roman"): Record<string, number> {
+  let attrs: Record<string, number> = {};
+  for (const step of cityStatusLadder(region)) {
+    if (population < step.population) break;
+    attrs = step.attrs;
+  }
+  return attrs;
+}
+
+/**
+ * MONDE d'une culture de population. Le Latium n'accueille que la culture romaine ; l'Albion
+ * en accueille DEUX — la native (`Celtic` : Tourbiers, Forgerons, Aldermen) et la romanisée
+ * (`RomanCeltic` : Mercators, Nobles), issue de la romanisation des bâtiments. Les bâtiments
+ * et les îles, eux, ne connaissent que ces deux mondes.
+ */
+export const worldOf = (region: string): string => (region === "Roman" ? "Roman" : "Celtic");
+
+/**
+ * Échelle des rangs de cité telle que la subit une CULTURE donnée : les seuils de population
+ * viennent du MONDE (40 rangs jusqu'à 260 000 habitants en Latium, 25 jusqu'à 47 500 en
+ * Albion), les effets de la culture.
+ */
+export function cityStatusLadder(region = "Roman"): { population: number; attrs: Record<string, number> }[] {
+  const rows = economy.cityStatus?.[worldOf(region)] ?? [];
+  return rows.map((s) => ({
+    population: s.population,
+    attrs: s.attrs?.[region] ?? s.attrs?.Roman ?? {},
+  }));
+}
 
 /** Région d'un bâtiment ("Roman"/"Celtic"/undefined). */
 export const regionOf = (defId: string): string | undefined =>

@@ -66,6 +66,23 @@ def t(el, path):
     return v.strip() if v else None
 
 
+def load_template_effect_ranges():
+    """Rayons par defaut herites : nom de template -> (RadiusDistance, StreetDistance)."""
+    out = {}
+    path = os.path.join(HERE, ".gamedata", "templates.xml")
+    if not os.path.exists(path):
+        return out
+    for _, el in ET.iterparse(path, events=("end",)):
+        if el.tag != "Template":
+            continue
+        name = el.findtext("Name")
+        es = el.find(".//EffectSource")
+        if name and es is not None:
+            out[name] = (es.findtext("RadiusDistance"), es.findtext("StreetDistance"))
+        el.clear()
+    return out
+
+
 def main():
     texts = load_texts()
     pop_levels = {}      # guid -> {name, region, workforce, factor}
@@ -79,6 +96,21 @@ def main():
     building_upkeep = {} # defId -> entretien argent/min
     public_effects = {}  # defId -> functional effect guids (pour services)
     fertilities = {}     # GUID Fertility/Deposit -> nom FR (saisie île + filtrage chaînes)
+    # EFFETS DE ZONE (cf. GAME_MECHANICS.md §2) : un batiment porte des FunctionalEffects
+    # -> asset Effect (EffectScope Radius ou StreetDistance) -> BuildingBuff dont
+    # BuildingUpgrade/AdditionalAttributes donne les deltas d'attributs appliques aux
+    # residences a portee. C'est la mecanique des « +1 Argent », « -2 Sante » autour des
+    # ateliers et des mines. Trois tables intermediaires, resolues apres le parcours.
+    fx_effects = {}      # GUID Effect -> {scope, buffs:[GUID]}
+    fx_buffs = {}        # GUID BuildingBuff -> {attrs:{}, stackable}
+    fx_owner = {}        # defId -> {fe:[GUID], template, radius, street}
+    # RANG DE CITE (CityStatus) : palier atteint selon la POPULATION TOTALE de l'ile. Chaque
+    # rang applique des deltas d'attributs a TOUTES les residences — malus croissants en
+    # Bonheur/Sante/Incendie, bonus en Croyance/Connaissance/Prestige. L'echelle vit dans
+    # EconomyFeature7/CityStatusFeature ; les effets, dans les assets CityStatus.
+    cs_effects = {}      # GUID CityStatus -> {attrs}
+    cs_ladder = {}       # region -> [{status, population}]
+    tpl_ranges = load_template_effect_ranges()
 
     for _, el in ET.iterparse(ASSETS, events=("end",)):
         if el.tag != "Asset":
@@ -97,6 +129,66 @@ def main():
                 "workforce": t(el, "./Values/PopulationLevel/ConnectedWorkforce"),
                 "factor": float(t(el, "./Values/PopulationLevel/PopulationToWorkforceFactor") or 0.5),
             }
+            el.clear(); continue
+
+        if tpl == "CityStatus":
+            # TROIS variantes d'effets, une par CULTURE de population : Roman (Latium), Mixed
+            # (romanisée d'Albion : Mercators, Nobles) et Regional (celtique native). Ne lire
+            # que la romaine appliquait les malus du Latium aux paliers celtiques.
+            variants = {}
+            for tag, key in (("AttributeEffectsRoman", "Roman"),
+                             ("AttributeEffectsMixed", "RomanCeltic"),
+                             ("AttributeEffectsRegional", "Celtic")):
+                eff = vals.find("./CityStatus/" + tag)
+                attrs = {}
+                if eff is not None:
+                    for c in eff:
+                        v = c.findtext("Value")
+                        if v:
+                            try:
+                                attrs[c.tag] = float(v)
+                            except ValueError:
+                                pass
+                variants[key] = attrs
+            cs_effects[guid] = variants
+            el.clear(); continue
+
+        if tpl == "EconomyFeature":
+            feat = vals.find("./EconomyFeature7/CityStatusFeature/Region")
+            if feat is not None:
+                for reg in feat:
+                    steps = []
+                    for it in reg.findall("./CityStatusList/Item"):
+                        st = it.findtext("CityStatus")
+                        pop = it.findtext("./RequiredPopulation/Item/PopulationCount")
+                        if st:
+                            steps.append({"status": st, "population": int(pop) if pop else 0})
+                    if steps:
+                        cs_ladder[reg.tag] = steps
+            el.clear(); continue
+
+        if tpl == "Effect":
+            e = vals.find("Effect")
+            if e is not None:
+                fx_effects[guid] = {
+                    "scope": t(el, "./Values/Effect/EffectScope"),
+                    "buffs": [i.findtext("GUID") for i in e.findall("./Buffs/Item") if i.findtext("GUID")],
+                }
+            el.clear(); continue
+
+        if tpl == "BuildingBuff":
+            attrs = {}
+            aa = vals.find("./BuildingUpgrade/AdditionalAttributes")
+            if aa is not None:
+                for c in aa:
+                    v = c.findtext("./AmountOrPercent/Value")
+                    if v:
+                        try:
+                            attrs[c.tag] = float(v)
+                        except ValueError:
+                            pass
+            fx_buffs[guid] = {"attrs": attrs,
+                              "stackable": t(el, "./Values/Buff/IsStackable") == "1"}
             el.clear(); continue
 
         if tpl == "Fertility":
@@ -136,6 +228,19 @@ def main():
                 "category": t(el, "./Values/Need/NeedCategoryType") or "Public",
             }
             el.clear(); continue
+
+        # EFFETS DE ZONE — releves AVANT le filtre de templates : la citerne d'aqueduc,
+        # l'Amphitheatre et les jetees en portent aussi, et leurs templates ne figurent pas
+        # dans BUILDING_TEMPLATES (qui ne sert qu'a l'economie de production).
+        fe = [i.findtext("FunctionalEffect")
+              for i in vals.findall("./Building/FunctionalEffects/Item")]
+        fe = [x for x in fe if x]
+        if fe:
+            rad = t(el, "./Values/EffectSource/RadiusDistance")
+            street = t(el, "./Values/EffectSource/StreetDistance")
+            if not rad and tpl in tpl_ranges:
+                rad, street = tpl_ranges[tpl]  # EffectSource vide = rayon herite du template
+            fx_owner[f"g{guid}"] = {"fe": fe, "radius": rad, "street": street}
 
         if tpl not in BUILDING_TEMPLATES:
             el.clear(); continue
@@ -215,10 +320,21 @@ def main():
             building_workforce[defId] = wf
         p.pop("maint", None)
 
-    # ordre des tiers via PopulationGroup7 ? on trie par GUID stable, region déduite du nom
+    # CULTURE d'un palier, déduite du nom interne. L'ORDRE DES TESTS EST DÉCISIF :
+    # « Population Level Roman Celtic 02 Merchants » contient « roman » ET « celtic ». Ce sont
+    # les Mercators, population ROMANISÉE d'Albion (leurs services sont le Fanum et le Théâtre
+    # bardique, bâtiments celtiques), pas un palier du Latium. Tester « roman » d'abord les
+    # rangeait en Latium — c'était faux. Trois familles, qui correspondent exactement aux trois
+    # variantes AttributeEffectsRoman / Mixed / Regional du rang de cité.
     def region_of(name):
         n = (name or "").lower()
-        return "Roman" if "roman" in n else ("Celtic" if "celtic" in n else "?")
+        if "roman celtic" in n:
+            return "RomanCeltic"
+        if "celtic" in n:
+            return "Celtic"
+        if "roman" in n:
+            return "Roman"
+        return "?"
 
     tiers = []
     # ordre Roman puis Celtic, par apparition
@@ -239,6 +355,10 @@ def main():
                 goods.append({
                     "good": prod, "rate": gd["rate"], "needName": products.get(prod),
                     "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                    # attributs COMPLETS du besoin (Bonheur, Sante, Incendie, Croyance...) :
+                    # indispensables au bilan par maison, ou seuls Population et Argent
+                    # etaient jusqu'ici remontes.
+                    "attrs": {k: v for k, v in attrs.items() if v},
                     "weight": (nd or {}).get("weight", 1), "category": (nd or {}).get("category", "Public"),
                 })
                 for k, v in attrs.items():
@@ -251,6 +371,7 @@ def main():
                 services.append({
                     "need": sneed, "building": sdef,
                     "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                    "attrs": {k: v for k, v in attrs.items() if v},
                     "weight": (nd or {}).get("weight", 1), "category": (nd or {}).get("category", "Public"),
                 })
                 for k, v in attrs.items():
@@ -293,8 +414,52 @@ def main():
         if catalog_ids and def_id not in catalog_ids:
             print(f"  ! override perime : batiment {def_id} absent du catalogue (patch jeu ?)", file=sys.stderr)
 
+    # resolution des effets de zone : batiment -> {scope, range, attrs, stackable}
+    building_effects = {}
+    for def_id, own in fx_owner.items():
+        attrs, stackable, scope = {}, False, None
+        for eg in own["fe"]:
+            eff = fx_effects.get(eg)
+            if not eff:
+                continue
+            for bg in eff["buffs"]:
+                bf = fx_buffs.get(bg)
+                if not bf or not bf["attrs"]:
+                    continue
+                scope = eff["scope"]
+                stackable = stackable or bf["stackable"]
+                for k, v in bf["attrs"].items():
+                    attrs[k] = attrs.get(k, 0) + v
+        if not attrs or not scope:
+            continue
+        # Radius = distance EUCLIDIENNE (RadiusDistance) ; StreetDistance = le long des rues
+        is_radius = scope == "Radius"
+        rng = own["radius"] if is_radius else own["street"]
+        if not rng:
+            continue
+        building_effects[def_id] = {
+            "scope": "radius" if is_radius else "street",
+            "range": int(rng),
+            "attrs": attrs,
+            "stackable": stackable,
+        }
+
+    # Echelle des rangs de cite, resolue et croissante. `cs_ladder` est indexe par MONDE
+    # (les seuils de population), tandis que les effets dependent de la CULTURE du palier :
+    # une meme ile en Albion applique la variante Mixed a ses Mercators et Regional a ses
+    # Forgerons. On expose donc les trois variantes par marche.
+    city_status = {}
+    for world, steps in cs_ladder.items():
+        rows = [{"population": st["population"],
+                 "attrs": cs_effects.get(st["status"], {})}
+                for st in steps]
+        rows.sort(key=lambda r: r["population"])
+        city_status[world] = rows
+
     out = {
         "tiers": tiers,
+        "buildingEffects": building_effects,
+        "cityStatus": city_status,
         "producers": producers,
         "buildingProd": bprod,
         "buildingWorkforce": building_workforce,

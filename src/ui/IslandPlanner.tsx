@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../state/store";
-import { economy, tiers } from "../economy/economy";
+import { economy, tiers, worldOf } from "../economy/economy";
 import { runIslandPlan, type AnyIslandPlanResult } from "../optimizer/runIslandPlan";
 import { gridWithObstacles } from "../optimizer/halfTileAdapter";
 import { makeLookup } from "../engine/rules";
@@ -8,6 +8,7 @@ import { producibleGoods as producibleGoodsSet } from "../economy/resources";
 import { ResourceSelector } from "./ResourceSelector";
 import { RunPanel } from "./components/RunPanel";
 import { PlanPreview, PlanPreviewLegend } from "./components/PlanPreview";
+import { regionOfIsland } from "../data/islands";
 
 interface Props {
   onClose: () => void;
@@ -24,18 +25,28 @@ const ATTR_FR: Record<string, string> = {
   FireSafety: "🔥 Sécurité incendie",
 };
 
-// paliers visés, du plus dense au moins dense — le défaut de l'UI est le premier, donc
-// le palier le plus haut (l'ordre brut de `tiers` suit les GUID et tombait sur « Nobles »)
-const targetTiers = tiers.filter((t) => t.residenceId).sort((a, b) => b.capacityDefault - a.capacityDefault);
+// paliers visés du monde courant, du plus dense au moins dense — le défaut de l'UI est le
+// premier (l'ordre brut de `tiers` suit les GUID et tombait sur « Nobles »)
+const tiersOfWorld = (world: string) =>
+  tiers.filter((t) => t.residenceId && worldOf(t.region) === world)
+    .sort((a, b) => b.capacityDefault - a.capacityDefault);
 
 type NeedMode = "auto" | "all";
 
 export function IslandPlanner({ onClose }: Props) {
   const applyOptimization = useStore((s) => s.applyOptimization);
 
-  const [tierGuid, setTierGuid] = useState(targetTiers[0]?.guid ?? "");
+  const world = useStore((s) => s.world);
+  const targetTiers = useMemo(() => tiersOfWorld(world), [world]);
+  const [tierGuid, setTierGuid] = useState(() => tiersOfWorld(world)[0]?.guid ?? "");
+  // changer de monde change les paliers disponibles : on retombe sur le plus dense
+  useEffect(() => {
+    if (!targetTiers.some((t) => t.guid === tierGuid)) setTierGuid(targetTiers[0]?.guid ?? "");
+  }, [targetTiers, tierGuid]);
   const [mode, setMode] = useState<"population" | "production">("population");
   const [needMode, setNeedMode] = useState<NeedMode>("auto");
+  const [exploitSlots, setExploitSlots] = useState(false);
+  const [localProduction, setLocalProduction] = useState(false);
   const [floor, setFloor] = useState(80);
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
@@ -58,7 +69,7 @@ export function IslandPlanner({ onClose }: Props) {
   const storedProfile = useStore((s) => (islandId ? s.islandProfiles[islandId] : undefined));
   const setIslandProfile = useStore((s) => s.setIslandProfile);
   const effProfile = storedProfile ?? { fertilities: [], mountainSlots: 0 };
-  const islandRegion = islandId?.includes("celtic") ? "Celtic" : "Roman";
+  const islandRegion = regionOfIsland(islandId);
 
   const producibleGoodsList = useMemo(() => {
     const set = producibleGoodsSet(effProfile, islandRegion);
@@ -81,6 +92,8 @@ export function IslandPlanner({ onClose }: Props) {
     const { promise, cancel } = runIslandPlan(
       {
         catalog: s.catalog, grid, mode, tierGuid, coverageFloor: floor / 100, needMode,
+        exploitSlots,
+        localProduction,
         ...(mode === "production"
           ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: effProfile.fertilities.length ? effProfile.fertilities : undefined }
           : {}),
@@ -133,7 +146,7 @@ export function IslandPlanner({ onClose }: Props) {
             <div className="field">
               <span>Tier-cible</span>
               <select value={tierGuid} onChange={(e) => setTierGuid(e.target.value)}>
-                {targetTiers.map((t) => <option key={t.guid} value={t.guid}>{t.name} ({t.region}) · cap {t.capacityDefault}</option>)}
+                {targetTiers.map((t) => <option key={t.guid} value={t.guid}>{t.name} · cap {t.capacityDefault}</option>)}
               </select>
             </div>
             <div className="field">
@@ -148,6 +161,28 @@ export function IslandPlanner({ onClose }: Props) {
                   : "Pose les 12 types de service du palier. Bonus maximal par maison, mais ils mangent ~⅓ de l'île."}
               </span>
             </div>
+            <label className="checkbox">
+              <input type="checkbox" checked={exploitSlots} onChange={(e) => setExploitSlots(e.target.checked)} />
+              <span>
+                Exploiter les emplacements libres
+                <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                  Mines, carrières, argile… sur les emplacements de montagne, rivière et marais que
+                  les aqueducs n'utilisent pas — l'eau reste prioritaire. Pose aussi les entrepôts
+                  nécessaires pour que la production sorte.
+                </span>
+              </span>
+            </label>
+            <label className="checkbox">
+              <input type="checkbox" checked={localProduction} onChange={(e) => setLocalProduction(e.target.checked)} />
+              <span>
+                Produire sur l'île
+                <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                  Pose des ateliers pour fabriquer une partie des biens au lieu de tout importer.
+                  Ils remplacent des maisons et pèsent sur les attributs : on s'arrête dès que le
+                  bilan de l'île passerait sous zéro.
+                </span>
+              </span>
+            </label>
             <label className="slider">
               <span style={{ color: "var(--muted)", fontSize: 12 }}>% maisons au tier</span>
               <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
@@ -217,6 +252,24 @@ export function IslandPlanner({ onClose }: Props) {
               </div>
             </div>
             <div style={{ marginBottom: 6 }}>
+              {result.viable
+                ? <span style={{ color: "#8bc34a" }}>✔ Bilan de l'île positif</span>
+                : <span style={{ color: "#ff8a85" }}>✘ Bilan de l'île en déficit</span>}
+              <span className="muted"> — </span>
+              {["Happiness", "Money", "Health", "FireSafety"].map((k) => {
+                const v = result.attrsTotal[k] ?? 0;
+                const lbl: Record<string, string> = { Happiness: "🙂", Money: "💰", Health: "❤", FireSafety: "🔥" };
+                return (
+                  <span key={k} style={{ color: v >= 0 ? "#8bc34a" : "#ff8a85", marginRight: 8 }}>
+                    {lbl[k]} {v >= 0 ? "+" : ""}{Math.round(v).toLocaleString("fr")}
+                  </span>
+                );
+              })}
+              <div className="muted" style={{ fontSize: "0.85em" }}>
+                total sur toutes les maisons, malus de rang de cité compris
+              </div>
+            </div>
+            <div style={{ marginBottom: 6 }}>
               💰 net <span style={{ color: result.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>{result.money.net >= 0 ? "+" : ""}{result.money.net.toLocaleString("fr")}/min</span>{" "}
               <span className="muted">(taxe {result.money.gross.toLocaleString("fr")} − entretien {result.money.upkeep.toLocaleString("fr")})</span>
             </div>
@@ -225,6 +278,32 @@ export function IslandPlanner({ onClose }: Props) {
                 💧 Eau : {result.water.sources} source{result.water.sources > 1 ? "s" : ""} · {result.water.used}/{result.water.capacity} u ·{" "}
                 {result.water.consumers.filter((c) => c.connected).length}/{result.water.consumers.length} raccordés
               </div>
+            )}
+            {result.workshops.length > 0 && (
+              <>
+                <b>🏭 Produit sur l'île ({result.workshops.length})</b>
+                <ul className="bilan">
+                  {result.workshops.map((w, i) => (
+                    <li key={i}>
+                      {w.name} ×{w.copies} · {w.perMin.toFixed(2)}/min {w.goodName}
+                      <span className="muted"> — {w.housesLost} maison(s)</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {result.exploited.length > 0 && (
+              <>
+                <b>⛏ Emplacements exploités ({result.exploited.length})</b>
+                <ul className="bilan">
+                  {result.exploited.map((e, i) => (
+                    <li key={i} style={{ color: e.served ? undefined : "#ffcc66" }}>
+                      {e.name} ({e.slotType}) · {e.perMin.toLocaleString("fr")}/min {e.goodName}
+                      {!e.served && " — sans entrepôt à portée"}
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
             <b>📦 À acheminer ({result.importGoods.length} biens)</b>
             <ul className="bilan">{result.importGoods.slice(0, 30).map((g) => <li key={g.good}>{g.perMin.toLocaleString("fr")}/min · {g.name}</li>)}</ul>

@@ -69,6 +69,15 @@ export interface TierEvaluator {
   reference(index: number): TierReach;
   /** Masque des services du palier `index` (utile aux moteurs pour cibler leur couverture). */
   maskOf(index: number): number;
+  /**
+   * Attributs COMPLETS d'une maison (Bonheur, Santé, Incendie…) pour ce masque de
+   * couverture : biens supposés remplis + services qui la couvrent effectivement, au
+   * palier réellement atteint. Mémoïsé comme `evaluate`.
+   *
+   * ⚠ Ce sont les mêmes valeurs que les effets de zone des bâtiments de service — ne
+   * jamais y ajouter `buildingEffects` pour ces bâtiments (cf. economy/attributes.ts).
+   */
+  attrsOf(mask: number): Readonly<Record<string, number>>;
 }
 
 interface CompiledTier {
@@ -177,19 +186,49 @@ export function compileTierEvaluator(chain: Tier[], opts: EvaluatorOptions = {})
     return base();
   };
 
+  // attributs complets pour un masque, au palier atteint
+  const computeAttrs = (mask: number): Record<string, number> => {
+    const reach = evaluateMask(mask);
+    const t = reach.tier;
+    const acc: Record<string, number> = {};
+    const add = (from: Record<string, number> | undefined) => {
+      if (!from) return;
+      for (const [k, v] of Object.entries(from)) acc[k] = (acc[k] ?? 0) + v;
+    };
+    if (goodsMet) for (const g of t.goods) add(g.attrs);
+    for (const s of t.services) {
+      if (!s.building) continue;
+      const b = bitOf.get(s.building);
+      if (b !== undefined && (mask & (1 << b))) add(s.attrs);
+    }
+    return acc;
+  };
+
   const nBits = serviceIds.length;
   let cache: (TierReach | undefined)[] | null = null;
-  if (nBits <= MAX_CACHED_BITS) cache = new Array<TierReach | undefined>(1 << nBits);
+  let attrCache: (Record<string, number> | undefined)[] | null = null;
+  if (nBits <= MAX_CACHED_BITS) {
+    cache = new Array<TierReach | undefined>(1 << nBits);
+    attrCache = new Array<Record<string, number> | undefined>(1 << nBits);
+  }
+
+  const evaluateMask = (mask: number): TierReach => {
+    if (!cache) return compute(mask);
+    const hit = cache[mask];
+    if (hit) return hit;
+    return (cache[mask] = compute(mask));
+  };
 
   return {
     chain,
     bitOf,
     serviceIds,
-    evaluate(mask: number): TierReach {
-      if (!cache) return compute(mask);
-      const hit = cache[mask];
+    evaluate: evaluateMask,
+    attrsOf(mask: number): Readonly<Record<string, number>> {
+      if (!attrCache) return computeAttrs(mask);
+      const hit = attrCache[mask];
       if (hit) return hit;
-      return (cache[mask] = compute(mask));
+      return (attrCache[mask] = computeAttrs(mask));
     },
     reference(index: number): TierReach {
       const k = Math.max(0, Math.min(chain.length - 1, index));

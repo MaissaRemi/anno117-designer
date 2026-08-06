@@ -5,14 +5,17 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Couche dependances separee : reconstruite seulement si package*.json change.
-COPY package.json package-lock.json ./
-RUN npm ci
+# pnpm via corepack (livre avec Node) : pas d'installation globale a gerer.
+RUN corepack enable pnpm
+
+# Couche dependances separee : reconstruite seulement si le manifeste change.
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-# `npm run build` = tsc --noEmit && vite build : le type-check echoue le build.
-RUN npm run build
+# `pnpm build` = tsc --noEmit && vite build : le type-check echoue le build.
+RUN pnpm build
 
 # ---------- runtime ----------
 FROM nginx:alpine AS runtime

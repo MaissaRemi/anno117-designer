@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { decodeMask, islands, type Island } from "../data/islands";
+import { useEffect, useMemo, useRef } from "react";
+import { decodeMask, islands, regionOfIsland, worldLabel, type Island } from "../data/islands";
 import { useStore } from "../state/store";
 import { Modal } from "./Modal";
 
@@ -44,12 +44,11 @@ function IslandThumb({ island, size = 64 }: { island: Island; size?: number }) {
 export function IslandPicker({ onClose }: Props) {
   const loadIsland = useStore((s) => s.loadIsland);
   const hasWork = useStore((s) => s.layout.buildings.length > 0 || s.layout.roads.length > 0);
-  const [region, setRegion] = useState<string>("");
-
-  const regions = useMemo(() => Array.from(new Set(islands.map((i) => i.region))), []);
+  const world = useStore((s) => s.world);
+  // Les îles DLC sont romaines : elles suivent le Latium.
   const list = useMemo(
-    () => islands.filter((i) => !region || i.region === region),
-    [region],
+    () => islands.filter((i) => regionOfIsland(i.id) === world),
+    [world],
   );
 
   // On ne demande confirmation que s'il y a QUELQUE CHOSE À PERDRE. Sur une grille vide,
@@ -64,15 +63,10 @@ export function IslandPicker({ onClose }: Props) {
   return (
     <Modal className="islands" onClose={onClose}>
       <div className="panel-head">
-          <h3>🏝 Îles d'Anno 117 ({list.length})</h3>
-          <select value={region} onChange={(e) => setRegion(e.target.value)}>
-            <option value="">Toutes régions</option>
-            {regions.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+          <h3>🏝 Îles — {worldLabel(world)} ({list.length})</h3>
+          <span className="muted" style={{ fontSize: 12 }}>
+            Change de monde dans la barre de gauche
+          </span>
         </div>
 
         <div className="island-grid">

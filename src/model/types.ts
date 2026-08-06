@@ -38,6 +38,10 @@ export interface BuildingDef {
   template?: string; // template du jeu (SlotFactoryBuilding7 = mines, Warehouse…)
   freeArea?: { radius: number; area: number }; // prod ∝ cases libres dans le rayon
   unique?: boolean; // BuildingUnique : 1 exemplaire max sur l'île (Colisée…)
+  /** Emplacement de terrain REQUIS (`Factory7/RawResourceType`). "mountain" et "river"
+   *  correspondent aux slots extraits des îles ; "coastal"/"forest"/"meadow"/"marsh"
+   *  décrivent un terrain, pas un slot ponctuel. Absent = pose libre. */
+  slotType?: string;
   radius?: RadiusSpec;
   field?: FieldSpec;
   color: string; // couleur de rendu (#rrggbb)

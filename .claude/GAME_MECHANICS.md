@@ -15,9 +15,11 @@ dumps `.gamedata/research/*.json` (script `tools/_dump_research.py`),
 
 ## 1. Grille & routes
 
-- **[FICHIERS]** Portée des services = DISTANCE PAR LA RUE (`EffectScope StreetDistance`,
-  ×1279 dans AB). `RadiusDistance` = préviz UI seulement. Pattern systématique :
-  **street = radius + 4** sur tous les services.
+- **[FICHIERS]** Portée des SERVICES = DISTANCE PAR LA RUE (`EffectScope StreetDistance`,
+  ×1279 dans AB). Pattern systématique : **street = radius + 4** sur tous les services.
+  ⚠ `RadiusDistance` n'est PAS une simple préviz d'interface (correction 2026-08-06) : c'est
+  la portée réelle des effets dont `EffectScope = Radius` — voir §2. Les deux valeurs
+  coexistent parce qu'elles servent deux mécaniques distinctes.
 - **[FICHIERS]** Coûts routes (argent 1010017) : terre **5**, pavée **40**, route de
   marais (Celtic) 10, pont bois 10 / pavé 20, quai bois/pierre/marbre 10/40/80,
   ponts-canaux celtiques 10/20/25. Pavée = vitesse charrettes (aucun `RangeFactor`
@@ -57,9 +59,62 @@ Institutions anti-incidents (portée street) : **Vigiles (feu) 30**, **Medicus
 celtiques idem mini. Shrines (mini-services) : 16-24 street.
 
 - **[FICHIERS]** Pas de falloff dans `Effect` → couverture binaire à la coupure.
-- [OUVERT] H2.13 : des bâtiments de PROD donneraient des bonus pop en rayon
-  (« bakery +2 pop/maison » vu en guide [WEB] + TextPools « Tavern Supplied ») — à
-  vérifier : 2e système de desserte par bâtiment de production ?
+- **[FICHIERS] H2.13 CONFIRMÉE (2026-08-06) — EFFETS DE ZONE À RAYON EUCLIDIEN.**
+  Oui, des bâtiments de PRODUCTION modifient les attributs des résidences autour d'eux.
+  Chaîne dans les fichiers : `Building/FunctionalEffects` → asset `Effect` → `BuildingBuff`
+  dont `BuildingUpgrade/AdditionalAttributes` porte les deltas. **140 bâtiments** en portent.
+  - `EffectScope = Radius` (86 bâtiments) → distance **EUCLIDIENNE**, valeur = `RadiusDistance`,
+    portées 20 à 30. C'est le cas des ateliers, mines et carrières.
+  - `EffectScope = StreetDistance` (54 bâtiments) → distance le long des rues, valeur =
+    `StreetDistance`. C'est le cas des services et des institutions.
+  - `IsStackable` : les MALUS cumulent (3 mines côte à côte = −6 Santé), les bonus non.
+  - Attributs touchés : Health 46, FireSafety 45, Happiness 36, Money 36, Prestige 25,
+    **Population 23**, Knowledge 13, Belief 9.
+  - Exemples : Mine de fer −2 Santé (r20, cumulable) · Charbonnière −3 Santé −3 Incendie
+    (r20, cumulable) · Lyrier +1 Argent +1 Bonheur (r24) · Épicurien de l'eau +1 Population
+    +1 Santé (r28) · Bains +2 Population +2 Santé +3 Incendie (street 66).
+  - **Conséquence de design** : une mine près des maisons COÛTE, un atelier de luxe RAPPORTE.
+    Extrait dans `economy.generated.json → buildingEffects`. Non encore exploité par
+    l'optimiseur de placement.
+  ⚠ Corrige aussi §1 : « `RadiusDistance` = préviz UI seulement » est FAUX. C'est la portée
+  réelle des effets à `EffectScope = Radius`. Le pattern « street = radius + 4 » reste vrai,
+  mais les deux nombres servent à deux mécaniques différentes.
+
+## 2 bis. RANG DE CITÉ — malus d'échelle [FICHIERS, 2026-08-06]
+
+`EconomyFeature7/CityStatusFeature/Region/<Roman|Celtic|Egyptian>/CityStatusList` : le rang
+d'une ville est déterminé par sa **population totale**, et chaque rang applique des deltas
+d'attributs à **TOUTES** ses résidences (assets `CityStatus`, `AttributeEffects*`).
+**40 paliers** côté romain.
+
+| population ≥ | Bonheur | Santé | Incendie | Croyance | Connaissance | Prestige |
+|---|---|---|---|---|---|---|
+| 0 | — | — | — | — | — | — |
+| 500 | | | −1 | +1 | | |
+| 1 000 | −2 | | −2 | +2 | +1 | |
+| 3 000 | −6 | −4 | −4 | +4 | +3 | +2 |
+| 7 500 | −10 | −8 | −6 | +6 | +5 | +4 |
+| 20 000 | −13 | −10,4 | −6,6 | +9 | +8 | +7 |
+| 70 000 | −15,8 | −12,4 | −7,9 | +19 | +18 | +17 |
+| 260 000 | −18,2 | −14,7 | −9,8 | +30 | +29 | +28 |
+
+**L'échelle et les effets ne se lisent pas au même endroit** (corrigé le 2026-08-06, cf. §17).
+Les **seuils** viennent du MONDE — 40 rangs jusqu'à 260 000 habitants en Latium, **25 rangs
+jusqu'à 47 500 seulement** en Albion. Les **effets**, eux, existent en trois variantes par
+rang (`AttributeEffectsRoman` / `Mixed` / `Regional`), une par culture de population. En
+Latium les trois sont identiques ; en Albion elles divergent nettement — au dernier rang :
+
+| culture d'Albion | Bonheur | Santé | Incendie | Croyance | Connaissance |
+|---|---|---|---|---|---|
+| romaine (`Roman`) | −10,6 | −12,0 | −8,2 | +23 | +33 |
+| romanisée (`Mixed` — Mercators, Nobles) | **−17,4** | −9,35 | −5,1 | +34,5 | +33 |
+| native (`Regional` — Tourbiers…Aldermen) | −12,6 | −6,7 | −1,95 | +34,5 | +22 |
+
+⚠ **Contrainte de fond ignorée jusqu'ici.** Les plans produits par l'optimiseur atteignent
+38 000 à 570 000 habitants : ils encaissent donc **−15 à −18 en Bonheur, −12 à −15 en Santé,
+−8 à −10 en Sécurité incendie** sur chaque maison, qu'il faut compenser par les services et
+les ateliers à effet positif (§2). Extrait dans `economy.generated.json → cityStatus`.
+Non encore appliqué par l'optimiseur.
 
 ## 3. Résidences & besoins
 
@@ -228,6 +283,21 @@ Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
 - **[FICHIERS]** Prods de marais (anguilles, oiseaux, etc.) : `CanBePlacedOnNonMarsh=1`
   → posables AUSSI hors marais. Route de marais dédiée (coût 10).
 - **[FICHIERS]** Romanisation par bâtiment (cf. §8).
+- **[FICHIERS, 2026-08-06] DEUX ÉCHELLES DE POPULATION COEXISTENT EN ALBION.** Les assets
+  `PopulationLevel` se rangent en trois familles selon leur nom interne :
+
+  | GUID | nom interne | nom FR | monde | culture |
+  |---|---|---|---|---|
+  | 1499, 1496, 1497, 1498 | `Population Level **Roman** 01–04` | Liberti, Plébéiens, Equites, Patriciens | Latium | `Roman` |
+  | 1500, 1501, 1502 | `Population Level **Celtic** 01–03` | Tourbiers, Forgerons, Aldermen | Albion | `Celtic` |
+  | 1503, 1504 | `Population Level **Roman Celtic** 02–03` | Mercators, Nobles | **Albion** | `RomanCeltic` |
+
+  ⚠ Piège : « Roman Celtic » contient « Roman ». Ce sont pourtant des paliers **d'Albion** —
+  la population romanisée — et non du Latium : leurs services sont le **Fanum** et le
+  **Théâtre bardique**, bâtiments celtiques. Corroboré par les trois variantes d'effets du
+  rang de cité (§2 bis), qui n'auraient aucun sens s'il n'y avait que deux cultures.
+  Il n'existe **pas** de palier 01 romano-celtique : les Mercators montent depuis les
+  Tourbiers natifs. Une île d'Albion peut donc porter les deux échelles à la fois.
 
 ## 13. CHECKLIST TESTS IN-GAME (pour l'utilisateur — à plus fort levier)
 
