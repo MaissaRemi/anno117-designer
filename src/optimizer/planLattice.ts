@@ -2,6 +2,7 @@ import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import { economy, residentialChain } from "../economy/economy";
+import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
 import { needsWater, planWater, type WaterPlanResult } from "./waterPlan";
 import { makeStreetGrid } from "./streetGrid";
@@ -26,10 +27,19 @@ export interface LatticeResult {
   roads: RoadTile[];
   fields: FieldTile[];
   houses: number;
-  fullyCovered: number; // maisons couvertes par TOUS les types (tier-cible atteint)
+  fullyCovered: number; // maisons ayant atteint le tier-cible
   /** Maisons par tier ATTEINT (guid → nb) : accounting MIXTE. Une maison sous-desservie
-   *  retombe au meilleur tier de la chaîne dont tous les services l'atteignent (min = base). */
+   *  retombe au meilleur palier dont elle franchit les seuils (min = base). */
   tierCounts: Record<string, number>;
+  /** Habitants TOTAUX = Σ sur les maisons de leur capacité RÉELLE (Σ Population des besoins
+   *  remplis, cf. economy/needsModel). Ce n'est pas `Σ tierCounts × capacité par défaut` :
+   *  deux maisons du même palier n'ont pas la même capacité si l'une est mieux desservie. */
+  residents: number;
+  /** Taxe/min cumulée des maisons (Σ Money des besoins remplis). */
+  houseMoney: number;
+  /** Capacité cumulée PAR PALIER atteint (guid → habitants). Permet de recalculer la
+   *  population après une démotion sans repasser par les masques de couverture. */
+  capByTier: Record<string, number>;
   servicesPlaced: Record<string, number>;
   water?: WaterPlanResult; // présent si opts.water
 }
@@ -81,7 +91,7 @@ export function planLattice(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, capByTier: {}, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
@@ -464,26 +474,20 @@ export function planLattice(
   rebuildDemand();
   for (const tc of typeCov.values()) refreshType(tc);
 
-  // --- MAISONS : DENSITÉ MAX + accounting MIXTE (cf. session refonte densité).
-  // On remplit TOUT slot valide (fitsHouse+route) — plus de plafond "fraction pleine".
-  // Chaque maison prend le TIER le plus haut de la chaîne résidentielle dont TOUS les
-  // services (ACTIFS — un consommateur d'eau non raccordé ne compte pas) l'atteignent ;
-  // à défaut, le tier de base (min de la chaîne). Sémantique jeu : une résidence
-  // sous-desservie ne disparaît pas, elle reste au palier inférieur.
+  // --- MAISONS : DENSITÉ MAX + accounting MIXTE, aux VRAIES règles du jeu.
+  // On remplit TOUT slot valide (fitsHouse+route). Le palier de chaque maison est décidé
+  // par `needsModel` : seuil de SupplyWeight par catégorie, pas un ET sur tous les services
+  // — et sa capacité vaut la somme des Population des besoins réellement remplis. Une
+  // résidence sous-desservie ne disparaît pas, elle reste au palier qu'elle franchit.
   const types = [...typeCov.values()].filter((tc) => (placements.get(tc.def.id) ?? []).length > 0);
   const covArr = types.map((tc) => covByType.get(tc.def.id) ?? coveredOrigins(tc));
 
-  // bit par type placé ; masque de couverture (types actifs) par slot ; masque requis
-  // par tier de la chaîne (services du tier ∩ types placés). tier atteint = plus haut
-  // dont requiredMask ⊆ coveredMask.
-  const chain = residentialChain(tierGuid); // base → cible (cap croissante)
+  const chain = residentialChain(tierGuid); // base → cible
   const resIdSet = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));
-  // bits sur l'UNION des services de la chaîne (pas seulement les types POSÉS) : un
-  // service requis mais JAMAIS posé garde un bit jamais allumé → son tier reste
-  // inatteignable (sinon une maison serait comptée au tier-cible sans ce service).
-  const chainSvcIds = [...new Set(chain.flatMap((t) => t.services.map((s) => s.building).filter((b): b is string => !!b)))];
-  const bitOf = new Map<string, number>();
-  chainSvcIds.forEach((id, b) => bitOf.set(id, b));
+  // L'évaluateur est scopé aux services RETENUS (`wanted`) : un type écarté ne compte ni
+  // pour les seuils ni pour la capacité — c'est ce qui rendait le mode « seuils »
+  // insatisfiable quand le masque exigeait encore les services écartés.
+  const evaluator = compileTierEvaluator(chain, { goodsMet: true, relevant: wanted ?? undefined });
   // consommateurs d'eau raccordés (≥1 copie) : un type d'eau MORT n'est pas actif
   const connByDef = new Map<string, number>();
   for (const c of water?.consumers ?? []) {
@@ -494,20 +498,12 @@ export function planLattice(
   // un type d'eau est INACTIF seulement si l'eau A ÉTÉ routée (opts.water) et qu'aucune
   // copie n'est raccordée ; sans routage (planLattice autonome) on suppose actif (géom.)
   const activeType = types.map((tc) => !needsWater(tc.def) || !water || (connByDef.get(tc.def.id) ?? 0) > 0);
-  const typeBit = types.map((tc) => bitOf.get(tc.def.id)); // bit du type posé (peut être undefined si hors chaîne)
-  const reqMask = chain.map((t) => {
-    let m = 0;
-    for (const s of t.services) {
-      if (!s.building) continue;
-      const b = bitOf.get(s.building);
-      if (b !== undefined) m |= 1 << b;
-    }
-    return m;
-  });
+  const typeBit = types.map((tc) => evaluator.bitOf.get(tc.def.id)); // undefined = hors chaîne/écarté
 
-  const placeHouses = (): { houses: number; fullyCovered: number; tierCounts: Record<string, number> } => {
-    let houses = 0, fullyCovered = 0;
+  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier"> => {
+    let houses = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
     const tierCounts: Record<string, number> = {};
+    const capByTier: Record<string, number> = {};
     const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
     for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
       if (!fitsHouse(x, y) || !touchesRoad(x, y)) continue;
@@ -517,22 +513,19 @@ export function planLattice(
         const b = typeBit[t];
         if (b !== undefined && activeType[t] && covArr[t][o]) coveredMask |= 1 << b;
       }
-      // tier atteint = plus haut de la chaîne dont les services requis sont couverts ;
-      // sinon base (idx 0) — la maison existe quand même (densité).
-      let ti = 0;
-      for (let k = chain.length - 1; k >= 0; k--) {
-        if ((reqMask[k] & coveredMask) === reqMask[k]) { ti = k; break; }
-      }
-      const t = chain[ti];
-      const defId = t?.residenceId ?? residenceId;
+      const reach = evaluator.evaluate(coveredMask);
+      const defId = reach.tier.residenceId ?? residenceId;
       for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
       buildings.push({ uid: uid("lat"), defId, x, y, rotation: 0, locked: false });
       markAdj(x, y, rw, rh);
       houses++;
-      tierCounts[t.guid] = (tierCounts[t.guid] ?? 0) + 1;
-      if (t.guid === targetGuid) fullyCovered++;
+      residents += reach.cap;
+      houseMoney += reach.money;
+      tierCounts[reach.tier.guid] = (tierCounts[reach.tier.guid] ?? 0) + 1;
+      capByTier[reach.tier.guid] = (capByTier[reach.tier.guid] ?? 0) + reach.cap;
+      if (reach.tier.guid === targetGuid) fullyCovered++;
     }
-    return { houses, fullyCovered, tierCounts };
+    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier };
   };
 
   // ═══ PHASE élagage routes : adjacentes aux bâtiments + chemins maison→service ═══
@@ -559,7 +552,7 @@ export function planLattice(
     return roads;
   };
 
-  const { houses, fullyCovered, tierCounts } = placeHouses();
+  const placed = placeHouses();
   const roads = pruneRoads();
-  return { buildings, roads, fields: [], houses, fullyCovered, tierCounts, servicesPlaced, water };
+  return { buildings, roads, fields: [], ...placed, servicesPlaced, water };
 }

@@ -2,6 +2,7 @@ import { makeLookup } from "../engine/rules";
 import type { AqueductTile, BuildingDef, FieldTile, GridShape, Layout, PlacedBuilding, RoadTile } from "../model/types";
 import { economy, residentialChain, upkeepOf } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
+import { compileTierEvaluator } from "../economy/needsModel";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { planLattice } from "./planLattice";
 import { planPacked } from "./packPlan";
@@ -112,19 +113,13 @@ export function planIslandImport(
   const cap = needMode === "thresholds" ? profile.cap : tier.capacityDefault || 10;
   const retainedServices = [...new Set(profile.services.map((s) => s.building).filter((b): b is string => !!b))];
 
-  // capacité/maison par tier (mode seuils = profil seuils ; sinon capacité par défaut)
-  const chain = residentialChain(req.tierGuid);
-  const capForTier = (guid: string): number => {
-    const t = economy.tiers.find((x) => x.guid === guid);
-    if (!t) return 1;
-    return needMode === "thresholds"
-      ? buildTierProfile(guid, { needSelection: "thresholds" }).cap
-      : (t.capacityDefault || 10);
-  };
-  const mixedResidents = (tc: Record<string, number>): number =>
-    Object.entries(tc).reduce((s, [g, n]) => s + n * capForTier(g), 0);
   // en mode seuils, seuls les services RETENUS comptent pour la faisabilité/couverture-tier
+  const chain = residentialChain(req.tierGuid);
   const relevant = needMode === "thresholds" ? new Set(retainedServices) : null;
+  // Évaluateur des VRAIES règles (seuils de SupplyWeight par catégorie + capacité = Σ
+  // Population des besoins remplis). Les moteurs l'utilisent par maison ; ici il ne sert
+  // qu'au chemin de repli (démotion pour eau morte), qui raisonne par palier.
+  const evaluator = compileTierEvaluator(chain, { goodsMet: true, relevant: relevant ?? undefined });
   const residenceIds = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));
 
   // --- COMPTOIR (racine du réseau + entrée des imports) : réservé AVANT les moteurs ---
@@ -169,8 +164,10 @@ export function planIslandImport(
     water: WaterPlanResult;
     buildings: PlacedBuilding[];
     tierCounts: Record<string, number>;
+    capByTier: Record<string, number>;
     deadTypes: Set<string>;
     residents: number;
+    houseMoney: number;
     /** part des consommateurs d'eau réellement raccordés (0..1 ; 1 si aucun) */
     waterPct: number;
   }
@@ -196,19 +193,39 @@ export function planIslandImport(
     const tierSafe = (t: (typeof chain)[number]): boolean => t.services.every((s) =>
       !s.building || (relevant && !relevant.has(s.building)) ? true : !deadTypes.has(s.building));
     const tierCounts: Record<string, number> = { ...cand.tierCounts };
+    const capByTier: Record<string, number> = { ...cand.capByTier };
+    let houseMoney = cand.houseMoney;
     let cutoff = chain.length;
     for (let k = 0; k < chain.length; k++) if (!tierSafe(chain[k])) { cutoff = k; break; }
     if (cutoff < chain.length) {
-      const safeGuid = chain[Math.max(0, cutoff - 1)]?.guid;
+      const safeIdx = Math.max(0, cutoff - 1);
+      const safeGuid = chain[safeIdx]?.guid;
+      // capacité attribuée aux maisons démotées : la moyenne OBSERVÉE du palier sûr si
+      // des maisons y vivent déjà, sinon la référence tous-services-couverts. C'est une
+      // approximation, sur un chemin de repli : les moteurs eau-aware ont déjà exclu les
+      // services secs de leur comptage par maison, seul packPlan passe par ici.
+      const avg = safeGuid && tierCounts[safeGuid]
+        ? (capByTier[safeGuid] || 0) / tierCounts[safeGuid]
+        : evaluator.reference(safeIdx).cap;
+      const before = Object.values(capByTier).reduce((a, b) => a + b, 0);
       let moved = 0;
-      for (let k = cutoff; k < chain.length; k++) { moved += tierCounts[chain[k].guid] || 0; delete tierCounts[chain[k].guid]; }
-      if (moved && safeGuid) tierCounts[safeGuid] = (tierCounts[safeGuid] || 0) + moved;
+      for (let k = cutoff; k < chain.length; k++) {
+        moved += tierCounts[chain[k].guid] || 0;
+        delete tierCounts[chain[k].guid];
+        delete capByTier[chain[k].guid];
+      }
+      if (moved && safeGuid) {
+        tierCounts[safeGuid] = (tierCounts[safeGuid] || 0) + moved;
+        capByTier[safeGuid] = (capByTier[safeGuid] || 0) + moved * avg;
+      }
+      const after = Object.values(capByTier).reduce((a, b) => a + b, 0);
+      houseMoney = before > 0 ? houseMoney * (after / before) : 0;
     }
     const nCons = water.consumers.length;
     const nOk = water.consumers.filter((c) => c.connected).length;
     return {
-      cand, water, buildings, tierCounts, deadTypes,
-      residents: mixedResidents(tierCounts),
+      cand, water, buildings, tierCounts, capByTier, deadTypes, houseMoney,
+      residents: Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0)),
       waterPct: nCons ? nOk / nCons : 1,
     };
   };
@@ -246,6 +263,7 @@ export function planIslandImport(
   const kontorGaps: string[] = [];
   let removedHouses = 0;
   const tierCounts: Record<string, number> = { ...pick.tierCounts };
+  const capByTier: Record<string, number> = { ...pick.capByTier };
   if (kontor) {
     const kp = connectKontor(req.grid, kontor, buildings, roads, lookup, (id) => residenceIds.has(id));
     if (kp.connected) {
@@ -256,7 +274,12 @@ export function planIslandImport(
         for (const b of buildings) {
           if (!gone.has(b.uid)) continue;
           const g = tierOfRes.get(b.defId);
-          if (g && tierCounts[g]) { tierCounts[g]--; removedHouses++; }
+          if (g && tierCounts[g]) {
+            const avg = (capByTier[g] || 0) / tierCounts[g];
+            tierCounts[g]--;
+            capByTier[g] = Math.max(0, (capByTier[g] || 0) - avg);
+            removedHouses++;
+          }
         }
       }
       const keep = buildings.filter((b) => !gone.has(b.uid));
@@ -293,17 +316,24 @@ export function planIslandImport(
   const analyzable = coverage.services.filter((s) => s.hasRadius && (!relevant || relevant.has(s.serviceId)));
   const coverageMin = analyzable.length ? Math.min(...analyzable.map((s) => s.pct)) : 100;
   const houses = dist.houses - removedHouses;
-  const fullyCovered = tierCounts[req.tierGuid] || 0; // maisons AU tier-cible (tous besoins)
+  const fullyCovered = tierCounts[req.tierGuid] || 0; // maisons ayant atteint le palier cible
   const fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
-  // habitants = population MIXTE totale : chaque maison au tier qu'elle atteint réellement
-  // (cible où couvert, palier inférieur ailleurs). Densité max, aucune terre gâchée.
-  const residents = mixedResidents(tierCounts);
+  // Habitants = Σ des capacités RÉELLES, maison par maison (Σ Population des besoins
+  // remplis). Deux maisons du même palier n'ont pas la même capacité : celle qui voit un
+  // service de plus héberge davantage. C'est ce gradient qui guide l'optimisation.
+  const residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
 
-  // manifeste d'import : vecteur de population MULTI-TIERS (solve gère plusieurs tiers)
+  // Manifeste d'import : vecteur de population MULTI-PALIERS. La capacité passée à `solve`
+  // est la MOYENNE OBSERVÉE par palier (capacité cumulée / nb de maisons), pas la capacité
+  // théorique tous-besoins-remplis : sinon `solve` déduirait un nombre de maisons faux et
+  // la demande de biens avec (elle est proportionnelle aux MAISONS, pas aux habitants).
   const capacities: Record<string, number> = {};
-  for (const t of chain) capacities[t.guid] = capForTier(t.guid);
+  for (const t of chain) {
+    const n = tierCounts[t.guid] || 0;
+    capacities[t.guid] = n > 0 ? Math.max(1, (capByTier[t.guid] || 0) / n) : (t.capacityDefault || 10);
+  }
   const popTargets = chain
-    .map((t) => ({ tier: t.guid, pop: (tierCounts[t.guid] || 0) * capForTier(t.guid) }))
+    .map((t) => ({ tier: t.guid, pop: (tierCounts[t.guid] || 0) * capacities[t.guid] }))
     .filter((p) => p.pop > 0);
   const sol = solve(
     popTargets.length ? popTargets : [{ tier: req.tierGuid, pop: 0 }],

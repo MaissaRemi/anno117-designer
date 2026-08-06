@@ -5,6 +5,8 @@ import type { BuildingDef } from "../model/types";
 import { economy } from "../economy/economy";
 import { makeLookup } from "../engine/rules";
 import { solve } from "../economy/solve";
+import { buildIslandGrid } from "../data/islandGrid";
+import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
@@ -17,17 +19,20 @@ const tier = economy.tiers.find(
 const plan = (w: number, h: number, floor = 1) =>
   planIslandImport({ catalog, grid: makeGrid(w, h), tierGuid: tier.guid, coverageFloor: floor });
 
-// capacité/maison par tier (mode "all" = capacité par défaut) + population MIXTE totale
+// capacité MAXIMALE d'une maison du palier (tous besoins remplis) — borne haute seulement :
+// la capacité réelle vaut Σ Population des besoins REMPLIS (cf. economy/needsModel), donc
+// deux maisons du même palier n'hébergent pas forcément autant.
 const capOf = (guid: string) => economy.tiers.find((t) => t.guid === guid)?.capacityDefault ?? 1;
-const mixed = (tc: Record<string, number>) => Object.entries(tc).reduce((s, [g, n]) => s + n * capOf(g), 0);
+const maxMixed = (tc: Record<string, number>) => Object.entries(tc).reduce((s, [g, n]) => s + n * capOf(g), 0);
 
 describe("planIslandImport (mode import)", () => {
   it("cale des maisons et renvoie un manifeste d'import", () => {
     const r = plan(36, 36, 0.5);
     expect(r.houses).toBeGreaterThan(0);
-    // habitants = somme MIXTE (chaque maison au palier ATTEINT) ≥ cible seule
-    expect(r.residents).toBe(mixed(r.tierCounts));
-    expect(r.residents).toBeGreaterThanOrEqual(r.fullyCovered * r.cap);
+    // habitants = Σ des capacités RÉELLES par maison : strictement positif, et borné par
+    // la capacité pleine de chaque palier (une maison partiellement desservie héberge moins)
+    expect(r.residents).toBeGreaterThan(0);
+    expect(r.residents).toBeLessThanOrEqual(maxMixed(r.tierCounts));
     expect(Object.values(r.tierCounts).reduce((a, b) => a + b, 0)).toBe(r.houses); // Σ tiers = maisons
     expect(r.fullyCovered).toBeLessThanOrEqual(r.houses);
     expect(r.buildings.length).toBeGreaterThanOrEqual(r.houses); // résidences + services
@@ -66,5 +71,23 @@ describe("planIslandImport (mode import)", () => {
     const r = plan(40, 40, 1);
     expect(r.coverage.services.length).toBeGreaterThan(0);
     expect(typeof r.coverageMin).toBe("number");
+  });
+
+  it("les DEUX modes de besoins atteignent le palier cible sur une île réelle", () => {
+    // Régression 2026-08 : le palier était décidé par un ET booléen sur TOUS les services du
+    // tier. En mode « seuils », qui écarte volontairement certains services, le masque devenait
+    // insatisfiable → 0 maison au palier cible, par construction (mesuré sur une île 320²).
+    // La vraie règle est un seuil de SupplyWeight par catégorie (cf. economy/needsModel).
+    const grid = downscaleGrid(buildIslandGrid("roman_island_medium_01")!);
+    const t4 = [...economy.tiers].filter((t) => t.residenceId)
+      .sort((a, b) => b.capacityDefault - a.capacityDefault)[0]!;
+    for (const needMode of ["all", "thresholds"] as const) {
+      const r = planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, needMode });
+      expect(r.houses).toBeGreaterThan(100);
+      expect(r.fullyCovered).toBeGreaterThan(0);
+      // et la population dépasse largement ce que donnerait un plan tout-au-palier-de-base
+      const capBase = Math.min(...economy.tiers.filter((t) => t.residenceId).map((t) => t.capacityDefault));
+      expect(r.residents).toBeGreaterThan(r.houses * capBase);
+    }
   });
 });

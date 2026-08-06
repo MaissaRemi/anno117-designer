@@ -1,6 +1,7 @@
 import { uid } from "../model/factories";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import { economy, residentialChain } from "../economy/economy";
+import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
 import { makeStreetGrid } from "./streetGrid";
 
@@ -22,9 +23,15 @@ export interface PackResult {
   roads: RoadTile[];
   fields: FieldTile[];
   houses: number;
-  fullyCovered: number; // maisons couvertes par TOUS les types
+  fullyCovered: number; // maisons ayant atteint le tier-cible
   /** Maisons par tier ATTEINT (guid → nb) : accounting MIXTE, comme planLattice. */
   tierCounts: Record<string, number>;
+  /** Habitants TOTAUX = Σ capacité RÉELLE par maison (cf. economy/needsModel). */
+  residents: number;
+  /** Taxe/min cumulée des maisons. */
+  houseMoney: number;
+  /** Capacité cumulée PAR PALIER atteint (guid → habitants). */
+  capByTier: Record<string, number>;
   servicesPlaced: Record<string, number>;
   /** Réseau d'eau intégré — jamais produit par packPlan (l'eau y serait routée
    *  APRÈS les maisons, sans corridors) ; présent pour l'interface commune des
@@ -83,7 +90,7 @@ export function planPacked(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, capByTier: {}, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- peigne de routes (identique districtPlan) : double-rangée + épines ---
@@ -291,30 +298,19 @@ export function planPacked(
   const types = [...typeCov.values()].filter((tc) => (placements.get(tc.def.id) ?? []).length > 0);
   for (const tc of types) { tc.covered = new Uint8Array(houses.length); bfsType(tc); markCovered(tc); }
 
-  // aucune maison jetée : chaque maison vivante prend le TIER le plus haut de la chaîne
-  // résidentielle dont tous les services requis la couvrent ; sinon la base. (Comme
-  // planLattice ; packPlan ne route pas l'eau ici → services d'eau supposés actifs,
-  // corrigé en aval par le gate eau de islandPlan si packPlan gagne — rare.)
+  // aucune maison jetée : chaque maison vivante prend le palier dont elle franchit les
+  // seuils de SupplyWeight (cf. economy/needsModel — la vraie règle du jeu), et sa capacité
+  // vaut la somme des Population des besoins remplis. (packPlan ne route pas l'eau ici →
+  // services d'eau supposés actifs ; islandPlan disqualifie ce candidat si son réseau d'eau
+  // ne tient pas.)
   const chain = residentialChain(tierGuid);
-  // bits sur l'UNION des services de la chaîne (cf. planLattice) : un service requis
-  // jamais posé garde un bit jamais allumé → tier inatteignable, pas de sur-comptage.
-  const chainSvcIds = [...new Set(chain.flatMap((t) => t.services.map((s) => s.building).filter((b): b is string => !!b)))];
-  const bitOf = new Map<string, number>();
-  chainSvcIds.forEach((id, b) => bitOf.set(id, b));
-  const typeBit = types.map((tc) => bitOf.get(tc.def.id));
-  const reqMask = chain.map((t) => {
-    let m = 0;
-    for (const s of t.services) {
-      if (!s.building) continue;
-      const b = bitOf.get(s.building);
-      if (b !== undefined) m |= 1 << b;
-    }
-    return m;
-  });
+  const evaluator = compileTierEvaluator(chain, { goodsMet: true, relevant: wanted ?? undefined });
+  const typeBit = types.map((tc) => evaluator.bitOf.get(tc.def.id));
   const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
   const alive = houses.map((h) => h.alive);
   const tierCounts: Record<string, number> = {};
-  let houseCount = 0, fullyCovered = 0;
+  const capByTier: Record<string, number> = {};
+  let houseCount = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
   for (let i = 0; i < houses.length; i++) {
     if (!alive[i]) continue;
     let coveredMask = 0;
@@ -322,16 +318,15 @@ export function planPacked(
       const b = typeBit[t];
       if (b !== undefined && types[t].covered[i]) coveredMask |= 1 << b;
     }
-    let ti = 0;
-    for (let k = chain.length - 1; k >= 0; k--) {
-      if ((reqMask[k] & coveredMask) === reqMask[k]) { ti = k; break; }
-    }
-    const tt = chain[ti];
+    const reach = evaluator.evaluate(coveredMask);
     const h = houses[i];
-    buildings.push({ uid: uid("pack"), defId: tt?.residenceId ?? tier.residenceId, x: h.x, y: h.y, rotation: 0, locked: false });
+    buildings.push({ uid: uid("pack"), defId: reach.tier.residenceId ?? tier.residenceId, x: h.x, y: h.y, rotation: 0, locked: false });
     houseCount++;
-    tierCounts[tt.guid] = (tierCounts[tt.guid] ?? 0) + 1;
-    if (tt.guid === targetGuid) fullyCovered++;
+    residents += reach.cap;
+    houseMoney += reach.money;
+    tierCounts[reach.tier.guid] = (tierCounts[reach.tier.guid] ?? 0) + 1;
+    capByTier[reach.tier.guid] = (capByTier[reach.tier.guid] ?? 0) + reach.cap;
+    if (reach.tier.guid === targetGuid) fullyCovered++;
   }
 
   // ===================== ÉLAGAGE ROUTES =====================
@@ -357,5 +352,5 @@ export function planPacked(
   const roads: RoadTile[] = [];
   for (let i = 0; i < N; i++) if (keep[i]) roads.push({ x: i % W, y: (i / W) | 0 });
 
-  return { buildings, roads, fields: [], houses: houseCount, fullyCovered, tierCounts, servicesPlaced };
+  return { buildings, roads, fields: [], houses: houseCount, fullyCovered, tierCounts, residents, houseMoney, capByTier, servicesPlaced };
 }
