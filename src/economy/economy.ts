@@ -60,10 +60,28 @@ export interface BuildingEffect {
   stackable: boolean;
 }
 
+/**
+ * PALIER DE RANG DE CITÉ (`EconomyFeature7/CityStatusFeature`). Le rang d'une ville est
+ * déterminé par sa POPULATION TOTALE, et chaque rang applique des deltas d'attributs à
+ * TOUTES ses résidences : malus croissants en Bonheur, Santé et Sécurité incendie, bonus
+ * en Croyance, Connaissance et Prestige.
+ *
+ * C'est une contrainte de fond qu'aucun plan ne peut ignorer : à 40 000 habitants on est
+ * déjà à −15 Bonheur, −12 Santé, −7,5 Incendie sur chaque maison. Ces malus doivent être
+ * compensés par les services et les ateliers à effet positif.
+ */
+export interface CityStatusStep {
+  /** Population totale à partir de laquelle ce rang s'applique. */
+  population: number;
+  attrs: Record<string, number>;
+}
+
 interface EconomyData {
   tiers: Tier[];
   /** defId → effet de zone, quand le bâtiment en porte un (140 bâtiments). */
   buildingEffects: Record<string, BuildingEffect>;
+  /** région → échelle des rangs de cité, par population croissante. */
+  cityStatus: Record<string, CityStatusStep[]>;
   producers: Record<string, string[]>; // goodGuid -> [defId]
   buildingProd: Record<string, BProd>;
   buildingWorkforce: Record<string, { tier: string; amount: number }[]>;
@@ -127,6 +145,20 @@ export const priceOf = (good: string | null): number =>
 /** Effet de zone d'un bâtiment, ou undefined s'il n'en porte pas. */
 export const effectOf = (defId: string): BuildingEffect | undefined =>
   economy.buildingEffects?.[defId];
+
+/**
+ * Malus/bonus de RANG DE CITÉ pour une population donnée, appliqués à chaque résidence.
+ * Renvoie le dernier palier dont le seuil est atteint.
+ */
+export function cityStatusAttrs(population: number, region = "Roman"): Record<string, number> {
+  const ladder = economy.cityStatus?.[region] ?? [];
+  let attrs: Record<string, number> = {};
+  for (const step of ladder) {
+    if (population < step.population) break;
+    attrs = step.attrs;
+  }
+  return attrs;
+}
 
 /** Région d'un bâtiment ("Roman"/"Celtic"/undefined). */
 export const regionOf = (defId: string): string | undefined =>

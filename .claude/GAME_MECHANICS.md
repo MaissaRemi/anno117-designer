@@ -80,6 +80,30 @@ celtiques idem mini. Shrines (mini-services) : 16-24 street.
   réelle des effets à `EffectScope = Radius`. Le pattern « street = radius + 4 » reste vrai,
   mais les deux nombres servent à deux mécaniques différentes.
 
+## 2 bis. RANG DE CITÉ — malus d'échelle [FICHIERS, 2026-08-06]
+
+`EconomyFeature7/CityStatusFeature/Region/<Roman|Celtic|Egyptian>/CityStatusList` : le rang
+d'une ville est déterminé par sa **population totale**, et chaque rang applique des deltas
+d'attributs à **TOUTES** ses résidences (assets `CityStatus`, `AttributeEffects*`).
+**40 paliers** côté romain.
+
+| population ≥ | Bonheur | Santé | Incendie | Croyance | Connaissance | Prestige |
+|---|---|---|---|---|---|---|
+| 0 | — | — | — | — | — | — |
+| 500 | | | −1 | +1 | | |
+| 1 000 | −2 | | −2 | +2 | +1 | |
+| 3 000 | −6 | −4 | −4 | +4 | +3 | +2 |
+| 7 500 | −10 | −8 | −6 | +6 | +5 | +4 |
+| 20 000 | −13 | −10,4 | −6,6 | +9 | +8 | +7 |
+| 70 000 | −15,8 | −12,4 | −7,9 | +19 | +18 | +17 |
+| 260 000 | −18,2 | −14,7 | −9,8 | +30 | +29 | +28 |
+
+⚠ **Contrainte de fond ignorée jusqu'ici.** Les plans produits par l'optimiseur atteignent
+38 000 à 570 000 habitants : ils encaissent donc **−15 à −18 en Bonheur, −12 à −15 en Santé,
+−8 à −10 en Sécurité incendie** sur chaque maison, qu'il faut compenser par les services et
+les ateliers à effet positif (§2). Extrait dans `economy.generated.json → cityStatus`.
+Non encore appliqué par l'optimiseur.
+
 ## 3. Résidences & besoins
 
 - **[FICHIERS]** `UpgradeThreshold` par catégorie (somme des `SupplyWeight` des

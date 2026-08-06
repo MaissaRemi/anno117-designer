@@ -104,6 +104,12 @@ def main():
     fx_effects = {}      # GUID Effect -> {scope, buffs:[GUID]}
     fx_buffs = {}        # GUID BuildingBuff -> {attrs:{}, stackable}
     fx_owner = {}        # defId -> {fe:[GUID], template, radius, street}
+    # RANG DE CITE (CityStatus) : palier atteint selon la POPULATION TOTALE de l'ile. Chaque
+    # rang applique des deltas d'attributs a TOUTES les residences — malus croissants en
+    # Bonheur/Sante/Incendie, bonus en Croyance/Connaissance/Prestige. L'echelle vit dans
+    # EconomyFeature7/CityStatusFeature ; les effets, dans les assets CityStatus.
+    cs_effects = {}      # GUID CityStatus -> {attrs}
+    cs_ladder = {}       # region -> [{status, population}]
     tpl_ranges = load_template_effect_ranges()
 
     for _, el in ET.iterparse(ASSETS, events=("end",)):
@@ -123,6 +129,34 @@ def main():
                 "workforce": t(el, "./Values/PopulationLevel/ConnectedWorkforce"),
                 "factor": float(t(el, "./Values/PopulationLevel/PopulationToWorkforceFactor") or 0.5),
             }
+            el.clear(); continue
+
+        if tpl == "CityStatus":
+            attrs = {}
+            eff = vals.find("./CityStatus/AttributeEffectsRoman")
+            if eff is not None:
+                for c in eff:
+                    v = c.findtext("Value")
+                    if v:
+                        try:
+                            attrs[c.tag] = float(v)
+                        except ValueError:
+                            pass
+            cs_effects[guid] = attrs
+            el.clear(); continue
+
+        if tpl == "EconomyFeature":
+            feat = vals.find("./EconomyFeature7/CityStatusFeature/Region")
+            if feat is not None:
+                for reg in feat:
+                    steps = []
+                    for it in reg.findall("./CityStatusList/Item"):
+                        st = it.findtext("CityStatus")
+                        pop = it.findtext("./RequiredPopulation/Item/PopulationCount")
+                        if st:
+                            steps.append({"status": st, "population": int(pop) if pop else 0})
+                    if steps:
+                        cs_ladder[reg.tag] = steps
             el.clear(); continue
 
         if tpl == "Effect":
@@ -386,9 +420,18 @@ def main():
             "stackable": stackable,
         }
 
+    # echelle des rangs de cite, resolue : [{population, attrs}] par region, croissante
+    city_status = {}
+    for reg, steps in cs_ladder.items():
+        rows = [{"population": st["population"], "attrs": cs_effects.get(st["status"], {})}
+                for st in steps]
+        rows.sort(key=lambda r: r["population"])
+        city_status[reg] = rows
+
     out = {
         "tiers": tiers,
         "buildingEffects": building_effects,
+        "cityStatus": city_status,
         "producers": producers,
         "buildingProd": bprod,
         "buildingWorkforce": building_workforce,
