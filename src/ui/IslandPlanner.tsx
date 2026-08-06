@@ -28,12 +28,14 @@ const ATTR_FR: Record<string, string> = {
 // le palier le plus haut (l'ordre brut de `tiers` suit les GUID et tombait sur « Nobles »)
 const targetTiers = tiers.filter((t) => t.residenceId).sort((a, b) => b.capacityDefault - a.capacityDefault);
 
+type NeedMode = "auto" | "all";
+
 export function IslandPlanner({ onClose }: Props) {
   const applyOptimization = useStore((s) => s.applyOptimization);
 
   const [tierGuid, setTierGuid] = useState(targetTiers[0]?.guid ?? "");
   const [mode, setMode] = useState<"population" | "production">("population");
-  const [needMode, setNeedMode] = useState<"all" | "thresholds">("all");
+  const [needMode, setNeedMode] = useState<NeedMode>("auto");
   const [floor, setFloor] = useState(80);
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
@@ -135,11 +137,16 @@ export function IslandPlanner({ onClose }: Props) {
               </select>
             </div>
             <div className="field">
-              <span>Besoins</span>
-              <select value={needMode} onChange={(e) => setNeedMode(e.target.value as "all" | "thresholds")}>
-                <option value="all">Complets (max bonus/maison)</option>
-                <option value="thresholds">Seuils d'upgrade (min services → + de maisons)</option>
+              <span>Services</span>
+              <select value={needMode} onChange={(e) => setNeedMode(e.target.value as NeedMode)}>
+                <option value="auto">Recette optimisée (max d'habitants)</option>
+                <option value="all">Tous les services (max de bonus par maison)</option>
               </select>
+              <span className="muted" style={{ fontSize: 11 }}>
+                {needMode === "auto"
+                  ? "Essaie plusieurs jeux de services et garde celui qui loge le plus de monde. Une recette maigre héberge moins par maison, mais laisse la place à bien plus de maisons."
+                  : "Pose les 12 types de service du palier. Bonus maximal par maison, mais ils mangent ~⅓ de l'île."}
+              </span>
             </div>
             <label className="slider">
               <span style={{ color: "var(--muted)", fontSize: 12 }}>% maisons au tier</span>

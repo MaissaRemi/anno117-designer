@@ -3,9 +3,10 @@ import type { AqueductTile, BuildingDef, FieldTile, GridShape, Layout, PlacedBui
 import { economy, residentialChain, upkeepOf } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
 import { compileTierEvaluator } from "../economy/needsModel";
+import { candidateRecipes } from "./recipes";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
-import { planLattice } from "./planLattice";
-import { planPacked } from "./packPlan";
+import { planLattice, type LatticeResult } from "./planLattice";
+import { planPacked, type PackResult } from "./packPlan";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, needsWater, planWater, type WaterConsumerReport, type WaterPlanResult } from "./waterPlan";
 import { connectKontor, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
@@ -17,9 +18,19 @@ export interface IslandPlanRequest {
   mode?: "population" | "production";
   tierGuid: string; // tier-cible (ex Patriciens) — mode population
   coverageFloor?: number; // 0..1, défaut 1 (seuil pour le flag feasible)
-  /** "all" = tous les besoins (max bonus/maison) ; "thresholds" = sous-ensemble le
-   *  moins cher atteignant les seuils d'upgrade (moins de services → plus de maisons). */
-  needMode?: "all" | "thresholds";
+  /** Choix des services à poser :
+   *  - "auto" (défaut) : RECHERCHE DE RECETTE — on énumère les sous-ensembles minimaux
+   *    qui franchissent les seuils du palier, on présélectionne par taxe foncière, puis
+   *    on tranche en faisant tourner le vrai moteur sur chacun (cf. optimizer/recipes.ts).
+   *    Mesuré ×1,48 sur la population face à « tous les services ».
+   *  - "all" : tous les services du palier (max de bonus par maison, densité minimale).
+   *  - "thresholds" : ancien pré-choix par ratio entretien/poids — conservé pour
+   *    comparaison, mais il retient systématiquement les services les plus coûteux
+   *    en sol (Grammaticus, Marché, Taverne) et perd contre "auto". */
+  needMode?: "auto" | "all" | "thresholds";
+  /** Nombre de recettes évaluées avec le moteur réel en mode "auto" (défaut 8).
+   *  Chaque évaluation coûte 80 à 400 ms selon la taille de l'île. */
+  recipeCount?: number;
   /** Mode production : bien cible (GUID) + débit u/min. */
   productionGood?: string;
   productionRate?: number;
@@ -101,26 +112,40 @@ export function planIslandImport(
   onProgress?: (step: number, total: number) => void,
 ): IslandPlanResult {
   const floor = (req.coverageFloor ?? 1) * 100;
-  const needMode = req.needMode ?? "all";
+  const needMode = req.needMode ?? "auto";
   const lookup = makeLookup(req.catalog);
   const tier = economy.tiers.find((t) => t.guid === req.tierGuid);
   if (!tier || !tier.residenceId) {
     throw new Error("Tier-cible invalide ou sans résidence.");
   }
-  // profil de besoins retenus (mode seuils : sous-ensemble le moins cher atteignant
-  // les seuils d'upgrade) → capacité/maison + services à placer cohérents
-  const profile = buildTierProfile(req.tierGuid, { needSelection: needMode });
-  const cap = needMode === "thresholds" ? profile.cap : tier.capacityDefault || 10;
-  const retainedServices = [...new Set(profile.services.map((s) => s.building).filter((b): b is string => !!b))];
-
-  // en mode seuils, seuls les services RETENUS comptent pour la faisabilité/couverture-tier
   const chain = residentialChain(req.tierGuid);
-  const relevant = needMode === "thresholds" ? new Set(retainedServices) : null;
-  // Évaluateur des VRAIES règles (seuils de SupplyWeight par catégorie + capacité = Σ
-  // Population des besoins remplis). Les moteurs l'utilisent par maison ; ici il ne sert
-  // qu'au chemin de repli (démotion pour eau morte), qui raisonne par palier.
-  const evaluator = compileTierEvaluator(chain, { goodsMet: true, relevant: relevant ?? undefined });
   const residenceIds = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));
+
+  // --- RECETTES À ESSAYER ------------------------------------------------------------
+  // `undefined` = tous les services du palier. Chaque entrée sera placée pour de vrai puis
+  // évaluée ; c'est la population LIVRÉE qui tranche, pas une estimation. Un modèle
+  // analytique ne suffit pas : confronté au moteur, son classement ne corrèle qu'à 0,45,
+  // et le routage d'eau l'inverse (chaque citerne coûte 10 u, une conduite, un corridor).
+  const trials: (string[] | undefined)[] = [];
+  if (needMode === "auto") {
+    // budget adaptatif : une évaluation coûte ~0,1 s sur une île moyenne mais plusieurs
+    // secondes sur une continentale de 400 000 tuiles
+    let land = 0;
+    for (const u of req.grid.usable) if (u) land++;
+    const keep = req.recipeCount ?? (land > 200_000 ? 4 : land > 60_000 ? 6 : 8);
+    for (const r of candidateRecipes(chain, lookup, { keep })) trials.push(r.serviceIds);
+    // …et TOUJOURS la recette complète en dernier recours. Sur une grande île, la portée
+    // du Colisée (unique) plafonne mécaniquement la part de maisons au palier cible : le
+    // sol libéré par une recette maigre ne produit alors que des maisons de base, tandis
+    // que les services supplémentaires font monter la capacité du cœur desservi. Mesuré
+    // sur une île continentale (400 000 tuiles) : la recette complète l'emporte. C'est
+    // précisément pourquoi on tranche au moteur et pas au modèle.
+    trials.push(undefined);
+  } else if (needMode === "thresholds") {
+    const profile = buildTierProfile(req.tierGuid, { needSelection: "thresholds" });
+    trials.push([...new Set(profile.services.map((s) => s.building).filter((b): b is string => !!b))]);
+  }
+  if (!trials.length) trials.push(undefined); // "all", ou repli si l'énumération n'a rien donné
 
   // --- COMPTOIR (racine du réseau + entrée des imports) : réservé AVANT les moteurs ---
   // Aucun moteur n'en posait : le plan était formellement valide (sans racine,
@@ -131,21 +156,10 @@ export function planIslandImport(
   const kontorDef = pickKontorDef(req.catalog, islandRegion);
   const kontor = kontorDef ? reserveKontor(req.grid, kontorDef) : null;
 
-  // PORTFOLIO de moteurs (cf. session refonte placement) : lattice co-localisé
-  // (gagne sur tiers riches en services, 11 types T4) vs houses-first min-cover
-  // (gagne sur tiers à peu de types). On garde le meilleur résultat réel.
-  const engineOpts = {
-    coverageFloor: req.coverageFloor ?? 1,
-    serviceIds: needMode === "thresholds" ? retainedServices : undefined,
-  };
   // moteurs sur grille SANS les zones montagne (non constructibles en vrai, et la
   // source d'aqueduc en a besoin) ; l'eau est planifiée sur la grille d'origine
   const planGrid = blockMountains(kontor?.grid ?? req.grid);
-  onProgress?.(1, 3);
-  // lattice route l'eau EN COURS de placement (corridors avant les maisons)
-  const candA = planLattice(planGrid, req.tierGuid, lookup, { ...engineOpts, water: true, heights: req.heights });
-  onProgress?.(2, 3);
-  const candB = planPacked(planGrid, req.tierGuid, lookup, engineOpts);
+  const coverageFloor = req.coverageFloor ?? 1;
   const svcCount = (r: { servicesPlaced: Record<string, number> }) =>
     Object.values(r.servicesPlaced).reduce((a, b) => a + b, 0);
 
@@ -158,9 +172,11 @@ export function planIslandImport(
   // 2/40 consommateurs — contre 30/30 pour le lattice écarté. Critère de sélection ≠
   // métrique livrée. On route donc l'eau et on applique la démotion À CHAQUE candidat
   // AVANT de trancher.
-  type Cand = typeof candA | typeof candB;
+  type Cand = LatticeResult | PackResult;
   interface Evaluated {
     cand: Cand;
+    /** services que ce candidat était censé poser (undefined = tous ceux du palier) */
+    relevant: Set<string> | null;
     water: WaterPlanResult;
     buildings: PlacedBuilding[];
     tierCounts: Record<string, number>;
@@ -171,7 +187,10 @@ export function planIslandImport(
     /** part des consommateurs d'eau réellement raccordés (0..1 ; 1 si aucun) */
     waterPct: number;
   }
-  const evaluate = (cand: Cand): Evaluated => {
+  const evaluate = (cand: Cand, relevant: Set<string> | null): Evaluated => {
+    // évaluateur scopé à CE jeu de services : un service hors recette ne compte ni pour
+    // les seuils ni pour la capacité (utilisé ici seulement par le repli de démotion)
+    const evaluator = compileTierEvaluator(chain, { goodsMet: true, relevant: relevant ?? undefined });
     const water = cand.water ?? planWater(req.grid, cand.buildings, cand.roads, lookup, req.heights);
     const buildings = cand.water ? cand.buildings : [...cand.buildings, ...water.sources];
     // types de service dont AUCUN exemplaire n'est raccordé → inactifs en jeu
@@ -224,14 +243,11 @@ export function planIslandImport(
     const nCons = water.consumers.length;
     const nOk = water.consumers.filter((c) => c.connected).length;
     return {
-      cand, water, buildings, tierCounts, capByTier, deadTypes, houseMoney,
+      cand, relevant, water, buildings, tierCounts, capByTier, deadTypes, houseMoney,
       residents: Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0)),
       waterPct: nCons ? nOk / nCons : 1,
     };
   };
-  onProgress?.(3, 3);
-  const evA = evaluate(candA);
-  const evB = evaluate(candB);
   // Critère LEXICOGRAPHIQUE, faisabilité d'abord.
   //
   // 1) VIABILITÉ EAU. Un plan dont la majorité des consommateurs d'eau reste sèche n'est pas
@@ -252,18 +268,48 @@ export function planIslandImport(
     if (a.cand.houses !== b.cand.houses) return a.cand.houses > b.cand.houses;
     return svcCount(a.cand) <= svcCount(b.cand);
   };
-  const pick = better(evA, evB) ? evA : evB;
-  const dist = pick.cand;
-  const water = pick.water;
-  const deadTypes = pick.deadTypes;
+
+  // --- ÉVALUATION DE CHAQUE RECETTE PAR LE MOTEUR RÉEL --------------------------------
+  // C'est la population LIVRÉE qui décide. On garde aussi packPlan sur la première recette :
+  // il gagne parfois sur les paliers sans consommateur d'eau (où son houses-first paie).
+  const total = trials.length + 1;
+  let pick: Evaluated | null = null;
+  for (let i = 0; i < trials.length; i++) {
+    onProgress?.(i + 1, total);
+    const serviceIds = trials[i];
+    const relevant = serviceIds ? new Set(serviceIds) : null;
+    const lat = planLattice(planGrid, req.tierGuid, lookup, {
+      coverageFloor, serviceIds, water: true, heights: req.heights,
+    });
+    const ev = evaluate(lat, relevant);
+    if (!pick || better(ev, pick)) pick = ev;
+  }
+  onProgress?.(total, total);
+  {
+    const serviceIds = trials[0];
+    const relevant = serviceIds ? new Set(serviceIds) : null;
+    const packed = planPacked(planGrid, req.tierGuid, lookup, { coverageFloor, serviceIds });
+    const ev = evaluate(packed, relevant);
+    if (!pick || better(ev, pick)) pick = ev;
+  }
+  const chosen = pick!;
+  const relevant = chosen.relevant;
+  const dist = chosen.cand;
+  const water = chosen.water;
+  const deadTypes = chosen.deadTypes;
+  // capacité de référence d'une maison au palier cible SOUS LA RECETTE RETENUE : c'est ce
+  // que le panneau affiche, et ce n'est plus `capacityDefault` — une recette maigre héberge
+  // moins par maison mais bien plus de maisons.
+  const cap = compileTierEvaluator(chain, { goodsMet: true, relevant: relevant ?? undefined })
+    .reference(chain.length - 1).cap;
 
   // --- pose du comptoir + raccordement au réseau produit -----------------------------
-  const buildings = [...pick.buildings];
+  const buildings = [...chosen.buildings];
   const roads: RoadTile[] = [...dist.roads];
   const kontorGaps: string[] = [];
   let removedHouses = 0;
-  const tierCounts: Record<string, number> = { ...pick.tierCounts };
-  const capByTier: Record<string, number> = { ...pick.capByTier };
+  const tierCounts: Record<string, number> = { ...chosen.tierCounts };
+  const capByTier: Record<string, number> = { ...chosen.capByTier };
   if (kontor) {
     const kp = connectKontor(req.grid, kontor, buildings, roads, lookup, (id) => residenceIds.has(id));
     if (kp.connected) {
@@ -335,9 +381,12 @@ export function planIslandImport(
   const popTargets = chain
     .map((t) => ({ tier: t.guid, pop: (tierCounts[t.guid] || 0) * capacities[t.guid] }))
     .filter((p) => p.pop > 0);
+  // needSelection: "all" — la DEMANDE DE BIENS est toujours complète : sur une île d'import
+  // tous les biens sont acheminés (c'est l'hypothèse `goodsMet` du modèle de besoins). Ce
+  // que la recette restreint, ce sont les SERVICES, qui ne consomment rien.
   const sol = solve(
     popTargets.length ? popTargets : [{ tier: req.tierGuid, pop: 0 }],
-    { includeProduction: false, includeServices: true, includeWorkforce: false, optimizeNeeds: false, needSelection: needMode, capacities },
+    { includeProduction: false, includeServices: true, includeWorkforce: false, optimizeNeeds: false, needSelection: "all", capacities },
   );
   const importGoods: ImportGood[] = Object.entries(sol.goodsPerMin)
     .filter(([, v]) => v > 0)
