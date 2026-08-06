@@ -75,8 +75,8 @@ docker compose --profile dev up dev     # http://localhost:5173
 ```bash
 git clone https://github.com/MaissaRemi/anno117-designer.git
 cd anno117-designer
-npm install
-npm run dev          # http://localhost:5173
+pnpm install
+pnpm dev          # http://localhost:5173
 ```
 
 Requires **Node.js 18+**.
@@ -84,10 +84,10 @@ Requires **Node.js 18+**.
 ### Other commands
 
 ```bash
-npm run build        # type-check then production build into dist/
-npm test             # unit tests for the rule engine and the optimiser
-npm run lint
-npm run typecheck
+pnpm build        # type-check then production build into dist/
+pnpm test             # unit tests for the rule engine and the optimiser
+pnpm lint
+pnpm typecheck
 ```
 
 The same four steps run on every push and pull request through GitHub Actions — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
