@@ -14,6 +14,14 @@ const chain = residentialChain(t4.guid);
 describe("candidateRecipes", () => {
   const recipes = candidateRecipes(chain, lookup, { keep: 12 });
 
+  it("les variantes de repli ajoutent le filet du palier inférieur", () => {
+    const fb = recipes.filter((r) => r.fallback);
+    expect(fb.length).toBeGreaterThan(0);
+    // strictement plus riches que la recette dont elles dérivent, mais toujours plus
+    // maigres que « tous les services »
+    for (const r of fb) expect(r.serviceIds.length).toBeGreaterThan(recipes[0].serviceIds.length);
+  });
+
   it("produit des recettes STRICTEMENT plus maigres que « tous les services »", () => {
     expect(recipes.length).toBeGreaterThan(0);
     const allServices = t4.services.filter((s) => s.building).length;
@@ -32,8 +40,8 @@ describe("candidateRecipes", () => {
     }
   });
 
-  it("chaque recette est MINIMALE : retirer un service fait perdre le palier", () => {
-    for (const r of recipes) {
+  it("chaque recette MINIMALE l'est vraiment : retirer un service fait perdre le palier", () => {
+    for (const r of recipes.filter((x) => !x.fallback)) {
       for (const drop of r.serviceIds) {
         const rest = r.serviceIds.filter((id) => id !== drop);
         const ev = compileTierEvaluator(chain, { goodsMet: true, relevant: new Set(rest) });

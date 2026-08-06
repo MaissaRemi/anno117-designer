@@ -73,6 +73,19 @@ describe("planIslandImport (mode import)", () => {
     expect(typeof r.coverageMin).toBe("number");
   });
 
+  it("borne basse de non-régression sur l'île de référence", () => {
+    // Golden numérique : la population livrée sur celtic_island_large_07 en mode auto.
+    // Historique mesuré : 30 092 (audit) → 43 315 (seuils pondérés) → 65 404 (recette) →
+    // 67 862 (filet de repli + raffinage + ancrage eau de l'Amphithéâtre).
+    // À RELEVER après chaque gain mesuré — c'est ce qui empêche une régression silencieuse.
+    const grid = downscaleGrid(buildIslandGrid("celtic_island_large_07")!);
+    const t4 = [...economy.tiers].filter((t) => t.residenceId)
+      .sort((a, b) => b.capacityDefault - a.capacityDefault)[0]!;
+    const r = planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8 });
+    expect(r.residents).toBeGreaterThan(60_000);
+    expect(r.feasible).toBe(true);
+  }, 60_000);
+
   it("les DEUX modes de besoins atteignent le palier cible sur une île réelle", () => {
     // Régression 2026-08 : le palier était décidé par un ET booléen sur TOUS les services du
     // tier. En mode « seuils », qui écarte volontairement certains services, le masque devenait

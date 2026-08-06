@@ -4,7 +4,7 @@ import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from
 import { economy, residentialChain } from "../economy/economy";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
-import { needsWater, planWater, type WaterPlanResult } from "./waterPlan";
+import { MAX_RUN, needsWater, planWater, type WaterPlanResult } from "./waterPlan";
 import { makeStreetGrid } from "./streetGrid";
 
 // Portée de PLANIFICATION = streetRange (distance le long des rues, cf.
@@ -292,15 +292,32 @@ export function planLattice(
     }
   };
 
+  // slots montagne = emplacements possibles des sources d'aqueduc (cf. waterPlan)
+  const mountainSlots = (grid.slots ?? []).filter((s) => s.type === "mountain");
   const SMALL_RANGE_MAX = 40; // gros (Théâtre/Biblio/Bains/Temple/Forum/MJeu) vs petits
   const placeLattice = (d: BuildingDef) => {
     const r = effR(d);
     // candidats : grille FINE (r/2) + centroïde en tête. Le lazy-greedy borné ci-dessous
     // est un min-set-cover approché par type (converge vers le quinconce ~aire/2r²).
     const cstep = Math.max(4, Math.floor(r / 2));
-    const anchors: { x: number; y: number }[] = [{ x: gx, y: gy }];
+    let anchors: { x: number; y: number }[] = [{ x: gx, y: gy }];
     for (let ly = y0; ly <= y1; ly += cstep) {
       for (let lx = x0; lx <= x1; lx += cstep) anchors.push({ x: lx, y: ly });
+    }
+    // ANCRAGE EAU d'un bâtiment UNIQUE et consommateur (l'Amphithéâtre : 1 exemplaire,
+    // 50 u obligatoires). Il n'a qu'une chance d'être bien posé : s'il atterrit loin de tout
+    // slot montagne, aucune conduite ne peut l'atteindre (MAX_RUN), il reste SEC donc
+    // INACTIF, et comme il pèse 8 des 12 points Wonders, TOUT le palier cible s'effondre —
+    // mesuré sur 6 îles sur 55, où le plan retombait entièrement au palier inférieur.
+    // On restreint donc ses ancres au voisinage des sources possibles, en desserrant par
+    // paliers, et on retombe sur les ancres libres si rien ne tient (best-effort).
+    if (d.unique && needsWater(d) && mountainSlots.length) {
+      for (const frac of [0.5, 0.75, 1]) {
+        const lim = frac * MAX_RUN;
+        const near = anchors.filter((a) => mountainSlots.some(
+          (s) => Math.max(Math.abs(s.x - a.x), Math.abs(s.y - a.y)) <= lim));
+        if (near.length) { anchors = near; break; }
+      }
     }
     const distMap = new Int32Array(N).fill(N);
     // minGain plafonné à 30 % de la terre : un type à portée >= taille d'île (Colisée

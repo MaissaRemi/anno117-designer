@@ -45,6 +45,8 @@ export interface Recipe {
   cap: number;
   /** Population estimée — sert UNIQUEMENT au pré-tri, jamais à la décision. */
   estimate: number;
+  /** Variante AUGMENTÉE d'un filet de repli : volontairement non minimale. */
+  fallback?: boolean;
 }
 
 /**
@@ -87,8 +89,34 @@ function minimalSubsets(items: { id: string; weight: number }[], target: number)
 export interface RecipeOptions {
   /** Nombre de recettes conservées après pré-tri par estimation. Défaut 8. */
   keep?: number;
-  /** Fraction d'île supposée en voirie (pour l'estimation seulement). Défaut 0,22. */
+  /** Fraction d'île supposée en voirie (pour l'estimation seulement). Défaut 0,20. */
   roadShare?: number;
+  /** Nombre de recettes AUGMENTÉES d'un filet de repli (cf. `fallbackAugment`). Défaut 2. */
+  keepFallback?: number;
+}
+
+/** Sous-ensembles minimaux d'UN palier, sans tri ni scoring. */
+function minimalRecipesFor(tier: Tier, lookup: DefLookup): string[][] {
+  const byCat = new Map<string, { id: string; weight: number }[]>();
+  for (const s of tier.services) {
+    if (!s.building) continue;
+    const d = lookup(s.building);
+    if (!d || !(d.streetRange || d.radius?.range)) continue;
+    const arr = byCat.get(s.category) ?? [];
+    arr.push({ id: s.building, weight: s.weight || 0 });
+    byCat.set(s.category, arr);
+  }
+  let combos: string[][] = [[]];
+  for (const [cat, items] of byCat) {
+    const threshold = tier.upgradeThresholds?.[cat] ?? 0;
+    const subsets = minimalSubsets(items, threshold);
+    const usable = subsets.length ? subsets : [items.map((i) => i.id)];
+    const next: string[][] = [];
+    for (const base of combos) for (const s of usable) next.push([...base, ...s]);
+    combos = next;
+    if (combos.length > 4096) break;
+  }
+  return combos;
 }
 
 /**
@@ -104,41 +132,25 @@ export function candidateRecipes(
   opts: RecipeOptions = {},
 ): Recipe[] {
   const keep = Math.max(1, opts.keep ?? 8);
-  const roadShare = opts.roadShare ?? 0.22;
+  const keepFallback = Math.max(0, opts.keepFallback ?? 2);
+  const roadShare = opts.roadShare ?? 0.20;
   const target = chain[chain.length - 1];
   if (!target) return [];
 
-  // services du palier cible, groupés par catégorie, avec leur poids
-  const byCat = new Map<string, { id: string; weight: number }[]>();
   const defOf = new Map<string, BuildingDef>();
-  for (const s of target.services) {
-    if (!s.building) continue;
-    const d = lookup(s.building);
-    if (!d || !(d.streetRange || d.radius?.range)) continue;
-    defOf.set(s.building, d);
-    const arr = byCat.get(s.category) ?? [];
-    arr.push({ id: s.building, weight: s.weight || 0 });
-    byCat.set(s.category, arr);
+  for (const t of chain) {
+    for (const s of t.services) {
+      if (!s.building || defOf.has(s.building)) continue;
+      const d = lookup(s.building);
+      if (d && (d.streetRange || d.radius?.range)) defOf.set(s.building, d);
+    }
   }
-  const allIds = [...defOf.keys()];
-  if (!allIds.length) return [];
+  if (!defOf.size) return [];
 
-  // produit cartésien des sous-ensembles minimaux, catégorie par catégorie
-  let combos: string[][] = [[]];
-  for (const [cat, items] of byCat) {
-    const threshold = target.upgradeThresholds?.[cat] ?? 0;
-    const subsets = minimalSubsets(items, threshold);
-    const usable = subsets.length ? subsets : [items.map((i) => i.id)]; // seuil hors d'atteinte
-    const next: string[][] = [];
-    for (const base of combos) for (const s of usable) next.push([...base, ...s]);
-    combos = next;
-    if (combos.length > 4096) break; // borne dure, on garde ce qui est déjà énuméré
-  }
-  if (!combos.length) combos = [allIds];
-
+  const combos = minimalRecipesFor(target, lookup);
   const ev = compileTierEvaluator(chain, { goodsMet: true });
-  const scored = combos.map((ids): Recipe => {
-    const tax = ids.reduce((s, id) => s + landTax(defOf.get(id)!), 0);
+  const score = (ids: string[]): Recipe => {
+    const tax = ids.reduce((s, id) => s + (defOf.has(id) ? landTax(defOf.get(id)!) : 0), 0);
     let mask = 0;
     for (const id of ids) {
       const b = ev.bitOf.get(id);
@@ -148,24 +160,51 @@ export function candidateRecipes(
     // estimation : le sol restant après voirie et services, divisé par l'emprise d'une
     // résidence, fois la capacité. Grossier — c'est un PRÉ-TRI, le moteur tranche.
     const free = Math.max(0, 1 - roadShare - tax);
-    return { serviceIds: ids, landTax: tax, cap, estimate: (free / 9) * cap };
-  });
+    return { serviceIds: [...ids].sort(), landTax: tax, cap, estimate: (free / 9) * cap };
+  };
 
+  const scored = (combos.length ? combos : [[...defOf.keys()]]).map(score);
   // tri déterministe : estimation décroissante, puis taxe croissante, puis clé stable
   scored.sort((a, b) =>
     b.estimate - a.estimate || a.landTax - b.landTax
     || a.serviceIds.join(",").localeCompare(b.serviceIds.join(",")));
 
-  // dédoublonnage (deux catégories peuvent proposer le même sous-ensemble via un service
-  // partagé) puis troncature
   const seen = new Set<string>();
   const out: Recipe[] = [];
-  for (const r of scored) {
-    const key = [...r.serviceIds].sort().join(",");
-    if (seen.has(key)) continue;
+  const push = (r: Recipe): boolean => {
+    const key = r.serviceIds.join(",");
+    if (seen.has(key)) return false;
     seen.add(key);
-    out.push({ ...r, serviceIds: [...r.serviceIds].sort() });
+    out.push(r);
+    return true;
+  };
+  for (const r of scored) {
     if (out.length >= keep) break;
+    push(r);
+  }
+
+  // --- FILET DE REPLI ---------------------------------------------------------------
+  // Le piège que masque une recette maigre : les paliers INTERMÉDIAIRES ont leur propre
+  // liste de services. Temple, Bibliothèque et Amphithéâtre n'appartiennent qu'à celle des
+  // Patriciens — une maison hors de leur portée ne retombe donc pas chez les Equites
+  // (capacité ~24) mais tout en bas de la chaîne (capacité 4). Mesuré : 672 maisons
+  // « ratées » ne pesaient que 2 688 habitants au lieu de ~16 000.
+  //
+  // On ajoute donc des variantes AUGMENTÉES du filet minimal de l'avant-dernier palier :
+  // quelques bâtiments de plus, mais toute maison hors du cœur atteint alors le palier
+  // intermédiaire. Mesuré : +61 % sur une île continentale, +13 % sur une très grande.
+  // Ces variantes sont poussées de force, jamais triées : l'estimation ne voit pas ce gain
+  // (elle raisonne sur la capacité du palier cible, pas sur celle des maisons ratées).
+  const fallbackTier = chain[chain.length - 2];
+  if (keepFallback > 0 && fallbackTier) {
+    const nets = minimalRecipesFor(fallbackTier, lookup).map(score)
+      .sort((a, b) => a.landTax - b.landTax || a.serviceIds.join(",").localeCompare(b.serviceIds.join(",")));
+    const net = nets[0];
+    if (net) {
+      for (const base of out.slice(0, keepFallback)) {
+        push({ ...score([...new Set([...base.serviceIds, ...net.serviceIds])]), fallback: true });
+      }
+    }
   }
   return out;
 }

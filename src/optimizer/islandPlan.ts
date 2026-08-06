@@ -111,7 +111,6 @@ export function planIslandImport(
   req: IslandPlanRequest,
   onProgress?: (step: number, total: number) => void,
 ): IslandPlanResult {
-  const floor = (req.coverageFloor ?? 1) * 100;
   const needMode = req.needMode ?? "auto";
   const lookup = makeLookup(req.catalog);
   const tier = economy.tiers.find((t) => t.guid === req.tierGuid);
@@ -126,21 +125,21 @@ export function planIslandImport(
   // évaluée ; c'est la population LIVRÉE qui tranche, pas une estimation. Un modèle
   // analytique ne suffit pas : confronté au moteur, son classement ne corrèle qu'à 0,45,
   // et le routage d'eau l'inverse (chaque citerne coûte 10 u, une conduite, un corridor).
+  let landTiles = 0;
+  for (const u of req.grid.usable) if (u) landTiles++;
   const trials: (string[] | undefined)[] = [];
   if (needMode === "auto") {
     // budget adaptatif : une évaluation coûte ~0,1 s sur une île moyenne mais plusieurs
     // secondes sur une continentale de 400 000 tuiles
-    let land = 0;
-    for (const u of req.grid.usable) if (u) land++;
-    const keep = req.recipeCount ?? (land > 200_000 ? 4 : land > 60_000 ? 6 : 8);
+    const land = landTiles;
+    const keep = req.recipeCount ?? (land > 200_000 ? 2 : land > 60_000 ? 5 : 7);
     for (const r of candidateRecipes(chain, lookup, { keep })) trials.push(r.serviceIds);
-    // …et TOUJOURS la recette complète en dernier recours. Sur une grande île, la portée
-    // du Colisée (unique) plafonne mécaniquement la part de maisons au palier cible : le
-    // sol libéré par une recette maigre ne produit alors que des maisons de base, tandis
-    // que les services supplémentaires font monter la capacité du cœur desservi. Mesuré
-    // sur une île continentale (400 000 tuiles) : la recette complète l'emporte. C'est
-    // précisément pourquoi on tranche au moteur et pas au modèle.
-    trials.push(undefined);
+    // La recette COMPLÈTE en dernier recours — mais seulement tant qu'elle est abordable.
+    // Elle pose 5 à 7 fois plus de copies, donc coûte 5 à 7 fois le temps d'un plan maigre
+    // (5,5 s à elle seule sur une île continentale). Au-delà de 200 000 tuiles elle est de
+    // toute façon battue par les recettes à filet de repli (437 287 contre 546 147 mesurés),
+    // parce que la portée du Colisée y plafonne la part de maisons au palier cible.
+    if (land <= 200_000) trials.push(undefined);
   } else if (needMode === "thresholds") {
     const profile = buildTierProfile(req.tierGuid, { needSelection: "thresholds" });
     trials.push([...new Set(profile.services.map((s) => s.building).filter((b): b is string => !!b))]);
@@ -258,7 +257,14 @@ export function planIslandImport(
   //    plus de corridor libre ; seul un moteur eau-aware peut être viable sur un tier à eau.
   // 2) Puis la population mixte, à 2 % près (en deçà c'est du bruit).
   // 3) Puis le taux de raccordement, la densité, et le moins de services (anti-confetti).
-  const WATER_VIABLE = 0.5;
+  //
+  // Le plancher est volontairement TRÈS BAS. Un raccordement partiel est déjà pénalisé une
+  // première fois par la démotion (`deadTypes`) ; en faire aussi un filtre à 50 % revenait à
+  // une double peine, qui coûtait ~100 000 habitants sur une île continentale (un plan à
+  // 437 000 habitants et 39 % de raccordement était rejeté au profit d'un plan à 339 000).
+  // Ce qu'il faut éliminer, c'est le plan structurellement injouable — typiquement packPlan,
+  // qui pose toutes ses maisons avant de router l'eau et ne laisse plus aucun corridor.
+  const WATER_VIABLE = 0.15;
   const viable = (e: Evaluated): boolean => e.waterPct >= WATER_VIABLE;
   const better = (a: Evaluated, b: Evaluated): boolean => {
     if (viable(a) !== viable(b)) return viable(a);
@@ -272,24 +278,39 @@ export function planIslandImport(
   // --- ÉVALUATION DE CHAQUE RECETTE PAR LE MOTEUR RÉEL --------------------------------
   // C'est la population LIVRÉE qui décide. On garde aussi packPlan sur la première recette :
   // il gagne parfois sur les paliers sans consommateur d'eau (où son houses-first paie).
-  const total = trials.length + 1;
+  // seuils de densification à balayer sur la recette GAGNANTE (cf. plus bas) : au-delà de
+  // 0,9 le moteur sur-densifie (services 10,8 % → 19,4 % du sol) et la population baisse.
+  const REFINE_FLOOR = 0.9;
+  const total = trials.length + 2;
   let pick: Evaluated | null = null;
+  const runLattice = (serviceIds: string[] | undefined, floor: number): Evaluated =>
+    evaluate(
+      planLattice(planGrid, req.tierGuid, lookup, { coverageFloor: floor, serviceIds, water: true, heights: req.heights }),
+      serviceIds ? new Set(serviceIds) : null,
+    );
+  let bestTrial: string[] | undefined;
   for (let i = 0; i < trials.length; i++) {
     onProgress?.(i + 1, total);
-    const serviceIds = trials[i];
-    const relevant = serviceIds ? new Set(serviceIds) : null;
-    const lat = planLattice(planGrid, req.tierGuid, lookup, {
-      coverageFloor, serviceIds, water: true, heights: req.heights,
-    });
-    const ev = evaluate(lat, relevant);
+    const ev = runLattice(trials[i], coverageFloor);
+    if (!pick || better(ev, pick)) { pick = ev; bestTrial = trials[i]; }
+  }
+  // RAFFINAGE : la recette gagnante rejouée à un seuil de densification plus exigeant.
+  // Mesuré +4,0 % (65 357 → 67 940 habitants) — le moteur pose une ou deux copies de plus
+  // là où la couverture était juste, et récupère des maisons entières au palier cible.
+  if (Math.abs(coverageFloor - REFINE_FLOOR) > 1e-6) {
+    onProgress?.(trials.length + 1, total);
+    const ev = runLattice(bestTrial, REFINE_FLOOR);
     if (!pick || better(ev, pick)) pick = ev;
   }
+  // packPlan sur la meilleure recette : il ne gagne jamais sur un palier à eau (il pose ses
+  // maisons avant de router), mais il reste pertinent sur les paliers qui n'en consomment
+  // pas. Sur les très grandes îles il coûte un plan complet pour un résultat toujours
+  // perdant (mesuré −0,7 % et −1,7 %) : on s'en passe.
   onProgress?.(total, total);
-  {
-    const serviceIds = trials[0];
-    const relevant = serviceIds ? new Set(serviceIds) : null;
+  if (landTiles <= 200_000) {
+    const serviceIds = bestTrial;
     const packed = planPacked(planGrid, req.tierGuid, lookup, { coverageFloor, serviceIds });
-    const ev = evaluate(packed, relevant);
+    const ev = evaluate(packed, serviceIds ? new Set(serviceIds) : null);
     if (!pick || better(ev, pick)) pick = ev;
   }
   const chosen = pick!;
@@ -454,8 +475,11 @@ export function planIslandImport(
     money,
     attributes,
     gaps: [...new Set(gaps)],
-    // faisable = au moins une maison ET fraction au tier-cible ≥ seuil (l'eau morte
-    // démote désormais les maisons au lieu d'annuler la population)
-    feasible: houses > 0 && fullyCoveredPct >= floor,
+    // FAISABLE = le plan tient debout en jeu : des maisons, des habitants, et un réseau
+    // d'eau qui n'est pas mort. Le critère précédent (`fullyCoveredPct ≥ curseur`) déclarait
+    // « best-effort » les MEILLEURS plans mesurés : une recette maigre loge bien plus de
+    // monde tout en laissant une part plus grande de maisons sous le palier cible. Le
+    // curseur reste un objectif affiché, pas un verdict.
+    feasible: houses > 0 && residents > 0 && chosen.waterPct >= WATER_VIABLE,
   };
 }
