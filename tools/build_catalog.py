@@ -153,6 +153,7 @@ def parse_products(root_iter_path):
 
 def collect_buildings(texts, template_effects):
     buildings = []
+    derived = []        # assets sans Template, resolus apres le parcours
     product_oasis = {}  # guid -> oasisId
     print("Parcours assets.xml...", file=sys.stderr)
     for _, el in ET.iterparse(ASSETS, events=("end",)):
@@ -164,6 +165,25 @@ def collect_buildings(texts, template_effects):
             product_oasis[guid] = text_of(el, "./Values/Text/OasisId")
             el.clear()
             continue
+        # HERITAGE D'ASSET : un asset sans <Template> mais avec <BaseAssetGUID> herite de son
+        # parent et ne redeclare que ses differences. Les trois comptoirs d'Albion
+        # (7037/7038/7039) sont exactement dans ce cas. Filtrer sur <Template> les faisait
+        # disparaitre du catalogue : `pickKontorDef` posait alors un comptoir ROMAIN sur les
+        # iles celtiques, faute d'en trouver un autre.
+        if tpl is None and el.findtext("BaseAssetGUID"):
+            g = text_of(el, "./Values/Standard/GUID")
+            if g:
+                derived.append({
+                    "guid": g,
+                    "base": el.findtext("BaseAssetGUID"),
+                    "nameInternal": text_of(el, "./Values/Standard/Name"),
+                    "oasis": text_of(el, "./Values/Text/OasisId"),
+                    "region": text_of(el, "./Values/Building/AssociatedRegions"),
+                    "icon": text_of(el, "./Values/Standard/IconFilename"),
+                })
+            el.clear()
+            continue
+
         if tpl not in TEMPLATE_CATEGORY:
             el.clear()
             continue
@@ -269,7 +289,30 @@ def collect_buildings(texts, template_effects):
             "slotType": slot_type,
         })
         el.clear()
-    print(f"  {len(buildings)} batiments, {len(product_oasis)} produits", file=sys.stderr)
+    # Resolution de l'heritage : on clone l'entree du parent et on n'ecrase que ce que
+    # l'asset derive redeclare. Le parent peut lui-meme etre derive, d'ou la boucle.
+    by_guid = {b["guid"]: b for b in buildings}
+    for _ in range(4):
+        added = 0
+        for d in derived:
+            if d["guid"] in by_guid:
+                continue
+            parent = by_guid.get(d["base"])
+            if not parent:
+                continue
+            row = dict(parent)
+            row["guid"] = d["guid"]
+            for k in ("nameInternal", "oasis", "region", "icon"):
+                if d.get(k):
+                    row[k] = d[k]
+            row["nameFr"] = texts.get(row["oasis"]) if row.get("oasis") else None
+            buildings.append(row)
+            by_guid[row["guid"]] = row
+            added += 1
+        if not added:
+            break
+    print(f"  {len(buildings)} batiments ({len(by_guid) - len(buildings) + sum(1 for d in derived if d['guid'] in by_guid)} herites), "
+          f"{len(product_oasis)} produits", file=sys.stderr)
     return buildings, product_oasis
 
 

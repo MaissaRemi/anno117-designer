@@ -78,6 +78,20 @@ export interface TierEvaluator {
    * jamais y ajouter `buildingEffects` pour ces bâtiments (cf. economy/attributes.ts).
    */
   attrsOf(mask: number): Readonly<Record<string, number>>;
+  /**
+   * Maison PLAFONNÉE au palier `index` — le cœur de la cascade de main-d'œuvre.
+   *
+   * `evaluate` renvoie le MEILLEUR palier qu'un masque autorise ; ici on demande ce que
+   * vaudrait la même maison laissée volontairement à un palier inférieur (ou d'une lignée
+   * parallèle). C'est un état de jeu parfaitement légal : la montée de palier est un acte
+   * MANUEL du joueur (`Upgradable/PossibleUpgrades`), pas un automatisme.
+   *
+   * `null` si le masque ne franchit pas les seuils de ce palier. Le palier de base fait
+   * exception : il est toujours atteignable.
+   */
+  evaluateAt(index: number, mask: number): TierReach | null;
+  /** Attributs de cette même maison plafonnée. */
+  attrsAt(index: number, mask: number): Readonly<Record<string, number>>;
 }
 
 interface CompiledTier {
@@ -186,10 +200,19 @@ export function compileTierEvaluator(chain: Tier[], opts: EvaluatorOptions = {})
     return base();
   };
 
+  /** Comme `compute`, mais pour UN palier imposé. `null` = seuils non franchis. */
+  const computeAt = (k: number, mask: number): TierReach | null => {
+    const ct = compiled[k];
+    const gate = THRESHOLD_MEANS_REACH ? ct : compiled[Math.max(0, k - 1)];
+    const g = evalTier(gate, mask);
+    if (!g.ok) return k === 0 ? base() : null; // le palier de base ne se refuse pas
+    const r = THRESHOLD_MEANS_REACH ? g : evalTier(ct, mask);
+    return { tier: ct.tier, index: k, cap: Math.max(1, Math.round(r.cap)), money: r.money };
+  };
+
   // attributs complets pour un masque, au palier atteint
-  const computeAttrs = (mask: number): Record<string, number> => {
-    const reach = evaluateMask(mask);
-    const t = reach.tier;
+  const computeAttrs = (mask: number, forced?: number): Record<string, number> => {
+    const t = forced !== undefined ? chain[forced] : evaluateMask(mask).tier;
     const acc: Record<string, number> = {};
     const add = (from: Record<string, number> | undefined) => {
       if (!from) return;
@@ -207,9 +230,16 @@ export function compileTierEvaluator(chain: Tier[], opts: EvaluatorOptions = {})
   const nBits = serviceIds.length;
   let cache: (TierReach | undefined)[] | null = null;
   let attrCache: (Record<string, number> | undefined)[] | null = null;
+  // ⚠ Les caches PLAFONNÉS sont indexés [palier][masque], jamais par le seul masque : deux
+  // maisons au même masque mais plafonnées différemment n'ont ni la même capacité ni les
+  // mêmes attributs. Partager le cache ferait silencieusement mentir toute la cascade.
+  let capCache: ((TierReach | null | undefined)[] | undefined)[] | null = null;
+  let capAttrCache: ((Record<string, number> | undefined)[] | undefined)[] | null = null;
   if (nBits <= MAX_CACHED_BITS) {
     cache = new Array<TierReach | undefined>(1 << nBits);
     attrCache = new Array<Record<string, number> | undefined>(1 << nBits);
+    capCache = new Array(chain.length);
+    capAttrCache = new Array(chain.length);
   }
 
   const evaluateMask = (mask: number): TierReach => {
@@ -229,6 +259,19 @@ export function compileTierEvaluator(chain: Tier[], opts: EvaluatorOptions = {})
       const hit = attrCache[mask];
       if (hit) return hit;
       return (attrCache[mask] = computeAttrs(mask));
+    },
+    evaluateAt(index: number, mask: number): TierReach | null {
+      const k = Math.max(0, Math.min(chain.length - 1, index));
+      if (!capCache) return computeAt(k, mask);
+      const row = (capCache[k] ??= new Array(1 << nBits));
+      const hit = row[mask];
+      return hit !== undefined ? hit : (row[mask] = computeAt(k, mask));
+    },
+    attrsAt(index: number, mask: number): Readonly<Record<string, number>> {
+      const k = Math.max(0, Math.min(chain.length - 1, index));
+      if (!capAttrCache) return computeAttrs(mask, k);
+      const row = (capAttrCache[k] ??= new Array(1 << nBits));
+      return (row[mask] ??= computeAttrs(mask, k));
     },
     reference(index: number): TierReach {
       const k = Math.max(0, Math.min(chain.length - 1, index));

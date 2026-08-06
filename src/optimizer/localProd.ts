@@ -1,6 +1,6 @@
 import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
-import { economy, effectOf, goodName, pickProducer } from "../economy/economy";
+import { economy, effectOf, goodName, pickProducerInWorld } from "../economy/economy";
 import { VITAL_ATTRS } from "../economy/attributes";
 import type { DefLookup } from "../engine/rules";
 import type { BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
@@ -164,7 +164,11 @@ export function planLocalProduction(
   const wanted = [...demand].sort((a, b) => b.perMin - a.perMin || a.good.localeCompare(b.good));
   for (const d of wanted) {
     if (out.buildings.length >= maxBuildings) break;
-    const defId = pickProducer(d.good, opts.region);
+    // `pickProducerInWorld`, pas `pickProducer` : ce dernier RETOMBE sur l'autre monde
+    // quand la région ne produit pas le bien. On posait ainsi 12 ateliers romains sur une
+    // île celtique — non constructibles en jeu, et réclamant une main-d'œuvre plébéienne
+    // qu'Albion ne peut pas fournir. Le bien reste simplement au manifeste d'import.
+    const defId = opts.region ? pickProducerInWorld(d.good, opts.region) : undefined;
     if (!defId) continue;
     const def = lookup(defId);
     if (!def || def.slotType) continue; // les productions à emplacement passent par slotPlan

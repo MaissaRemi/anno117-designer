@@ -95,6 +95,12 @@ interface EconomyData {
   producers: Record<string, string[]>; // goodGuid -> [defId]
   buildingProd: Record<string, BProd>;
   buildingWorkforce: Record<string, { tier: string; amount: number }[]>;
+  /**
+   * defId → bien de main-d'œuvre → quantités OFFERTES par difficulté, plus le prélèvement
+   * propre du bâtiment (`cost`). Seuls les comptoirs en portent : c'est la main-d'œuvre
+   * disponible sur une île avant la moindre maison.
+   */
+  workforceGrants: Record<string, Record<string, { plenty?: number; medium?: number; spare?: number; cost?: number }>>;
   buildingUpkeep: Record<string, number>; // defId -> entretien argent/min
   goodNames: Record<string, string>;
   goodPrices: Record<string, number>; // GUID -> BasePrice (valeur marchande de réf.)
@@ -212,4 +218,23 @@ export function pickProducer(good: string, region?: string): string | undefined 
     if (common) return common;
   }
   return list[0];
+}
+
+/**
+ * Producteur CONSTRUCTIBLE dans un monde donné, ou `undefined`. Contrairement à
+ * `pickProducer`, ne retombe JAMAIS sur l'autre monde.
+ *
+ * Le repli de `pickProducer` est acceptable pour estimer un entretien, mais pas pour POSER
+ * un bâtiment : mesuré avant correction, il plaçait 12 ateliers romains sur une île celtique
+ * (savonnerie g3189, tissage g3191, pressoir à olives g4831) et 6 ateliers celtiques sur une
+ * île romaine. En jeu ces bâtiments ne sont pas constructibles là — et ils réclamaient
+ * 32 Plébéiens et 24 Equites d'une main-d'œuvre qu'Albion ne peut pas fournir.
+ */
+export function pickProducerInWorld(good: string, world: string): string | undefined {
+  const list = economy.producers[good];
+  if (!list || !list.length) return undefined;
+  return list.find((d) => {
+    const r = regionOf(d);
+    return !r || worldOf(r) === world;
+  });
 }
