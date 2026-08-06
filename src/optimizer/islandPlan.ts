@@ -10,6 +10,7 @@ import { planPacked, type PackResult } from "./packPlan";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, needsWater, planWater, type WaterConsumerReport, type WaterPlanResult } from "./waterPlan";
 import { connectKontor, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
+import { planSlots, type ExploitedSlot } from "./slotPlan";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -31,6 +32,10 @@ export interface IslandPlanRequest {
   /** Nombre de recettes évaluées avec le moteur réel en mode "auto" (défaut 8).
    *  Chaque évaluation coûte 80 à 400 ms selon la taille de l'île. */
   recipeCount?: number;
+  /** Exploiter les emplacements de terrain (montagne, rivière, marais) que le réseau
+   *  d'eau n'a PAS consommés : mines, carrières, argile… plus les entrepôts nécessaires
+   *  pour que leur production sorte. L'eau reste prioritaire. Défaut false. */
+  exploitSlots?: boolean;
   /** Mode production : bien cible (GUID) + débit u/min. */
   productionGood?: string;
   productionRate?: number;
@@ -70,6 +75,8 @@ export interface IslandPlanResult {
     consumers: WaterConsumerReport[];
   } | null; // null = aucun consommateur d'eau dans le plan
   importGoods: ImportGood[];
+  /** Emplacements de terrain exploités (option `exploitSlots`) — vide si l'option est off. */
+  exploited: ExploitedSlot[];
   coverage: CoverageReport;
   coverageMin: number; // min % parmi les services à rayon (métrique de faisabilité)
   money: { gross: number; upkeep: number; net: number };
@@ -361,6 +368,41 @@ export function planIslandImport(
     kontorGaps.push("Aucun comptoir posable : pas de littoral exploitable → réseau routier sans racine");
   }
 
+  // --- EXPLOITATION DES EMPLACEMENTS LIBRES (option) ---------------------------------
+  // Appelée APRÈS le routage d'eau : les sources ont déjà pris les slots montagne dont
+  // elles avaient besoin, ce module ne voit que le complément. Il pose aussi les entrepôts
+  // sans lesquels la production ne sortirait pas.
+  let exploited: ExploitedSlot[] = [];
+  if (req.exploitSlots) {
+    const sp = planSlots(
+      req.grid, req.catalog, lookup, buildings, roads, water.usedSlots,
+      (id) => residenceIds.has(id),
+      { fertilities: req.islandFertilities, region: islandRegion },
+    );
+    if (sp.removed.length) {
+      const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
+      const gone = new Set(sp.removed);
+      for (const b of buildings) {
+        if (!gone.has(b.uid)) continue;
+        const g = tierOfRes.get(b.defId);
+        if (g && tierCounts[g]) {
+          const avg = (capByTier[g] || 0) / tierCounts[g];
+          tierCounts[g]--;
+          capByTier[g] = Math.max(0, (capByTier[g] || 0) - avg);
+          removedHouses++;
+        }
+      }
+      const keep = buildings.filter((b) => !gone.has(b.uid));
+      buildings.length = 0;
+      buildings.push(...keep);
+    }
+    buildings.push(...sp.buildings);
+    const seenR = new Set(roads.map((r) => `${r.x},${r.y}`));
+    for (const r of sp.roads) if (!seenR.has(`${r.x},${r.y}`)) { seenR.add(`${r.x},${r.y}`); roads.push(r); }
+    exploited = sp.exploited;
+    kontorGaps.push(...sp.gaps);
+  }
+
   // CONNEXITÉ : l'élagage des moteurs peut laisser des îlots de route (case d'accès dont le
   // connecteur a sauté). En jeu, un bâtiment desservi par une route coupée du comptoir est
   // INACTIF. On raccroche ce qui peut l'être et on signale le reste.
@@ -469,6 +511,7 @@ export function planIslandImport(
       ? { sources: water.sources.length, capacity: water.capacity, used: water.used, consumers: water.consumers }
       : null,
     importGoods,
+    exploited,
     tierCounts,
     coverage,
     coverageMin,

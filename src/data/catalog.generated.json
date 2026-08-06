@@ -2336,7 +2336,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "meadow"
   },
   {
     "id": "g8586",
@@ -2370,7 +2371,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40
+    "transporterRange": 40,
+    "slotType": "coastal"
   },
   {
     "id": "g3174",
@@ -2596,7 +2598,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "forest"
   },
   {
     "id": "g5976",
@@ -2632,7 +2635,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "forest"
   },
   {
     "id": "g2955",
@@ -2666,7 +2670,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40
+    "transporterRange": 40,
+    "slotType": "coastal"
   },
   {
     "id": "g2956",
@@ -2699,7 +2704,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "coastal"
   },
   {
     "id": "g145229",
@@ -2849,7 +2855,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "river"
   },
   {
     "id": "g2916",
@@ -2882,7 +2889,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g5978",
@@ -2915,7 +2923,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g5295",
@@ -2948,7 +2957,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g2954",
@@ -2981,7 +2991,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g2920",
@@ -3014,7 +3025,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g2800",
@@ -3129,7 +3141,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "forest"
   },
   {
     "id": "g5977",
@@ -3166,7 +3179,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "forest"
   },
   {
     "id": "g5851",
@@ -3202,7 +3216,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "marsh"
   },
   {
     "id": "g31773",
@@ -3280,7 +3295,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "forest"
   },
   {
     "id": "g31761",
@@ -3316,7 +3332,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "forest"
   },
   {
     "id": "g5608",
@@ -3551,7 +3568,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "marsh"
   },
   {
     "id": "g2796",
@@ -3584,7 +3602,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "coastal"
   },
   {
     "id": "g2699",
@@ -3771,7 +3790,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40
+    "transporterRange": 40,
+    "slotType": "coastal"
   },
   {
     "id": "g31756",
@@ -4491,7 +4511,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "marsh"
   },
   {
     "id": "g5605",
@@ -5104,7 +5125,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "river"
   },
   {
     "id": "g4832",
@@ -5341,7 +5363,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 80
+    "transporterRange": 80,
+    "slotType": "coastal"
   },
   {
     "id": "g5980",
@@ -5374,7 +5397,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g50280",
@@ -5407,7 +5431,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g5291",
@@ -5440,7 +5465,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g144810",
@@ -5473,7 +5499,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g144811",
@@ -5506,7 +5533,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g5290",
@@ -5539,7 +5567,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g2918",
@@ -5572,7 +5601,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g5982",
@@ -5605,7 +5635,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30
+    "transporterRange": 30,
+    "slotType": "mountain"
   },
   {
     "id": "g3075",
@@ -5954,7 +5985,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40
+    "transporterRange": 40,
+    "slotType": "marsh"
   },
   {
     "id": "g2958",
@@ -5988,7 +6020,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 80
+    "transporterRange": 80,
+    "slotType": "coastal"
   },
   {
     "id": "g10929",
@@ -6021,7 +6054,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "coastal"
   },
   {
     "id": "g5278",
@@ -6055,7 +6089,8 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40
+    "transporterRange": 40,
+    "slotType": "coastal"
   },
   {
     "id": "g8431",
@@ -6088,7 +6123,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "coastal"
   },
   {
     "id": "g2795",
@@ -6124,7 +6160,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "meadow"
   },
   {
     "id": "g8427",
@@ -6160,7 +6197,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "meadow"
   },
   {
     "id": "g5959",
@@ -6448,7 +6486,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "marsh"
   },
   {
     "id": "g3201",
@@ -6804,7 +6843,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "marsh"
   },
   {
     "id": "g8893",
@@ -7031,7 +7071,8 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "slotType": "river"
   },
   {
     "id": "g2786",

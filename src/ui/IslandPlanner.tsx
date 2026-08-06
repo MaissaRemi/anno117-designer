@@ -36,6 +36,7 @@ export function IslandPlanner({ onClose }: Props) {
   const [tierGuid, setTierGuid] = useState(targetTiers[0]?.guid ?? "");
   const [mode, setMode] = useState<"population" | "production">("population");
   const [needMode, setNeedMode] = useState<NeedMode>("auto");
+  const [exploitSlots, setExploitSlots] = useState(false);
   const [floor, setFloor] = useState(80);
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
@@ -81,6 +82,7 @@ export function IslandPlanner({ onClose }: Props) {
     const { promise, cancel } = runIslandPlan(
       {
         catalog: s.catalog, grid, mode, tierGuid, coverageFloor: floor / 100, needMode,
+        exploitSlots,
         ...(mode === "production"
           ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: effProfile.fertilities.length ? effProfile.fertilities : undefined }
           : {}),
@@ -148,6 +150,17 @@ export function IslandPlanner({ onClose }: Props) {
                   : "Pose les 12 types de service du palier. Bonus maximal par maison, mais ils mangent ~⅓ de l'île."}
               </span>
             </div>
+            <label className="checkbox">
+              <input type="checkbox" checked={exploitSlots} onChange={(e) => setExploitSlots(e.target.checked)} />
+              <span>
+                Exploiter les emplacements libres
+                <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                  Mines, carrières, argile… sur les emplacements de montagne, rivière et marais que
+                  les aqueducs n'utilisent pas — l'eau reste prioritaire. Pose aussi les entrepôts
+                  nécessaires pour que la production sorte.
+                </span>
+              </span>
+            </label>
             <label className="slider">
               <span style={{ color: "var(--muted)", fontSize: 12 }}>% maisons au tier</span>
               <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
@@ -225,6 +238,19 @@ export function IslandPlanner({ onClose }: Props) {
                 💧 Eau : {result.water.sources} source{result.water.sources > 1 ? "s" : ""} · {result.water.used}/{result.water.capacity} u ·{" "}
                 {result.water.consumers.filter((c) => c.connected).length}/{result.water.consumers.length} raccordés
               </div>
+            )}
+            {result.exploited.length > 0 && (
+              <>
+                <b>⛏ Emplacements exploités ({result.exploited.length})</b>
+                <ul className="bilan">
+                  {result.exploited.map((e, i) => (
+                    <li key={i} style={{ color: e.served ? undefined : "#ffcc66" }}>
+                      {e.name} ({e.slotType}) · {e.perMin.toLocaleString("fr")}/min {e.goodName}
+                      {!e.served && " — sans entrepôt à portée"}
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
             <b>📦 À acheminer ({result.importGoods.length} biens)</b>
             <ul className="bilan">{result.importGoods.slice(0, 30).map((g) => <li key={g.good}>{g.perMin.toLocaleString("fr")}/min · {g.name}</li>)}</ul>

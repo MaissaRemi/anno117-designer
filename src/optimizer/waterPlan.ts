@@ -52,6 +52,9 @@ export interface WaterConsumerReport {
 
 export interface WaterPlanResult {
   sources: PlacedBuilding[]; // Sources d'aqueduc posées (slots montagne)
+  /** Slots montagne CONSOMMÉS par le réseau d'eau (source posée ou tentative échouée).
+   *  L'eau est prioritaire : tout le reste ne peut exploiter que le complément. */
+  usedSlots: { x: number; y: number }[];
   aqueducts: AqueductTile[]; // conduites (arbre source → consommateurs)
   capacity: number; // somme des sources posées
   used: number; // conso raccordée
@@ -121,13 +124,13 @@ export function planWater(
     consumers.push({ b, def, fp: footprintOf(b, def), amount: waterAmountOf(def) });
   }
   if (!consumers.length) {
-    return { sources: [], aqueducts: [], capacity: 0, used: 0, consumers: [], gaps: [] };
+    return { sources: [], usedSlots: [], aqueducts: [], capacity: 0, used: 0, consumers: [], gaps: [] };
   }
 
   const slots = (grid.slots ?? []).filter((s) => s.type === "mountain");
   if (!slots.length) {
     return {
-      sources: [], aqueducts: [], capacity: 0, used: 0,
+      sources: [], usedSlots: [], aqueducts: [], capacity: 0, used: 0,
       consumers: consumers.map((c) => ({ uid: c.b.uid, name: c.def.name, amount: c.amount, connected: false })),
       gaps: ["Aucun slot montagne : pas de source d'eau possible (Bains/Forum/Citernes inactifs)"],
     };
@@ -135,7 +138,7 @@ export function planWater(
   const srcDef = SOURCE_IDS.map((id) => lookup(id)).find((d): d is BuildingDef => !!d);
   if (!srcDef) {
     return {
-      sources: [], aqueducts: [], capacity: 0, used: 0,
+      sources: [], usedSlots: [], aqueducts: [], capacity: 0, used: 0,
       consumers: consumers.map((c) => ({ uid: c.b.uid, name: c.def.name, amount: c.amount, connected: false })),
       gaps: ["Source d'aqueduc absente du catalogue"],
     };
@@ -246,12 +249,14 @@ export function planWater(
   // (l'occupation ne fait que croître : il échouera toujours) ; un slot HORS PORTÉE
   // de la cible n'est PAS consommé — il peut servir à un consommateur plus proche.
   const remainingSlots = [...slots];
+  const usedSlots: { x: number; y: number }[] = [];
   const takeSlotNear = (tx: number, ty: number, maxDist = Infinity): boolean => {
     const candidates = remainingSlots
       .filter((s) => Math.hypot(s.x - tx, s.y - ty) <= maxDist)
       .sort((a, b) => Math.hypot(a.x - tx, a.y - ty) - Math.hypot(b.x - tx, b.y - ty));
     for (const s of candidates) {
       remainingSlots.splice(remainingSlots.indexOf(s), 1);
+      usedSlots.push({ x: Math.round(s.x), y: Math.round(s.y) });
       if (placeSource(Math.round(s.x), Math.round(s.y))) return true;
     }
     return false;
@@ -264,7 +269,7 @@ export function planWater(
   takeSlotNear(cx, cy);
   if (!sources.length) {
     return {
-      sources: [], aqueducts: [], capacity: 0, used: 0,
+      sources: [], usedSlots: [], aqueducts: [], capacity: 0, used: 0,
       consumers: consumers.map((c) => ({ uid: c.b.uid, name: c.def.name, amount: c.amount, connected: false })),
       gaps: ["Aucune source posable près des slots montagne (encombrement)"],
     };
@@ -383,6 +388,7 @@ export function planWater(
 
   return {
     sources,
+    usedSlots,
     aqueducts,
     capacity: sources.length * WATER_CAPACITY,
     used: srcUsed.reduce((a, b) => a + b, 0),

@@ -236,6 +236,13 @@ def collect_buildings(texts, template_effects):
         # Portée transporteur (distance-rue prod <-> entrepôt, défaut moteur 30)
         mtr = text_of(el, "./Values/FactoryBase/MaxTransporterRange")
 
+        # Type d'EMPLACEMENT requis : `Factory7/RawResourceType` vaut Mountain ou River.
+        # C'est la seule donnée qui relie un batiment a un slot du terrain (mines et
+        # carrieres sur Mountain, argile / esturgeons / moulins sur River). Un batiment
+        # sans cette valeur se pose librement, meme si son template est SlotFactoryBuilding7.
+        raw_res = text_of(el, "./Values/Factory7/RawResourceType")
+        slot_type = raw_res.lower() if raw_res else None
+
         # BuildingUnique AVEC enfant Uniques = 1 exemplaire max (Colisée…) ; le tag
         # vide (entrepôts…) n'est PAS une contrainte d'unicité
         bu = values.find("BuildingUnique")
@@ -259,6 +266,7 @@ def collect_buildings(texts, template_effects):
             "unique": unique,
             "production": production,
             "transporterRange": int(mtr) if mtr else None,
+            "slotType": slot_type,
         })
         el.clear()
     print(f"  {len(buildings)} batiments, {len(product_oasis)} produits", file=sys.stderr)
@@ -389,6 +397,8 @@ def to_app_catalog(buildings, product_name):
             entry["freeArea"] = b["freeArea"]
         if b.get("unique"):
             entry["unique"] = True
+        if b.get("slotType"):
+            entry["slotType"] = b["slotType"]  # "mountain" | "river" : emplacement requis
         if b.get("production"):
             p = b["production"]
             entry["production"] = {
