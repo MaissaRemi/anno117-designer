@@ -8,6 +8,9 @@ export interface TierGood {
   money: number; // argent accordé (Money)
   weight: number; // SupplyWeight : points apportés à la catégorie quand rempli
   category: string; // NeedCategoryType (Food/Fashion/Household/Wonders/Culture) ou "Public"
+  /** NeedAttributes COMPLETS du besoin (Bonheur, Santé, Incendie, Croyance…). Identiques à
+   *  l'effet de zone du bâtiment qui le remplit — ne jamais additionner les deux. */
+  attrs?: Record<string, number>;
 }
 export interface TierService {
   need: string;
@@ -16,6 +19,8 @@ export interface TierService {
   money: number;
   weight: number;
   category: string;
+  /** NeedAttributes complets — cf. `TierGood.attrs`. */
+  attrs?: Record<string, number>;
 }
 export interface Tier {
   guid: string;

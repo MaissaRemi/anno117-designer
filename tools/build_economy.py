@@ -336,6 +336,10 @@ def main():
                 goods.append({
                     "good": prod, "rate": gd["rate"], "needName": products.get(prod),
                     "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                    # attributs COMPLETS du besoin (Bonheur, Sante, Incendie, Croyance...) :
+                    # indispensables au bilan par maison, ou seuls Population et Argent
+                    # etaient jusqu'ici remontes.
+                    "attrs": {k: v for k, v in attrs.items() if v},
                     "weight": (nd or {}).get("weight", 1), "category": (nd or {}).get("category", "Public"),
                 })
                 for k, v in attrs.items():
@@ -348,6 +352,7 @@ def main():
                 services.append({
                     "need": sneed, "building": sdef,
                     "pop": attrs.get("Population", 0), "money": attrs.get("Money", 0),
+                    "attrs": {k: v for k, v in attrs.items() if v},
                     "weight": (nd or {}).get("weight", 1), "category": (nd or {}).get("category", "Public"),
                 })
                 for k, v in attrs.items():
