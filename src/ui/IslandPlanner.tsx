@@ -187,8 +187,11 @@ export function IslandPlanner({ onClose }: Props) {
           <div className="warn">Aucun plan trouvé{result.gaps?.length ? ` — ${result.gaps[0]}` : " (île trop petite ou fragmentée)"}.</div>
         )}
 
+        {/* Sur écran large : la carte à gauche (elle reste visible pendant qu'on fait défiler
+            le bilan), les chiffres à droite. En dessous de 1100 px, on empile. */}
+        <div className="result-split">
         {result && !running && result.buildings.length > 0 && (
-          <div className="plan-preview-wrap">
+          <div className="result-map">
             <PlanPreview
               grid={grid}
               buildings={result.buildings}
@@ -199,6 +202,7 @@ export function IslandPlanner({ onClose }: Props) {
             {result.mode === "import" && <PlanPreviewLegend tierCounts={result.tierCounts} />}
           </div>
         )}
+        <div className="result-stats">
 
         {result && !running && result.mode === "import" && (
           <div className="opt-result">
@@ -258,6 +262,8 @@ export function IslandPlanner({ onClose }: Props) {
           <button className="primary" onClick={place} style={{ marginTop: 12 }}>Placer sur l'île →</button>
         )}
         {placeMsg && <div className="muted" style={{ marginTop: 6 }}>{placeMsg}</div>}
+        </div>
+        </div>
       </div>
     </div>
   );
