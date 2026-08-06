@@ -286,6 +286,13 @@ label { font-size: 13px; }
 .opt-result, .opt-progress { margin-top: var(--sp-3); padding: var(--sp-2); border-radius: var(--r-sm); font-size: 13px; }
 .opt-progress { background: var(--accent-soft); }
 .opt-result { background: rgba(134,192,74,0.14); }
+/* ---- carte de prévisualisation d'un plan (couleur = palier atteint) ---- */
+.plan-preview-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: var(--sp-3); }
+.plan-preview { display: block; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--s2); image-rendering: pixelated; }
+.plan-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; font-size: 11px; color: var(--muted); }
+.plan-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.plan-legend i { width: 9px; height: 9px; border-radius: 2px; flex: 0 0 auto; }
+
 .opt-items { display: flex; flex-direction: column; gap: 4px; margin: var(--sp-2) 0; }
 .opt-item { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--r-sm); font-size: 13px; }
 .opt-item span:first-child { flex: 1; }

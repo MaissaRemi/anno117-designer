@@ -7,6 +7,7 @@ import { makeLookup } from "../engine/rules";
 import { producibleGoods as producibleGoodsSet } from "../economy/resources";
 import { ResourceSelector } from "./ResourceSelector";
 import { RunPanel } from "./components/RunPanel";
+import { PlanPreview, PlanPreviewLegend } from "./components/PlanPreview";
 
 interface Props {
   onClose: () => void;
@@ -23,12 +24,14 @@ const ATTR_FR: Record<string, string> = {
   FireSafety: "🔥 Sécurité incendie",
 };
 
-const targetTiers = tiers.filter((t) => t.residenceId);
+// paliers visés, du plus dense au moins dense — le défaut de l'UI est le premier, donc
+// le palier le plus haut (l'ordre brut de `tiers` suit les GUID et tombait sur « Nobles »)
+const targetTiers = tiers.filter((t) => t.residenceId).sort((a, b) => b.capacityDefault - a.capacityDefault);
 
 export function IslandPlanner({ onClose }: Props) {
   const applyOptimization = useStore((s) => s.applyOptimization);
 
-  const [tierGuid, setTierGuid] = useState(targetTiers[targetTiers.length - 1]?.guid ?? "");
+  const [tierGuid, setTierGuid] = useState(targetTiers[0]?.guid ?? "");
   const [mode, setMode] = useState<"population" | "production">("population");
   const [needMode, setNeedMode] = useState<"all" | "thresholds">("all");
   const [floor, setFloor] = useState(80);
@@ -46,6 +49,9 @@ export function IslandPlanner({ onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const usable = useStore((s) => s.layout.grid.usable.filter(Boolean).length);
+  const grid = useStore((s) => s.layout.grid);
+  const catalog = useStore((s) => s.catalog);
+  const lookup = useMemo(() => makeLookup(catalog), [catalog]);
   const islandId = useStore((s) => s.layout.grid.islandId);
   const storedProfile = useStore((s) => (islandId ? s.islandProfiles[islandId] : undefined));
   const setIslandProfile = useStore((s) => s.setIslandProfile);
@@ -172,6 +178,19 @@ export function IslandPlanner({ onClose }: Props) {
         {!result && !running && <p className="muted">Lance un calcul pour voir le résultat ici.</p>}
         {result && !running && result.buildings.length === 0 && (
           <div className="warn">Aucun plan trouvé{result.gaps?.length ? ` — ${result.gaps[0]}` : " (île trop petite ou fragmentée)"}.</div>
+        )}
+
+        {result && !running && result.buildings.length > 0 && (
+          <div className="plan-preview-wrap">
+            <PlanPreview
+              grid={grid}
+              buildings={result.buildings}
+              roads={result.roads}
+              aqueducts={result.mode === "import" ? result.aqueducts : undefined}
+              lookup={lookup}
+            />
+            {result.mode === "import" && <PlanPreviewLegend tierCounts={result.tierCounts} />}
+          </div>
         )}
 
         {result && !running && result.mode === "import" && (
