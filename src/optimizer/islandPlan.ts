@@ -5,6 +5,8 @@ import { buildTierProfile, solve } from "../economy/solve";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { cityStatusAttrs } from "../economy/economy";
 import { institutionDefs, isViable, VITAL_ATTRS, worstAttr } from "../economy/attributes";
+import { effectOf } from "../economy/economy";
+import { footprintSize } from "../engine/geometry";
 import { candidateRecipes } from "./recipes";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { planLattice, type LatticeResult } from "./planLattice";
@@ -301,9 +303,9 @@ export function planIslandImport(
   // Ce qu'il faut éliminer, c'est le plan structurellement injouable — typiquement packPlan,
   // qui pose toutes ses maisons avant de router l'eau et ne laisse plus aucun corridor.
   const WATER_VIABLE = 0.15;
-  const viable = (e: Evaluated): boolean => e.waterPct >= WATER_VIABLE;
+  const waterViable = (e: Evaluated): boolean => e.waterPct >= WATER_VIABLE;
   const better = (a: Evaluated, b: Evaluated): boolean => {
-    if (viable(a) !== viable(b)) return viable(a);
+    if (waterViable(a) !== waterViable(b)) return waterViable(a);
     // VIABILITÉ DE L'ÎLE avant la population : un bilan négatif en Bonheur, Argent, Santé
     // ou Sécurité incendie déclenche émeutes, incendies et maladies. Maximiser la
     // population sans cette contrainte revenait à optimiser une ville que le jeu punit.
@@ -358,7 +360,7 @@ export function planIslandImport(
   const dist = chosen.cand;
   const water = chosen.water;
   const deadTypes = chosen.deadTypes;
-  const attrsTotal = chosen.attrsTotal;
+  const attrsTotal: Record<string, number> = { ...chosen.attrsTotal };
   // capacité de référence d'une maison au palier cible SOUS LA RECETTE RETENUE : c'est ce
   // que le panneau affiche, et ce n'est plus `capacityDefault` — une recette maigre héberge
   // moins par maison mais bien plus de maisons.
@@ -436,6 +438,45 @@ export function planIslandImport(
     exploited = sp.exploited;
     kontorGaps.push(...sp.gaps);
   }
+
+  // --- EFFETS DE ZONE DES BÂTIMENTS POSÉS HORS MOTEUR ---------------------------------
+  // Les exploitations d'emplacement (mines, carrières, ferme à bœufs) portent toutes un
+  // malus de Santé −2 CUMULABLE dans un rayon EUCLIDIEN de 20 à 24. Elles sont posées après
+  // les moteurs, donc leur effet échappait au bilan calculé par ceux-ci. On le rattrape ici,
+  // sur les maisons réellement à portée.
+  const zoneDelta: Record<string, number> = {};
+  {
+    const houseList = buildings.filter((b) => residenceIds.has(b.defId));
+    const svcOfTiers = new Set(chain.flatMap((t) => t.services.map((s) => s.building)));
+    const centre = (b: PlacedBuilding) => {
+      const d = lookup(b.defId);
+      const fp = d ? footprintSize(d, b.rotation) : { w: 1, h: 1 };
+      return { x: b.x + fp.w / 2, y: b.y + fp.h / 2 };
+    };
+    const houseCentres = houseList.map(centre);
+    // non cumulable : une seule fois par type et par maison
+    const seenOnce = new Map<string, Set<number>>();
+    for (const b of buildings) {
+      const fx = effectOf(b.defId);
+      if (!fx || fx.scope !== "radius" || svcOfTiers.has(b.defId)) continue;
+      const c = centre(b);
+      const r2 = fx.range * fx.range;
+      for (let i = 0; i < houseCentres.length; i++) {
+        const h = houseCentres[i];
+        const dx = h.x - c.x, dy = h.y - c.y;
+        if (dx * dx + dy * dy > r2) continue;
+        if (!fx.stackable) {
+          let set = seenOnce.get(b.defId);
+          if (!set) seenOnce.set(b.defId, (set = new Set()));
+          if (set.has(i)) continue;
+          set.add(i);
+        }
+        for (const [k, v] of Object.entries(fx.attrs)) zoneDelta[k] = (zoneDelta[k] ?? 0) + v;
+      }
+    }
+    for (const k of VITAL_ATTRS) attrsTotal[k] = (attrsTotal[k] ?? 0) + (zoneDelta[k] ?? 0);
+  }
+  const planViable = isViable(attrsTotal);
 
   // CONNEXITÉ : l'élagage des moteurs peut laisser des îlots de route (case d'accès dont le
   // connecteur a sauté). En jeu, un bâtiment desservi par une route coupée du comptoir est
@@ -556,7 +597,7 @@ export function planIslandImport(
     importGoods,
     exploited,
     attrsTotal,
-    viable: chosen.viable,
+    viable: planViable,
     tierCounts,
     coverage,
     coverageMin,
