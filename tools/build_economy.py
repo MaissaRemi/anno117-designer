@@ -66,6 +66,23 @@ def t(el, path):
     return v.strip() if v else None
 
 
+def load_template_effect_ranges():
+    """Rayons par defaut herites : nom de template -> (RadiusDistance, StreetDistance)."""
+    out = {}
+    path = os.path.join(HERE, ".gamedata", "templates.xml")
+    if not os.path.exists(path):
+        return out
+    for _, el in ET.iterparse(path, events=("end",)):
+        if el.tag != "Template":
+            continue
+        name = el.findtext("Name")
+        es = el.find(".//EffectSource")
+        if name and es is not None:
+            out[name] = (es.findtext("RadiusDistance"), es.findtext("StreetDistance"))
+        el.clear()
+    return out
+
+
 def main():
     texts = load_texts()
     pop_levels = {}      # guid -> {name, region, workforce, factor}
@@ -79,6 +96,15 @@ def main():
     building_upkeep = {} # defId -> entretien argent/min
     public_effects = {}  # defId -> functional effect guids (pour services)
     fertilities = {}     # GUID Fertility/Deposit -> nom FR (saisie île + filtrage chaînes)
+    # EFFETS DE ZONE (cf. GAME_MECHANICS.md §2) : un batiment porte des FunctionalEffects
+    # -> asset Effect (EffectScope Radius ou StreetDistance) -> BuildingBuff dont
+    # BuildingUpgrade/AdditionalAttributes donne les deltas d'attributs appliques aux
+    # residences a portee. C'est la mecanique des « +1 Argent », « -2 Sante » autour des
+    # ateliers et des mines. Trois tables intermediaires, resolues apres le parcours.
+    fx_effects = {}      # GUID Effect -> {scope, buffs:[GUID]}
+    fx_buffs = {}        # GUID BuildingBuff -> {attrs:{}, stackable}
+    fx_owner = {}        # defId -> {fe:[GUID], template, radius, street}
+    tpl_ranges = load_template_effect_ranges()
 
     for _, el in ET.iterparse(ASSETS, events=("end",)):
         if el.tag != "Asset":
@@ -97,6 +123,30 @@ def main():
                 "workforce": t(el, "./Values/PopulationLevel/ConnectedWorkforce"),
                 "factor": float(t(el, "./Values/PopulationLevel/PopulationToWorkforceFactor") or 0.5),
             }
+            el.clear(); continue
+
+        if tpl == "Effect":
+            e = vals.find("Effect")
+            if e is not None:
+                fx_effects[guid] = {
+                    "scope": t(el, "./Values/Effect/EffectScope"),
+                    "buffs": [i.findtext("GUID") for i in e.findall("./Buffs/Item") if i.findtext("GUID")],
+                }
+            el.clear(); continue
+
+        if tpl == "BuildingBuff":
+            attrs = {}
+            aa = vals.find("./BuildingUpgrade/AdditionalAttributes")
+            if aa is not None:
+                for c in aa:
+                    v = c.findtext("./AmountOrPercent/Value")
+                    if v:
+                        try:
+                            attrs[c.tag] = float(v)
+                        except ValueError:
+                            pass
+            fx_buffs[guid] = {"attrs": attrs,
+                              "stackable": t(el, "./Values/Buff/IsStackable") == "1"}
             el.clear(); continue
 
         if tpl == "Fertility":
@@ -136,6 +186,19 @@ def main():
                 "category": t(el, "./Values/Need/NeedCategoryType") or "Public",
             }
             el.clear(); continue
+
+        # EFFETS DE ZONE — releves AVANT le filtre de templates : la citerne d'aqueduc,
+        # l'Amphitheatre et les jetees en portent aussi, et leurs templates ne figurent pas
+        # dans BUILDING_TEMPLATES (qui ne sert qu'a l'economie de production).
+        fe = [i.findtext("FunctionalEffect")
+              for i in vals.findall("./Building/FunctionalEffects/Item")]
+        fe = [x for x in fe if x]
+        if fe:
+            rad = t(el, "./Values/EffectSource/RadiusDistance")
+            street = t(el, "./Values/EffectSource/StreetDistance")
+            if not rad and tpl in tpl_ranges:
+                rad, street = tpl_ranges[tpl]  # EffectSource vide = rayon herite du template
+            fx_owner[f"g{guid}"] = {"fe": fe, "radius": rad, "street": street}
 
         if tpl not in BUILDING_TEMPLATES:
             el.clear(); continue
@@ -293,8 +356,39 @@ def main():
         if catalog_ids and def_id not in catalog_ids:
             print(f"  ! override perime : batiment {def_id} absent du catalogue (patch jeu ?)", file=sys.stderr)
 
+    # resolution des effets de zone : batiment -> {scope, range, attrs, stackable}
+    building_effects = {}
+    for def_id, own in fx_owner.items():
+        attrs, stackable, scope = {}, False, None
+        for eg in own["fe"]:
+            eff = fx_effects.get(eg)
+            if not eff:
+                continue
+            for bg in eff["buffs"]:
+                bf = fx_buffs.get(bg)
+                if not bf or not bf["attrs"]:
+                    continue
+                scope = eff["scope"]
+                stackable = stackable or bf["stackable"]
+                for k, v in bf["attrs"].items():
+                    attrs[k] = attrs.get(k, 0) + v
+        if not attrs or not scope:
+            continue
+        # Radius = distance EUCLIDIENNE (RadiusDistance) ; StreetDistance = le long des rues
+        is_radius = scope == "Radius"
+        rng = own["radius"] if is_radius else own["street"]
+        if not rng:
+            continue
+        building_effects[def_id] = {
+            "scope": "radius" if is_radius else "street",
+            "range": int(rng),
+            "attrs": attrs,
+            "stackable": stackable,
+        }
+
     out = {
         "tiers": tiers,
+        "buildingEffects": building_effects,
         "producers": producers,
         "buildingProd": bprod,
         "buildingWorkforce": building_workforce,

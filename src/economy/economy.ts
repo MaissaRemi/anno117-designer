@@ -39,8 +39,31 @@ export interface BProd {
   fertility?: string; // GUID Fertility/Deposit requis (sinon non constructible)
 }
 
+/**
+ * EFFET DE ZONE d'un bâtiment (cf. GAME_MECHANICS.md §2). Chaîne dans les fichiers du jeu :
+ * `Building/FunctionalEffects` → asset `Effect` (`EffectScope`) → `BuildingBuff` dont
+ * `BuildingUpgrade/AdditionalAttributes` porte les deltas appliqués aux résidences à portée.
+ *
+ * Deux portées de nature DIFFÉRENTE :
+ *  - `radius` : distance EUCLIDIENNE (`RadiusDistance`) — c'est celle des ateliers et des
+ *    mines. `RadiusDistance` n'est donc pas une simple prévisualisation d'interface.
+ *  - `street` : distance le long des rues (`StreetDistance`) — services et institutions.
+ *
+ * `stackable` : plusieurs copies cumulent leur effet sur la même maison (c'est le cas des
+ * malus — trois mines côte à côte valent −6 en Santé), sinon l'effet ne compte qu'une fois.
+ */
+export interface BuildingEffect {
+  scope: "radius" | "street";
+  range: number;
+  /** Delta par attribut : Population, Money, Happiness, Health, FireSafety, Knowledge… */
+  attrs: Record<string, number>;
+  stackable: boolean;
+}
+
 interface EconomyData {
   tiers: Tier[];
+  /** defId → effet de zone, quand le bâtiment en porte un (140 bâtiments). */
+  buildingEffects: Record<string, BuildingEffect>;
   producers: Record<string, string[]>; // goodGuid -> [defId]
   buildingProd: Record<string, BProd>;
   buildingWorkforce: Record<string, { tier: string; amount: number }[]>;
@@ -100,6 +123,10 @@ export const goodName = (g: string | null): string =>
 /** Valeur marchande de référence d'un bien (BasePrice), 0 si inconnu. */
 export const priceOf = (good: string | null): number =>
   (good && economy.goodPrices[good]) || 0;
+
+/** Effet de zone d'un bâtiment, ou undefined s'il n'en porte pas. */
+export const effectOf = (defId: string): BuildingEffect | undefined =>
+  economy.buildingEffects?.[defId];
 
 /** Région d'un bâtiment ("Roman"/"Celtic"/undefined). */
 export const regionOf = (defId: string): string | undefined =>

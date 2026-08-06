@@ -15,9 +15,11 @@ dumps `.gamedata/research/*.json` (script `tools/_dump_research.py`),
 
 ## 1. Grille & routes
 
-- **[FICHIERS]** Portée des services = DISTANCE PAR LA RUE (`EffectScope StreetDistance`,
-  ×1279 dans AB). `RadiusDistance` = préviz UI seulement. Pattern systématique :
-  **street = radius + 4** sur tous les services.
+- **[FICHIERS]** Portée des SERVICES = DISTANCE PAR LA RUE (`EffectScope StreetDistance`,
+  ×1279 dans AB). Pattern systématique : **street = radius + 4** sur tous les services.
+  ⚠ `RadiusDistance` n'est PAS une simple préviz d'interface (correction 2026-08-06) : c'est
+  la portée réelle des effets dont `EffectScope = Radius` — voir §2. Les deux valeurs
+  coexistent parce qu'elles servent deux mécaniques distinctes.
 - **[FICHIERS]** Coûts routes (argent 1010017) : terre **5**, pavée **40**, route de
   marais (Celtic) 10, pont bois 10 / pavé 20, quai bois/pierre/marbre 10/40/80,
   ponts-canaux celtiques 10/20/25. Pavée = vitesse charrettes (aucun `RangeFactor`
@@ -57,9 +59,26 @@ Institutions anti-incidents (portée street) : **Vigiles (feu) 30**, **Medicus
 celtiques idem mini. Shrines (mini-services) : 16-24 street.
 
 - **[FICHIERS]** Pas de falloff dans `Effect` → couverture binaire à la coupure.
-- [OUVERT] H2.13 : des bâtiments de PROD donneraient des bonus pop en rayon
-  (« bakery +2 pop/maison » vu en guide [WEB] + TextPools « Tavern Supplied ») — à
-  vérifier : 2e système de desserte par bâtiment de production ?
+- **[FICHIERS] H2.13 CONFIRMÉE (2026-08-06) — EFFETS DE ZONE À RAYON EUCLIDIEN.**
+  Oui, des bâtiments de PRODUCTION modifient les attributs des résidences autour d'eux.
+  Chaîne dans les fichiers : `Building/FunctionalEffects` → asset `Effect` → `BuildingBuff`
+  dont `BuildingUpgrade/AdditionalAttributes` porte les deltas. **140 bâtiments** en portent.
+  - `EffectScope = Radius` (86 bâtiments) → distance **EUCLIDIENNE**, valeur = `RadiusDistance`,
+    portées 20 à 30. C'est le cas des ateliers, mines et carrières.
+  - `EffectScope = StreetDistance` (54 bâtiments) → distance le long des rues, valeur =
+    `StreetDistance`. C'est le cas des services et des institutions.
+  - `IsStackable` : les MALUS cumulent (3 mines côte à côte = −6 Santé), les bonus non.
+  - Attributs touchés : Health 46, FireSafety 45, Happiness 36, Money 36, Prestige 25,
+    **Population 23**, Knowledge 13, Belief 9.
+  - Exemples : Mine de fer −2 Santé (r20, cumulable) · Charbonnière −3 Santé −3 Incendie
+    (r20, cumulable) · Lyrier +1 Argent +1 Bonheur (r24) · Épicurien de l'eau +1 Population
+    +1 Santé (r28) · Bains +2 Population +2 Santé +3 Incendie (street 66).
+  - **Conséquence de design** : une mine près des maisons COÛTE, un atelier de luxe RAPPORTE.
+    Extrait dans `economy.generated.json → buildingEffects`. Non encore exploité par
+    l'optimiseur de placement.
+  ⚠ Corrige aussi §1 : « `RadiusDistance` = préviz UI seulement » est FAUX. C'est la portée
+  réelle des effets à `EffectScope = Radius`. Le pattern « street = radius + 4 » reste vrai,
+  mais les deux nombres servent à deux mécaniques différentes.
 
 ## 3. Résidences & besoins
 
