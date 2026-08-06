@@ -15,6 +15,7 @@ import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, needsWater, planWater, type WaterConsumerReport, type WaterPlanResult } from "./waterPlan";
 import { connectKontor, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
 import { planSlots, type ExploitedSlot } from "./slotPlan";
+import { planLocalProduction, type LocalWorkshop } from "./localProd";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -40,6 +41,10 @@ export interface IslandPlanRequest {
    *  d'eau n'a PAS consommés : mines, carrières, argile… plus les entrepôts nécessaires
    *  pour que leur production sorte. L'eau reste prioritaire. Défaut false. */
   exploitSlots?: boolean;
+  /** Produire une partie des biens SUR L'ÎLE au lieu de tout importer. Les ateliers sont
+   *  posés tant que le bilan d'attributs de l'île reste positif — le surplus de Santé et
+   *  d'Argent est exactement le budget qu'ils dépensent. Défaut false. */
+  localProduction?: boolean;
   /** Mode production : bien cible (GUID) + débit u/min. */
   productionGood?: string;
   productionRate?: number;
@@ -81,6 +86,8 @@ export interface IslandPlanResult {
   importGoods: ImportGood[];
   /** Emplacements de terrain exploités (option `exploitSlots`) — vide si l'option est off. */
   exploited: ExploitedSlot[];
+  /** Ateliers posés sur l'île (option `localProduction`) — leur production sort du manifeste. */
+  workshops: LocalWorkshop[];
   /** BILAN DE L'ÎLE par attribut vital : somme sur toutes les maisons, malus de rang de
    *  cité compris. C'est le total qui doit rester ≥ 0 — une maison en déficit compensée
    *  par ses voisines ne pose pas de problème. */
@@ -476,7 +483,6 @@ export function planIslandImport(
     }
     for (const k of VITAL_ATTRS) attrsTotal[k] = (attrsTotal[k] ?? 0) + (zoneDelta[k] ?? 0);
   }
-  const planViable = isViable(attrsTotal);
 
   // CONNEXITÉ : l'élagage des moteurs peut laisser des îlots de route (case d'accès dont le
   // connecteur a sauté). En jeu, un bâtiment desservi par une route coupée du comptoir est
@@ -499,13 +505,13 @@ export function planIslandImport(
   });
   const analyzable = coverage.services.filter((s) => s.hasRadius && (!relevant || relevant.has(s.serviceId)));
   const coverageMin = analyzable.length ? Math.min(...analyzable.map((s) => s.pct)) : 100;
-  const houses = dist.houses - removedHouses;
-  const fullyCovered = tierCounts[req.tierGuid] || 0; // maisons ayant atteint le palier cible
-  const fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
+  let houses = dist.houses - removedHouses;
+  let fullyCovered = tierCounts[req.tierGuid] || 0; // maisons ayant atteint le palier cible
+  let fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
   // Habitants = Σ des capacités RÉELLES, maison par maison (Σ Population des besoins
   // remplis). Deux maisons du même palier n'ont pas la même capacité : celle qui voit un
   // service de plus héberge davantage. C'est ce gradient qui guide l'optimisation.
-  const residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
+  let residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
 
   // Manifeste d'import : vecteur de population MULTI-PALIERS. La capacité passée à `solve`
   // est la MOYENNE OBSERVÉE par palier (capacité cumulée / nb de maisons), pas la capacité
@@ -530,6 +536,54 @@ export function planIslandImport(
     .filter(([, v]) => v > 0)
     .map(([good, perMin]) => ({ good, name: goodName(good), perMin: Math.round(perMin * 100) / 100 }))
     .sort((a, b) => b.perMin - a.perMin);
+
+  // --- PRODUCTION FINALE SUR L'ÎLE (option) -------------------------------------------
+  // Le bilan d'attributs est un BUDGET : le surplus de Santé et d'Argent achète des ateliers
+  // qui retirent leur bien du manifeste d'import. On s'arrête au premier qui ferait passer
+  // un attribut vital sous zéro.
+  let workshops: LocalWorkshop[] = [];
+  if (req.localProduction) {
+    const lp = planLocalProduction(
+      req.grid, lookup, buildings, roads, residenceIds,
+      importGoods.map((g) => ({ good: g.good, perMin: g.perMin })),
+      attrsTotal,
+      { region: islandRegion },
+    );
+    if (lp.buildings.length) {
+      const gone = new Set(lp.removed);
+      const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
+      for (const b of buildings) {
+        if (!gone.has(b.uid)) continue;
+        const g = tierOfRes.get(b.defId);
+        if (g && tierCounts[g]) {
+          const avg = (capByTier[g] || 0) / tierCounts[g];
+          tierCounts[g]--;
+          capByTier[g] = Math.max(0, (capByTier[g] || 0) - avg);
+          removedHouses++;
+        }
+      }
+      const keep = buildings.filter((b) => !gone.has(b.uid));
+      buildings.length = 0;
+      buildings.push(...keep, ...lp.buildings);
+      for (const k of VITAL_ATTRS) attrsTotal[k] = (attrsTotal[k] ?? 0) + (lp.attrsDelta[k] ?? 0);
+      workshops = lp.workshops;
+      // les maisons rasées sortent des compteurs. Le manifeste, lui, a été calculé AVANT
+      // la démolition : il surestime donc légèrement la demande, ce qui est conservateur —
+      // le recalculer imposerait une seconde passe du solveur pour un écart de l'ordre du %.
+      houses = dist.houses - removedHouses;
+      residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
+      fullyCovered = tierCounts[req.tierGuid] || 0;
+      fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
+      // le manifeste perd ce qui est produit sur place
+      for (const w of workshops) {
+        const g = importGoods.find((x) => x.good === w.good);
+        if (!g) continue;
+        g.perMin = Math.max(0, Math.round((g.perMin - w.perMin) * 100) / 100);
+      }
+    }
+    kontorGaps.push(...lp.gaps);
+  }
+
 
   // bonus d'attributs cumulés (par tier atteint × maisons de ce tier)
   const attributes: Record<string, number> = {};
@@ -577,6 +631,7 @@ export function planIslandImport(
     if (s.pct < 100) gaps.push(`${s.name} : ${s.pct}% des maisons couvertes (distance-rue)`);
   }
 
+  const planViable = isViable(attrsTotal);
   const hasWaterConsumers = water.consumers.length > 0;
   return {
     mode: "import",
@@ -596,6 +651,7 @@ export function planIslandImport(
       : null,
     importGoods,
     exploited,
+    workshops,
     attrsTotal,
     viable: planViable,
     tierCounts,

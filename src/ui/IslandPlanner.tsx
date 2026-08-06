@@ -37,6 +37,7 @@ export function IslandPlanner({ onClose }: Props) {
   const [mode, setMode] = useState<"population" | "production">("population");
   const [needMode, setNeedMode] = useState<NeedMode>("auto");
   const [exploitSlots, setExploitSlots] = useState(false);
+  const [localProduction, setLocalProduction] = useState(false);
   const [floor, setFloor] = useState(80);
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
@@ -83,6 +84,7 @@ export function IslandPlanner({ onClose }: Props) {
       {
         catalog: s.catalog, grid, mode, tierGuid, coverageFloor: floor / 100, needMode,
         exploitSlots,
+        localProduction,
         ...(mode === "production"
           ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: effProfile.fertilities.length ? effProfile.fertilities : undefined }
           : {}),
@@ -158,6 +160,17 @@ export function IslandPlanner({ onClose }: Props) {
                   Mines, carrières, argile… sur les emplacements de montagne, rivière et marais que
                   les aqueducs n'utilisent pas — l'eau reste prioritaire. Pose aussi les entrepôts
                   nécessaires pour que la production sorte.
+                </span>
+              </span>
+            </label>
+            <label className="checkbox">
+              <input type="checkbox" checked={localProduction} onChange={(e) => setLocalProduction(e.target.checked)} />
+              <span>
+                Produire sur l'île
+                <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                  Pose des ateliers pour fabriquer une partie des biens au lieu de tout importer.
+                  Ils remplacent des maisons et pèsent sur les attributs : on s'arrête dès que le
+                  bilan de l'île passerait sous zéro.
                 </span>
               </span>
             </label>
@@ -256,6 +269,19 @@ export function IslandPlanner({ onClose }: Props) {
                 💧 Eau : {result.water.sources} source{result.water.sources > 1 ? "s" : ""} · {result.water.used}/{result.water.capacity} u ·{" "}
                 {result.water.consumers.filter((c) => c.connected).length}/{result.water.consumers.length} raccordés
               </div>
+            )}
+            {result.workshops.length > 0 && (
+              <>
+                <b>🏭 Produit sur l'île ({result.workshops.length})</b>
+                <ul className="bilan">
+                  {result.workshops.map((w, i) => (
+                    <li key={i}>
+                      {w.name} ×{w.copies} · {w.perMin.toFixed(2)}/min {w.goodName}
+                      <span className="muted"> — {w.housesLost} maison(s)</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
             {result.exploited.length > 0 && (
               <>
