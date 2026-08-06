@@ -10,3 +10,7 @@ graphify-out/
 
 # Assets extraits du jeu (Ubisoft) : regenerables via tools/extract_icons.py
 public/icons/
+
+# fichiers de travail jetables (sondes/benchs des agents)
+src/**/__tmp*
+src/**/_bench.test.ts
