@@ -98,6 +98,18 @@ d'attributs à **TOUTES** ses résidences (assets `CityStatus`, `AttributeEffect
 | 70 000 | −15,8 | −12,4 | −7,9 | +19 | +18 | +17 |
 | 260 000 | −18,2 | −14,7 | −9,8 | +30 | +29 | +28 |
 
+**L'échelle et les effets ne se lisent pas au même endroit** (corrigé le 2026-08-06, cf. §17).
+Les **seuils** viennent du MONDE — 40 rangs jusqu'à 260 000 habitants en Latium, **25 rangs
+jusqu'à 47 500 seulement** en Albion. Les **effets**, eux, existent en trois variantes par
+rang (`AttributeEffectsRoman` / `Mixed` / `Regional`), une par culture de population. En
+Latium les trois sont identiques ; en Albion elles divergent nettement — au dernier rang :
+
+| culture d'Albion | Bonheur | Santé | Incendie | Croyance | Connaissance |
+|---|---|---|---|---|---|
+| romaine (`Roman`) | −10,6 | −12,0 | −8,2 | +23 | +33 |
+| romanisée (`Mixed` — Mercators, Nobles) | **−17,4** | −9,35 | −5,1 | +34,5 | +33 |
+| native (`Regional` — Tourbiers…Aldermen) | −12,6 | −6,7 | −1,95 | +34,5 | +22 |
+
 ⚠ **Contrainte de fond ignorée jusqu'ici.** Les plans produits par l'optimiseur atteignent
 38 000 à 570 000 habitants : ils encaissent donc **−15 à −18 en Bonheur, −12 à −15 en Santé,
 −8 à −10 en Sécurité incendie** sur chaque maison, qu'il faut compenser par les services et
@@ -271,6 +283,21 @@ Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
 - **[FICHIERS]** Prods de marais (anguilles, oiseaux, etc.) : `CanBePlacedOnNonMarsh=1`
   → posables AUSSI hors marais. Route de marais dédiée (coût 10).
 - **[FICHIERS]** Romanisation par bâtiment (cf. §8).
+- **[FICHIERS, 2026-08-06] DEUX ÉCHELLES DE POPULATION COEXISTENT EN ALBION.** Les assets
+  `PopulationLevel` se rangent en trois familles selon leur nom interne :
+
+  | GUID | nom interne | nom FR | monde | culture |
+  |---|---|---|---|---|
+  | 1499, 1496, 1497, 1498 | `Population Level **Roman** 01–04` | Liberti, Plébéiens, Equites, Patriciens | Latium | `Roman` |
+  | 1500, 1501, 1502 | `Population Level **Celtic** 01–03` | Tourbiers, Forgerons, Aldermen | Albion | `Celtic` |
+  | 1503, 1504 | `Population Level **Roman Celtic** 02–03` | Mercators, Nobles | **Albion** | `RomanCeltic` |
+
+  ⚠ Piège : « Roman Celtic » contient « Roman ». Ce sont pourtant des paliers **d'Albion** —
+  la population romanisée — et non du Latium : leurs services sont le **Fanum** et le
+  **Théâtre bardique**, bâtiments celtiques. Corroboré par les trois variantes d'effets du
+  rang de cité (§2 bis), qui n'auraient aucun sens s'il n'y avait que deux cultures.
+  Il n'existe **pas** de palier 01 romano-celtique : les Mercators montent depuis les
+  Tourbiers natifs. Une île d'Albion peut donc porter les deux échelles à la fois.
 
 ## 13. CHECKLIST TESTS IN-GAME (pour l'utilisateur — à plus fort levier)
 

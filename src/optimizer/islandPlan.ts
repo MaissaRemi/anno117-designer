@@ -282,7 +282,10 @@ export function planIslandImport(
     // DE CITÉ appliqué à chacune — il dépend de la population totale et n'est donc connu
     // qu'ici. Le jugement porte sur le total, pas sur la pire maison : un quartier de
     // bordure en déficit compensé par le cœur de la ville ne pose pas de problème.
-    const rank = cityStatusAttrs(residents, islandRegion);
+    // Le rang se lit avec la CULTURE du palier visé, pas avec le monde de l'île : sur une
+    // même île d'Albion, une maison romanisée encaisse −17,4 Bonheur au dernier rang là où
+    // une maison native n'en prend que −12,6.
+    const rank = cityStatusAttrs(residents, tier?.region ?? islandRegion);
     const attrsTotal: Record<string, number> = {};
     for (const k of VITAL_ATTRS) attrsTotal[k] = (cand.attrsSum[k] ?? 0) + cand.houses * (rank[k] ?? 0);
     return {

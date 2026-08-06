@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { decodeMask, islands, worldLabel, type Island } from "../data/islands";
+import { decodeMask, islands, regionOfIsland, worldLabel, type Island } from "../data/islands";
 import { useStore } from "../state/store";
 import { Modal } from "./Modal";
 
@@ -47,7 +47,7 @@ export function IslandPicker({ onClose }: Props) {
   const world = useStore((s) => s.world);
   // Les îles DLC sont romaines : elles suivent le Latium.
   const list = useMemo(
-    () => islands.filter((i) => (i.region === "Celtic" ? "Celtic" : "Roman") === world),
+    () => islands.filter((i) => regionOfIsland(i.id) === world),
     [world],
   );
 

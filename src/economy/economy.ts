@@ -78,7 +78,12 @@ export interface BuildingEffect {
 export interface CityStatusStep {
   /** Population totale à partir de laquelle ce rang s'applique. */
   population: number;
-  attrs: Record<string, number>;
+  /**
+   * Effets du rang, par CULTURE de population (`Roman`, `RomanCeltic`, `Celtic`). En Latium
+   * les trois sont identiques — une seule culture y vit. En Albion elles divergent : au
+   * dernier rang, −10,6 Bonheur pour un Romain, −17,4 pour un romanisé, −12,6 pour un natif.
+   */
+  attrs: Record<string, Record<string, number>>;
 }
 
 interface EconomyData {
@@ -135,7 +140,11 @@ export function residentialChain(tierGuid: string): Tier[] {
     new Set(t.services.map((s) => s.building).filter((b): b is string => !!b));
   const targetSvc = svcOf(target);
   return tiers
-    .filter((t) => !!t.residenceId && t.region === target.region
+    // Comparaison au niveau du MONDE, pas de la culture : en Albion, une maison romanisée
+    // (Mercators) se hisse depuis les Tourbiers natifs — il n'existe pas de palier 01
+    // romano-celtique. Le vrai garde-fou reste l'inclusion des services ci-dessous, qui
+    // interdit de compter un palier dont la ville ne dessert pas les besoins.
+    .filter((t) => !!t.residenceId && worldOf(t.region) === worldOf(target.region)
       && t.capacityDefault <= target.capacityDefault
       && [...svcOf(t)].every((b) => targetSvc.has(b)))
     .sort((a, b) => a.capacityDefault - b.capacityDefault);
@@ -156,13 +165,33 @@ export const effectOf = (defId: string): BuildingEffect | undefined =>
  * Renvoie le dernier palier dont le seuil est atteint.
  */
 export function cityStatusAttrs(population: number, region = "Roman"): Record<string, number> {
-  const ladder = economy.cityStatus?.[region] ?? [];
   let attrs: Record<string, number> = {};
-  for (const step of ladder) {
+  for (const step of cityStatusLadder(region)) {
     if (population < step.population) break;
     attrs = step.attrs;
   }
   return attrs;
+}
+
+/**
+ * MONDE d'une culture de population. Le Latium n'accueille que la culture romaine ; l'Albion
+ * en accueille DEUX — la native (`Celtic` : Tourbiers, Forgerons, Aldermen) et la romanisée
+ * (`RomanCeltic` : Mercators, Nobles), issue de la romanisation des bâtiments. Les bâtiments
+ * et les îles, eux, ne connaissent que ces deux mondes.
+ */
+export const worldOf = (region: string): string => (region === "Roman" ? "Roman" : "Celtic");
+
+/**
+ * Échelle des rangs de cité telle que la subit une CULTURE donnée : les seuils de population
+ * viennent du MONDE (40 rangs jusqu'à 260 000 habitants en Latium, 25 jusqu'à 47 500 en
+ * Albion), les effets de la culture.
+ */
+export function cityStatusLadder(region = "Roman"): { population: number; attrs: Record<string, number> }[] {
+  const rows = economy.cityStatus?.[worldOf(region)] ?? [];
+  return rows.map((s) => ({
+    population: s.population,
+    attrs: s.attrs?.[region] ?? s.attrs?.Roman ?? {},
+  }));
 }
 
 /** Région d'un bâtiment ("Roman"/"Celtic"/undefined). */

@@ -1,4 +1,4 @@
-import { economy, pickProducer, priceOf, tierByGuid, upkeepOf, type BProd } from "./economy";
+import { economy, pickProducer, priceOf, tierByGuid, upkeepOf, worldOf, type BProd } from "./economy";
 
 /** Maisons couvertes par défaut par un bâtiment de service (rayon d'influence). */
 const DEFAULT_HOUSES_PER_SERVICE = 30;
@@ -118,7 +118,7 @@ export function buildTierProfile(tierGuid: string, o: TierProfileOptions = {}): 
     type Cand = { kind: "good" | "svc"; idx: number; weight: number; cost: number };
     const byCat = new Map<string, Cand[]>();
     tier.goods.forEach((g, idx) => {
-      const cost = g.good ? g.rate * upkeepPerUnit(g.good, tier.region) : 0;
+      const cost = g.good ? g.rate * upkeepPerUnit(g.good, worldOf(tier.region)) : 0;
       const arr = byCat.get(g.category) ?? [];
       arr.push({ kind: "good", idx, weight: g.weight || 1, cost });
       byCat.set(g.category, arr);
@@ -144,7 +144,7 @@ export function buildTierProfile(tierGuid: string, o: TierProfileOptions = {}): 
     tier.services.forEach((s, i) => { if (keepS.has(i)) { services.push({ building: s.building }); cap += s.pop; money += s.money; } });
   } else {
     const keepGood = (g: typeof tier.goods[number]) =>
-      !o.optimizeNeeds || !g.good || g.money - g.rate * upkeepPerUnit(g.good, tier.region) >= 0;
+      !o.optimizeNeeds || !g.good || g.money - g.rate * upkeepPerUnit(g.good, worldOf(tier.region)) >= 0;
     const keepSvc = (s: typeof tier.services[number]) =>
       !o.optimizeNeeds || s.money - (s.building ? upkeepOf(s.building) : 0) / housesPerService >= 0;
     for (const g of tier.goods) if (keepGood(g)) { goods.push({ good: g.good, rate: g.rate }); cap += g.pop; money += g.money; }
@@ -208,7 +208,7 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
       for (const g of pr.goods) {
         if (!g.good) continue;
         demand[g.good] = (demand[g.good] || 0) + consumers * g.rate;
-        noteRegion(g.good, tier.region);
+        noteRegion(g.good, worldOf(tier.region));
       }
     }
     const counts: Record<string, number> = {};

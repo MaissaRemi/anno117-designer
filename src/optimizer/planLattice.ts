@@ -1,7 +1,7 @@
 import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
-import { economy, effectOf, residentialChain } from "../economy/economy";
+import { cityStatusLadder, economy, effectOf, residentialChain } from "../economy/economy";
 import { VITAL_ATTRS } from "../economy/attributes";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
@@ -620,7 +620,7 @@ export function planLattice(
     // plus haut palier COHÉRENT — celui dont la population retombe bien dans sa tranche.
     let keep: typeof placed = placed;
     if (viabilityGate) {
-      const ladder = economy.cityStatus?.[tier.region] ?? [];
+      const ladder = cityStatusLadder(tier.region);
       const rankAt = (pop: number): Record<string, number> => {
         let a: Record<string, number> = {};
         for (const st of ladder) { if (pop < st.population) break; a = st.attrs; }

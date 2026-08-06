@@ -132,17 +132,25 @@ def main():
             el.clear(); continue
 
         if tpl == "CityStatus":
-            attrs = {}
-            eff = vals.find("./CityStatus/AttributeEffectsRoman")
-            if eff is not None:
-                for c in eff:
-                    v = c.findtext("Value")
-                    if v:
-                        try:
-                            attrs[c.tag] = float(v)
-                        except ValueError:
-                            pass
-            cs_effects[guid] = attrs
+            # TROIS variantes d'effets, une par CULTURE de population : Roman (Latium), Mixed
+            # (romanisée d'Albion : Mercators, Nobles) et Regional (celtique native). Ne lire
+            # que la romaine appliquait les malus du Latium aux paliers celtiques.
+            variants = {}
+            for tag, key in (("AttributeEffectsRoman", "Roman"),
+                             ("AttributeEffectsMixed", "RomanCeltic"),
+                             ("AttributeEffectsRegional", "Celtic")):
+                eff = vals.find("./CityStatus/" + tag)
+                attrs = {}
+                if eff is not None:
+                    for c in eff:
+                        v = c.findtext("Value")
+                        if v:
+                            try:
+                                attrs[c.tag] = float(v)
+                            except ValueError:
+                                pass
+                variants[key] = attrs
+            cs_effects[guid] = variants
             el.clear(); continue
 
         if tpl == "EconomyFeature":
@@ -312,10 +320,21 @@ def main():
             building_workforce[defId] = wf
         p.pop("maint", None)
 
-    # ordre des tiers via PopulationGroup7 ? on trie par GUID stable, region déduite du nom
+    # CULTURE d'un palier, déduite du nom interne. L'ORDRE DES TESTS EST DÉCISIF :
+    # « Population Level Roman Celtic 02 Merchants » contient « roman » ET « celtic ». Ce sont
+    # les Mercators, population ROMANISÉE d'Albion (leurs services sont le Fanum et le Théâtre
+    # bardique, bâtiments celtiques), pas un palier du Latium. Tester « roman » d'abord les
+    # rangeait en Latium — c'était faux. Trois familles, qui correspondent exactement aux trois
+    # variantes AttributeEffectsRoman / Mixed / Regional du rang de cité.
     def region_of(name):
         n = (name or "").lower()
-        return "Roman" if "roman" in n else ("Celtic" if "celtic" in n else "?")
+        if "roman celtic" in n:
+            return "RomanCeltic"
+        if "celtic" in n:
+            return "Celtic"
+        if "roman" in n:
+            return "Roman"
+        return "?"
 
     tiers = []
     # ordre Roman puis Celtic, par apparition
@@ -425,13 +444,17 @@ def main():
             "stackable": stackable,
         }
 
-    # echelle des rangs de cite, resolue : [{population, attrs}] par region, croissante
+    # Echelle des rangs de cite, resolue et croissante. `cs_ladder` est indexe par MONDE
+    # (les seuils de population), tandis que les effets dependent de la CULTURE du palier :
+    # une meme ile en Albion applique la variante Mixed a ses Mercators et Regional a ses
+    # Forgerons. On expose donc les trois variantes par marche.
     city_status = {}
-    for reg, steps in cs_ladder.items():
-        rows = [{"population": st["population"], "attrs": cs_effects.get(st["status"], {})}
+    for world, steps in cs_ladder.items():
+        rows = [{"population": st["population"],
+                 "attrs": cs_effects.get(st["status"], {})}
                 for st in steps]
         rows.sort(key=lambda r: r["population"])
-        city_status[reg] = rows
+        city_status[world] = rows
 
     out = {
         "tiers": tiers,

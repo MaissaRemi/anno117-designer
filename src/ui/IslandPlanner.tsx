@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../state/store";
-import { economy, tiers } from "../economy/economy";
+import { economy, tiers, worldOf } from "../economy/economy";
 import { runIslandPlan, type AnyIslandPlanResult } from "../optimizer/runIslandPlan";
 import { gridWithObstacles } from "../optimizer/halfTileAdapter";
 import { makeLookup } from "../engine/rules";
@@ -28,7 +28,7 @@ const ATTR_FR: Record<string, string> = {
 // paliers visés du monde courant, du plus dense au moins dense — le défaut de l'UI est le
 // premier (l'ordre brut de `tiers` suit les GUID et tombait sur « Nobles »)
 const tiersOfWorld = (world: string) =>
-  tiers.filter((t) => t.residenceId && t.region === world)
+  tiers.filter((t) => t.residenceId && worldOf(t.region) === world)
     .sort((a, b) => b.capacityDefault - a.capacityDefault);
 
 type NeedMode = "auto" | "all";
