@@ -43,6 +43,7 @@ function IslandThumb({ island, size = 64 }: { island: Island; size?: number }) {
 
 export function IslandPicker({ onClose }: Props) {
   const loadIsland = useStore((s) => s.loadIsland);
+  const hasWork = useStore((s) => s.layout.buildings.length > 0 || s.layout.roads.length > 0);
   const [region, setRegion] = useState<string>("");
 
   const regions = useMemo(() => Array.from(new Set(islands.map((i) => i.region))), []);
@@ -51,11 +52,13 @@ export function IslandPicker({ onClose }: Props) {
     [region],
   );
 
+  // On ne demande confirmation que s'il y a QUELQUE CHOSE À PERDRE. Sur une grille vide,
+  // une boîte de dialogue à chaque clic n'est qu'un obstacle — et une fenêtre native
+  // refusée (navigateur qui les bloque) donnait l'impression que le bouton ne marchait pas.
   const choose = (id: string) => {
-    if (confirm("Charger cette île ? La disposition actuelle sera remplacée.")) {
-      loadIsland(id);
-      onClose();
-    }
+    if (hasWork && !confirm("Charger cette île ? La disposition actuelle sera remplacée.")) return;
+    loadIsland(id);
+    onClose();
   };
 
   return (

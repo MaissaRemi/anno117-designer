@@ -1,19 +1,24 @@
-import { useEffect, useMemo, useRef } from "react";
-import { footprintSize } from "../../engine/geometry";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { footprintCells, footprintSize } from "../../engine/geometry";
 import type { DefLookup } from "../../engine/rules";
 import { economy } from "../../economy/economy";
-import type { GridShape, PlacedBuilding, RoadTile } from "../../model/types";
+import type { BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../../model/types";
 
 /**
- * Carte de prévisualisation d'un plan, colorée PAR PALIER ATTEINT.
+ * Carte de prévisualisation d'un plan — colorée par PALIER ATTEINT, navigable, et capable
+ * de montrer la portée réelle d'un service au survol.
  *
- * Le panneau de résultat ne disait que « 62 % au palier cible » — sans dire OÙ sont les
- * 38 % restants ni pourquoi. Or c'est exactement l'information qui permet de décider :
- * une bordure non desservie ne se corrige pas comme un trou au milieu de l'île.
+ * Trois raisons d'exister :
+ *  1. le panneau de résultat annonçait « 77 % au palier cible » sans dire OÙ sont les 23 %
+ *     restants — or une bordure non desservie ne se corrige pas comme un trou central ;
+ *  2. sur une île de 640² il faut pouvoir zoomer pour juger d'un quartier ;
+ *  3. la portée d'un service se mesure LE LONG DES RUES, pas à vol d'oiseau : c'est
+ *     contre-intuitif, et seul un survol qui allume le réseau atteint le rend lisible.
  *
- * Rendu en deux temps : on peint une ImageData à la résolution EXACTE de la grille (une
- * case = un pixel), puis on l'étire au canvas sans lissage. Une île 640² fait 410 000
- * cases — les dessiner en `fillRect` bloquerait le thread UI plusieurs centaines de ms.
+ * Rendu en trois couches hors-écran, à la résolution EXACTE de la grille (une case = un
+ * pixel), étirées sans lissage. Une île 640² fait 410 000 cases : les dessiner en
+ * `fillRect` bloquerait le thread UI. Le fond n'est recalculé que si le plan change ; le
+ * surlignage, que si le bâtiment survolé change.
  */
 
 export interface PlanPreviewProps {
@@ -28,24 +33,39 @@ export interface PlanPreviewProps {
 
 /** Palette par rang dans la chaîne résidentielle : sombre en bas, or au palier cible. */
 const TIER_RAMP = ["#4a5568", "#5b7fa8", "#3fa796", "#c9a227", "#e8c547"];
-const COL_SEA = [8, 14, 24] as const;
-const COL_LAND = [30, 34, 40] as const;
-const COL_ROAD = [96, 100, 108] as const;
-const COL_AQUA = [64, 176, 208] as const;
-const COL_SERVICE = [214, 92, 76] as const;
-const COL_ROOT = [255, 214, 92] as const;
+const COL_SEA: RGB = [8, 14, 24];
+const COL_LAND: RGB = [30, 34, 40];
+const COL_ROAD: RGB = [96, 100, 108];
+const COL_AQUA: RGB = [64, 176, 208];
+const COL_SERVICE: RGB = [214, 92, 76];
+const COL_ROOT: RGB = [255, 214, 92];
+const COL_REACH: RGB = [88, 224, 120]; // rues à portée du service survolé
+const COL_FOCUS: RGB = [255, 255, 255]; // le service survolé lui-même
 
-const hexToRgb = (h: string): readonly [number, number, number] => [
+type RGB = readonly [number, number, number];
+const hexToRgb = (h: string): RGB => [
   parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16),
 ];
 
+const rangeOf = (d: BuildingDef): number => d.streetRange || d.radius?.range || 0;
+
 export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 320 }: PlanPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const baseRef = useRef<HTMLCanvasElement | null>(null);
+  const hlRef = useRef<HTMLCanvasElement | null>(null);
+  const [view, setView] = useState({ z: 1, ox: 0, oy: 0 });
+  const [hover, setHover] = useState<number>(-1); // index du bâtiment survolé
+  const dragRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+
+  const W = grid.w, H = grid.h;
+  const cpt = grid.cellsPerTile ?? 1;
+  const fit = Math.min(size / W, size / H);
+  const cw = Math.max(1, Math.round(W * fit)), ch = Math.max(1, Math.round(H * fit));
 
   /** residenceId → couleur, par rang dans la chaîne (capacité croissante). */
   const colorOfResidence = useMemo(() => {
     const res = economy.tiers.filter((t) => t.residenceId).sort((a, b) => a.capacityDefault - b.capacityDefault);
-    const m = new Map<string, readonly [number, number, number]>();
+    const m = new Map<string, RGB>();
     res.forEach((t, i) => {
       const c = TIER_RAMP[Math.min(TIER_RAMP.length - 1, Math.round((i / Math.max(1, res.length - 1)) * (TIER_RAMP.length - 1)))];
       m.set(t.residenceId!, hexToRgb(c));
@@ -53,58 +73,197 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
     return m;
   }, []);
 
+  /** Index case → indice de bâtiment, pour le pointage au survol. Une seule passe. */
+  const hitMap = useMemo(() => {
+    const m = new Int32Array(W * H).fill(-1);
+    for (let i = 0; i < buildings.length; i++) {
+      const def = lookup(buildings[i].defId);
+      if (!def) continue;
+      for (const c of footprintCells(def, buildings[i].x, buildings[i].y, buildings[i].rotation, cpt)) {
+        if (c.x >= 0 && c.y >= 0 && c.x < W && c.y < H) m[c.y * W + c.x] = i;
+      }
+    }
+    return m;
+  }, [buildings, lookup, W, H, cpt]);
+
+  const roadSet = useMemo(() => {
+    const s = new Set<number>();
+    for (const r of roads) if (r.x >= 0 && r.y >= 0 && r.x < W && r.y < H) s.add(r.y * W + r.x);
+    return s;
+  }, [roads, W, H]);
+
+  // ---- couche de FOND : terrain, voirie, conduites, bâtiments ----
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const W = grid.w, H = grid.h;
     const img = new ImageData(W, H);
     const px = img.data;
-    const put = (x: number, y: number, c: readonly [number, number, number]) => {
+    const put = (x: number, y: number, c: RGB) => {
       if (x < 0 || y < 0 || x >= W || y >= H) return;
       const i = (y * W + x) * 4;
       px[i] = c[0]; px[i + 1] = c[1]; px[i + 2] = c[2]; px[i + 3] = 255;
     };
-
-    // 1. terrain
     for (let i = 0; i < W * H; i++) {
       const c = grid.usable[i] ? COL_LAND : COL_SEA;
       const o = i * 4;
       px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255;
     }
-    // 2. voirie, puis conduites (elles enjambent, donc elles passent au-dessus)
     for (const r of roads) put(r.x, r.y, COL_ROAD);
     for (const a of aqueducts ?? []) put(a.x, a.y, COL_AQUA);
-    // 3. bâtiments : maisons colorées par palier, services en rouge, comptoir en or
     for (const b of buildings) {
       const def = lookup(b.defId);
       if (!def) continue;
       const col = def.roadRoot ? COL_ROOT : (colorOfResidence.get(b.defId) ?? COL_SERVICE);
-      const { w, h } = footprintSize(def, b.rotation, grid.cellsPerTile ?? 1);
+      const { w, h } = footprintSize(def, b.rotation, cpt);
       for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) put(b.x + i, b.y + j, col);
     }
-
-    // 4. étirement sans lissage vers le canvas visible
-    const scale = Math.min(size / W, size / H);
-    const dpr = Math.min(2, typeof devicePixelRatio === "number" ? devicePixelRatio : 1);
-    const cw = Math.max(1, Math.round(W * scale)), ch = Math.max(1, Math.round(H * scale));
-    canvas.style.width = `${cw}px`;
-    canvas.style.height = `${ch}px`;
-    canvas.width = Math.round(cw * dpr);
-    canvas.height = Math.round(ch * dpr);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
     const off = document.createElement("canvas");
     off.width = W; off.height = H;
     off.getContext("2d")!.putImageData(img, 0, 0);
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
-  }, [grid, buildings, roads, aqueducts, lookup, size, colorOfResidence]);
+    baseRef.current = off;
+    setView({ z: 1, ox: 0, oy: 0 });
+  }, [grid, buildings, roads, aqueducts, lookup, colorOfResidence, W, H, cpt]);
 
-  return <canvas ref={canvasRef} className="plan-preview" />;
+  // ---- couche de SURLIGNAGE : portée-rue du service survolé ----
+  const hovered = hover >= 0 ? buildings[hover] : null;
+  const hoveredDef = hovered ? lookup(hovered.defId) : null;
+  useEffect(() => {
+    if (!hovered || !hoveredDef || rangeOf(hoveredDef) <= 0) { hlRef.current = null; return; }
+    const img = new ImageData(W, H);
+    const px = img.data;
+    const put = (c: number, col: RGB) => {
+      const i = c * 4;
+      px[i] = col[0]; px[i + 1] = col[1]; px[i + 2] = col[2]; px[i + 3] = 255;
+    };
+    // BFS le long des routes, même sémantique que `streetCoverage` de l'analyseur :
+    // graines = routes adjacentes à l'emprise (distance 1), limite = portée × cellules/tuile
+    const limit = rangeOf(hoveredDef) * cpt;
+    const cells = footprintCells(hoveredDef, hovered.x, hovered.y, hovered.rotation, cpt);
+    const own = new Set(cells.map((c) => c.y * W + c.x));
+    const dist = new Map<number, number>();
+    let frontier: number[] = [];
+    const seed = (c: number) => {
+      if (own.has(c) || !roadSet.has(c) || dist.has(c)) return;
+      dist.set(c, 1); frontier.push(c);
+    };
+    for (const c of cells) {
+      if (c.x > 0) seed(c.y * W + c.x - 1);
+      if (c.x < W - 1) seed(c.y * W + c.x + 1);
+      if (c.y > 0) seed((c.y - 1) * W + c.x);
+      if (c.y < H - 1) seed((c.y + 1) * W + c.x);
+    }
+    let d = 1;
+    while (frontier.length && d < limit) {
+      const next: number[] = [];
+      for (const c of frontier) {
+        const x = c % W, y = (c / W) | 0;
+        for (const nb of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
+          if (nb < 0 || !roadSet.has(nb) || dist.has(nb)) continue;
+          dist.set(nb, d + 1); next.push(nb);
+        }
+      }
+      frontier = next; d++;
+    }
+    for (const c of dist.keys()) put(c, COL_REACH);
+    for (const c of own) put(c, COL_FOCUS);
+    const off = document.createElement("canvas");
+    off.width = W; off.height = H;
+    off.getContext("2d")!.putImageData(img, 0, 0);
+    hlRef.current = off;
+  }, [hovered, hoveredDef, roadSet, W, H, cpt]);
+
+  // ---- composition ----
+  const paint = useCallback(() => {
+    const canvas = canvasRef.current, base = baseRef.current;
+    if (!canvas || !base) return;
+    const dpr = Math.min(2, typeof devicePixelRatio === "number" ? devicePixelRatio : 1);
+    canvas.style.width = `${cw}px`;
+    canvas.style.height = `${ch}px`;
+    if (canvas.width !== Math.round(cw * dpr)) canvas.width = Math.round(cw * dpr);
+    if (canvas.height !== Math.round(ch * dpr)) canvas.height = Math.round(ch * dpr);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(dpr, dpr);
+    ctx.translate(view.ox, view.oy);
+    ctx.scale(view.z, view.z);
+    ctx.drawImage(base, 0, 0, cw, ch);
+    if (hlRef.current) ctx.drawImage(hlRef.current, 0, 0, cw, ch);
+  }, [cw, ch, view]);
+
+  useEffect(paint, [paint, hover]);
+
+  // ---- interactions : molette = zoom au curseur, glisser = déplacement ----
+  // La molette est câblée à la main en NON PASSIF : React attache `onWheel` en passif, donc
+  // `preventDefault` y est ignoré et la page défilait au lieu de zoomer.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      setView((v) => {
+        const z = Math.min(24, Math.max(1, v.z * (e.deltaY < 0 ? 1.25 : 1 / 1.25)));
+        if (z === v.z) return v;
+        // le point sous le curseur reste immobile
+        const k = z / v.z;
+        let ox = mx - (mx - v.ox) * k;
+        let oy = my - (my - v.oy) * k;
+        // pas de vide autour de la carte
+        ox = Math.min(0, Math.max(cw - cw * z, ox));
+        oy = Math.min(0, Math.max(ch - ch * z, oy));
+        return { z, ox, oy };
+      });
+    };
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", onWheel);
+  }, [cw, ch]);
+  const onDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    dragRef.current = { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy };
+  };
+  const onUp = () => { dragRef.current = null; };
+  const onMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const d = dragRef.current;
+    if (d) {
+      setView((v) => ({
+        z: v.z,
+        ox: Math.min(0, Math.max(cw - cw * v.z, d.ox + (e.clientX - d.x))),
+        oy: Math.min(0, Math.max(ch - ch * v.z, d.oy + (e.clientY - d.y))),
+      }));
+      return;
+    }
+    // écran → case de grille
+    const gx = Math.floor(((e.clientX - rect.left - view.ox) / view.z) / fit);
+    const gy = Math.floor(((e.clientY - rect.top - view.oy) / view.z) / fit);
+    const idx = gx >= 0 && gy >= 0 && gx < W && gy < H ? hitMap[gy * W + gx] : -1;
+    setHover((h) => (h === idx ? h : idx));
+  };
+
+  const legendRange = hoveredDef && rangeOf(hoveredDef) > 0 ? rangeOf(hoveredDef) : null;
+  return (
+    <div className="plan-preview-box">
+      <canvas
+        ref={canvasRef}
+        className="plan-preview"
+        onMouseDown={onDown}
+        onMouseUp={onUp}
+        onMouseMove={onMove}
+        onMouseLeave={() => { dragRef.current = null; setHover(-1); }}
+        onDoubleClick={() => setView({ z: 1, ox: 0, oy: 0 })}
+      />
+      <div className="plan-preview-hint">
+        {hoveredDef
+          ? <><b>{hoveredDef.name}</b>{legendRange ? ` · portée-rue ${legendRange} — les rues atteintes sont en vert` : " · aucune portée"}</>
+          : <>molette = zoom · glisser = déplacer · double-clic = vue entière · survoler un service montre sa portée</>}
+        {view.z > 1 && <span className="muted"> · ×{view.z.toFixed(1)}</span>}
+      </div>
+    </div>
+  );
 }
 
-/** Légende : un pastille par palier présent + les repères de lecture. */
+/** Légende : une pastille par palier présent + les repères de lecture. */
 export function PlanPreviewLegend({ tierCounts }: { tierCounts: Record<string, number> }) {
   const res = economy.tiers.filter((t) => t.residenceId).sort((a, b) => a.capacityDefault - b.capacityDefault);
   const items = res

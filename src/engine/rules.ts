@@ -158,11 +158,16 @@ export interface FieldResult {
 export function validateFields(layout: Layout, lookup: DefLookup, b: PlacedBuilding): FieldResult | null {
   const def = lookup(b.defId);
   if (!def || !def.field) return null;
-  const scale = gridScale(layout.grid);
-  const required = def.field.tiles * scale * scale; // tuiles → cellules (aire : ×scale²)
   const owned = layout.fields.filter(
     (f) => f.ownerUid === b.uid && f.fieldType === def.field!.fieldType,
   );
+  return fieldResult(layout, def, b, owned);
+}
+
+/** Cœur de `validateFields`, sur des cases de champ DÉJÀ filtrées (index partagé). */
+function fieldResult(layout: Layout, def: BuildingDef, b: PlacedBuilding, owned: Cell[]): FieldResult {
+  const scale = gridScale(layout.grid);
+  const required = def.field!.tiles * scale * scale; // tuiles → cellules (aire : ×scale²)
   const count = owned.length;
 
   // Connexité (BFS orthogonal sur les cases du champ).
@@ -310,21 +315,65 @@ export interface BuildingIssues {
   ok: boolean;
 }
 
-/** Valide toute la disposition, renvoie les problèmes par bâtiment. */
+/**
+ * Valide toute la disposition, renvoie les problèmes par bâtiment.
+ *
+ * ⚠ Cette fonction tourne à CHAQUE rendu de la grille. Elle était quadratique : `canPlace`
+ * reconstruisait l'ensemble des cases bloquées (tous les bâtiments + tous les champs +
+ * toutes les routes) pour CHAQUE bâtiment, et `validateFields` refiltrait la liste
+ * complète des champs de la même façon. Mesuré sur un plan d'île appliqué — 1 517
+ * bâtiments, 22 348 routes, grille 640×640 — : **21,5 secondes**. L'interface paraissait
+ * plantée dès qu'on posait un plan.
+ *
+ * On indexe donc une seule fois (occupation, routes, champs par propriétaire), puis chaque
+ * bâtiment se valide en temps proportionnel à sa seule emprise.
+ */
 export function validateLayout(layout: Layout, lookup: DefLookup): Map<string, BuildingIssues> {
   const issues = new Map<string, BuildingIssues>();
   const scale = gridScale(layout.grid);
   const { set: rootSet } = rootedRoadSet(layout, lookup);
+
+  // nombre de bâtiments couvrant chaque case : > 1 ⇔ chevauchement (le bâtiment testé
+  // comptant pour 1, un second occupant fait passer le compteur à 2)
+  const cover = new Map<string, number>();
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
     if (!def) continue;
+    for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) {
+      const k = cellKey(c.x, c.y);
+      cover.set(k, (cover.get(k) ?? 0) + 1);
+    }
+  }
+  const roadCells = new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
+  const fieldOwner = new Map<string, string>();
+  const fieldsByOwner = new Map<string, typeof layout.fields>();
+  for (const f of layout.fields) {
+    fieldOwner.set(cellKey(f.x, f.y), f.ownerUid);
+    const arr = fieldsByOwner.get(f.ownerUid);
+    if (arr) arr.push(f);
+    else fieldsByOwner.set(f.ownerUid, [f]);
+  }
+
+  for (const b of layout.buildings) {
+    const def = lookup(b.defId);
+    if (!def) continue;
+    const cells = footprintCells(def, b.x, b.y, b.rotation, scale);
     // terrain : chaque case de l'emprise doit correspondre au terrain de pose
-    const terrain = footprintCells(def, b.x, b.y, b.rotation, scale).some(
-      (c) => !isBuildable(layout.grid, c.x, c.y, def.placement),
-    );
-    const overlap = !canPlace(layout, lookup, def, b.x, b.y, b.rotation, b.uid);
+    let terrain = false;
+    let overlap = false;
+    for (const c of cells) {
+      const k = cellKey(c.x, c.y);
+      if (!isBuildable(layout.grid, c.x, c.y, def.placement)) { terrain = true; overlap = true; continue; }
+      // même sémantique que `canPlace` : un autre bâtiment, une route, ou le champ d'AUTRUI
+      if ((cover.get(k) ?? 0) > 1 || roadCells.has(k)) { overlap = true; continue; }
+      const fo = fieldOwner.get(k);
+      if (fo !== undefined && fo !== b.uid) overlap = true;
+    }
     const road = def.needsRoad && !def.roadRoot && !roadConnected(layout, lookup, b, rootSet);
-    const field = validateFields(layout, lookup, b);
+    const owned = def.field
+      ? (fieldsByOwner.get(b.uid) ?? []).filter((f) => f.fieldType === def.field!.fieldType)
+      : null;
+    const field = owned ? fieldResult(layout, def, b, owned) : null;
     const ok = !overlap && !road && !terrain && (!field || field.ok);
     issues.set(b.uid, { uid: b.uid, road, field, overlap, terrain, ok });
   }
