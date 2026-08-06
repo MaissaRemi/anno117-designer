@@ -183,8 +183,17 @@ Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
 ## 9. Wonders & monuments [FICHIERS]
 
 - **Colisée** : bâtiment final = `MonumentEventBuilding` 3621 « Wonder Roman
-  Colosseum », **street 250** (couvre l'île entière — PAS de contrainte de
-  centrage), **`BuildingUnique`**, **eau 50u Mandatory**, pente max 5. CHANTIER =
+  Colosseum », **street 250**, **`BuildingUnique`**, **eau 50u Mandatory**, pente max 5.
+  ⚠ **CORRECTION 2026-08-06** : « street 250 couvre l'île entière, pas de contrainte de
+  centrage » était FAUX au-delà des îles moyennes. 250 est une distance **le long des
+  rues**, pas un rayon à vol d'oiseau. Mesures : BFS géodésique sur la terre (borne
+  supérieure, la distance-rue est toujours ≥) → `large_07` 99,0 % de la terre atteignable,
+  `extralarge_04` 91,3 %, **`continental_01` (406 901 tuiles) seulement 30,2 %**. Confirmé
+  au moteur, recette maigre : continental 9 328 maisons T4 sur 29 370 = 31,8 %.
+  → Sur une île de plus de ~350 tuiles d'étendue, le Colisée **plafonne mécaniquement** la
+  part de maisons au palier final. Conséquence de design : planifier les Patriciens DANS sa
+  boule et les Equites dehors (Wonders 4 = Forum seul) plutôt que de laisser 68 % de l'île
+  au palier de base. Non implémenté à ce jour. CHANTIER =
   3 assets `Monument` (Phase 0/1/2) — construction par phases avec livraisons.
   `MonumentEvent` : jeux du Colisée (Small/Medium/Grand) = events activables.
 - Forum/Bains/Temple = `PublicServiceBuilding` ordinaires (construction instantanée),
@@ -221,6 +230,15 @@ Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
 - **[FICHIERS]** Romanisation par bâtiment (cf. §8).
 
 ## 13. CHECKLIST TESTS IN-GAME (pour l'utilisateur — à plus fort levier)
+
+0. **[LE PLUS RENTABLE] Sens de `UpgradeThreshold`** — le seuil porté par la résidence du
+   palier T est-il la condition pour **ÊTRE** T, ou pour **QUITTER** T ? Protocole : monter
+   une maison au palier Patricien en ne fournissant que le **Forum** côté Wonders (w4), sans
+   Colisée. Si elle monte → lecture (b), le Colisée devient OPTIONNEL, le budget d'eau est
+   divisé par deux et les recettes gagnantes changent entièrement. Si elle bloque →
+   lecture (a), celle qu'implémente le code (`needsModel.ts`, `THRESHOLD_MEANS_REACH`).
+   Les deux lectures sont cohérentes avec les fichiers ; seul le jeu tranche.
+
 
 1. **Aqueduc plat** : tracer une conduite droite sur terrain plat depuis une source ;
    noter la longueur exacte à laquelle l'eau s'arrête (départ H2 vs H1 si possible).
