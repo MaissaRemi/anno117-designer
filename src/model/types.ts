@@ -37,7 +37,14 @@ export interface BuildingDef {
   transporterRange?: number; // prod : distance-rue max vers un entrepôt (défaut 30)
   template?: string; // template du jeu (SlotFactoryBuilding7 = mines, Warehouse…)
   freeArea?: { radius: number; area: number }; // prod ∝ cases libres dans le rayon
-  unique?: boolean; // BuildingUnique : 1 exemplaire max sur l'île (Colisée…)
+  unique?: boolean; // BuildingUnique : contrainte d'unicité sur l'île (Colisée…)
+  /**
+   * TYPE d'unicité (`UniqueType`). Le quota porte sur le type, pas sur le bâtiment : les
+   * seize autels de dieux — huit divinités × deux régions — partagent `Shrine` avec
+   * `UniqueScope=Area`. Le total autorisé par île est donc commun à toutes les divinités,
+   * et vaut le nombre de permis de sanctuaire détenus.
+   */
+  uniqueType?: string;
   /** Emplacement de terrain REQUIS (`Factory7/RawResourceType`). "mountain" et "river"
    *  correspondent aux slots extraits des îles ; "coastal"/"forest"/"meadow"/"marsh"
    *  décrivent un terrain, pas un slot ponctuel. Absent = pose libre. */

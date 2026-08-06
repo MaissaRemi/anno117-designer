@@ -106,8 +106,8 @@ export function houseAttrs(opts: {
  * ce sont les seuls bâtiments dont l'effet de zone corrige directement les attributs que le
  * rang de cité dégrade. Portée le long des rues.
  */
-export function institutionDefs(region?: string): { defId: string; attrs: Attrs; range: number }[] {
-  const out: { defId: string; attrs: Attrs; range: number }[] = [];
+export function institutionDefs(region?: string): { defId: string; attrs: Attrs; range: number; uniqueType?: string }[] {
+  const out: { defId: string; attrs: Attrs; range: number; uniqueType?: string }[] = [];
   for (const [defId, fx] of Object.entries(economy.buildingEffects ?? {})) {
     if (fx.scope !== "street") continue;
     // uniquement du bénéfice sur les attributs vitaux, et hors besoins de palier
@@ -121,4 +121,38 @@ export function institutionDefs(region?: string): { defId: string; attrs: Attrs;
   // tri déterministe : le plus utile d'abord (somme des gains vitaux), puis defId
   const gain = (a: Attrs) => VITAL_ATTRS.reduce((s, k) => s + Math.max(0, a[k] ?? 0), 0);
   return out.sort((a, b) => gain(b.attrs) - gain(a.attrs) || a.defId.localeCompare(b.defId));
+}
+
+/** `UniqueType` que partagent les seize autels de dieux. */
+export const SHRINE_TYPE = "Shrine";
+
+/**
+ * DIVINITÉ TUTÉLAIRE — un seul dieu par île.
+ *
+ * « Chaque île a un dieu tutélaire que vénère sa population » : c'est un choix d'interface,
+ * et il commande quel autel y est constructible. Les seize autels (huit divinités × deux
+ * régions) partagent en outre le quota `UniqueType=Shrine`. Poser les autels de six dieux
+ * différents, comme le faisait le planificateur, n'a donc aucun équivalent en jeu.
+ *
+ * Le choix ne se fait PAS sur la somme des gains : seul l'attribut LIMITANT compte. Mesuré
+ * sur roman_island_medium_01, où la sécurité incendie est le goulot, Vulcain (🔥+2) et
+ * Neptune (🔥+1 💰+1) valent des milliers d'habitants, tandis que Cérès, Epona, Cernunnos et
+ * Mercure-Lug n'en valent exactement aucun.
+ *
+ * @param deficit  manque par attribut vital, ≥ 0 (0 = cet attribut n'est pas contraignant)
+ */
+export function pickPatron(
+  candidates: { defId: string; attrs: Attrs; range: number; uniqueType?: string }[],
+  deficit: Record<string, number>,
+): string | undefined {
+  const shrines = candidates.filter((c) => c.uniqueType === SHRINE_TYPE);
+  if (!shrines.length) return undefined;
+  const score = (a: Attrs) =>
+    VITAL_ATTRS.reduce((s, k) => s + Math.max(0, deficit[k] ?? 0) * Math.max(0, a[k] ?? 0), 0);
+  // à égalité (aucun déficit connu), on retombe sur le gain vital brut puis sur le defId :
+  // le résultat reste déterministe.
+  const gain = (a: Attrs) => VITAL_ATTRS.reduce((s, k) => s + Math.max(0, a[k] ?? 0), 0);
+  return [...shrines].sort((a, b) =>
+    score(b.attrs) - score(a.attrs) || gain(b.attrs) - gain(a.attrs) || a.defId.localeCompare(b.defId),
+  )[0]?.defId;
 }

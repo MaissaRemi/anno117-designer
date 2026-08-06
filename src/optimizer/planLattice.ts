@@ -34,7 +34,19 @@ export interface LatticeOpts {
   /** Arrêter de bâtir quand le BILAN DE L'ÎLE passerait sous zéro sur un attribut vital.
    *  Défaut true. */
   viabilityGate?: boolean;
+  /** Plafond par `UniqueType`, tous bâtiments confondus. Voir `DEFAULT_UNIQUE_QUOTA`. */
+  uniqueQuota?: Record<string, number>;
 }
+
+/**
+ * Plafonds par `UniqueType`, sur l'île (`UniqueScope=Area`).
+ *
+ * `Shrine` couvre les seize autels de dieux et n'a PAS d'`AllowedAmount` dans les fichiers :
+ * le nombre autorisé est celui des permis de sanctuaire détenus (produit 93771), qui
+ * s'obtiennent par la dévotion et la recherche — dont une technologie répétable. On retient
+ * 2 par défaut, valeur réaliste en cours de partie, réglable par l'utilisateur.
+ */
+export const DEFAULT_UNIQUE_QUOTA: Record<string, number> = { Shrine: 2, Monument01: 1 };
 
 /**
  * Espacement des épines verticales du peigne de routes.
@@ -227,6 +239,7 @@ export function planLattice(
     }
     buildings.push({ uid: uid("lat"), defId: def.id, x, y, rotation: rot ? 90 : 0, locked: false });
     servicesPlaced[def.id] = (servicesPlaced[def.id] ?? 0) + 1;
+    if (def.uniqueType) uniqueUsed.set(def.uniqueType, (uniqueUsed.get(def.uniqueType) ?? 0) + 1);
     const arr = placements.get(def.id) ?? [];
     arr.push({ x, y, w, h });
     placements.set(def.id, arr);
@@ -236,6 +249,20 @@ export function planLattice(
     const ring = layRing(x, y, w, h);
     if (ring.length) connectRing(ring);
   };
+  /**
+   * QUOTA D'UNICITÉ PARTAGÉ. `BuildingUnique` ne plafonne pas un bâtiment mais un TYPE :
+   * les seize autels de dieux — huit divinités × deux régions — portent tous
+   * `UniqueType=Shrine` avec `UniqueScope=Area`, si bien que le total autorisé sur l'île
+   * est commun à toutes les divinités. Le placeur ne connaissait que le drapeau booléen et
+   * en posait donc une copie par DIVINITÉ : 72 autels mesurés sur roman_island_medium_01,
+   * 84 sur celtic_island_large_07, là où le jeu en autorise le nombre de permis détenus.
+   */
+  const uniqueUsed = new Map<string, number>();
+  const quotaOf = (d: BuildingDef): number =>
+    d.uniqueType ? (opts.uniqueQuota?.[d.uniqueType] ?? DEFAULT_UNIQUE_QUOTA[d.uniqueType] ?? 1) : Infinity;
+  const remainingQuota = (d: BuildingDef): number =>
+    d.uniqueType ? quotaOf(d) - (uniqueUsed.get(d.uniqueType) ?? 0) : Infinity;
+
   // pose une copie au plus près de (tx,ty) dans un rayon maxRad (spirale Chebyshev)
   const placeNear = (def: BuildingDef, tx: number, ty: number, maxRad: number, rot: 0 | 1 = 0): boolean => {
     const w = rot ? def.size.h : def.size.w, h = rot ? def.size.w : def.size.h;
@@ -371,8 +398,11 @@ export function planLattice(
     // minGain plafonné à 30 % de la terre : un type à portée >= taille d'île (Colisée
     // 250) aurait sinon un seuil inatteignable → jamais posé
     const minGain = Math.max(60, Math.min(Math.floor(2 * r * r * 0.25), Math.floor(landCount * 0.3)));
-    // BuildingUnique (Colisée…) : 1 seul exemplaire — sa portée (250) couvre l'île
-    const maxCopies = d.unique ? 1 : Math.ceil(landCount / (2 * r * r)) * 2 + 2;
+    // Le quota est PARTAGÉ entre bâtiments de même `uniqueType` : on ne borne donc pas à 1
+    // par bâtiment mais au reliquat commun. Le Colisée reste à 1, les autels se partagent
+    // les permis de sanctuaire.
+    const maxCopies = Math.min(remainingQuota(d), Math.ceil(landCount / (2 * r * r)) * 2 + 2);
+    if (maxCopies <= 0) return;
     greedyCover(anchors, distMap, r, minGain, maxCopies, (a) => {
       const before = (placements.get(d.id) ?? []).length;
       placeNear(d, a.x, a.y, Math.floor(r / 2) + 4);
@@ -399,7 +429,15 @@ export function planLattice(
   const tryStrip = (cx: number, ly: number): boolean => {
     let xa = cx, xb = cx, above = true;
     const pos: { d: BuildingDef; x: number; y: number; rot: 0 | 1 }[] = [];
+    // Le quota compte AUSSI ce que ce strip a déjà retenu : sans ce compteur local, un même
+    // strip posait un autel par divinité d'un coup, quota ou pas.
+    const localUse = new Map<string, number>();
     for (const d of smallByH) {
+      if (d.uniqueType) {
+        const used = (localUse.get(d.uniqueType) ?? 0);
+        if (remainingQuota(d) - used <= 0) continue;
+        localUse.set(d.uniqueType, used + 1);
+      }
       const rot: 0 | 1 = d.size.h > STEPH - 1 && d.size.w <= STEPH - 1 ? 1 : 0;
       const w = rot ? d.size.h : d.size.w, h = rot ? d.size.w : d.size.h;
       const ty = above ? ly - h : ly + 1; // flush contre la route
@@ -414,6 +452,10 @@ export function planLattice(
   };
   const placeClusterLattice = () => {
     if (!smallDefs.length) return;
+    // NOTE : les bâtiments à quota restent dans ce calcul, bien qu'on n'en pose qu'un ou
+    // deux. Les en exclure élargit la trame et dégrade mesurablement la connexité routière
+    // (0,95 → 0,70) et le raccordement à l'eau (0,60 → 0,54) : c'est une question
+    // d'optimisation à traiter séparément, pas un effet du quota d'unicité.
     const rC = Math.min(...smallDefs.map((d) => effR(d)));
     const cstep = Math.max(4, Math.floor(rC / 2));
     // ancres : centroïde + grille fine SNAPPÉE aux lignes du peigne (flush)

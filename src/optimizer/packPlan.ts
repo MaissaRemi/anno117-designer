@@ -4,7 +4,7 @@ import { economy, residentialChain } from "../economy/economy";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { VITAL_ATTRS } from "../economy/attributes";
 import type { DefLookup } from "../engine/rules";
-import type { HousePlot } from "./planLattice";
+import { DEFAULT_UNIQUE_QUOTA, type HousePlot } from "./planLattice";
 import { makeStreetGrid } from "./streetGrid";
 
 const SMALL_RANGE_MAX = 40; // services portée <= 40 = locaux
@@ -18,6 +18,8 @@ export interface PackOpts {
   coverageFloor?: number;
   /** Restreint les services à placer (mode seuils). Absent = tous les services du tier. */
   serviceIds?: string[];
+  /** Plafond par `UniqueType`, tous bâtiments confondus (cf. `DEFAULT_UNIQUE_QUOTA`). */
+  uniqueQuota?: Record<string, number>;
 }
 
 export interface PackResult {
@@ -74,6 +76,8 @@ export function planPacked(
   const floor = Math.min(1, Math.max(0.3, opts.coverageFloor ?? 1));
   const tier = economy.tiers.find((t) => t.guid === tierGuid);
   if (!tier || !tier.residenceId) throw new Error("Tier-cible invalide.");
+  /** Compteur du quota d'unicité PARTAGÉ par `uniqueType` (cf. planLattice). */
+  const uniqueUsed = new Map<string, number>();
   const resDef = lookup(tier.residenceId)!;
   const rw = resDef.size.w, rh = resDef.size.h;
   const W = grid.w, H = grid.h, N = W * H;
@@ -181,6 +185,7 @@ export function planPacked(
       if (roadAt[c]) roadAt[c] = 0;
     }
     buildings.push({ uid: uid("pack"), defId: def.id, x, y, rotation: 0, locked: false });
+    if (def.uniqueType) uniqueUsed.set(def.uniqueType, (uniqueUsed.get(def.uniqueType) ?? 0) + 1);
     servicesPlaced[def.id] = (servicesPlaced[def.id] ?? 0) + 1;
     const arr = placements.get(def.id) ?? [];
     arr.push({ x, y, w: def.size.w, h: def.size.h });
@@ -225,7 +230,13 @@ export function planPacked(
     bfsType(tc); markCovered(tc);
     const q = proxyQ(tc.range);
     const stride = 3;
-    const maxIters = tc.def.unique ? 1 : 60; // BuildingUnique (Colisée) : 1 copie max
+    // Le quota d'unicité est PARTAGÉ par `uniqueType`, pas par bâtiment : les seize autels
+    // de dieux se partagent les permis de sanctuaire. Borner à 1 par bâtiment posait une
+    // copie PAR DIVINITÉ — six autels là où le jeu en autorise deux.
+    const maxIters = tc.def.uniqueType
+      ? Math.max(0, (opts.uniqueQuota?.[tc.def.uniqueType] ?? DEFAULT_UNIQUE_QUOTA[tc.def.uniqueType] ?? 1)
+          - (uniqueUsed.get(tc.def.uniqueType) ?? 0))
+      : (tc.def.unique ? 1 : 60);
     for (let iter = 0; iter < maxIters; iter++) {
       // uncov = maisons vivantes non couvertes (origines) ; cible du glouton
       const uncov = new Int32Array(N);

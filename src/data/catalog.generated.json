@@ -7459,7 +7459,8 @@
       "range": 250
     },
     "streetRange": 250,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Monument01"
   },
   {
     "id": "g36912",
@@ -7478,6 +7479,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7522,6 +7524,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7566,6 +7569,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7602,6 +7606,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7638,6 +7643,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7678,6 +7684,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7722,7 +7729,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g144813",
@@ -7745,7 +7753,8 @@
       "range": 18
     },
     "streetRange": 22,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g3620",
@@ -7852,6 +7861,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -8698,7 +8708,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82491",
@@ -8721,7 +8732,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81072",
@@ -8744,7 +8756,8 @@
       "range": 18
     },
     "streetRange": 22,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82492",
@@ -8767,7 +8780,8 @@
       "range": 20
     },
     "streetRange": 24,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81021",
@@ -8790,7 +8804,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82487",
@@ -8813,7 +8828,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g80710",
@@ -8836,7 +8852,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82486",
@@ -8859,7 +8876,8 @@
       "range": 18
     },
     "streetRange": 22,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81070",
@@ -8882,7 +8900,8 @@
       "range": 14
     },
     "streetRange": 18,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82490",
@@ -8905,7 +8924,8 @@
       "range": 12
     },
     "streetRange": 16,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81069",
@@ -8928,7 +8948,8 @@
       "range": 18
     },
     "streetRange": 22,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82489",
@@ -8951,7 +8972,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81068",
@@ -8974,7 +8996,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82488",
@@ -8997,7 +9020,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g19691",

@@ -4,7 +4,7 @@ import { economy, residentialChain, upkeepOf } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { cityStatusAttrs, tierByGuid } from "../economy/economy";
-import { institutionDefs, isViable, VITAL_ATTRS, worstAttr } from "../economy/attributes";
+import { institutionDefs, pickPatron, SHRINE_TYPE, isViable, VITAL_ATTRS, worstAttr } from "../economy/attributes";
 import { effectOf } from "../economy/economy";
 import { footprintSize } from "../engine/geometry";
 import { candidateRecipes, unlockWorkerTiers } from "./recipes";
@@ -56,6 +56,12 @@ export interface IslandPlanRequest {
   /** Hauteurs quantifiées de l'île (q = h/16, mer < 0) — pente des aqueducs.
    *  Décodées par le worker depuis terrain.generated (grid.islandId). */
   heights?: Int8Array;
+  /**
+   * Plafond par `UniqueType` sur l'île. Le seul réglage utile est `Shrine` : le nombre
+   * d'autels autorisés vaut le nombre de PERMIS DE SANCTUAIRE détenus en partie, que le
+   * joueur augmente par la dévotion et la recherche. Défaut `DEFAULT_UNIQUE_QUOTA`.
+   */
+  uniqueQuota?: Record<string, number>;
 }
 
 export interface ImportGood {
@@ -172,17 +178,25 @@ export function planIslandImport(
     // budget adaptatif : une évaluation coûte ~0,1 s sur une île moyenne mais plusieurs
     // secondes sur une continentale de 400 000 tuiles
     const land = landTiles;
-    const keep = req.recipeCount ?? (land > 200_000 ? 2 : land > 60_000 ? 5 : 7);
-    // Les recettes sont choisies pour le palier CIBLE, et cela suffisait tant que le plan
-    // n'avait pas besoin d'ouvriers. Ce n'est plus vrai : les listes de services sont
-    // EMBOÎTÉES mais les seuils ne le sont pas de la même façon. Une recette qui ne garde
-    // que les services lourds (aqueduc 4, thermes 4) donne bien Public 8 ≥ 7 aux Equites,
-    // mais Public 0 aux Plébéiens — qui, eux, ne comptent que le marché et la taverne.
-    // Résultat mesuré : aucune parcelle de l'île ne pouvait accueillir un Plébéien, et la
-    // cascade n'avait tout simplement aucun candidat à convertir.
-    const needWorkers = !!req.exploitSlots || !!req.localProduction;
+    // Chaque recette est essayée sous deux formes (cf. plus bas) : on divise le budget de
+    // recettes pour garder le même temps de calcul.
+    const keep = Math.max(1, Math.round((req.recipeCount ?? (land > 200_000 ? 2 : land > 60_000 ? 5 : 7)) / 2));
+    // Chaque recette est essayée sous DEUX formes : telle quelle, et complétée des services
+    // qui rendent les paliers inférieurs atteignables (`unlockWorkerTiers`).
+    //
+    // Les listes de services sont emboîtées, mais les SCORES ne le sont pas : chaque palier
+    // ne compte que les services de sa propre liste. Une recette qui ne garde que les
+    // services lourds donne Public 8 ≥ 7 aux Equites et Public 0 aux Plébéiens, dont la
+    // liste s'arrête au marché et à la taverne. Deux conséquences, l'une attendue et l'autre
+    // pas : la cascade de main-d'œuvre n'avait aucune maison à convertir (vivier plébéien
+    // vide), ET la comptabilité mixte perdait des habitants faute de palier de repli —
+    // mesuré 15 881 contre 25 828 sur roman_island_medium_01.
+    //
+    // On n'en fait donc pas une variante conditionnée aux options : le moteur tranche.
     for (const r of candidateRecipes(chain, lookup, { keep })) {
-      trials.push(needWorkers ? unlockWorkerTiers(r.serviceIds, chain) : r.serviceIds);
+      trials.push(r.serviceIds);
+      const opened = unlockWorkerTiers(r.serviceIds, chain);
+      if (opened && r.serviceIds && opened.length !== r.serviceIds.length) trials.push(opened);
     }
     // La recette COMPLÈTE en dernier recours — mais seulement tant qu'elle est abordable.
     // Elle pose 5 à 7 fois plus de copies, donc coûte 5 à 7 fois le temps d'un plan maigre
@@ -206,9 +220,17 @@ export function planIslandImport(
   // posait donc jamais — alors qu'elles sont le seul contrepoids au malus de rang de cité.
   // Mesuré : sans elles aucune ville ne dépasse 3 000 habitants avec tous ses attributs
   // positifs ; avec elles la recette complète tient jusqu'à 260 000.
-  const institutions = institutionDefs(islandRegion)
-    .filter((i) => lookup(i.defId))
-    .map((i) => i.defId);
+  const instCands = institutionDefs(islandRegion)
+    .map((i) => ({ ...i, uniqueType: lookup(i.defId)?.uniqueType }))
+    .filter((i) => lookup(i.defId));
+  // DIVINITÉ TUTÉLAIRE : une seule par île. Le choix se fait sur le déficit d'attribut
+  // observé, mesuré par une passe SANS autel — seul l'attribut limitant compte, et le
+  // classement change complètement d'une île à l'autre. Il est fait plus bas, une fois ce
+  // déficit connu ; ici on retient les institutions non religieuses, communes à tous les
+  // essais, plus l'autel finalement élu.
+  const nonShrine = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE).map((i) => i.defId);
+  let patron: string | undefined;
+  const institutions = nonShrine;
   const kontorDef = pickKontorDef(req.catalog, islandRegion);
   const kontor = kontorDef ? reserveKontor(req.grid, kontorDef) : null;
 
@@ -363,7 +385,11 @@ export function planIslandImport(
   let pick: Evaluated | null = null;
   const runLattice = (serviceIds: string[] | undefined, floor: number): Evaluated =>
     evaluate(
-      planLattice(planGrid, req.tierGuid, lookup, { coverageFloor: floor, serviceIds, water: true, heights: req.heights, institutions }),
+      planLattice(planGrid, req.tierGuid, lookup, {
+        coverageFloor: floor, serviceIds, water: true, heights: req.heights,
+        institutions: patron ? [...institutions, patron] : institutions,
+        uniqueQuota: req.uniqueQuota,
+      }),
       serviceIds ? new Set(serviceIds) : null,
     );
   let bestTrial: string[] | undefined;
@@ -372,6 +398,34 @@ export function planIslandImport(
     const ev = runLattice(trials[i], coverageFloor);
     if (!pick || better(ev, pick)) { pick = ev; bestTrial = trials[i]; }
   }
+  // ═══ DIVINITÉ TUTÉLAIRE ═══════════════════════════════════════════════════════════════
+  // Le choix ne peut pas être fait à l'avance : il dépend de l'attribut qui MANQUE, et celui
+  // qui manque dépend du plan. On mesure donc le déficit sur le meilleur plan sans autel,
+  // on élit le dieu qui le comble, et on rejoue la recette gagnante avec lui.
+  //
+  // Un tri statique par « somme des gains vitaux » est inopérant : sur une île où la sécurité
+  // incendie est le goulot, Vulcain et Neptune valent des milliers d'habitants et les quatre
+  // autres divinités exactement zéro.
+  if (pick && instCands.some((i) => i.uniqueType === SHRINE_TYPE)) {
+    const rank = cityStatusAttrs(pick.residents, tier?.region ?? islandRegion);
+    const deficit: Record<string, number> = {};
+    for (const k of VITAL_ATTRS) {
+      deficit[k] = Math.max(0, -((pick.cand.attrsSum[k] ?? 0) + pick.cand.houses * (rank[k] ?? 0)));
+    }
+    // Aucun attribut en déficit : le plan tient déjà. On vise alors le plus serré — c'est
+    // lui qui bornera la production locale et la cascade de main-d'œuvre.
+    if (VITAL_ATTRS.every((k) => deficit[k] === 0)) {
+      const w = worstAttr({ ...pick.attrsTotal });
+      if (w) deficit[w.attr] = 1;
+    }
+    patron = pickPatron(instCands, deficit);
+    if (patron) {
+      const ev = runLattice(bestTrial, coverageFloor);
+      if (better(ev, pick)) pick = ev;
+      else patron = undefined; // l'autel ne paie pas son sol : on s'en passe
+    }
+  }
+
   // RAFFINAGE : la recette gagnante rejouée à un seuil de densification plus exigeant.
   // Mesuré +4,0 % (65 357 → 67 940 habitants) — le moteur pose une ou deux copies de plus
   // là où la couverture était juste, et récupère des maisons entières au palier cible.
@@ -387,7 +441,7 @@ export function planIslandImport(
   onProgress?.(total, total);
   if (landTiles <= 200_000) {
     const serviceIds = bestTrial;
-    const packed = planPacked(planGrid, req.tierGuid, lookup, { coverageFloor, serviceIds });
+    const packed = planPacked(planGrid, req.tierGuid, lookup, { coverageFloor, serviceIds, uniqueQuota: req.uniqueQuota });
     const ev = evaluate(packed, serviceIds ? new Set(serviceIds) : null);
     if (!pick || better(ev, pick)) pick = ev;
   }

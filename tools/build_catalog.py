@@ -263,10 +263,17 @@ def collect_buildings(texts, template_effects):
         raw_res = text_of(el, "./Values/Factory7/RawResourceType")
         slot_type = raw_res.lower() if raw_res else None
 
-        # BuildingUnique AVEC enfant Uniques = 1 exemplaire max (Colisée…) ; le tag
-        # vide (entrepôts…) n'est PAS une contrainte d'unicité
+        # BuildingUnique AVEC enfant Uniques = contrainte d'unicité (Colisée…) ; le tag
+        # vide (entrepôts…) n'en est pas une.
+        #
+        # Le TYPE compte autant que le drapeau : plusieurs bâtiments partagent un même
+        # `UniqueType`, et c'est le TOTAL par type qui est plafonné, pas chaque bâtiment.
+        # Les 16 autels de dieux (8 divinités x 2 régions) portent tous UniqueType=Shrine
+        # avec UniqueScope=Area : le quota est commun A TOUTE L'ÎLE, tous dieux confondus.
         bu = values.find("BuildingUnique")
         unique = bu is not None and len(bu) > 0
+        uniq_types = [x.text for x in el.findall("./Values/BuildingUnique/Uniques/Item/UniqueType") if x.text]
+        unique_type = uniq_types[0] if uniq_types else None
 
         buildings.append({
             "guid": guid,
@@ -284,6 +291,7 @@ def collect_buildings(texts, template_effects):
             "field": field,
             "freeArea": free_area,
             "unique": unique,
+            "uniqueType": unique_type,
             "production": production,
             "transporterRange": int(mtr) if mtr else None,
             "slotType": slot_type,
@@ -440,6 +448,10 @@ def to_app_catalog(buildings, product_name):
             entry["freeArea"] = b["freeArea"]
         if b.get("unique"):
             entry["unique"] = True
+            # Le TYPE d'unicite : plusieurs batiments le partagent, et c'est le TOTAL par
+            # type qui est plafonne sur l'ile (UniqueScope=Area).
+            if b.get("uniqueType"):
+                entry["uniqueType"] = b["uniqueType"]
         if b.get("slotType"):
             entry["slotType"] = b["slotType"]  # "mountain" | "river" : emplacement requis
         if b.get("production"):

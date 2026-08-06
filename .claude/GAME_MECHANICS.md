@@ -307,6 +307,49 @@ contenait 799 Liberti, 688 Equites, 617 Patriciens et **zéro** Plébéien. Cf.
   Chars (2781), Jeux de plateau (145225) — w=8 chacun → UN des trois suffit.
 - Pas de Circus Maximus constructible (textes narratifs seulement).
 
+## 9 bis. DIVINITÉS, TEMPLES ET AUTELS [FICHIERS, 2026-08-06]
+
+Trois règles distinctes, à ne pas confondre.
+
+**1. Le dieu tutélaire — un par île.** « Chaque île a un dieu tutélaire que vénère sa
+population » (`texts_french.xml`, LineId -6911304497477006556). C'est un choix d'interface,
+pas un bâtiment. Huit divinités, assets `Template=Patron` : Mars (80562), Cérès (43594),
+Neptune (27899), Minerve (27900), Mercure-Lug (50311), Epona (80861), Cernunnos (50242),
+Vulcain (144800, DLC01). Des îles différentes peuvent avoir des dieux différents ; changer
+le dieu d'une île remet sa Dévotion à zéro.
+
+**2. Temples, sanctuaires et fanums — non liés à un dieu.** Les quatre bâtiments religieux
+(3615 Sanctuaire, 3619 Temple, 6728 Fanum, 6729 Temple celte) portent
+`<VariationControl>Religion</VariationControl>` : leur **modèle 3D** change selon le dieu
+tutélaire, mais c'est le même asset, sans contrainte d'unicité. Ce sont eux qui remplissent
+les besoins Public/Wonders des paliers ; les autels n'en remplissent aucun.
+
+**3. Les autels de dieux — quota PARTAGÉ.** Seize assets 3×3 (huit divinités × deux régions),
+portée-rue 16 à 24. Tous portent le **même** `UniqueType=Shrine` avec `UniqueScope=Area` :
+le plafond est commun à l'île, toutes divinités confondues. Il n'y a pas d'`AllowedAmount` —
+le nombre autorisé vaut le stock de **permis de sanctuaire** (produit 93771), obtenus par la
+dévotion et la recherche, dont une technologie répétable.
+
+| dieu | autel Latium / Albion | effet de zone |
+|---|---|---|
+| Mars | 80710 / 82486 | Population +1, Prestige +1 |
+| Cérès | 81021 / 82487 | Population +1, Santé +1 |
+| Neptune | 81068 / 82488 | Revenus +1, Incendie +1 |
+| Minerve | 81069 / 82489 | Connaissance +1, Prestige +1 |
+| Mercure-Lug | 81070 / 82490 | Revenus +2 |
+| Epona | 81071 / 82491 | Population +1, Bonheur +1 |
+| Cernunnos | 81072 / 82492 | Santé +1, Foi +1 |
+| Vulcain | 144812 / 144813 | Incendie +2 |
+
+⚠ **Le choix du dieu se fait sur l'attribut LIMITANT, jamais sur la somme des gains.** Mesuré
+sur `roman_island_medium_01`, où la sécurité incendie est le goulot : Vulcain et Neptune
+valent des milliers d'habitants, Cérès, Epona, Cernunnos et Mercure-Lug exactement zéro.
+
+⚠ **Régression corrigée le 2026-08-06.** Le placeur ne lisait qu'un booléen `unique` et posait
+donc une copie par DIVINITÉ : **72 autels** mesurés sur `roman_island_medium_01`, **84** sur
+`celtic_island_large_07`. Cf. `optimizer/planLattice.ts → DEFAULT_UNIQUE_QUOTA` et
+`economy/attributes.ts → pickPatron`.
+
 ## 10. Incidents
 
 - **[FICHIERS]** Propagation feu par SAUTS euclidiens : `BurstDistance`/`BurstCount`
