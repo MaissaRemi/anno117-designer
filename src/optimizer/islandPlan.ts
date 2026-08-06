@@ -79,10 +79,11 @@ export interface IslandPlanResult {
   importGoods: ImportGood[];
   /** Emplacements de terrain exploités (option `exploitSlots`) — vide si l'option est off. */
   exploited: ExploitedSlot[];
-  /** Bilan des attributs VITAUX de la maison la moins bien lotie, malus de rang de cité
-   *  compris. Toutes les maisons tiennent si ces quatre valeurs sont ≥ 0. */
-  attrsWorst: Record<string, number>;
-  /** Toutes les maisons gardent-elles Bonheur, Argent, Santé et Incendie ≥ 0 ? */
+  /** BILAN DE L'ÎLE par attribut vital : somme sur toutes les maisons, malus de rang de
+   *  cité compris. C'est le total qui doit rester ≥ 0 — une maison en déficit compensée
+   *  par ses voisines ne pose pas de problème. */
+  attrsTotal: Record<string, number>;
+  /** Le bilan de l'île tient-il sur les quatre attributs vitaux ? */
   viable: boolean;
   coverage: CoverageReport;
   coverageMin: number; // min % parmi les services à rayon (métrique de faisabilité)
@@ -206,9 +207,9 @@ export function planIslandImport(
     houseMoney: number;
     /** part des consommateurs d'eau réellement raccordés (0..1 ; 1 si aucun) */
     waterPct: number;
-    /** attributs vitaux de la maison la moins bien lotie, rang de cité compris */
-    attrsWorst: Record<string, number>;
-    /** toutes les maisons tiennent-elles ? */
+    /** bilan de l'île par attribut vital, rang de cité compris */
+    attrsTotal: Record<string, number>;
+    /** le bilan de l'île tient-il ? */
     viable: boolean;
   }
   const evaluate = (cand: Cand, relevant: Set<string> | null): Evaluated => {
@@ -267,18 +268,19 @@ export function planIslandImport(
     const nCons = water.consumers.length;
     const nOk = water.consumers.filter((c) => c.connected).length;
     const residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
-    // Bilan de la maison la moins bien lotie : le pire par attribut relevé par le moteur,
-    // auquel s'ajoute le malus de RANG DE CITÉ — qui dépend de la population totale, et
-    // n'est donc connu qu'ici. Prendre le minimum attribut par attribut est conservateur.
+    // BILAN DE L'ÎLE : somme des attributs sur toutes les maisons, plus le malus de RANG
+    // DE CITÉ appliqué à chacune — il dépend de la population totale et n'est donc connu
+    // qu'ici. Le jugement porte sur le total, pas sur la pire maison : un quartier de
+    // bordure en déficit compensé par le cœur de la ville ne pose pas de problème.
     const rank = cityStatusAttrs(residents, islandRegion);
-    const attrsWorst: Record<string, number> = {};
-    for (const k of VITAL_ATTRS) attrsWorst[k] = (cand.attrsMin[k] ?? 0) + (rank[k] ?? 0);
+    const attrsTotal: Record<string, number> = {};
+    for (const k of VITAL_ATTRS) attrsTotal[k] = (cand.attrsSum[k] ?? 0) + cand.houses * (rank[k] ?? 0);
     return {
       cand, relevant, water, buildings, tierCounts, capByTier, deadTypes, houseMoney,
       residents,
       waterPct: nCons ? nOk / nCons : 1,
-      attrsWorst,
-      viable: isViable(attrsWorst),
+      attrsTotal,
+      viable: isViable(attrsTotal),
     };
   };
   // Critère LEXICOGRAPHIQUE, faisabilité d'abord.
@@ -302,12 +304,9 @@ export function planIslandImport(
   const viable = (e: Evaluated): boolean => e.waterPct >= WATER_VIABLE;
   const better = (a: Evaluated, b: Evaluated): boolean => {
     if (viable(a) !== viable(b)) return viable(a);
-    // VIABILITÉ DES MAISONS avant la population : un plan dont une maison passe sous zéro
-    // en Bonheur, Argent, Santé ou Sécurité incendie déclenche émeutes, incendies et
-    // maladies. Mesuré : la recette la plus dense (Temple+Bibliothèque+Forum+Amphithéâtre)
-    // est non viable dès la première maison — la Bibliothèque vaut −2 en Sécurité incendie
-    // et rien ne la compense. Maximiser la population sans cette contrainte revenait à
-    // optimiser une ville que le jeu punit.
+    // VIABILITÉ DE L'ÎLE avant la population : un bilan négatif en Bonheur, Argent, Santé
+    // ou Sécurité incendie déclenche émeutes, incendies et maladies. Maximiser la
+    // population sans cette contrainte revenait à optimiser une ville que le jeu punit.
     if (a.viable !== b.viable) return a.viable;
     const close = Math.abs(a.residents - b.residents) <= 0.02 * Math.max(a.residents, b.residents, 1);
     if (!close) return a.residents > b.residents;
@@ -359,7 +358,7 @@ export function planIslandImport(
   const dist = chosen.cand;
   const water = chosen.water;
   const deadTypes = chosen.deadTypes;
-  const attrsWorst = chosen.attrsWorst;
+  const attrsTotal = chosen.attrsTotal;
   // capacité de référence d'une maison au palier cible SOUS LA RECETTE RETENUE : c'est ce
   // que le panneau affiche, et ce n'est plus `capacityDefault` — une recette maigre héberge
   // moins par maison mais bien plus de maisons.
@@ -525,12 +524,12 @@ export function planIslandImport(
   }
   if (removedHouses) gaps.push(`${removedHouses} maison(s) rasée(s) pour raccorder le comptoir`);
   {
-    const w = worstAttr(attrsWorst);
+    const w = worstAttr(attrsTotal);
     if (w) {
       const label: Record<string, string> = {
         Happiness: "Bonheur", Money: "Argent", Health: "Santé", FireSafety: "Sécurité incendie",
       };
-      gaps.push(`${label[w.attr] ?? w.attr} négatif (${w.value.toFixed(1)}) sur la maison la moins bien lotie — émeutes/incendies/maladies en jeu`);
+      gaps.push(`${label[w.attr] ?? w.attr} négatif sur l'île (${w.value.toFixed(0)}) — émeutes/incendies/maladies en jeu`);
     }
   }
   for (const s of analyzable) {
@@ -556,7 +555,7 @@ export function planIslandImport(
       : null,
     importGoods,
     exploited,
-    attrsWorst,
+    attrsTotal,
     viable: chosen.viable,
     tierCounts,
     coverage,

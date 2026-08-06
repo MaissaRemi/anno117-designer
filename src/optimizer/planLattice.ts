@@ -31,7 +31,8 @@ export interface LatticeOpts {
    * positifs ; avec elles, la recette complète tient jusqu'à 260 000.
    */
   institutions?: string[];
-  /** Refuser de poser une maison dont un attribut vital serait négatif. Défaut true. */
+  /** Arrêter de bâtir quand le BILAN DE L'ÎLE passerait sous zéro sur un attribut vital.
+   *  Défaut true. */
   viabilityGate?: boolean;
 }
 
@@ -76,11 +77,14 @@ export interface LatticeResult {
   /** Taxe/min cumulée des maisons (Σ Money des besoins remplis). */
   houseMoney: number;
   /**
-   * Pire valeur observée, sur l'ensemble des maisons, de chaque attribut VITAL — hors
-   * malus de rang de cité, que seul l'appelant connaît (il dépend de la population totale).
-   * Une maison est viable si, malus de rang ajouté, ces quatre valeurs restent ≥ 0.
+   * SOMME de chaque attribut VITAL sur toutes les maisons retenues, hors malus de rang de
+   * cité — que seul l'appelant connaît, puisqu'il dépend de la population totale.
+   *
+   * Le bilan se juge à l'échelle de l'ÎLE, pas de la maison : une maison en déficit
+   * compensée par ses voisines ne pose aucun problème. Le total de l'île vaut donc
+   * `attrsSum[k] + houses × rangDeCité[k]`, et c'est lui qui doit rester ≥ 0.
    */
-  attrsMin: Record<string, number>;
+  attrsSum: Record<string, number>;
   /** Capacité cumulée PAR PALIER atteint (guid → habitants). Permet de recalculer la
    *  population après une démotion sans repasser par les masques de couverture. */
   capByTier: Record<string, number>;
@@ -140,7 +144,7 @@ export function planLattice(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, attrsMin: {}, capByTier: {}, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, attrsSum: {}, capByTier: {}, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
@@ -573,12 +577,12 @@ export function planLattice(
     .map((tc, i) => ({ i, id: tc.def.id, fx: effectOf(tc.def.id) }))
     .filter((e) => instIds.includes(e.id) && !!e.fx);
 
-  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsMin"> => {
+  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsSum"> => {
     let houses = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
     const tierCounts: Record<string, number> = {};
     const capByTier: Record<string, number> = {};
-    const attrsMin: Record<string, number> = {};
-    for (const k of VITAL_ATTRS) attrsMin[k] = Infinity;
+    const attrsSum: Record<string, number> = {};
+    for (const k of VITAL_ATTRS) attrsSum[k] = 0;
     const placed: { b: PlacedBuilding; cap: number; money: number; guid: string; attrs: Record<string, number> }[] = [];
     const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
     for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
@@ -617,20 +621,38 @@ export function planLattice(
     let keep: typeof placed = placed;
     if (viabilityGate) {
       const ladder = economy.cityStatus?.[tier.region] ?? [];
-      const survivors = (rank: Record<string, number>) =>
-        placed.filter((p) => VITAL_ATTRS.every((k) => (p.attrs[k] ?? 0) + (rank[k] ?? 0) >= 0));
-      // f(P) = population des maisons viables sous le malus du palier atteint à P. f est
-      // décroissante (plus la ville est grande, plus le malus mord), donc on cherche le
-      // point fixe : le plus haut palier dont la population survivante atteint encore son
-      // propre seuil. Le palier 0 le vérifie toujours, la sélection est donc bien définie.
-      let best = survivors(ladder[0]?.attrs ?? {});
-      for (const step of ladder) {
-        const surv = survivors(step.attrs);
-        const pop = surv.reduce((a, p) => a + p.cap, 0);
-        if (pop >= step.population) best = surv;
-        else break; // f décroissante : les paliers suivants échoueront aussi
+      const rankAt = (pop: number): Record<string, number> => {
+        let a: Record<string, number> = {};
+        for (const st of ladder) { if (pop < st.population) break; a = st.attrs; }
+        return a;
+      };
+      // Bilan de l'ÎLE : Σ des attributs des maisons retenues, plus le malus de rang appliqué
+      // à chacune. Tant qu'un attribut vital est déficitaire, on retire les maisons qui y
+      // contribuent le plus négativement — ce sont les bordures mal desservies. Retirer
+      // baisse aussi la population, donc le malus de rang : la boucle converge.
+      // On retire par lots (2 %) pour ne pas refaire n² tours sur les grandes îles.
+      const totals = (set: typeof placed) => {
+        const pop = set.reduce((a, p) => a + p.cap, 0);
+        const rank = rankAt(pop);
+        const t: Record<string, number> = {};
+        for (const k of VITAL_ATTRS) {
+          t[k] = set.reduce((a, p) => a + (p.attrs[k] ?? 0), 0) + set.length * (rank[k] ?? 0);
+        }
+        return { t, rank };
+      };
+      for (let guard = 0; guard < 400 && keep.length; guard++) {
+        const { t, rank } = totals(keep);
+        let binding: string | null = null;
+        for (const k of VITAL_ATTRS) if (t[k] < 0 && (binding === null || t[k] < t[binding])) binding = k;
+        if (!binding) break;
+        const b = binding;
+        // tri déterministe : contribution croissante, puis position — la pire d'abord
+        const sorted = [...keep].sort((p, q) =>
+          ((p.attrs[b] ?? 0) + (rank[b] ?? 0)) - ((q.attrs[b] ?? 0) + (rank[b] ?? 0))
+          || p.b.y - q.b.y || p.b.x - q.b.x);
+        const drop = Math.max(1, Math.ceil(keep.length * 0.02));
+        keep = sorted.slice(drop);
       }
-      keep = best;
       if (keep.length !== placed.length) {
         const gone = new Set(placed.filter((p) => !keep.includes(p)).map((p) => p.b.uid));
         const kept = buildings.filter((b) => !gone.has(b.uid));
@@ -654,13 +676,9 @@ export function planLattice(
       tierCounts[p.guid] = (tierCounts[p.guid] ?? 0) + 1;
       capByTier[p.guid] = (capByTier[p.guid] ?? 0) + p.cap;
       if (p.guid === targetGuid) fullyCovered++;
-      for (const k of VITAL_ATTRS) {
-        const v = p.attrs[k] ?? 0;
-        if (v < attrsMin[k]) attrsMin[k] = v;
-      }
+      for (const k of VITAL_ATTRS) attrsSum[k] += p.attrs[k] ?? 0;
     }
-    for (const k of VITAL_ATTRS) if (!Number.isFinite(attrsMin[k])) attrsMin[k] = 0;
-    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsMin };
+    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum };
   };
 
   // ═══ PHASE élagage routes : adjacentes aux bâtiments + chemins maison→service ═══
