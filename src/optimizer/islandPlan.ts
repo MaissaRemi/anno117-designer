@@ -1,6 +1,6 @@
 import { makeLookup } from "../engine/rules";
 import type { AqueductTile, BuildingDef, FieldTile, GridShape, Layout, PlacedBuilding, RoadTile } from "../model/types";
-import { economy } from "../economy/economy";
+import { economy, residentialChain } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { planLattice } from "./planLattice";
@@ -42,7 +42,10 @@ export interface IslandPlanResult {
   houses: number;
   fullyCovered: number; // maisons couvertes par TOUS leurs besoins (= tier-cible atteint)
   fullyCoveredPct: number; // 0..100 (fullyCovered / houses)
-  residents: number; // habitants des maisons PLEINEMENT couvertes (au tier-cible)
+  /** Maisons par tier ATTEINT (guid → nb) : accounting MIXTE. Une maison sous-desservie
+   *  retombe au meilleur palier atteint (min = base) — d'où residents = somme mixte. */
+  tierCounts: Record<string, number>;
+  residents: number; // habitants TOTAUX (mixte, tous paliers atteints)
   buildings: PlacedBuilding[]; // résidences + services + sources d'eau
   roads: RoadTile[];
   fields: FieldTile[];
@@ -125,12 +128,24 @@ export function planIslandImport(
   const candB = planPacked(planGrid, req.tierGuid, lookup, engineOpts);
   const svcCount = (r: { servicesPlaced: Record<string, number> }) =>
     Object.values(r.servicesPlaced).reduce((a, b) => a + b, 0);
-  // critère : d'abord les maisons PLEINEMENT couvertes (= tier-cible, tous bonus),
-  // puis le total de maisons, puis le moins de services (anti-confetti)
-  const better = (a: typeof candA, b: typeof candB): boolean =>
-    a.fullyCovered !== b.fullyCovered ? a.fullyCovered > b.fullyCovered
-    : a.houses !== b.houses ? a.houses > b.houses
-    : svcCount(a) <= svcCount(b);
+  // capacité/maison par tier (mode seuils = profil seuils ; sinon capacité par défaut)
+  const chain = residentialChain(req.tierGuid);
+  const capForTier = (guid: string): number => {
+    const t = economy.tiers.find((x) => x.guid === guid);
+    if (!t) return 1;
+    return needMode === "thresholds"
+      ? buildTierProfile(guid, { needSelection: "thresholds" }).cap
+      : (t.capacityDefault || 10);
+  };
+  const mixedResidents = (tc: Record<string, number>): number =>
+    Object.entries(tc).reduce((s, [g, n]) => s + n * capForTier(g), 0);
+  // critère : population MIXTE totale (densité, tous tiers), puis + de maisons, puis
+  // moins de services (anti-confetti). L'ancien critère "maisons au tier-cible seul"
+  // laissait ~30 % de l'île vide (terres non couvrables par TOUS les services T4).
+  const better = (a: typeof candA, b: typeof candB): boolean => {
+    const ra = mixedResidents(a.tierCounts), rb = mixedResidents(b.tierCounts);
+    return ra !== rb ? ra > rb : a.houses !== b.houses ? a.houses > b.houses : svcCount(a) <= svcCount(b);
+  };
   const dist = better(candA, candB) ? candA : candB;
 
   // réseau d'eau : intégré au moteur s'il le fournit (lattice) ; sinon routage
@@ -156,10 +171,11 @@ export function planIslandImport(
   const analyzable = coverage.services.filter((s) => s.hasRadius && (!relevant || relevant.has(s.serviceId)));
   const coverageMin = analyzable.length ? Math.min(...analyzable.map((s) => s.pct)) : 100;
   const houses = dist.houses;
-  // EAU : un service consommateur d'eau requis mais dont AUCUN exemplaire n'est
-  // raccordé est INACTIF en jeu (Bains/Forum/Colisée/Citerne sans aqueduc) → les
-  // maisons qui en dépendent ne montent PAS au tier. analyzeCoverage ne le voit pas
-  // (couverture géométrique) → on annule la couverture-tier si un tel service est mort.
+  // EAU : un service consommateur d'eau requis mais dont AUCUN exemplaire n'est raccordé
+  // est INACTIF (Bains/Forum/Colisée/Citerne sans aqueduc). Les moteurs eau-aware
+  // (planLattice) l'ont déjà exclu de l'accounting mixte. Filet de sécurité ici (surtout
+  // packPlan, non eau-aware) : DÉMOTE les maisons comptées à un tier « eau-bloqué » vers le
+  // plus haut tier sûr, au lieu d'annuler toute la population (ancien comportement 0).
   const defOfUid = new Map(buildings.map((b) => [b.uid, b.defId]));
   const connectedByDef = new Map<string, number>();
   for (const c of water.consumers) {
@@ -167,37 +183,50 @@ export function planIslandImport(
     const id = defOfUid.get(c.uid);
     if (id) connectedByDef.set(id, (connectedByDef.get(id) ?? 0) + 1);
   }
-  const waterDead = [...new Set(tier.services.map((s) => s.building))]
-    .filter((id): id is string => !!id && (!relevant || relevant.has(id)))
-    .filter((id) => { const d = lookup(id); return d && needsWater(d) && !connectedByDef.get(id); });
-  const waterOk = waterDead.length === 0;
-  // borne autoritative DANS LES DEUX MODES : analyzeCoverage (scopé aux services
-  // retenus) exige TOUS les services pertinents — y compris un type que le moteur
-  // n'aurait pas pu poser (sorti de son propre compte) → corrige le sur-comptage
-  // quand un service requis finit à 0 copie sur île saturée.
-  const fullyCappable = Math.min(dist.fullyCovered, coverage.housesFullyCovered);
-  const fullyCovered = waterOk ? fullyCappable : 0; // service eau mort → aucune maison au tier
+  const deadTypes = new Set(
+    [...new Set(tier.services.map((s) => s.building))]
+      .filter((id): id is string => !!id && (!relevant || relevant.has(id)))
+      .filter((id) => { const d = lookup(id); return !!d && needsWater(d) && !connectedByDef.get(id); }),
+  );
+  const tierSafe = (t: (typeof chain)[number]): boolean => t.services.every((s) =>
+    !s.building || (relevant && !relevant.has(s.building)) ? true : !deadTypes.has(s.building));
+  const tierCounts: Record<string, number> = { ...dist.tierCounts };
+  let cutoff = chain.length; // 1er tier eau-bloqué (les tiers sont nichés → montée monotone)
+  for (let k = 0; k < chain.length; k++) if (!tierSafe(chain[k])) { cutoff = k; break; }
+  if (cutoff < chain.length) {
+    const safeGuid = chain[Math.max(0, cutoff - 1)]?.guid;
+    let moved = 0;
+    for (let k = cutoff; k < chain.length; k++) { moved += tierCounts[chain[k].guid] || 0; delete tierCounts[chain[k].guid]; }
+    if (moved && safeGuid) tierCounts[safeGuid] = (tierCounts[safeGuid] || 0) + moved;
+  }
+  const fullyCovered = tierCounts[req.tierGuid] || 0; // maisons AU tier-cible (tous besoins)
   const fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
-  // habitants au TIER-CIBLE = maisons pleinement couvertes (les partielles n'ont pas
-  // tous les besoins → tier inférieur). Manifeste d'import + bonus basés là-dessus.
-  const residents = fullyCovered * cap;
+  // habitants = population MIXTE totale : chaque maison au tier qu'elle atteint réellement
+  // (cible où couvert, palier inférieur ailleurs). Densité max, aucune terre gâchée.
+  const residents = mixedResidents(tierCounts);
 
-  // manifeste d'import : biens consommables (pas d'explosion de chaîne → on ship le fini)
+  // manifeste d'import : vecteur de population MULTI-TIERS (solve gère plusieurs tiers)
+  const capacities: Record<string, number> = {};
+  for (const t of chain) capacities[t.guid] = capForTier(t.guid);
+  const popTargets = chain
+    .map((t) => ({ tier: t.guid, pop: (tierCounts[t.guid] || 0) * capForTier(t.guid) }))
+    .filter((p) => p.pop > 0);
   const sol = solve(
-    [{ tier: req.tierGuid, pop: residents }],
-    {
-      includeProduction: false, includeServices: true, includeWorkforce: false,
-      optimizeNeeds: false, needSelection: needMode, capacities: { [req.tierGuid]: cap },
-    },
+    popTargets.length ? popTargets : [{ tier: req.tierGuid, pop: 0 }],
+    { includeProduction: false, includeServices: true, includeWorkforce: false, optimizeNeeds: false, needSelection: needMode, capacities },
   );
   const importGoods: ImportGood[] = Object.entries(sol.goodsPerMin)
     .filter(([, v]) => v > 0)
     .map(([good, perMin]) => ({ good, name: goodName(good), perMin: Math.round(perMin * 100) / 100 }))
     .sort((a, b) => b.perMin - a.perMin);
 
-  // bonus d'attributs cumulés (maisons PLEINEMENT couvertes = au tier-cible)
+  // bonus d'attributs cumulés (par tier atteint × maisons de ce tier)
   const attributes: Record<string, number> = {};
-  for (const [k, v] of Object.entries(tier.perHouse || {})) attributes[k] = Math.round(v * fullyCovered);
+  for (const t of chain) {
+    const n = tierCounts[t.guid] || 0;
+    if (!n) continue;
+    for (const [k, v] of Object.entries(t.perHouse || {})) attributes[k] = (attributes[k] || 0) + Math.round(v * n);
+  }
 
   // trous best-effort (en mode seuils : seulement les services retenus)
   const gaps: string[] = [];
@@ -214,9 +243,9 @@ export function planIslandImport(
     if (s.pct < 100) gaps.push(`${s.name} : ${s.pct}% des maisons couvertes (distance-rue)`);
   }
   gaps.push(...water.gaps);
-  for (const id of waterDead) {
+  for (const id of deadTypes) {
     const d = lookup(id);
-    gaps.push(`${d?.name ?? id} sans eau (aucun raccordé) → 0 maison au tier-cible`);
+    gaps.push(`${d?.name ?? id} sans eau (aucun raccordé) → maisons plafonnées au palier inférieur`);
   }
 
   const hasWaterConsumers = water.consumers.length > 0;
@@ -237,12 +266,14 @@ export function planIslandImport(
       ? { sources: water.sources.length, capacity: water.capacity, used: water.used, consumers: water.consumers }
       : null,
     importGoods,
+    tierCounts,
     coverage,
     coverageMin,
     money: sol.money,
     attributes,
     gaps: [...new Set(gaps)],
-    // faisable = au moins une maison ET fraction au tier-cible ≥ seuil ET eau OK
-    feasible: houses > 0 && waterOk && fullyCoveredPct >= floor,
+    // faisable = au moins une maison ET fraction au tier-cible ≥ seuil (l'eau morte
+    // démote désormais les maisons au lieu d'annuler la population)
+    feasible: houses > 0 && fullyCoveredPct >= floor,
   };
 }

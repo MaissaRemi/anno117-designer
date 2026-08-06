@@ -23,12 +23,14 @@ describe("contraintes de fidélité (unique + eau)", () => {
     expect((r.servicesPlaced[COLOSSEUM] ?? 0)).toBeLessThanOrEqual(1);
   });
 
-  it("île SANS slot montagne en T4 : services à eau morts → 0 maison au tier, infaisable", () => {
+  it("île SANS slot montagne en T4 : services à eau morts → tier-cible inatteignable, maisons DÉMOTÉES", () => {
     const grid = makeGrid(120, 120); // aucun slot → aucune source d'aqueduc possible
     const r = planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, needMode: "all" });
-    expect(r.fullyCovered).toBe(0); // Bains/Forum/Colisée/Citerne inactifs sans eau
-    expect(r.residents).toBe(0);
-    expect(r.feasible).toBe(false);
+    expect(r.fullyCovered).toBe(0); // aucune maison au tier-cible (Bains/Forum/Colisée sans eau)
+    // eau morte : les maisons retombent aux PALIERS INFÉRIEURS (sans besoin d'eau), pas 0
+    expect(r.residents).toBeGreaterThan(0);
+    expect(r.tierCounts[t4.guid] ?? 0).toBe(0); // rien au palier cible
+    expect(r.feasible).toBe(false); // fraction au tier-cible < seuil
     expect(r.gaps.some((g) => /eau/i.test(g))).toBe(true);
   });
 

@@ -177,11 +177,13 @@ export function IslandPlanner({ onClose }: Props) {
         {result && !running && result.mode === "import" && (
           <div className="opt-result">
             <div style={{ marginBottom: 6 }}>
-              <b>{result.residents.toLocaleString("fr")} habitants</b> ({result.tierName}) ·{" "}
-              <b style={{ color: color(result.fullyCoveredPct) }}>{result.fullyCovered}</b>/{result.houses} maisons au tier ({result.fullyCoveredPct}%)
+              <b>{result.residents.toLocaleString("fr")} habitants</b> <span className="muted">(mixte)</span> ·{" "}
+              <b style={{ color: color(result.fullyCoveredPct) }}>{result.fullyCovered}</b>/{result.houses} au tier-cible ({result.tierName}, {result.fullyCoveredPct}%)
               {!result.feasible && <span style={{ color: "#ffcc66" }}> (best-effort)</span>}
               <div className="muted" style={{ fontSize: "0.85em" }}>
-                couverture min {result.coverageMin}% · {result.houses - result.fullyCovered} maisons partielles (tier inférieur)
+                {[...tiers].filter((t) => result.tierCounts[t.guid]).sort((a, b) => b.capacityDefault - a.capacityDefault)
+                  .map((t) => `${t.name} ${result.tierCounts[t.guid].toLocaleString("fr")}`).join(" · ")}
+                {" · "}couverture min {result.coverageMin}%
               </div>
             </div>
             <div style={{ marginBottom: 6 }}>

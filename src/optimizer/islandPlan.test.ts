@@ -17,12 +17,18 @@ const tier = economy.tiers.find(
 const plan = (w: number, h: number, floor = 1) =>
   planIslandImport({ catalog, grid: makeGrid(w, h), tierGuid: tier.guid, coverageFloor: floor });
 
+// capacité/maison par tier (mode "all" = capacité par défaut) + population MIXTE totale
+const capOf = (guid: string) => economy.tiers.find((t) => t.guid === guid)?.capacityDefault ?? 1;
+const mixed = (tc: Record<string, number>) => Object.entries(tc).reduce((s, [g, n]) => s + n * capOf(g), 0);
+
 describe("planIslandImport (mode import)", () => {
   it("cale des maisons et renvoie un manifeste d'import", () => {
     const r = plan(36, 36, 0.5);
     expect(r.houses).toBeGreaterThan(0);
-    // habitants = maisons PLEINEMENT couvertes × cap (les partielles = tier inférieur)
-    expect(r.residents).toBe(r.fullyCovered * r.cap);
+    // habitants = somme MIXTE (chaque maison au palier ATTEINT) ≥ cible seule
+    expect(r.residents).toBe(mixed(r.tierCounts));
+    expect(r.residents).toBeGreaterThanOrEqual(r.fullyCovered * r.cap);
+    expect(Object.values(r.tierCounts).reduce((a, b) => a + b, 0)).toBe(r.houses); // Σ tiers = maisons
     expect(r.fullyCovered).toBeLessThanOrEqual(r.houses);
     expect(r.buildings.length).toBeGreaterThanOrEqual(r.houses); // résidences + services
     expect(r.importGoods.length).toBeGreaterThan(0); // biens à acheminer
@@ -35,13 +41,15 @@ describe("planIslandImport (mode import)", () => {
     expect(big.houses).toBeGreaterThanOrEqual(small.houses);
   });
 
-  it("manifeste = demande directe solve(pop = fullyCovered*cap)", () => {
+  it("manifeste = demande directe solve(vecteur pop MIXTE par tier)", () => {
     const r = plan(36, 36, 0.5);
+    const targets = Object.entries(r.tierCounts).map(([g, n]) => ({ tier: g, pop: n * capOf(g) }));
+    const capacities = Object.fromEntries(Object.keys(r.tierCounts).map((g) => [g, capOf(g)]));
     const sol = solve(
-      [{ tier: tier.guid, pop: r.fullyCovered * r.cap }],
-      { includeProduction: false, includeServices: true, includeWorkforce: false, optimizeNeeds: false, capacities: { [tier.guid]: r.cap } },
+      targets,
+      { includeProduction: false, includeServices: true, includeWorkforce: false, optimizeNeeds: false, capacities },
     );
-    // chaque bien du manifeste correspond à la demande solve (arrondie)
+    // chaque bien du manifeste correspond à la demande solve mixte (arrondie)
     for (const g of r.importGoods.slice(0, 5)) {
       expect(Math.round((sol.goodsPerMin[g.good] || 0) * 100) / 100).toBeCloseTo(g.perMin, 1);
     }

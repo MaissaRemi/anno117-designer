@@ -1,7 +1,7 @@
 import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
-import { economy } from "../economy/economy";
+import { economy, residentialChain } from "../economy/economy";
 import type { DefLookup } from "../engine/rules";
 import { needsWater, planWater, type WaterPlanResult } from "./waterPlan";
 import { makeStreetGrid } from "./streetGrid";
@@ -27,6 +27,9 @@ export interface LatticeResult {
   fields: FieldTile[];
   houses: number;
   fullyCovered: number; // maisons couvertes par TOUS les types (tier-cible atteint)
+  /** Maisons par tier ATTEINT (guid → nb) : accounting MIXTE. Une maison sous-desservie
+   *  retombe au meilleur tier de la chaîne dont tous les services l'atteignent (min = base). */
+  tierCounts: Record<string, number>;
   servicesPlaced: Record<string, number>;
   water?: WaterPlanResult; // présent si opts.water
 }
@@ -78,7 +81,7 @@ export function planLattice(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
@@ -461,48 +464,82 @@ export function planLattice(
   rebuildDemand();
   for (const tc of typeCov.values()) refreshType(tc);
 
-  // --- MAISONS : floor = fraction des maisons PLEINEMENT couvertes (mécanique
-  // d'upgrade du jeu, cf. GAME_MECHANICS.md §3 — pas "chaque service ≥ floor").
-  //  Passe 1 : toutes les maisons couvertes par TOUS les types (= tier-cible atteint).
-  //  Passe 2 : maisons partielles (meilleures d'abord) tant que pleines/total ≥ floor.
+  // --- MAISONS : DENSITÉ MAX + accounting MIXTE (cf. session refonte densité).
+  // On remplit TOUT slot valide (fitsHouse+route) — plus de plafond "fraction pleine".
+  // Chaque maison prend le TIER le plus haut de la chaîne résidentielle dont TOUS les
+  // services (ACTIFS — un consommateur d'eau non raccordé ne compte pas) l'atteignent ;
+  // à défaut, le tier de base (min de la chaîne). Sémantique jeu : une résidence
+  // sous-desservie ne disparaît pas, elle reste au palier inférieur.
   const types = [...typeCov.values()].filter((tc) => (placements.get(tc.def.id) ?? []).length > 0);
   const covArr = types.map((tc) => covByType.get(tc.def.id) ?? coveredOrigins(tc));
 
-  // ═══ PHASE maisons : floor = fraction PLEINEMENT couverte (mécanique d'upgrade du jeu,
-  // GAME_MECHANICS §3 — pas « chaque service ≥ floor »). Passe 1 : maisons couvertes par
-  // TOUS les types. Passe 2 : partielles les mieux couvertes tant que pleines/total ≥ floor.
-  const placeHouses = (): { houses: number; fullyCovered: number } => {
+  // bit par type placé ; masque de couverture (types actifs) par slot ; masque requis
+  // par tier de la chaîne (services du tier ∩ types placés). tier atteint = plus haut
+  // dont requiredMask ⊆ coveredMask.
+  const chain = residentialChain(tierGuid); // base → cible (cap croissante)
+  const resIdSet = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));
+  // bits sur l'UNION des services de la chaîne (pas seulement les types POSÉS) : un
+  // service requis mais JAMAIS posé garde un bit jamais allumé → son tier reste
+  // inatteignable (sinon une maison serait comptée au tier-cible sans ce service).
+  const chainSvcIds = [...new Set(chain.flatMap((t) => t.services.map((s) => s.building).filter((b): b is string => !!b)))];
+  const bitOf = new Map<string, number>();
+  chainSvcIds.forEach((id, b) => bitOf.set(id, b));
+  // consommateurs d'eau raccordés (≥1 copie) : un type d'eau MORT n'est pas actif
+  const connByDef = new Map<string, number>();
+  for (const c of water?.consumers ?? []) {
+    if (!c.connected) continue;
+    const id = buildings.find((b) => b.uid === c.uid)?.defId;
+    if (id) connByDef.set(id, (connByDef.get(id) ?? 0) + 1);
+  }
+  // un type d'eau est INACTIF seulement si l'eau A ÉTÉ routée (opts.water) et qu'aucune
+  // copie n'est raccordée ; sans routage (planLattice autonome) on suppose actif (géom.)
+  const activeType = types.map((tc) => !needsWater(tc.def) || !water || (connByDef.get(tc.def.id) ?? 0) > 0);
+  const typeBit = types.map((tc) => bitOf.get(tc.def.id)); // bit du type posé (peut être undefined si hors chaîne)
+  const reqMask = chain.map((t) => {
+    let m = 0;
+    for (const s of t.services) {
+      if (!s.building) continue;
+      const b = bitOf.get(s.building);
+      if (b !== undefined) m |= 1 << b;
+    }
+    return m;
+  });
+
+  const placeHouses = (): { houses: number; fullyCovered: number; tierCounts: Record<string, number> } => {
     let houses = 0, fullyCovered = 0;
-    const placeAt = (x: number, y: number, full: boolean) => {
-      for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
-      buildings.push({ uid: uid("lat"), defId: residenceId, x, y, rotation: 0, locked: false });
-      markAdj(x, y, rw, rh);
-      houses++;
-      if (full) fullyCovered++;
-    };
-    const partials: { x: number; y: number; cov: number }[] = [];
+    const tierCounts: Record<string, number> = {};
+    const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
     for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
       if (!fitsHouse(x, y) || !touchesRoad(x, y)) continue;
       const o = y * W + x;
-      let cov = 0;
-      for (let t = 0; t < types.length; t++) if (covArr[t][o]) cov++;
-      if (cov === types.length) placeAt(x, y, true);
-      else if (floor < 1) partials.push({ x, y, cov });
+      let coveredMask = 0;
+      for (let t = 0; t < types.length; t++) {
+        const b = typeBit[t];
+        if (b !== undefined && activeType[t] && covArr[t][o]) coveredMask |= 1 << b;
+      }
+      // tier atteint = plus haut de la chaîne dont les services requis sont couverts ;
+      // sinon base (idx 0) — la maison existe quand même (densité).
+      let ti = 0;
+      for (let k = chain.length - 1; k >= 0; k--) {
+        if ((reqMask[k] & coveredMask) === reqMask[k]) { ti = k; break; }
+      }
+      const t = chain[ti];
+      const defId = t?.residenceId ?? residenceId;
+      for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
+      buildings.push({ uid: uid("lat"), defId, x, y, rotation: 0, locked: false });
+      markAdj(x, y, rw, rh);
+      houses++;
+      tierCounts[t.guid] = (tierCounts[t.guid] ?? 0) + 1;
+      if (t.guid === targetGuid) fullyCovered++;
     }
-    // partielles les MIEUX couvertes d'abord ; gardées tant que la fraction pleine ≥ floor
-    partials.sort((a, b) => b.cov - a.cov);
-    for (const p of partials) {
-      if (fullyCovered < floor * (houses + 1) - 1e-9) break; // ajouter diluerait sous le seuil
-      if (fitsHouse(p.x, p.y) && touchesRoad(p.x, p.y)) placeAt(p.x, p.y, false);
-    }
-    return { houses, fullyCovered };
+    return { houses, fullyCovered, tierCounts };
   };
 
   // ═══ PHASE élagage routes : adjacentes aux bâtiments + chemins maison→service ═══
   const pruneRoads = (): RoadTile[] => {
     const keep = new Uint8Array(N);
     for (let i = 0; i < N; i++) if (roadAt[i] && bldAdj[i]) keep[i] = 1;
-    const housesPlaced = buildings.filter((b) => b.defId === tier.residenceId);
+    const housesPlaced = buildings.filter((b) => resIdSet.has(b.defId));
     const chainKept = new Map<string, Uint8Array>();
     for (const t of types) chainKept.set(t.def.id, new Uint8Array(N));
     for (const hb of housesPlaced) {
@@ -522,7 +559,7 @@ export function planLattice(
     return roads;
   };
 
-  const { houses, fullyCovered } = placeHouses();
+  const { houses, fullyCovered, tierCounts } = placeHouses();
   const roads = pruneRoads();
-  return { buildings, roads, fields: [], houses, fullyCovered, servicesPlaced, water };
+  return { buildings, roads, fields: [], houses, fullyCovered, tierCounts, servicesPlaced, water };
 }

@@ -74,6 +74,26 @@ export const economy = data as unknown as EconomyData;
 export const tiers = economy.tiers;
 export const upkeepOf = (defId: string): number => economy.buildingUpkeep[defId] || 0;
 export const tierByGuid = (g: string): Tier | undefined => tiers.find((t) => t.guid === g);
+
+/**
+ * Chaîne résidentielle menant au tier-cible : tiers de MÊME région dont l'ensemble
+ * de services est NICHÉ dans (⊆) celui du cible, du plus bas au cible. Les services
+ * sont cumulatifs dans le jeu (Liberti ⊂ Plébéiens ⊂ Equites ⊂ Patriciens), donc une
+ * maison sous-desservie retombe au tier le plus haut dont TOUS les services l'atteignent.
+ * Base de l'accounting MIXTE (densité max sans gonfler la population au tier-cible).
+ */
+export function residentialChain(tierGuid: string): Tier[] {
+  const target = tierByGuid(tierGuid);
+  if (!target || !target.residenceId) return target ? [target] : [];
+  const svcOf = (t: Tier): Set<string> =>
+    new Set(t.services.map((s) => s.building).filter((b): b is string => !!b));
+  const targetSvc = svcOf(target);
+  return tiers
+    .filter((t) => !!t.residenceId && t.region === target.region
+      && t.capacityDefault <= target.capacityDefault
+      && [...svcOf(t)].every((b) => targetSvc.has(b)))
+    .sort((a, b) => a.capacityDefault - b.capacityDefault);
+}
 export const goodName = (g: string | null): string =>
   (g && economy.goodNames[g]) || g || "?";
 
