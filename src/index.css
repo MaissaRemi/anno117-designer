@@ -326,3 +326,7 @@ label { font-size: 13px; }
 .world-switch { margin-top: auto; display: flex; flex-direction: column; gap: 3px; padding: 6px 4px; border-top: 1px solid var(--line); }
 .world-switch button { height: 24px; padding: 0 6px; font-size: 11px; justify-content: center; background: transparent; border-color: transparent; color: var(--muted); }
 .world-switch button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* La même bascule, mais posée dans un en-tête de panneau : horizontale, sans le filet de
+   séparation ni la poussée en bas de la barre de navigation. */
+.panel-head .world-switch { margin-top: 0; flex-direction: row; border-top: none; padding: 0; gap: 4px; }
+.panel-head .world-switch button { height: 26px; padding: 0 12px; font-size: 12px; border-color: var(--line); }
