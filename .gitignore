@@ -13,4 +13,5 @@ public/icons/
 
 # fichiers de travail jetables (sondes/benchs des agents)
 src/**/__tmp*
-src/**/_bench.test.ts
+src/**/__bench*
+src/**/_bench*

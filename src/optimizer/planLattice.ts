@@ -20,7 +20,34 @@ export interface LatticeOpts {
   water?: boolean;
   /** Hauteurs quantifiées (q = h/16) — pente des aqueducs (waterPlan). */
   heights?: Int8Array | null;
+  /** Espacement des ÉPINES verticales du peigne, en tuiles. Voir `SPINE_STEP`. */
+  spineStep?: number;
 }
+
+/**
+ * Espacement des épines verticales du peigne de routes.
+ *
+ * Le pas HORIZONTAL vaut `2·rh + 1` (= 7 pour des résidences 3×3) et il est optimal :
+ * une rangée de route pour deux rangées de maisons, soit le minimum en 4-adjacence.
+ * Les épines, elles, ne servent qu'à la connexité et à raccourcir la distance-rue —
+ * et à 7 elles coûtaient à elles seules ~1 colonne sur 7, soit ~12 % du sol.
+ *
+ * La valeur a été BALAYÉE, pas devinée — et l'optimum n'est pas monotone : élargir rend
+ * du sol mais allonge la distance-rue, donc un service couvre moins de maisons, et le
+ * tracé des conduites d'eau change aussi (elles se faufilent entre les routes). 13 gagne
+ * sur les deux îles testées, et c'est aussi la valeur la plus ROBUSTE : 9, 17, 21 et 25
+ * font s'effondrer le réseau d'eau de medium_01 (0 maison au palier cible).
+ *
+ *   île 320² (terre 45 621)        île medium_01 (terre 26 835)
+ *   pas | habitants | routes        pas | habitants | routes
+ *     7 |    47 281 |   25 %          7 |    27 536 |   26 %
+ *    11 |    46 955 |   22 %         11 |    27 551 |   23 %
+ *    13 |    48 990 |   22 %   ←     13 |    29 289 |   23 %   ←
+ *    17 |    47 852 |   21 %         17 |    22 680 |   21 %
+ *    21 |    44 815 |   20 %         21 |    22 482 |   21 %
+ *    41 |    42 556 |   20 %         41 |    21 661 |   21 %
+ */
+export const SPINE_STEP = 13;
 
 export interface LatticeResult {
   buildings: PlacedBuilding[];
@@ -96,7 +123,7 @@ export function planLattice(
 
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
   const STEPH = 2 * rh + 1;
-  const STEPV = Math.max(rw + 2, Math.min(2 * rw + 1, 11));
+  const STEPV = Math.max(rw + 2, opts.spineStep ?? SPINE_STEP);
   // « prises d'eau » : cases réservées SANS route près des consommateurs d'eau —
   // une conduite ne peut pas terminer sur une route, donc un anneau complet rend
   // le bâtiment irraccordable (cause du 0/20 raccordés)
