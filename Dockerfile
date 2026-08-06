@@ -22,5 +22,8 @@ COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
+# 127.0.0.1 et non `localhost` : dans le conteneur, `localhost` resout d'abord en ::1
+# alors que nginx n'ecoute qu'en IPv4 — le healthcheck echouait donc toujours
+# (« connection refused ») et le conteneur se declarait unhealthy en servant du 200.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-  CMD wget -qO- http://localhost/ >/dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
