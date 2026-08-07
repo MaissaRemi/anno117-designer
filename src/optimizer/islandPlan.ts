@@ -427,19 +427,24 @@ export function planIslandImport(
       if (w) deficit[w.attr] = 1;
     }
     patron = pickPatron(instCands, deficit);
+    if (patron) {
+      // La passe est rejouée AU MÊME SEUIL que celle qui a servi à mesurer le déficit.
+      // Tenté un temps de la fusionner avec le raffinage, pour économiser 1,15 s : le patron
+      // était alors choisi sur un plan et appliqué à un autre, et le bilan de l'île finissait
+      // à −1 en sécurité incendie. L'économie ne valait pas ça.
+      const ev = runLattice(bestTrial, coverageFloor);
+      if (better(ev, pick)) pick = ev;
+      else patron = undefined; // l'autel ne paie pas son sol : on s'en passe
+    }
   }
 
   // RAFFINAGE : la recette gagnante rejouée à un seuil de densification plus exigeant.
   // Mesuré +4,0 % (65 357 → 67 940 habitants) — le moteur pose une ou deux copies de plus
   // là où la couverture était juste, et récupère des maisons entières au palier cible.
-  // C'est aussi elle qui porte la divinité tutélaire élue ci-dessus : le dieu se choisissait
-  // auparavant dans une passe à lui, mesurée à 1,15 s — 8,6 % du plan — pour trancher entre
-  // huit bâtiments 3×3. Si l'autel ne paie pas son sol, `pick` reste le plan sans lui.
-  if (Math.abs(coverageFloor - REFINE_FLOOR) > 1e-6 || patron) {
+  if (Math.abs(coverageFloor - REFINE_FLOOR) > 1e-6) {
     onProgress?.(trials.length + 1, total);
     const ev = runLattice(bestTrial, REFINE_FLOOR);
     if (!pick || better(ev, pick)) pick = ev;
-    else patron = undefined;
   }
   // packPlan sur la meilleure recette : il ne gagne jamais sur un palier à eau (il pose ses
   // maisons avant de router), mais il reste pertinent sur les paliers qui n'en consomment
