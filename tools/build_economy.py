@@ -146,6 +146,7 @@ def main():
     cs_effects = {}      # GUID CityStatus -> {attrs}
     cs_ladder = {}       # region -> [{status, population}]
     wf_grants = {}       # GUID comptoir -> {deltas, maint, population}
+    unique_types = {}    # UniqueType -> {scope, allowed?, permit?}
     derived = {}         # GUID sans Template -> surcharges + GUID du parent
     tpl_ranges = load_template_effect_ranges()
 
@@ -216,6 +217,25 @@ def main():
                 "maint": read_maint_items(vals.find("./Maintenance/Maintenances")),
                 "population": t(el, "./Values/AttributeProvider/Population"),
             }
+            el.clear(); continue
+
+        if tpl == "UniqueBuildingConfig":
+            # REGLES D'UNICITE, toutes reunies dans un seul asset (GUID 81160). Le plafond
+            # ne porte pas sur un batiment mais sur un TYPE, et deux mecanismes coexistent :
+            #   AllowedAmount  = plafond DUR, immuable (Monument01 et Headquarter : 1)
+            #   RequiredPermit = chaque exemplaire consomme un PERMIS, etat de partie que le
+            #                    joueur augmente par la recherche (Shrine : produit 93771)
+            # VillaMilitiaAuxilia porte les deux : plafond de 2 ET consommation de permis.
+            cfgs = vals.find("./UniqueBuildings/UniqueTypeConfigs")
+            if cfgs is not None:
+                for c in cfgs:
+                    row = {"scope": c.findtext("UniqueScope")}
+                    a, prm = c.findtext("AllowedAmount"), c.findtext("RequiredPermit")
+                    if a:
+                        row["allowed"] = int(a)
+                    if prm:
+                        row["permit"] = prm
+                    unique_types[c.tag] = row
             el.clear(); continue
 
         if tpl == "HarborWarehouse":
@@ -584,6 +604,7 @@ def main():
         "buildingProd": bprod,
         "buildingWorkforce": building_workforce,
         "workforceGrants": workforce_grants,
+        "uniqueTypes": unique_types,
         "buildingUpkeep": building_upkeep,
         "goodNames": products,
         "goodPrices": good_prices,

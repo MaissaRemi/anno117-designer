@@ -101,6 +101,15 @@ interface EconomyData {
    * disponible sur une île avant la moindre maison.
    */
   workforceGrants: Record<string, Record<string, { plenty?: number; medium?: number; spare?: number; cost?: number }>>;
+  /**
+   * RÈGLES D'UNICITÉ par `UniqueType` (asset `UniqueBuildingConfig`, GUID 81160). Le plafond
+   * porte sur un TYPE, pas sur un bâtiment — les seize autels de dieux partagent `Shrine`.
+   * Deux mécanismes de nature différente, qui peuvent se cumuler :
+   *  - `allowed` : plafond DUR, immuable (Monument01 et Headquarter valent 1) ;
+   *  - `permit` : chaque exemplaire consomme un PERMIS, état de partie que le joueur
+   *    augmente par la recherche. Le nombre détenu n'est PAS dans les fichiers.
+   */
+  uniqueTypes: Record<string, { scope: string; allowed?: number; permit?: string }>;
   buildingUpkeep: Record<string, number>; // defId -> entretien argent/min
   goodNames: Record<string, string>;
   goodPrices: Record<string, number>; // GUID -> BasePrice (valeur marchande de réf.)

@@ -39,15 +39,18 @@ export interface SlotPlanOptions {
   /** Région de l'île ("Roman" / "Celtic") : un bâtiment d'une autre région est écarté. */
   region?: string;
   /**
-   * Paliers que l'île peut réellement HÉBERGER, d'après la desserte de ses parcelles.
+   * GUICHET DE MAIN-D'ŒUVRE. Une exploitation n'est posée que si l'île peut l'armer — non pas
+   * « le palier est hébergeable quelque part », mais « il reste assez d'ouvriers de ce palier
+   * après tout ce qui a déjà été engagé ». Le devis est demandé À CHAQUE POSE, et débité.
    *
-   * Un bâtiment réclamant la main-d'œuvre d'un palier absent de ce vivier ne tournera
-   * jamais : aucune conversion de maison ne peut le pourvoir, faute de parcelle capable
-   * d'atteindre ce palier. Le poser reviendrait à occuper du sol pour rien — mesuré sur
-   * roman_island_medium_01, quatre laveurs d'or réclamaient 16 unités plébéiennes pour un
-   * vivier plébéien vide. Absent = aucun filtre.
+   * La version précédente filtrait qualitativement, sur un simple ensemble de paliers
+   * atteignables : une seule maison plébéienne hébergeable laissait poser quatre laveurs d'or
+   * réclamant seize unités.
    */
-  hostable?: Set<string>;
+  workforce?: {
+    quote(defIds: string[]): Record<string, number> | null;
+    charge(defIds: string[]): void;
+  };
 }
 
 export interface ExploitedSlot {
@@ -101,9 +104,10 @@ export function pickSlotBuilding(
       const fert = economy.buildingProd[d.id]?.fertility;
       return !fert || !have || have.has(fert);
     })
-    // MAIN-D'ŒUVRE : écarte ce que l'île ne pourra jamais armer.
-    .filter((d) => !opts.hostable
-      || (economy.buildingWorkforce[d.id] ?? []).every((w) => opts.hostable!.has(w.tier)))
+    // MAIN-D'ŒUVRE : écarte d'emblée ce que l'île ne pourra jamais armer, même en y
+    // consacrant toutes ses maisons. Le contrôle fin — « en reste-t-il assez ? » — se fait
+    // à la pose, exemplaire par exemplaire.
+    .filter((d) => !opts.workforce || opts.workforce.quote([d.id]) !== null)
     .map((d) => {
       const r = ratePerMin(d.id);
       return { d, value: r ? r.perMin * priceOf(r.good) : 0 };
@@ -241,6 +245,12 @@ export function planSlots(
     if (!byType.has(s.type)) byType.set(s.type, pickSlotBuilding(catalog, s.type, opts));
     const def = byType.get(s.type);
     if (!def) continue;
+    // Devis AVANT de poser : le vivier peut s'épuiser en cours de route, chaque exemplaire
+    // consommant sa part. C'est ce que le filtre qualitatif ne voyait pas.
+    if (opts.workforce && !opts.workforce.quote([def.id])) {
+      out.gaps.push(`${def.name} : main-d'œuvre insuffisante pour un exemplaire de plus`);
+      break;
+    }
     const sx = Math.round(s.x), sy = Math.round(s.y);
     const dims: [number, number, 0 | 90][] = [
       [def.size.w, def.size.h, 0],
@@ -258,6 +268,7 @@ export function planSlots(
           all.push(b);
           stampOcc(b, idx);
           out.buildings.push(b);
+          opts.workforce?.charge([def.id]);
           placedIdx.push(idx);
           linkToRoads(x, y, w, h, { x: sx, y: sy });
           const r0 = ratePerMin(def.id);

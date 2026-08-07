@@ -2,6 +2,7 @@ import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import { cityStatusLadder, economy, effectOf, residentialChainExtended } from "../economy/economy";
+import { uniqueCap } from "../economy/uniques";
 import { VITAL_ATTRS } from "../economy/attributes";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
@@ -34,28 +35,9 @@ export interface LatticeOpts {
   /** Arrêter de bâtir quand le BILAN DE L'ÎLE passerait sous zéro sur un attribut vital.
    *  Défaut true. */
   viabilityGate?: boolean;
-  /** Plafond par `UniqueType`, tous bâtiments confondus. Voir `DEFAULT_UNIQUE_QUOTA`. */
-  uniqueQuota?: Record<string, number>;
+  /** Permis détenus en partie, par GUID de permis. Voir `economy/uniques`. */
+  permits?: Record<string, number>;
 }
-
-/**
- * Plafonds par `UniqueType`, sur l'île (`UniqueScope=Area`).
- *
- * `Shrine` couvre les seize autels de dieux et n'a PAS d'`AllowedAmount` dans les fichiers :
- * le nombre autorisé est celui des permis de sanctuaire détenus (produit 93771), qui
- * s'obtiennent par la dévotion et la recherche — dont une technologie répétable. On retient
- * 2 par défaut, valeur réaliste en cours de partie, réglable par l'utilisateur.
- */
-export const DEFAULT_UNIQUE_QUOTA: Record<string, number> = { Shrine: 2, Monument01: 1 };
-
-/**
- * Plafond d'un bâtiment, tous porteurs du même `uniqueType` confondus. `Infinity` s'il n'en
- * porte aucun. Unique expression de la règle : les deux moteurs de placement l'appellent,
- * au lieu d'en tenir chacun une copie.
- */
-export const uniqueCap = (d: BuildingDef, quota?: Record<string, number>): number =>
-  d.uniqueType ? (quota?.[d.uniqueType] ?? DEFAULT_UNIQUE_QUOTA[d.uniqueType] ?? 1)
-    : (d.unique ? 1 : Infinity);
 
 /**
  * Espacement des épines verticales du peigne de routes.
@@ -274,7 +256,7 @@ export function planLattice(
    */
   const uniqueUsed = new Map<string, number>();
   const remainingQuota = (d: BuildingDef): number =>
-    uniqueCap(d, opts.uniqueQuota) - (d.uniqueType ? (uniqueUsed.get(d.uniqueType) ?? 0) : 0);
+    uniqueCap(d, opts.permits) - (d.uniqueType ? (uniqueUsed.get(d.uniqueType) ?? 0) : 0);
 
   // pose une copie au plus près de (tx,ty) dans un rayon maxRad (spirale Chebyshev)
   const placeNear = (def: BuildingDef, tx: number, ty: number, maxRad: number, rot: 0 | 1 = 0): boolean => {

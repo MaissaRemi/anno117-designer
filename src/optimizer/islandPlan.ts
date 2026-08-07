@@ -57,11 +57,12 @@ export interface IslandPlanRequest {
    *  Décodées par le worker depuis terrain.generated (grid.islandId). */
   heights?: Int8Array;
   /**
-   * Plafond par `UniqueType` sur l'île. Le seul réglage utile est `Shrine` : le nombre
-   * d'autels autorisés vaut le nombre de PERMIS DE SANCTUAIRE détenus en partie, que le
-   * joueur augmente par la dévotion et la recherche. Défaut `DEFAULT_UNIQUE_QUOTA`.
+   * PERMIS détenus en partie, par GUID de permis. Le seul qui compte aujourd'hui est le
+   * permis d'autel (`SHRINE_PERMIT`) : il borne le nombre d'autels de la divinité tutélaire.
+   * Ce n'est pas une donnée des fichiers du jeu mais un état de partie — défaut
+   * `DEFAULT_PERMITS`.
    */
-  uniqueQuota?: Record<string, number>;
+  permits?: Record<string, number>;
 }
 
 export interface ImportGood {
@@ -397,7 +398,7 @@ export function planIslandImport(
       planLattice(planGrid, req.tierGuid, lookup, {
         coverageFloor: floor, serviceIds, water: true, heights: req.heights,
         institutions: patron ? [...institutions, patron] : institutions,
-        uniqueQuota: req.uniqueQuota,
+        permits: req.permits,
       }),
       serviceIds ? new Set(serviceIds) : null,
     );
@@ -450,7 +451,7 @@ export function planIslandImport(
   onProgress?.(total, total);
   if (landTiles <= 200_000) {
     const serviceIds = bestTrial;
-    const packed = planPacked(planGrid, req.tierGuid, lookup, { coverageFloor, serviceIds, uniqueQuota: req.uniqueQuota });
+    const packed = planPacked(planGrid, req.tierGuid, lookup, { coverageFloor, serviceIds, permits: req.permits });
     const ev = evaluate(packed, serviceIds ? new Set(serviceIds) : null);
     if (!pick || better(ev, pick)) pick = ev;
   }
@@ -507,17 +508,29 @@ export function planIslandImport(
   // Appelée APRÈS le routage d'eau : les sources ont déjà pris les slots montagne dont
   // elles avaient besoin, ce module ne voit que le complément. Il pose aussi les entrepôts
   // sans lesquels la production ne sortirait pas.
-  // VIVIER DE PALIERS : ceux qu'au moins une parcelle peut atteindre. Un bâtiment réclamant
-  // la main-d'œuvre d'un palier absent de ce vivier ne tournera jamais — aucune conversion
-  // ne peut le pourvoir. On ne le pose donc pas plutôt que d'occuper du sol pour rien.
-  const hostable = hostableTiers(dist.plots);
+  // ═══ GUICHET DE MAIN-D'ŒUVRE ═════════════════════════════════════════════════════════
+  // Le grand-livre naît ICI, avant les exploitations, pour leur servir de guichet : rien
+  // n'entre dans le plan sans qu'on ait vérifié que l'île saura l'armer, et en quelle
+  // quantité. Le comptoir fournit une part gratuite — 25 unités du premier palier —, seule
+  // main-d'œuvre qui ne vienne pas de la population.
+  //
+  // Les SERVICES, eux, sont posés par le moteur de placement et ne passent pas par ce
+  // guichet : ils sont facturés en bloc, sans droit de refus. C'est la seule source de
+  // déficit préexistant que le devis doive tolérer.
+  const aliveUids = new Set(buildings.map((b) => b.uid));
+  const ledger = new WorkforceLedger(
+    (dist.plots ?? []).filter((p) => aliveUids.has(p.uid)),
+    workforceGrant(kontorDef?.id),
+    islandRegion,
+  );
+  ledger.charge(buildings.filter((b) => !residenceIds.has(b.defId)).map((b) => b.defId));
 
   let exploited: ExploitedSlot[] = [];
   if (req.exploitSlots) {
     const sp = planSlots(
       req.grid, req.catalog, lookup, buildings, roads, water.usedSlots,
       (id) => residenceIds.has(id),
-      { fertilities: req.islandFertilities, region: islandRegion, hostable },
+      { fertilities: req.islandFertilities, region: islandRegion, workforce: ledger },
     );
     if (sp.removed.length) {
       const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
@@ -638,22 +651,6 @@ export function planIslandImport(
   // Le bilan d'attributs est un BUDGET : le surplus de Santé et d'Argent achète des ateliers
   // qui retirent leur bien du manifeste d'import. On s'arrête au premier qui ferait passer
   // un attribut vital sous zéro.
-  // ═══ CASCADE DE MAIN-D'ŒUVRE ═════════════════════════════════════════════════════════
-  // Chaque bâtiment posé réclame la main-d'œuvre d'UN palier précis, et il n'existe aucune
-  // substitution : une île de Patriciens purs ne fait tourner aucun atelier réclamant des
-  // Plébéiens. On rétrograde donc une part des maisons — ce qui ne démolit rien, les neuf
-  // résidences du jeu faisant toutes 3×3.
-  //
-  // Le comptoir fournit une part gratuite (25 unités du premier palier au niveau 1), seule
-  // main-d'œuvre qui ne vienne pas de la population.
-  const aliveUids = new Set(buildings.map((b) => b.uid));
-  const ledger = new WorkforceLedger(
-    (dist.plots ?? []).filter((p) => aliveUids.has(p.uid)),
-    workforceGrant(kontorDef?.id),
-    islandRegion,
-  );
-  ledger.charge(buildings.filter((b) => !residenceIds.has(b.defId)).map((b) => b.defId));
-
   let workshops: LocalWorkshop[] = [];
   if (req.localProduction) {
     const lp = planLocalProduction(

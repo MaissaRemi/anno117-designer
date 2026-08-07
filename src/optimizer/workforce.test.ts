@@ -154,20 +154,18 @@ describe("cascade dans le plan d'île", () => {
   }, 300_000);
 
   it("on ne pose pas ce que l'île ne pourra jamais armer", () => {
-    // Un bâtiment réclamant un palier absent du VIVIER — aucune parcelle ne peut l'atteindre —
-    // ne tournera jamais : aucune conversion ne peut le pourvoir. Mesuré avant correctif sur
-    // roman_island_medium_01 : quatre laveurs d'or réclamaient 16 unités plébéiennes pour un
-    // vivier plébéien vide. `pickSlotBuilding` les écarte désormais.
+    // Le guichet est QUANTITATIF : il ne demande pas « ce palier est-il hébergeable quelque
+    // part » mais « en reste-t-il assez après ce qui est déjà engagé ». Un vivier d'une seule
+    // maison plébéienne laissait auparavant poser quatre laveurs d'or réclamant seize unités.
     const roman = catalog.filter((d) => d.slotType === "river" && (!d.region || d.region === "Roman"));
     const needy = roman.find((d) => (economy.buildingWorkforce[d.id] ?? []).length > 0);
     expect(needy).toBeDefined();
-    const tier = economy.buildingWorkforce[needy!.id][0].tier;
-    // vivier privé de ce palier : le bâtiment n'est plus candidat
-    const hostable = new Set(economy.tiers.map((t) => t.guid).filter((g) => g !== tier));
-    const withAll = pickSlotBuilding(catalog, "river", { region: "Roman" });
-    const withGap = pickSlotBuilding(catalog, "river", { region: "Roman", hostable });
-    expect(withAll).toBeDefined();
-    if (withGap) expect((economy.buildingWorkforce[withGap.id] ?? []).every((w) => hostable.has(w.tier))).toBe(true);
+    // un grand-livre sans aucune parcelle ne peut rien armer : tout devis est refusé
+    const vide = new WorkforceLedger([], {}, "Roman");
+    expect(vide.quote([needy!.id])).toBeNull();
+    expect(pickSlotBuilding(catalog, "river", { region: "Roman", workforce: vide })).toBeUndefined();
+    // sans guichet, le candidat reste retenu
+    expect(pickSlotBuilding(catalog, "river", { region: "Roman" })).toBeDefined();
   });
 
   it("la demande de main-d'œuvre d'un bâtiment est lue depuis les données du jeu", () => {

@@ -4,7 +4,8 @@ import { economy, residentialChainExtended } from "../economy/economy";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { VITAL_ATTRS } from "../economy/attributes";
 import type { DefLookup } from "../engine/rules";
-import { uniqueCap, type HousePlot } from "./planLattice";
+import type { HousePlot } from "./planLattice";
+import { uniqueCap } from "../economy/uniques";
 import { makeStreetGrid } from "./streetGrid";
 
 const SMALL_RANGE_MAX = 40; // services portée <= 40 = locaux
@@ -18,8 +19,8 @@ export interface PackOpts {
   coverageFloor?: number;
   /** Restreint les services à placer (mode seuils). Absent = tous les services du tier. */
   serviceIds?: string[];
-  /** Plafond par `UniqueType`, tous bâtiments confondus (cf. `DEFAULT_UNIQUE_QUOTA`). */
-  uniqueQuota?: Record<string, number>;
+  /** Permis détenus en partie, par GUID de permis (cf. `economy/uniques`). */
+  permits?: Record<string, number>;
 }
 
 export interface PackResult {
@@ -234,7 +235,7 @@ export function planPacked(
     // de dieux se partagent les permis de sanctuaire. Borner à 1 par bâtiment posait une
     // copie PAR DIVINITÉ — six autels là où le jeu en autorise deux.
     const used = tc.def.uniqueType ? (uniqueUsed.get(tc.def.uniqueType) ?? 0) : 0;
-    const maxIters = Math.max(0, Math.min(60, uniqueCap(tc.def, opts.uniqueQuota) - used));
+    const maxIters = Math.max(0, Math.min(60, uniqueCap(tc.def, opts.permits) - used));
     for (let iter = 0; iter < maxIters; iter++) {
       // uncov = maisons vivantes non couvertes (origines) ; cible du glouton
       const uncov = new Int32Array(N);

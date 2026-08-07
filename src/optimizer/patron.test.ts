@@ -6,7 +6,7 @@ import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
 import { economy, worldOf } from "../economy/economy";
 import { institutionDefs, pickPatron, SHRINE_TYPE } from "../economy/attributes";
-import { DEFAULT_UNIQUE_QUOTA } from "./planLattice";
+import { DEFAULT_PERMITS, SHRINE_PERMIT, uniqueCap } from "../economy/uniques";
 import { regionOfIsland } from "../data/islands";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
@@ -55,17 +55,34 @@ describe("divinité tutélaire — un seul dieu par île", () => {
       // UN SEUL dieu : « chaque île a un dieu tutélaire que vénère sa population ».
       expect(new Set(shrines.map((b) => b.defId)).size).toBeLessThanOrEqual(1);
       // et le quota partagé des permis de sanctuaire est respecté
-      expect(shrines.length).toBeLessThanOrEqual(DEFAULT_UNIQUE_QUOTA[SHRINE_TYPE]);
+      expect(shrines.length).toBeLessThanOrEqual(DEFAULT_PERMITS[SHRINE_PERMIT]);
       // le dieu retenu est bien de la région de l'île
       for (const b of shrines) expect(worldOf(byId.get(b.defId)!.region!)).toBe(world);
     }, 300_000);
   }
 
+  it("la règle d'unicité vient des données du jeu, pas d'une table écrite à la main", () => {
+    // `UniqueBuildingConfig` (GUID 81160) déclare huit types. Deux mécanismes distincts s'y
+    // côtoient, et les confondre rendait le repli silencieux.
+    expect(economy.uniqueTypes.Monument01).toMatchObject({ scope: "Area", allowed: 1 });
+    expect(economy.uniqueTypes.Shrine).toMatchObject({ scope: "Area", permit: SHRINE_PERMIT });
+    // plafond DUR : aucun permis ne le relève
+    const colisee = catalog.find((d) => d.uniqueType === "Monument01")!;
+    expect(uniqueCap(colisee, { [SHRINE_PERMIT]: 99 })).toBe(1);
+    // plafond par PERMIS : c'est un état de partie, pas une donnée du jeu
+    const autel = catalog.find((d) => d.uniqueType === SHRINE_TYPE)!;
+    expect(uniqueCap(autel)).toBe(DEFAULT_PERMITS[SHRINE_PERMIT]);
+    expect(uniqueCap(autel, { [SHRINE_PERMIT]: 5 })).toBe(5);
+    expect(uniqueCap(autel, { [SHRINE_PERMIT]: 0 })).toBe(0);
+    // un bâtiment sans type d'unicité n'est jamais borné
+    expect(uniqueCap(catalog.find((d) => !d.unique)!)).toBe(Infinity);
+  });
+
   it("le quota est réglable — 0 permis, aucun autel", () => {
     const grid = downscaleGrid(buildIslandGrid("roman_island_medium_01")!);
     const r = planIslandImport({
       catalog, grid, tierGuid: topTierOf("Roman").guid, coverageFloor: 0.8,
-      uniqueQuota: { [SHRINE_TYPE]: 0 },
+      permits: { [SHRINE_PERMIT]: 0 },
     });
     expect(r.buildings.filter((b) => byId.get(b.defId)?.uniqueType === SHRINE_TYPE)).toHaveLength(0);
   }, 300_000);
