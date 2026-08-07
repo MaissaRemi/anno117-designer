@@ -71,7 +71,7 @@ describe("production finale sur l'île", () => {
   });
 
   it("les maisons rasées sont décomptées de la population", () => {
-    const lost = on.workshops.reduce((a, w) => a + w.housesLost, 0);
+    const lost = on.workshops.reduce((a, w) => a + w.razed.length, 0);
     expect(lost).toBeGreaterThan(0);
     expect(on.houses).toBeLessThan(off.houses);
     expect(on.residents).toBeLessThan(off.residents);

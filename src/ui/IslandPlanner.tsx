@@ -316,7 +316,7 @@ export function IslandPlanner({ onClose }: Props) {
                   {result.workshops.map((w, i) => (
                     <li key={i}>
                       {w.name} ×{w.copies} · {w.perMin.toFixed(2)}/min {w.goodName}
-                      <span className="muted"> — {w.housesLost} maison(s)</span>
+                      <span className="muted"> — {w.razed.length} maison(s)</span>
                     </li>
                   ))}
                 </ul>

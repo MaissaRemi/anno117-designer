@@ -54,12 +54,10 @@ export interface LocalWorkshop {
   copies: number;
   /** effet de zone cumulé sur les maisons à portée */
   attrs: Record<string, number>;
-  /** maisons rasées pour faire la place */
-  housesLost: number;
+  /** bâtiments posés pour cet atelier — permet de DÉFAIRE la pose */
+  placed: PlacedBuilding[];
   /** intrants consommés par ces copies, u/min — à produire ou à importer */
   inputs: { good: string; perMin: number }[];
-  /** uid des bâtiments posés pour cet atelier — permet de DÉFAIRE la pose */
-  uids: string[];
   /** uid des résidences rasées sous leur emprise — idem */
   razed: string[];
 }
@@ -69,8 +67,7 @@ export interface LocalProdResult {
   /** uids de résidences rasées pour faire place aux ateliers */
   removed: string[];
   workshops: LocalWorkshop[];
-  /** delta d'attributs de l'île, effets de zone des ateliers compris */
-  attrsDelta: Record<string, number>;
+
   /**
    * BILAN DU MANIFESTE, bien par bien : ce que l'île produit désormais elle-même (positif)
    * et ce qu'elle doit acheminer EN PLUS pour alimenter ses ateliers (négatif).
@@ -107,7 +104,7 @@ export function planLocalProduction(
 ): LocalProdResult {
   const W = grid.w, H = grid.h, N = W * H;
   const maxBuildings = opts.maxBuildings ?? 40;
-  const out: LocalProdResult = { buildings: [], removed: [], workshops: [], attrsDelta: {}, netPerMin: {}, gaps: [] };
+  const out: LocalProdResult = { buildings: [], removed: [], workshops: [], netPerMin: {}, gaps: [] };
 
   // --- occupation courante ------------------------------------------------------------
   const roadAt = new Uint8Array(N);
@@ -207,7 +204,7 @@ export function planLocalProduction(
     const copies = Math.min(4, Math.ceil(d.perMin / rate)); // borné : on ne bétonne pas l'île
     const ws: LocalWorkshop = {
       defId, name: def.name, good: d.good, goodName: goodName(d.good),
-      perMin: 0, copies: 0, attrs: {}, housesLost: 0, inputs: [], uids: [], razed: [],
+      perMin: 0, copies: 0, attrs: {}, inputs: [], placed: [], razed: [],
     };
     for (let c = 0; c < copies; c++) {
       if (out.buildings.length >= maxBuildings) break;
@@ -242,7 +239,6 @@ export function planLocalProduction(
       for (const u of doomed) {
         removed.add(u);
         ws.razed.push(u);
-        ws.housesLost++;
         const h = houses.find((x) => x.uid === u);
         if (h) h.alive = false;
       }
@@ -255,10 +251,9 @@ export function planLocalProduction(
       all.push(b);
       stamp(b, idx);
       out.buildings.push(b);
-      ws.uids.push(b.uid);
+      ws.placed.push(b);
       for (const [k, v] of Object.entries(impact)) {
         budget[k] = (budget[k] ?? 0) + v;
-        out.attrsDelta[k] = (out.attrsDelta[k] ?? 0) + v;
         ws.attrs[k] = (ws.attrs[k] ?? 0) + v;
       }
       ws.copies++;
@@ -273,14 +268,12 @@ export function planLocalProduction(
     // reste du budget et de la place, son propre producteur sera posé au tour suivant, ce
     // qui referme la chaîne d'un cran de plus. Le budget d'attributs, le quota de bâtiments
     // et la main-d'œuvre bornent naturellement la remontée.
-    out.netPerMin[ws.good] = (out.netPerMin[ws.good] ?? 0) + ws.perMin;
     const prod = economy.buildingProd[defId];
     if (prod) {
       for (const inp of prod.inputs) {
         const need = inputRatePerMin(prod, inp.amount) * ws.copies;
         if (need <= 0) continue;
         ws.inputs.push({ good: inp.good, perMin: Math.round(need * 100) / 100 });
-        out.netPerMin[inp.good] = (out.netPerMin[inp.good] ?? 0) - need;
         if (!queued.has(inp.good)) { queued.add(inp.good); wanted.push({ good: inp.good, perMin: need }); }
       }
     }
@@ -289,5 +282,23 @@ export function planLocalProduction(
 
   out.removed = [...removed];
   if (!out.workshops.length) out.gaps.push("Aucun atelier local posable (place ou budget d'attributs insuffisant)");
+  out.netPerMin = netOf(out.workshops);
   return out;
+}
+
+/**
+ * BILAN DES BIENS d'un ensemble d'ateliers : positif = produit ici, négatif = à acheminer en
+ * plus pour l'alimenter. Un atelier ne fait pas disparaître un besoin, il le DÉPLACE en amont.
+ *
+ * Dérivé des ateliers, donc juste par construction quand on en retire — le recul sur pose
+ * recalculait sinon la même chose à côté, et les deux versions ne coïncidaient déjà plus :
+ * l'une soustrayait l'intrant arrondi, l'autre sa valeur exacte.
+ */
+export function netOf(workshops: LocalWorkshop[]): Record<string, number> {
+  const net: Record<string, number> = {};
+  for (const w of workshops) {
+    net[w.good] = (net[w.good] ?? 0) + w.perMin;
+    for (const inp of w.inputs) net[inp.good] = (net[inp.good] ?? 0) - inp.perMin;
+  }
+  return net;
 }

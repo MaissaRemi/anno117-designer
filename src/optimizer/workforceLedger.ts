@@ -47,8 +47,13 @@ export interface SettleResult {
   deficit: Record<string, number>;
   /** demande adressée à des paliers absents du monde de l'île (jamais satisfiable) */
   alien: Record<string, number>;
-  /** variation du bilan d'attributs due aux SEULES conversions (hors rang de cité) */
-  attrsDelta: Record<string, number>;
+  /**
+   * SOMME ABSOLUE des attributs vitaux sur les maisons debout, dans leur affectation finale
+   * et hors rang de cité. C'est la seule grandeur dont le bilan de l'île doive partir : la
+   * tenir par accumulation de deltas sur un état qui bouge encore est précisément ce qui
+   * faisait finir le bilan à −1 en sécurité incendie.
+   */
+  attrsSum: Record<string, number>;
   /** maisons encore debout */
   houses: number;
   offer: Record<string, number>;
@@ -71,10 +76,7 @@ export class WorkforceLedger {
   private nowAttrs: Record<string, number> | null = null;
   private nowPop = 0;
   private nowShort = 0;
-  /** parcelles rasées après coup (emprise d'un atelier) — exclues de tous les totaux */
-  private readonly dead = new Set<number>();
   private readonly byUid = new Map<string, number>();
-  private readonly initialAttrs: Record<string, number>;
 
   constructor(plots: HousePlot[], grants: Record<string, number>, world: string) {
     this.plots = plots;
@@ -86,19 +88,6 @@ export class WorkforceLedger {
       this.cur[i] = k >= 0 ? k : Math.max(0, plots[i].opts.length - 1);
       this.byUid.set(plots[i].uid, i);
     }
-    this.initialAttrs = this.attrsOf(this.cur);
-  }
-
-  /**
-   * Retire des parcelles rasées après la construction du grand-livre (l'emprise d'un atelier
-   * remplace des maisons). Elles cessent de compter, en offre comme en attributs.
-   */
-  drop(uids: Iterable<string>): void {
-    for (const u of uids) {
-      const i = this.byUid.get(u);
-      if (i !== undefined) this.dead.add(i);
-    }
-    this.nowAttrs = null;
   }
 
   /**
@@ -162,7 +151,6 @@ export class WorkforceLedger {
     for (const k of VITAL_ATTRS) attrsSum[k] = 0;
     let residents = 0, houses = 0;
     for (let i = 0; i < this.plots.length; i++) {
-      if (this.dead.has(i)) continue;
       const p = this.plots[i];
       const o = p.opts[this.cur[i]];
       if (!o) continue;
@@ -184,13 +172,10 @@ export class WorkforceLedger {
     return {
       changed,
       conversions: [...conv.values()].sort((a, b) => b.houses - a.houses),
-      tierCounts, capByTier,
+      tierCounts, capByTier, attrsSum,
       residents: Math.round(residents),
       deficit: r.deficit,
       alien: r.alien,
-      attrsDelta: Object.fromEntries(
-        VITAL_ATTRS.map((k) => [k, (attrsSum[k] ?? 0) - (this.initialAttrs[k] ?? 0)]),
-      ),
       houses,
       offer: this.supplyOf(this.cur),
       demand: { ...this.demand },
@@ -206,7 +191,7 @@ export class WorkforceLedger {
     for (const k of VITAL_ATTRS) c[k] = 0;
     for (const u of uids) {
       const i = this.byUid.get(u);
-      if (i === undefined || this.dead.has(i)) continue;
+      if (i === undefined) continue;
       const o = this.plots[i].opts[this.cur[i]];
       if (!o) continue;
       for (const k of VITAL_ATTRS) c[k] += o.attrs[k] ?? 0;
@@ -218,7 +203,6 @@ export class WorkforceLedger {
   private supplyOf(assign: Int32Array): Record<string, number> {
     const s: Record<string, number> = { ...this.grants };
     for (let i = 0; i < this.plots.length; i++) {
-      if (this.dead.has(i)) continue;
       const o = this.plots[i].opts[assign[i]];
       if (!o) continue;
       const t = tierByGuid(o.guid);
@@ -262,8 +246,7 @@ export class WorkforceLedger {
 
       let bestI = -1, bestK = -1, bestPrice = Infinity;
       for (let i = 0; i < this.plots.length; i++) {
-        if (this.dead.has(i)) continue;
-        const opts = this.plots[i].opts;
+          const opts = this.plots[i].opts;
         const from = opts[assign[i]];
         if (!from || from.guid === target) continue;
         const k = opts.findIndex((o) => o.guid === target);
@@ -306,7 +289,6 @@ export class WorkforceLedger {
     const a: Record<string, number> = {};
     for (const k of VITAL_ATTRS) a[k] = 0;
     for (let i = 0; i < this.plots.length; i++) {
-      if (this.dead.has(i)) continue;
       const o = this.plots[i].opts[assign[i]];
       if (!o) continue;
       for (const k of VITAL_ATTRS) a[k] += o.attrs[k] ?? 0;
@@ -317,7 +299,6 @@ export class WorkforceLedger {
   private popOf(assign: Int32Array): number {
     let p = 0;
     for (let i = 0; i < this.plots.length; i++) {
-      if (this.dead.has(i)) continue;
       p += this.plots[i].opts[assign[i]]?.cap ?? 0;
     }
     return p;
