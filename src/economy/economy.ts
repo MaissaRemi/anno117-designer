@@ -29,6 +29,12 @@ export interface Tier {
   workforce: string | null; // GUID bien-workforce fourni
   factor: number; // workforce par résident
   residenceId: string | null;
+  /**
+   * Résidences vers lesquelles celle-ci peut MONTER (`Upgradable/PossibleUpgrades`). C'est un
+   * ARBRE, pas une chaîne : en Albion les Tourbiers se hissent SOIT vers les Forgerons
+   * (lignée native) SOIT vers les Mercators (romanisée).
+   */
+  upgradesTo: string[];
   capacityDefault: number; // habitants max/maison = Σ Population des besoins
   perHouse: Record<string, number>; // attributs/maison pleine (Money, Happiness, …)
   goods: TierGood[];
@@ -144,29 +150,36 @@ export const upkeepOf = (defId: string): number => economy.buildingUpkeep[defId]
 const tierIndex = new Map(tiers.map((t) => [t.guid, t] as const));
 export const tierByGuid = (g: string): Tier | undefined => tierIndex.get(g);
 
+/** Paliers dont on peut monter DIRECTEMENT vers `t`, d'après le graphe déclaré par le jeu. */
+const parentsOf = (t: Tier): Tier[] =>
+  t.residenceId ? tiers.filter((p) => p.upgradesTo?.includes(t.residenceId!)) : [];
+/** Paliers vers lesquels `t` peut monter directement. */
+const childrenOf = (t: Tier): Tier[] =>
+  (t.upgradesTo ?? []).map((r) => tiers.find((x) => x.residenceId === r)).filter((x): x is Tier => !!x);
+
 /**
- * Chaîne résidentielle menant au tier-cible : tiers de MÊME région dont l'ensemble
- * de services est NICHÉ dans (⊆) celui du cible, du plus bas au cible. Les services
- * sont cumulatifs dans le jeu (Liberti ⊂ Plébéiens ⊂ Equites ⊂ Patriciens), donc une
- * maison sous-desservie retombe au tier le plus haut dont TOUS les services l'atteignent.
- * Base de l'accounting MIXTE (densité max sans gonfler la population au tier-cible).
+ * Chaîne résidentielle menant au tier-cible : ses ANCÊTRES dans le graphe de montée, du plus
+ * bas à la cible. Une maison sous-desservie retombe au meilleur palier de cette chaîne dont
+ * elle franchit les seuils — base de l'accounting MIXTE.
+ *
+ * Le graphe est déclaré par le jeu (`Upgradable/PossibleUpgrades`). L'ordre en était déduit
+ * auparavant de la capacité et de l'inclusion des services, ce qui marchait tant que la
+ * lignée était unique — mais l'Albion en a deux, et « le palier de capacité juste inférieure »
+ * y désigne volontiers un palier de l'AUTRE lignée.
  */
 export function residentialChain(tierGuid: string): Tier[] {
   const target = tierByGuid(tierGuid);
   if (!target || !target.residenceId) return target ? [target] : [];
-  const svcOf = (t: Tier): Set<string> =>
-    new Set(t.services.map((s) => s.building).filter((b): b is string => !!b));
-  const targetSvc = svcOf(target);
-  return tiers
-    // Comparaison au niveau du MONDE, pas de la culture : en Albion, une maison romanisée
-    // (Mercators) se hisse depuis les Tourbiers natifs — il n'existe pas de palier 01
-    // romano-celtique. Le vrai garde-fou reste l'inclusion des services ci-dessous, qui
-    // interdit de compter un palier dont la ville ne dessert pas les besoins.
-    .filter((t) => !!t.residenceId && worldOf(t.region) === worldOf(target.region)
-      && t.capacityDefault <= target.capacityDefault
-      && [...svcOf(t)].every((b) => targetSvc.has(b)))
-    .sort((a, b) => a.capacityDefault - b.capacityDefault);
+  const out = new Map<string, Tier>([[target.guid, target]]);
+  const stack = [target];
+  while (stack.length) {
+    for (const p of parentsOf(stack.pop()!)) {
+      if (p.residenceId && !out.has(p.guid)) { out.set(p.guid, p); stack.push(p); }
+    }
+  }
+  return [...out.values()].sort((a, b) => a.capacityDefault - b.capacityDefault);
 }
+
 /**
  * CHAÎNE ÉTENDUE — la chaîne résidentielle, plus les LIGNÉES PARALLÈLES du même monde.
  *
@@ -191,15 +204,17 @@ export function residentialChain(tierGuid: string): Tier[] {
 export function residentialChainExtended(tierGuid: string): Tier[] {
   const target = tierByGuid(tierGuid);
   if (!target?.residenceId) return residentialChain(tierGuid);
-  const out = [...residentialChain(tierGuid)];
-  const seen = new Set(out.map((t) => t.guid));
-  for (const t of tiers) {
-    if (!t.residenceId || seen.has(t.guid)) continue;
-    if (worldOf(t.region) !== worldOf(target.region)) continue;
-    if (t.capacityDefault > target.capacityDefault) continue;
-    out.push(t);
+  const out = new Map(residentialChain(tierGuid).map((t) => [t.guid, t] as const));
+  const stack = [...out.values()];
+  while (stack.length) {
+    for (const c of childrenOf(stack.pop()!)) {
+      // borné par la cible : on n'héberge pas un palier plus dense qu'elle
+      if (!out.has(c.guid) && c.residenceId && c.capacityDefault <= target.capacityDefault) {
+        out.set(c.guid, c); stack.push(c);
+      }
+    }
   }
-  return out.sort((a, b) => a.capacityDefault - b.capacityDefault);
+  return [...out.values()].sort((a, b) => a.capacityDefault - b.capacityDefault);
 }
 
 export const goodName = (g: string | null): string =>

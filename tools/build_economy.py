@@ -392,8 +392,16 @@ def main():
                     except ValueError:
                         pass
             if tier:
+                # GRAPHE DE MONTEE. `Upgradable/PossibleUpgrades` declare vers quelle
+                # residence celle-ci peut monter. C'est un ARBRE, pas une chaine : en Albion
+                # les Tourbiers se hissent SOIT vers les Forgerons (lignee native) SOIT vers
+                # les Mercators (romanisee). Sans cette arete, le code deduisait l'ordre de la
+                # capacite et prenait le voisin de tableau pour le predecesseur.
+                upg = [x for x in (it.findtext("UpgradeGUID")
+                                   for it in el.findall("./Values/Upgradable/PossibleUpgrades/Item")) if x]
                 residences[tier] = {"defId": defId, "goods": goods, "services": services,
-                                    "thresholds": thresholds}
+                                    "thresholds": thresholds,
+                                    "upgradesTo": [f"g{x}" for x in upg]}
 
         el.clear()
 
@@ -478,6 +486,7 @@ def main():
             "workforce": pl["workforce"],
             "factor": pl["factor"],
             "residenceId": res["defId"] if res else None,
+            "upgradesTo": res.get("upgradesTo", []) if res else [],
             "capacityDefault": cap,
             "perHouse": dict(per_house),
             "goods": goods,

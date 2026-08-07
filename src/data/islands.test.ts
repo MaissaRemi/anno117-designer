@@ -85,6 +85,20 @@ describe("séparation des mondes (Latium / Albion)", () => {
     expect(Math.max(...caps)).toBe(nobles.capacityDefault);
   });
 
+  it("le graphe de montée vient du jeu, et il FOURCHE en Albion", () => {
+    // `Upgradable/PossibleUpgrades` : les Tourbiers se hissent vers DEUX paliers. C'est un
+    // arbre, pas une chaîne — et « le palier de capacité juste inférieure » désignait donc
+    // volontiers un palier de l'autre lignée.
+    const byRes = (n: string) => economy.tiers.find((t) => t.name === n)!.residenceId!;
+    const tourbiers = economy.tiers.find((t) => t.name === "Tourbiers")!;
+    expect(tourbiers.upgradesTo).toHaveLength(2);
+    expect(tourbiers.upgradesTo).toContain(byRes("Mercators"));
+    expect(tourbiers.upgradesTo).toContain(byRes("Forgerons"));
+    // le Latium, lui, est une chaîne simple
+    expect(economy.tiers.find((t) => t.name === "Liberti")!.upgradesTo).toEqual([byRes("Plébéiens")]);
+    expect(economy.tiers.find((t) => t.name === "Patriciens")!.upgradesTo).toEqual([]);
+  });
+
   it("Latium : chaîne déjà emboîtée, l'extension n'y change rien", () => {
     const pat = economy.tiers.find((t) => t.name === "Patriciens")!;
     expect(residentialChainExtended(pat.guid).map((t) => t.name))
