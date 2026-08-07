@@ -173,6 +173,10 @@ export function planIslandImport(
   // et le routage d'eau l'inverse (chaque citerne coûte 10 u, une conduite, un corridor).
   let landTiles = 0;
   for (const u of req.grid.usable) if (u) landTiles++;
+  // Le plan aura-t-il besoin d'ouvriers ? Cela ne change PAS les recettes essayées (elles le
+  // sont toutes, sous leurs deux formes), seulement l'arbitrage entre plans à population
+  // comparable.
+  const needWorkers = !!req.exploitSlots || !!req.localProduction;
   const trials: (string[] | undefined)[] = [];
   if (needMode === "auto") {
     // budget adaptatif : une évaluation coûte ~0,1 s sur une île moyenne mais plusieurs
@@ -266,6 +270,8 @@ export function planIslandImport(
     waterPct: number;
     /** bilan de l'île par attribut vital, rang de cité compris */
     attrsTotal: Record<string, number>;
+    /** nombre de paliers que les parcelles de ce plan savent héberger (vivier) */
+    hostable: number;
     /** le bilan de l'île tient-il ? */
     viable: boolean;
   }
@@ -337,6 +343,7 @@ export function planIslandImport(
     for (const k of VITAL_ATTRS) attrsTotal[k] = (cand.attrsSum[k] ?? 0) + cand.houses * (rank[k] ?? 0);
     return {
       cand, relevant, water, buildings, tierCounts, capByTier, deadTypes, houseMoney,
+      hostable: new Set((cand.plots ?? []).flatMap((p) => p.opts.map((o) => o.guid))).size,
       residents,
       waterPct: nCons ? nOk / nCons : 1,
       attrsTotal,
@@ -370,6 +377,11 @@ export function planIslandImport(
     if (a.viable !== b.viable) return a.viable;
     const close = Math.abs(a.residents - b.residents) <= 0.02 * Math.max(a.residents, b.residents, 1);
     if (!close) return a.residents > b.residents;
+    // À population comparable, on préfère le plan dont le VIVIER est le plus riche : il
+    // pourra héberger des maisons ouvrières de plus de paliers, donc armer davantage
+    // d'ateliers et d'exploitations. C'est un départage, pas un sacrifice — la population
+    // reste le critère premier.
+    if (needWorkers && a.hostable !== b.hostable) return a.hostable > b.hostable;
     if (a.waterPct !== b.waterPct) return a.waterPct > b.waterPct;
     if (a.cand.houses !== b.cand.houses) return a.cand.houses > b.cand.houses;
     return svcCount(a.cand) <= svcCount(b.cand);
@@ -498,12 +510,18 @@ export function planIslandImport(
   // Appelée APRÈS le routage d'eau : les sources ont déjà pris les slots montagne dont
   // elles avaient besoin, ce module ne voit que le complément. Il pose aussi les entrepôts
   // sans lesquels la production ne sortirait pas.
+  // VIVIER DE PALIERS : ceux qu'au moins une parcelle peut atteindre. Un bâtiment réclamant
+  // la main-d'œuvre d'un palier absent de ce vivier ne tournera jamais — aucune conversion
+  // ne peut le pourvoir. On ne le pose donc pas plutôt que d'occuper du sol pour rien.
+  const hostable = new Set<string>();
+  for (const p of dist.plots ?? []) for (const o of p.opts) hostable.add(o.guid);
+
   let exploited: ExploitedSlot[] = [];
   if (req.exploitSlots) {
     const sp = planSlots(
       req.grid, req.catalog, lookup, buildings, roads, water.usedSlots,
       (id) => residenceIds.has(id),
-      { fertilities: req.islandFertilities, region: islandRegion },
+      { fertilities: req.islandFertilities, region: islandRegion, hostable },
     );
     if (sp.removed.length) {
       const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
