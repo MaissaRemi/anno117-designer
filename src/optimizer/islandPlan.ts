@@ -654,6 +654,12 @@ export function planIslandImport(
   // qui retirent leur bien du manifeste d'import. On s'arrête au premier qui ferait passer
   // un attribut vital sous zéro.
   let workshops: LocalWorkshop[] = [];
+  // Rang de cité de RÉFÉRENCE : celui qui a servi à bâtir `attrsTotal`. Le recul sur pose le
+  // rejoue pour chaque sous-ensemble d'ateliers essayé.
+  const rankBase = cityStatusAttrs(residents, tier?.region ?? islandRegion);
+  const lpDropped: LocalWorkshop[] = [];
+  let wfFinal: ReturnType<WorkforceLedger["settle"]> | null = null;
+  let attrsFinal: Record<string, number> | null = null;
   if (req.localProduction) {
     const lp = planLocalProduction(
       req.grid, lookup, buildings, roads, residenceIds,
@@ -661,6 +667,61 @@ export function planIslandImport(
       attrsTotal,
       { region: islandRegion, workforce: ledger },
     );
+    // ═══ RECUL SUR POSE ═══════════════════════════════════════════════════════════════
+    // Le garde-fou de `planLocalProduction` compare un devis PRÉDICTIF à son budget, et le
+    // devis dérive : il chiffre l'effet de zone et les conversions telles qu'il les voit au
+    // moment de la pose, alors que la facture réelle n'est connue qu'au règlement de la
+    // main-d'œuvre — après toutes les conversions et toutes les démolitions. Mesuré sur
+    // roman_island_medium_01 : emplacements et production coûtent 9 et 637 en sécurité
+    // incendie sur un budget de 645, et leur cumul finit à −1.
+    //
+    // On ne corrige pas le devis, on cesse de lui faire confiance : les ateliers sont posés
+    // comme avant, puis on RETIRE les derniers tant que le bilan de l'île est négatif — en
+    // RÉÉVALUANT pour de bon à chaque recul. Défaire une pose se réduit alors à reconstruire
+    // le grand-livre sans elle, ce qui coûte un balayage des parcelles, et l'ordre de retrait
+    // est celui de la pose : les ateliers sont proposés par débit décroissant, donc le
+    // dernier posé est le moins rentable.
+    const settleWith = (kept: LocalWorkshop[]) => {
+      const razed = new Set(kept.flatMap((w) => w.razed));
+      const l = new WorkforceLedger(
+        (dist.plots ?? []).filter((p) => aliveUids.has(p.uid) && !razed.has(p.uid)),
+        workforceGrant(kontorDef?.id),
+        islandRegion,
+      );
+      l.charge(buildings.filter((b) => !residenceIds.has(b.defId)).map((b) => b.defId));
+      l.charge(kept.flatMap((w) => w.uids.map(() => w.defId)));
+      const wfk = l.settle();
+      const rankAfter = cityStatusAttrs(wfk.residents, tier?.region ?? islandRegion);
+      const attrs: Record<string, number> = {};
+      for (const k of VITAL_ATTRS) {
+        const zone = kept.reduce((a, w) => a + (w.attrs[k] ?? 0), 0);
+        attrs[k] = (attrsTotal[k] ?? 0) + zone + (wfk.attrsDelta[k] ?? 0)
+          + wfk.houses * ((rankAfter[k] ?? 0) - (rankBase[k] ?? 0));
+      }
+      return { wf: wfk, attrs };
+    };
+    const kept = [...lp.workshops];
+    let trial = settleWith(kept);
+    while (kept.length && !isViable(trial.attrs)) {
+      lpDropped.push(kept.pop()!);
+      trial = settleWith(kept);
+    }
+    wfFinal = trial.wf;
+    attrsFinal = trial.attrs;
+    const keptUids = new Set(kept.flatMap((w) => w.uids));
+    lp.buildings = lp.buildings.filter((b) => keptUids.has(b.uid));
+    lp.removed = kept.flatMap((w) => w.razed);
+    lp.workshops = kept;
+    // le bilan des biens ne retient que ce qui reste posé
+    lp.netPerMin = {};
+    for (const w of kept) {
+      lp.netPerMin[w.good] = (lp.netPerMin[w.good] ?? 0) + w.perMin;
+      for (const inp of w.inputs) lp.netPerMin[inp.good] = (lp.netPerMin[inp.good] ?? 0) - inp.perMin;
+    }
+    for (const k of VITAL_ATTRS) {
+      lp.attrsDelta[k] = kept.reduce((a, w) => a + (w.attrs[k] ?? 0), 0);
+    }
+
     if (lp.buildings.length) {
       const gone = new Set(lp.removed);
       const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
@@ -677,7 +738,6 @@ export function planIslandImport(
       const keep = buildings.filter((b) => !gone.has(b.uid));
       buildings.length = 0;
       buildings.push(...keep, ...lp.buildings);
-      for (const k of VITAL_ATTRS) attrsTotal[k] = (attrsTotal[k] ?? 0) + (lp.attrsDelta[k] ?? 0);
       workshops = lp.workshops;
       // les maisons rasées sortent des compteurs. Le manifeste, lui, a été calculé AVANT
       // la démolition : il surestime donc légèrement la demande, ce qui est conservateur —
@@ -707,7 +767,10 @@ export function planIslandImport(
       importGoods.push(...still.sort((a, b) => b.perMin - a.perMin));
     }
     kontorGaps.push(...lp.gaps);
-    ledger.drop(lp.removed); // les maisons sous l'emprise d'un atelier ne fournissent plus rien
+    if (lpDropped.length) {
+      const n = lpDropped.reduce((a, w) => a + w.copies, 0);
+      kontorGaps.push(`${n} atelier(s) retiré(s) : le bilan de l'île ne les portait pas`);
+    }
   }
 
   // ═══ RÈGLEMENT DE LA MAIN-D'ŒUVRE ════════════════════════════════════════════════════
@@ -718,13 +781,13 @@ export function planIslandImport(
   // On recalcule ensuite le rang de cité, puisque la population a baissé — c'est la seule
   // rétroaction du système, et elle joue en notre faveur : moins d'habitants, malus plus
   // doux. Le nombre de maisons, lui, est invariant.
-  const wf = ledger.settle();
+  const wf = wfFinal ?? ledger.settle();
+  if (attrsFinal) for (const k of VITAL_ATTRS) attrsTotal[k] = attrsFinal[k] ?? 0;
   if (wf.changed.size) {
     for (const b of buildings) {
       const to = wf.changed.get(b.uid);
       if (to) b.defId = to;
     }
-    const rankBefore = cityStatusAttrs(residents, tier?.region ?? islandRegion);
     for (const k of Object.keys(tierCounts)) delete tierCounts[k];
     Object.assign(tierCounts, wf.tierCounts);
     for (const k of Object.keys(capByTier)) delete capByTier[k];
@@ -733,11 +796,16 @@ export function planIslandImport(
     residents = wf.residents;
     fullyCovered = tierCounts[req.tierGuid] || 0;
     fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
-    const rankAfter = cityStatusAttrs(residents, tier?.region ?? islandRegion);
-    for (const k of VITAL_ATTRS) {
-      attrsTotal[k] = (attrsTotal[k] ?? 0)
-        + (wf.attrsDelta[k] ?? 0)
-        + houses * ((rankAfter[k] ?? 0) - (rankBefore[k] ?? 0));
+    // Sans production locale, le règlement n'a pas encore été porté au bilan : on le fait
+    // ici. Avec, `attrsFinal` le porte déjà — c'est le sous-ensemble d'ateliers retenu par le
+    // recul sur pose, évalué pour de bon et non prédit.
+    if (!attrsFinal) {
+      const rankAfter = cityStatusAttrs(residents, tier?.region ?? islandRegion);
+      for (const k of VITAL_ATTRS) {
+        attrsTotal[k] = (attrsTotal[k] ?? 0)
+          + (wf.attrsDelta[k] ?? 0)
+          + houses * ((rankAfter[k] ?? 0) - (rankBase[k] ?? 0));
+      }
     }
   }
 

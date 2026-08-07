@@ -58,6 +58,10 @@ export interface LocalWorkshop {
   housesLost: number;
   /** intrants consommés par ces copies, u/min — à produire ou à importer */
   inputs: { good: string; perMin: number }[];
+  /** uid des bâtiments posés pour cet atelier — permet de DÉFAIRE la pose */
+  uids: string[];
+  /** uid des résidences rasées sous leur emprise — idem */
+  razed: string[];
 }
 
 export interface LocalProdResult {
@@ -203,7 +207,7 @@ export function planLocalProduction(
     const copies = Math.min(4, Math.ceil(d.perMin / rate)); // borné : on ne bétonne pas l'île
     const ws: LocalWorkshop = {
       defId, name: def.name, good: d.good, goodName: goodName(d.good),
-      perMin: 0, copies: 0, attrs: {}, housesLost: 0, inputs: [],
+      perMin: 0, copies: 0, attrs: {}, housesLost: 0, inputs: [], uids: [], razed: [],
     };
     for (let c = 0; c < copies; c++) {
       if (out.buildings.length >= maxBuildings) break;
@@ -237,6 +241,7 @@ export function planLocalProduction(
       // pose : les résidences sous l'emprise sont rasées
       for (const u of doomed) {
         removed.add(u);
+        ws.razed.push(u);
         ws.housesLost++;
         const h = houses.find((x) => x.uid === u);
         if (h) h.alive = false;
@@ -250,6 +255,7 @@ export function planLocalProduction(
       all.push(b);
       stamp(b, idx);
       out.buildings.push(b);
+      ws.uids.push(b.uid);
       for (const [k, v] of Object.entries(impact)) {
         budget[k] = (budget[k] ?? 0) + v;
         out.attrsDelta[k] = (out.attrsDelta[k] ?? 0) + v;
