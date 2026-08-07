@@ -55,6 +55,8 @@ export interface LocalWorkshop {
   attrs: Record<string, number>;
   /** maisons rasées pour faire la place */
   housesLost: number;
+  /** intrants consommés par ces copies, u/min — à produire ou à importer */
+  inputs: { good: string; perMin: number }[];
 }
 
 export interface LocalProdResult {
@@ -64,6 +66,15 @@ export interface LocalProdResult {
   workshops: LocalWorkshop[];
   /** delta d'attributs de l'île, effets de zone des ateliers compris */
   attrsDelta: Record<string, number>;
+  /**
+   * BILAN DU MANIFESTE, bien par bien : ce que l'île produit désormais elle-même (positif)
+   * et ce qu'elle doit acheminer EN PLUS pour alimenter ses ateliers (négatif).
+   *
+   * Un atelier ne fait pas disparaître un besoin, il le DÉPLACE en amont : produire des
+   * tuniques sur place, c'est cesser d'importer des tuniques et commencer à importer de la
+   * laine. Ne soustraire que le bien fini surestimait le gain.
+   */
+  netPerMin: Record<string, number>;
   gaps: string[];
 }
 
@@ -93,7 +104,7 @@ export function planLocalProduction(
 ): LocalProdResult {
   const W = grid.w, H = grid.h, N = W * H;
   const maxBuildings = opts.maxBuildings ?? 40;
-  const out: LocalProdResult = { buildings: [], removed: [], workshops: [], attrsDelta: {}, gaps: [] };
+  const out: LocalProdResult = { buildings: [], removed: [], workshops: [], attrsDelta: {}, netPerMin: {}, gaps: [] };
 
   // --- occupation courante ------------------------------------------------------------
   const roadAt = new Uint8Array(N);
@@ -175,6 +186,9 @@ export function planLocalProduction(
 
   // --- biens du manifeste, du plus lourd au plus léger ---------------------------------
   const wanted = [...demand].sort((a, b) => b.perMin - a.perMin || a.good.localeCompare(b.good));
+  // La file s'allonge au fil de la remontée de chaîne (cf. plus bas). `queued` évite de
+  // traiter deux fois un bien réclamé par plusieurs ateliers, et coupe les cycles.
+  const queued = new Set(wanted.map((d) => d.good));
   for (const d of wanted) {
     if (out.buildings.length >= maxBuildings) break;
     // `pickProducerInWorld`, pas `pickProducer` : ce dernier RETOMBE sur l'autre monde
@@ -190,7 +204,7 @@ export function planLocalProduction(
     const copies = Math.min(4, Math.ceil(d.perMin / rate)); // borné : on ne bétonne pas l'île
     const ws: LocalWorkshop = {
       defId, name: def.name, good: d.good, goodName: goodName(d.good),
-      perMin: 0, copies: 0, attrs: {}, housesLost: 0,
+      perMin: 0, copies: 0, attrs: {}, housesLost: 0, inputs: [],
     };
     for (let c = 0; c < copies; c++) {
       if (out.buildings.length >= maxBuildings) break;
@@ -245,7 +259,27 @@ export function planLocalProduction(
       ws.copies++;
       ws.perMin += rate;
     }
-    if (ws.copies) out.workshops.push(ws);
+    if (!ws.copies) continue;
+
+    // ═══ REMONTÉE DE CHAÎNE ═══════════════════════════════════════════════════════════
+    // Un atelier consomme. Produire des tuniques sur place, c'est cesser d'importer des
+    // tuniques et commencer à importer de la laine — et jusqu'ici seule la première moitié
+    // était comptée. On inscrit donc l'intrant au bilan, ET on l'ajoute à la file : s'il
+    // reste du budget et de la place, son propre producteur sera posé au tour suivant, ce
+    // qui referme la chaîne d'un cran de plus. Le budget d'attributs, le quota de bâtiments
+    // et la main-d'œuvre bornent naturellement la remontée.
+    out.netPerMin[ws.good] = (out.netPerMin[ws.good] ?? 0) + ws.perMin;
+    const prod = economy.buildingProd[defId];
+    if (prod?.cycleTime) {
+      for (const inp of prod.inputs) {
+        const need = (inp.amount / prod.cycleTime) * 60 * ws.copies;
+        if (need <= 0) continue;
+        ws.inputs.push({ good: inp.good, perMin: Math.round(need * 100) / 100 });
+        out.netPerMin[inp.good] = (out.netPerMin[inp.good] ?? 0) - need;
+        if (!queued.has(inp.good)) { queued.add(inp.good); wanted.push({ good: inp.good, perMin: need }); }
+      }
+    }
+    out.workshops.push(ws);
   }
 
   out.removed = [...removed];

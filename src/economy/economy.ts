@@ -155,6 +155,41 @@ export function residentialChain(tierGuid: string): Tier[] {
       && [...svcOf(t)].every((b) => targetSvc.has(b)))
     .sort((a, b) => a.capacityDefault - b.capacityDefault);
 }
+/**
+ * CHAÎNE ÉTENDUE — la chaîne résidentielle, plus les LIGNÉES PARALLÈLES du même monde.
+ *
+ * L'Albion porte deux échelles de population qui divergent dès le premier palier : la native
+ * (Tourbiers → Forgerons → Aldermen) et la romanisée (Tourbiers → Mercators → Nobles). Les
+ * services de l'une ne sont pas inclus dans ceux de l'autre, si bien que `residentialChain`
+ * les sépare — une île visant les Nobles ne pouvait héberger ni Forgeron ni Alderman.
+ *
+ * C'est bloquant pour la cascade de main-d'œuvre : **21 biens celtiques n'ont de producteur
+ * que dans la lignée native** (Bière g5570, Fromage g6586, Bronze g5470, Minerai de cuivre
+ * g5290, Granite g41811…), et les carrières de granite comme les mines d'étain réclament des
+ * Forgerons. Sans eux, ces bâtiments ne peuvent jamais être armés.
+ *
+ * Les paliers ajoutés ne sont ATTEIGNABLES que si le plan pose les services qui leur
+ * manquent — un seul pour les Forgerons (l'Aire récréative), quelques-uns pour les Aldermen.
+ * On ne tranche pas ici : la complétion de recette (`unlockWorkerTiers`) les propose en
+ * variante, et c'est le moteur qui décide si le sol dépensé les vaut. Sans ces services, ces
+ * paliers restent simplement hors d'atteinte et ne coûtent rien.
+ *
+ * En Latium la chaîne est déjà emboîtée : le résultat y est identique à `residentialChain`.
+ */
+export function residentialChainExtended(tierGuid: string): Tier[] {
+  const target = tierByGuid(tierGuid);
+  if (!target?.residenceId) return residentialChain(tierGuid);
+  const out = [...residentialChain(tierGuid)];
+  const seen = new Set(out.map((t) => t.guid));
+  for (const t of tiers) {
+    if (!t.residenceId || seen.has(t.guid)) continue;
+    if (worldOf(t.region) !== worldOf(target.region)) continue;
+    if (t.capacityDefault > target.capacityDefault) continue;
+    out.push(t);
+  }
+  return out.sort((a, b) => a.capacityDefault - b.capacityDefault);
+}
+
 export const goodName = (g: string | null): string =>
   (g && economy.goodNames[g]) || g || "?";
 

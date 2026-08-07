@@ -1,7 +1,7 @@
 import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
-import { cityStatusLadder, economy, effectOf, residentialChain } from "../economy/economy";
+import { cityStatusLadder, economy, effectOf, residentialChainExtended } from "../economy/economy";
 import { VITAL_ATTRS } from "../economy/attributes";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
@@ -616,7 +616,7 @@ export function planLattice(
   const types = [...typeCov.values()].filter((tc) => (placements.get(tc.def.id) ?? []).length > 0);
   const covArr = types.map((tc) => covByType.get(tc.def.id) ?? coveredOrigins(tc));
 
-  const chain = residentialChain(tierGuid); // base → cible
+  const chain = residentialChainExtended(tierGuid); // base → cible
   const resIdSet = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));
   // L'évaluateur est scopé aux services RETENUS (`wanted`) : un type écarté ne compte ni
   // pour les seuils ni pour la capacité — c'est ce qui rendait le mode « seuils »

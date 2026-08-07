@@ -240,6 +240,20 @@ productivité cible est calculée quand la main-d'œuvre manque. Deux indices co
 suggèrent une variable **continue**, tandis que l'allocation réelle suit `ConsumerPriority`
 (1 à 9, Kontor = 9). L'optimiseur impose donc `offre ≥ demande` par palier — hypothèse sûre.
 
+⚠ ⚠ **DEUX LIGNÉES EN ALBION.** La native (Tourbiers → Forgerons → Aldermen) et la romanisée
+(Tourbiers → Mercators → Nobles) divergent dès le premier palier, et les services de l'une ne
+sont PAS inclus dans ceux de l'autre. Or **21 biens celtiques n'ont de producteur que dans la
+lignée native** (Bière g5570, Fromage g6586, Bronze g5470, Minerai de cuivre g5290, Granite
+g41811…), et carrières de granite comme mines d'étain réclament des Forgerons. Une île visant
+les Nobles doit donc pouvoir héberger aussi la lignée native : il lui manque un seul service
+pour les Forgerons (Aire récréative g6725, 7×9), quelques-uns pour les Aldermen. Cf.
+`economy/economy.ts → residentialChainExtended`.
+
+⚠ **UN ATELIER DÉPLACE LE BESOIN, IL NE LE SUPPRIME PAS.** Produire des tuniques sur place,
+c'est cesser d'importer des tuniques et commencer à importer de la laine. Le tonnage total du
+manifeste peut donc MONTER (mesuré 155,7 → 158,4 u/min), une recette consommant souvent plus
+d'unités qu'elle n'en produit. Le gain se lit en VALEUR, pas en volume.
+
 ⚠ **PIÈGE DE PLANIFICATION.** Les listes de services sont emboîtées, mais les scores ne le
 sont pas : chaque palier ne compte que les services de **sa propre** liste. Une recette qui
 ne garde que les services lourds donne Public 8 ≥ 7 aux Equites et Public **0** aux

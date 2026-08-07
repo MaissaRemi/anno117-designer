@@ -1,6 +1,6 @@
 import { makeLookup } from "../engine/rules";
 import type { AqueductTile, BuildingDef, FieldTile, GridShape, Layout, PlacedBuilding, RoadTile } from "../model/types";
-import { economy, residentialChain, upkeepOf } from "../economy/economy";
+import { economy, residentialChainExtended, upkeepOf } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { cityStatusAttrs, tierByGuid } from "../economy/economy";
@@ -163,7 +163,7 @@ export function planIslandImport(
   if (!tier || !tier.residenceId) {
     throw new Error("Tier-cible invalide ou sans résidence.");
   }
-  const chain = residentialChain(req.tierGuid);
+  const chain = residentialChainExtended(req.tierGuid);
   const residenceIds = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));
 
   // --- RECETTES À ESSAYER ------------------------------------------------------------
@@ -691,12 +691,25 @@ export function planIslandImport(
       residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
       fullyCovered = tierCounts[req.tierGuid] || 0;
       fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
-      // le manifeste perd ce qui est produit sur place
-      for (const w of workshops) {
-        const g = importGoods.find((x) => x.good === w.good);
-        if (!g) continue;
-        g.perMin = Math.max(0, Math.round((g.perMin - w.perMin) * 100) / 100);
+      // MANIFESTE : un atelier ne fait pas disparaître un besoin, il le DÉPLACE en amont.
+      // Produire des tuniques sur place, c'est cesser d'importer des tuniques et commencer
+      // à importer de la laine — sauf si la remontée de chaîne a aussi posé le producteur
+      // de laine, auquel cas le bilan se compense de lui-même. `netPerMin` porte les deux
+      // sens : positif = produit ici, négatif = à acheminer en plus.
+      for (const [good, net] of Object.entries(lp.netPerMin)) {
+        if (Math.abs(net) < 1e-6) continue;
+        let g = importGoods.find((x) => x.good === good);
+        if (!g) {
+          if (net >= 0) continue; // rien à retrancher d'un bien qu'on n'importait pas
+          g = { good, name: goodName(good), perMin: 0 };
+          importGoods.push(g);
+        }
+        g.perMin = Math.max(0, Math.round((g.perMin - net) * 100) / 100);
       }
+      // un bien entièrement produit sur place sort du manifeste
+      const still = importGoods.filter((g) => g.perMin > 0);
+      importGoods.length = 0;
+      importGoods.push(...still.sort((a, b) => b.perMin - a.perMin));
     }
     kontorGaps.push(...lp.gaps);
     ledger.drop(lp.removed); // les maisons sous l'emprise d'un atelier ne fournissent plus rien

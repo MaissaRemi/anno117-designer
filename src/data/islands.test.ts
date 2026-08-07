@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import rawCatalog from "./catalog.generated.json";
 import type { BuildingDef } from "../model/types";
 import { islands, regionOfIsland, worldLabel } from "./islands";
-import { cityStatusAttrs, cityStatusLadder, economy, residentialChain, worldOf } from "../economy/economy";
+import { cityStatusAttrs, cityStatusLadder, economy, residentialChain, residentialChainExtended, worldOf } from "../economy/economy";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 
@@ -67,6 +67,28 @@ describe("séparation des mondes (Latium / Albion)", () => {
     expect(at("Roman")).toBeLessThan(0);
     expect(at("RomanCeltic")).not.toBe(at("Celtic"));
     expect(at("RomanCeltic")).toBeLessThan(at("Celtic"));
+  });
+
+  it("Albion : les DEUX lignées sont hébergeables sur une même île", () => {
+    // 21 biens celtiques n'ont de producteur que dans la lignée native (Bière, Fromage,
+    // Bronze, Granite…), et les carrières comme les mines d'étain réclament des Forgerons.
+    // Sans eux, une île visant les Nobles ne peut jamais armer ces bâtiments.
+    const nobles = economy.tiers.find((t) => t.name === "Nobles")!;
+    const strict = residentialChain(nobles.guid).map((t) => t.name);
+    const large = residentialChainExtended(nobles.guid).map((t) => t.name);
+    expect(strict).not.toContain("Forgerons");
+    expect(large).toContain("Forgerons");
+    expect(large).toContain("Mercators");
+    // capacité croissante, et jamais au-delà de la cible
+    const caps = residentialChainExtended(nobles.guid).map((t) => t.capacityDefault);
+    expect([...caps].sort((a, b) => a - b)).toEqual(caps);
+    expect(Math.max(...caps)).toBe(nobles.capacityDefault);
+  });
+
+  it("Latium : chaîne déjà emboîtée, l'extension n'y change rien", () => {
+    const pat = economy.tiers.find((t) => t.name === "Patriciens")!;
+    expect(residentialChainExtended(pat.guid).map((t) => t.name))
+      .toEqual(residentialChain(pat.guid).map((t) => t.name));
   });
 
   it("une maison romanisée peut se hisser depuis un palier natif", () => {

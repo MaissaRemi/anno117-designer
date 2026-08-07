@@ -1,6 +1,6 @@
 import { uid } from "../model/factories";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
-import { economy, residentialChain } from "../economy/economy";
+import { economy, residentialChainExtended } from "../economy/economy";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { VITAL_ATTRS } from "../economy/attributes";
 import type { DefLookup } from "../engine/rules";
@@ -323,7 +323,7 @@ export function planPacked(
   // vaut la somme des Population des besoins remplis. (packPlan ne route pas l'eau ici →
   // services d'eau supposés actifs ; islandPlan disqualifie ce candidat si son réseau d'eau
   // ne tient pas.)
-  const chain = residentialChain(tierGuid);
+  const chain = residentialChainExtended(tierGuid);
   const evaluator = compileTierEvaluator(chain, { goodsMet: true, relevant: wanted ?? undefined });
   const typeBit = types.map((tc) => evaluator.bitOf.get(tc.def.id));
   const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
