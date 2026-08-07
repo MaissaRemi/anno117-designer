@@ -77,6 +77,15 @@ export class WorkforceLedger {
   private nowPop = 0;
   private nowShort = 0;
   private readonly byUid = new Map<string, number>();
+  /**
+   * INDEX du palier dans les options de chaque parcelle : `optIdx.get(guid)[i]` donne le rang
+   * de l'option, ou −1 si la parcelle ne sait pas l'accueillir. Il était cherché par
+   * `findIndex` au cœur de la boucle gloutonne, donc `conversions × parcelles × options` fois
+   * par règlement — mesuré 2 ms par appel à dix conversions, 62 ms à six cents. C'est le seul
+   * terme qui grandit quand la demande de main-d'œuvre serre l'offre, et il pèse aussi sur les
+   * soixante-trois devis que les emplacements et les ateliers demandent par plan.
+   */
+  private readonly optIdx = new Map<string, Int32Array>();
 
   constructor(plots: HousePlot[], grants: Record<string, number>, world: string) {
     this.plots = plots;
@@ -87,6 +96,12 @@ export class WorkforceLedger {
       const k = plots[i].opts.findIndex((o) => o.guid === plots[i].guid);
       this.cur[i] = k >= 0 ? k : Math.max(0, plots[i].opts.length - 1);
       this.byUid.set(plots[i].uid, i);
+      for (let k = 0; k < plots[i].opts.length; k++) {
+        const g = plots[i].opts[k].guid;
+        let col = this.optIdx.get(g);
+        if (!col) { col = new Int32Array(plots.length).fill(-1); this.optIdx.set(g, col); }
+        col[i] = k;
+      }
     }
   }
 
@@ -245,12 +260,14 @@ export class WorkforceLedger {
       for (const k of VITAL_ATTRS) mu[k] = 1 / Math.max(1, attrs[k] ?? 0);
 
       let bestI = -1, bestK = -1, bestPrice = Infinity;
+      const col = this.optIdx.get(target);
+      if (!col) break; // aucune parcelle ne sait accueillir ce palier : déficit irréductible
       for (let i = 0; i < this.plots.length; i++) {
-          const opts = this.plots[i].opts;
+        const k = col[i];
+        if (k < 0 || k === assign[i]) continue;
+        const opts = this.plots[i].opts;
         const from = opts[assign[i]];
-        if (!from || from.guid === target) continue;
-        const k = opts.findIndex((o) => o.guid === target);
-        if (k < 0) continue;
+        if (!from) continue;
         const to = opts[k];
         const tTo = tierByGuid(to.guid), tFrom = tierByGuid(from.guid);
         if (!tTo?.workforce) continue;

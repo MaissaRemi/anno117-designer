@@ -690,6 +690,7 @@ export function planIslandImport(
 
   let droppedCopies = 0;
   let kept: LocalWorkshop[] = [];
+  let trial: ReturnType<typeof settleWith> | null = null;
   if (req.localProduction) {
     const lp = planLocalProduction(
       req.grid, lookup, buildings, roads, residenceIds,
@@ -706,7 +707,13 @@ export function planIslandImport(
     // recul. L'ordre de retrait est celui de la pose — les biens sont proposés par débit
     // décroissant, donc le dernier posé est le moins rentable.
     kept = [...lp.workshops];
-    while (kept.length && !isViable(settleWith(kept).attrs)) droppedCopies += kept.pop()!.copies;
+    // Le dernier essai est CONSERVÉ : c'est celui du sous-ensemble accepté, et le recalculer
+    // plus bas serait un règlement complet jeté pour rien.
+    trial = settleWith(kept);
+    while (kept.length && !isViable(trial.attrs)) {
+      droppedCopies += kept.pop()!.copies;
+      trial = settleWith(kept);
+    }
     lp.buildings = kept.flatMap((w) => w.placed);
     lp.removed = kept.flatMap((w) => w.razed);
     lp.workshops = kept;
@@ -773,7 +780,7 @@ export function planIslandImport(
   // Le règlement retenu est celui du sous-ensemble d'ateliers gardé — le même appel que
   // celui qui a servi à trancher, et le SEUL qui alimente le bilan. Sans production locale,
   // `kept` est vide : c'est exactement le même chemin.
-  const final = settleWith(kept);
+  const final = trial ?? settleWith(kept);
   const wf = final.wf;
   for (const k of VITAL_ATTRS) attrsTotal[k] = final.attrs[k] ?? 0;
   if (wf.changed.size) {
