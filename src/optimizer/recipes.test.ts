@@ -41,7 +41,10 @@ describe("candidateRecipes", () => {
   });
 
   it("chaque recette MINIMALE l'est vraiment : retirer un service fait perdre le palier", () => {
-    for (const r of recipes.filter((x) => !x.fallback)) {
+    // Les variantes AUGMENTÉES — filet de repli et ouverture des paliers inférieurs — ne
+    // sont minimales par construction : elles ajoutent délibérément des services pour rendre
+    // les paliers intermédiaires atteignables.
+    for (const r of recipes.filter((x) => !x.fallback && !x.opens)) {
       for (const drop of r.serviceIds) {
         const rest = r.serviceIds.filter((id) => id !== drop);
         const ev = compileTierEvaluator(chain, { goodsMet: true, relevant: new Set(rest) });

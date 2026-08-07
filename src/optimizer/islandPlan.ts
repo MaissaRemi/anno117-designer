@@ -7,7 +7,7 @@ import { cityStatusAttrs, tierByGuid } from "../economy/economy";
 import { institutionDefs, pickPatron, SHRINE_TYPE, isViable, VITAL_ATTRS, worstAttr } from "../economy/attributes";
 import { effectOf } from "../economy/economy";
 import { footprintSize } from "../engine/geometry";
-import { candidateRecipes, unlockWorkerTiers } from "./recipes";
+import { candidateRecipes } from "./recipes";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { hostableTiers, planLattice, type LatticeResult } from "./planLattice";
 import { planPacked, type PackResult } from "./packPlan";
@@ -182,25 +182,23 @@ export function planIslandImport(
     // budget adaptatif : une évaluation coûte ~0,1 s sur une île moyenne mais plusieurs
     // secondes sur une continentale de 400 000 tuiles
     const land = landTiles;
-    // Chaque recette est essayée sous deux formes (cf. plus bas) : on divise le budget de
-    // recettes pour garder le même temps de calcul.
-    const keep = Math.max(1, Math.round((req.recipeCount ?? (land > 200_000 ? 2 : land > 60_000 ? 5 : 7)) / 2));
-    // Chaque recette est essayée sous DEUX formes : telle quelle, et complétée des services
-    // qui rendent les paliers inférieurs atteignables (`unlockWorkerTiers`).
-    //
-    // Les listes de services sont emboîtées, mais les SCORES ne le sont pas : chaque palier
-    // ne compte que les services de sa propre liste. Une recette qui ne garde que les
-    // services lourds donne Public 8 ≥ 7 aux Equites et Public 0 aux Plébéiens, dont la
-    // liste s'arrête au marché et à la taverne. Deux conséquences, l'une attendue et l'autre
-    // pas : la cascade de main-d'œuvre n'avait aucune maison à convertir (vivier plébéien
-    // vide), ET la comptabilité mixte perdait des habitants faute de palier de repli —
-    // mesuré 15 881 contre 25 828 sur roman_island_medium_01.
-    //
-    // On n'en fait donc pas une variante conditionnée aux options : le moteur tranche.
-    for (const r of candidateRecipes(chain, lookup, { keep })) {
+    // BUDGET D'ESSAIS, pas de recettes : c'est le nombre de passes du moteur qui coûte, et
+    // `keep` n'est qu'un plafond MOU — `candidateRecipes` y ajoute ses variantes. Le diviser
+    // ne divisait donc rien : mesuré, 11 passes étaient devenues 15, soit +36 % de temps de
+    // plan pour un commentaire qui promettait l'inverse. On réserve ici les places des
+    // variantes au lieu de les découvrir après coup.
+    const budget = req.recipeCount ?? (land > 200_000 ? 2 : land > 60_000 ? 5 : 7);
+    const keepFallback = budget >= 5 ? 2 : 1;
+    const keepOpened = budget >= 5 ? 2 : 1;
+    const keep = Math.max(1, budget - keepFallback - keepOpened);
+    // `candidateRecipes` produit lui-même ses variantes — filet de repli et ouverture des
+    // paliers inférieurs — avec son propre dédoublonnage et son propre filtre catalogue.
+    // Le budget porte sur les ESSAIS, c'est-à-dire sur le temps de calcul : `keep` n'est
+    // qu'un plafond MOU côté recettes, et le diviser ne divisait rien. Mesuré avant
+    // correction : 11 passes devenues 15, soit +36 % de temps de plan pour un commentaire
+    // qui promettait l'inverse.
+    for (const r of candidateRecipes(chain, lookup, { keep, keepFallback, keepOpened })) {
       trials.push(r.serviceIds);
-      const opened = unlockWorkerTiers(r.serviceIds, chain);
-      if (opened && r.serviceIds && opened.length !== r.serviceIds.length) trials.push(opened);
     }
     // La recette COMPLÈTE en dernier recours — mais seulement tant qu'elle est abordable.
     // Elle pose 5 à 7 fois plus de copies, donc coûte 5 à 7 fois le temps d'un plan maigre
@@ -429,20 +427,19 @@ export function planIslandImport(
       if (w) deficit[w.attr] = 1;
     }
     patron = pickPatron(instCands, deficit);
-    if (patron) {
-      const ev = runLattice(bestTrial, coverageFloor);
-      if (better(ev, pick)) pick = ev;
-      else patron = undefined; // l'autel ne paie pas son sol : on s'en passe
-    }
   }
 
   // RAFFINAGE : la recette gagnante rejouée à un seuil de densification plus exigeant.
   // Mesuré +4,0 % (65 357 → 67 940 habitants) — le moteur pose une ou deux copies de plus
   // là où la couverture était juste, et récupère des maisons entières au palier cible.
-  if (Math.abs(coverageFloor - REFINE_FLOOR) > 1e-6) {
+  // C'est aussi elle qui porte la divinité tutélaire élue ci-dessus : le dieu se choisissait
+  // auparavant dans une passe à lui, mesurée à 1,15 s — 8,6 % du plan — pour trancher entre
+  // huit bâtiments 3×3. Si l'autel ne paie pas son sol, `pick` reste le plan sans lui.
+  if (Math.abs(coverageFloor - REFINE_FLOOR) > 1e-6 || patron) {
     onProgress?.(trials.length + 1, total);
     const ev = runLattice(bestTrial, REFINE_FLOOR);
     if (!pick || better(ev, pick)) pick = ev;
+    else patron = undefined;
   }
   // packPlan sur la meilleure recette : il ne gagne jamais sur un palier à eau (il pose ses
   // maisons avant de router), mais il reste pertinent sur les paliers qui n'en consomment
