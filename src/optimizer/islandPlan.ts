@@ -1,13 +1,13 @@
 import { makeLookup } from "../engine/rules";
 import type { AqueductTile, BuildingDef, FieldTile, GridShape, Layout, PlacedBuilding, RoadTile } from "../model/types";
-import { economy, residentialChain, upkeepOf } from "../economy/economy";
+import { economy, residentialChainExtended, upkeepOf } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
 import { compileTierEvaluator } from "../economy/needsModel";
-import { cityStatusAttrs } from "../economy/economy";
-import { institutionDefs, isViable, VITAL_ATTRS, worstAttr } from "../economy/attributes";
+import { cityStatusAttrs, tierByGuid } from "../economy/economy";
+import { institutionDefs, pickPatron, SHRINE_TYPE, isViable, VITAL_ATTRS, worstAttr } from "../economy/attributes";
 import { effectOf } from "../economy/economy";
 import { footprintSize } from "../engine/geometry";
-import { candidateRecipes } from "./recipes";
+import { candidateRecipes, unlockWorkerTiers } from "./recipes";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { planLattice, type LatticeResult } from "./planLattice";
 import { planPacked, type PackResult } from "./packPlan";
@@ -15,6 +15,8 @@ import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, needsWater, planWater, type WaterConsumerReport, type WaterPlanResult } from "./waterPlan";
 import { connectKontor, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
 import { planSlots, type ExploitedSlot } from "./slotPlan";
+import { WorkforceLedger } from "./workforceLedger";
+import { workforceGrant } from "../economy/workforce";
 import { planLocalProduction, type LocalWorkshop } from "./localProd";
 import { regionOfIsland } from "../data/islands";
 
@@ -54,6 +56,12 @@ export interface IslandPlanRequest {
   /** Hauteurs quantifiées de l'île (q = h/16, mer < 0) — pente des aqueducs.
    *  Décodées par le worker depuis terrain.generated (grid.islandId). */
   heights?: Int8Array;
+  /**
+   * Plafond par `UniqueType` sur l'île. Le seul réglage utile est `Shrine` : le nombre
+   * d'autels autorisés vaut le nombre de PERMIS DE SANCTUAIRE détenus en partie, que le
+   * joueur augmente par la dévotion et la recherche. Défaut `DEFAULT_UNIQUE_QUOTA`.
+   */
+  uniqueQuota?: Record<string, number>;
 }
 
 export interface ImportGood {
@@ -93,6 +101,19 @@ export interface IslandPlanResult {
    *  cité compris. C'est le total qui doit rester ≥ 0 — une maison en déficit compensée
    *  par ses voisines ne pose pas de problème. */
   attrsTotal: Record<string, number>;
+  /**
+   * MAIN-D'ŒUVRE. `offer` et `demand` sont en unités par palier ; `deficit` non vide signifie
+   * que des bâtiments tourneront au ralenti en jeu. `conversions` liste les maisons
+   * rétrogradées pour armer la production locale.
+   */
+  workforce: {
+    offer: Record<string, number>;
+    demand: Record<string, number>;
+    deficit: Record<string, number>;
+    alien: Record<string, number>;
+    convertible: Record<string, number>;
+    conversions: { from: string; to: string; houses: number; popLost: number }[];
+  };
   /** Le bilan de l'île tient-il sur les quatre attributs vitaux ? */
   viable: boolean;
   coverage: CoverageReport;
@@ -142,7 +163,7 @@ export function planIslandImport(
   if (!tier || !tier.residenceId) {
     throw new Error("Tier-cible invalide ou sans résidence.");
   }
-  const chain = residentialChain(req.tierGuid);
+  const chain = residentialChainExtended(req.tierGuid);
   const residenceIds = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));
 
   // --- RECETTES À ESSAYER ------------------------------------------------------------
@@ -152,13 +173,35 @@ export function planIslandImport(
   // et le routage d'eau l'inverse (chaque citerne coûte 10 u, une conduite, un corridor).
   let landTiles = 0;
   for (const u of req.grid.usable) if (u) landTiles++;
+  // Le plan aura-t-il besoin d'ouvriers ? Cela ne change PAS les recettes essayées (elles le
+  // sont toutes, sous leurs deux formes), seulement l'arbitrage entre plans à population
+  // comparable.
+  const needWorkers = !!req.exploitSlots || !!req.localProduction;
   const trials: (string[] | undefined)[] = [];
   if (needMode === "auto") {
     // budget adaptatif : une évaluation coûte ~0,1 s sur une île moyenne mais plusieurs
     // secondes sur une continentale de 400 000 tuiles
     const land = landTiles;
-    const keep = req.recipeCount ?? (land > 200_000 ? 2 : land > 60_000 ? 5 : 7);
-    for (const r of candidateRecipes(chain, lookup, { keep })) trials.push(r.serviceIds);
+    // Chaque recette est essayée sous deux formes (cf. plus bas) : on divise le budget de
+    // recettes pour garder le même temps de calcul.
+    const keep = Math.max(1, Math.round((req.recipeCount ?? (land > 200_000 ? 2 : land > 60_000 ? 5 : 7)) / 2));
+    // Chaque recette est essayée sous DEUX formes : telle quelle, et complétée des services
+    // qui rendent les paliers inférieurs atteignables (`unlockWorkerTiers`).
+    //
+    // Les listes de services sont emboîtées, mais les SCORES ne le sont pas : chaque palier
+    // ne compte que les services de sa propre liste. Une recette qui ne garde que les
+    // services lourds donne Public 8 ≥ 7 aux Equites et Public 0 aux Plébéiens, dont la
+    // liste s'arrête au marché et à la taverne. Deux conséquences, l'une attendue et l'autre
+    // pas : la cascade de main-d'œuvre n'avait aucune maison à convertir (vivier plébéien
+    // vide), ET la comptabilité mixte perdait des habitants faute de palier de repli —
+    // mesuré 15 881 contre 25 828 sur roman_island_medium_01.
+    //
+    // On n'en fait donc pas une variante conditionnée aux options : le moteur tranche.
+    for (const r of candidateRecipes(chain, lookup, { keep })) {
+      trials.push(r.serviceIds);
+      const opened = unlockWorkerTiers(r.serviceIds, chain);
+      if (opened && r.serviceIds && opened.length !== r.serviceIds.length) trials.push(opened);
+    }
     // La recette COMPLÈTE en dernier recours — mais seulement tant qu'elle est abordable.
     // Elle pose 5 à 7 fois plus de copies, donc coûte 5 à 7 fois le temps d'un plan maigre
     // (5,5 s à elle seule sur une île continentale). Au-delà de 200 000 tuiles elle est de
@@ -181,9 +224,17 @@ export function planIslandImport(
   // posait donc jamais — alors qu'elles sont le seul contrepoids au malus de rang de cité.
   // Mesuré : sans elles aucune ville ne dépasse 3 000 habitants avec tous ses attributs
   // positifs ; avec elles la recette complète tient jusqu'à 260 000.
-  const institutions = institutionDefs(islandRegion)
-    .filter((i) => lookup(i.defId))
-    .map((i) => i.defId);
+  const instCands = institutionDefs(islandRegion)
+    .map((i) => ({ ...i, uniqueType: lookup(i.defId)?.uniqueType }))
+    .filter((i) => lookup(i.defId));
+  // DIVINITÉ TUTÉLAIRE : une seule par île. Le choix se fait sur le déficit d'attribut
+  // observé, mesuré par une passe SANS autel — seul l'attribut limitant compte, et le
+  // classement change complètement d'une île à l'autre. Il est fait plus bas, une fois ce
+  // déficit connu ; ici on retient les institutions non religieuses, communes à tous les
+  // essais, plus l'autel finalement élu.
+  const nonShrine = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE).map((i) => i.defId);
+  let patron: string | undefined;
+  const institutions = nonShrine;
   const kontorDef = pickKontorDef(req.catalog, islandRegion);
   const kontor = kontorDef ? reserveKontor(req.grid, kontorDef) : null;
 
@@ -219,6 +270,8 @@ export function planIslandImport(
     waterPct: number;
     /** bilan de l'île par attribut vital, rang de cité compris */
     attrsTotal: Record<string, number>;
+    /** nombre de paliers que les parcelles de ce plan savent héberger (vivier) */
+    hostable: number;
     /** le bilan de l'île tient-il ? */
     viable: boolean;
   }
@@ -290,6 +343,7 @@ export function planIslandImport(
     for (const k of VITAL_ATTRS) attrsTotal[k] = (cand.attrsSum[k] ?? 0) + cand.houses * (rank[k] ?? 0);
     return {
       cand, relevant, water, buildings, tierCounts, capByTier, deadTypes, houseMoney,
+      hostable: new Set((cand.plots ?? []).flatMap((p) => p.opts.map((o) => o.guid))).size,
       residents,
       waterPct: nCons ? nOk / nCons : 1,
       attrsTotal,
@@ -323,6 +377,11 @@ export function planIslandImport(
     if (a.viable !== b.viable) return a.viable;
     const close = Math.abs(a.residents - b.residents) <= 0.02 * Math.max(a.residents, b.residents, 1);
     if (!close) return a.residents > b.residents;
+    // À population comparable, on préfère le plan dont le VIVIER est le plus riche : il
+    // pourra héberger des maisons ouvrières de plus de paliers, donc armer davantage
+    // d'ateliers et d'exploitations. C'est un départage, pas un sacrifice — la population
+    // reste le critère premier.
+    if (needWorkers && a.hostable !== b.hostable) return a.hostable > b.hostable;
     if (a.waterPct !== b.waterPct) return a.waterPct > b.waterPct;
     if (a.cand.houses !== b.cand.houses) return a.cand.houses > b.cand.houses;
     return svcCount(a.cand) <= svcCount(b.cand);
@@ -338,7 +397,11 @@ export function planIslandImport(
   let pick: Evaluated | null = null;
   const runLattice = (serviceIds: string[] | undefined, floor: number): Evaluated =>
     evaluate(
-      planLattice(planGrid, req.tierGuid, lookup, { coverageFloor: floor, serviceIds, water: true, heights: req.heights, institutions }),
+      planLattice(planGrid, req.tierGuid, lookup, {
+        coverageFloor: floor, serviceIds, water: true, heights: req.heights,
+        institutions: patron ? [...institutions, patron] : institutions,
+        uniqueQuota: req.uniqueQuota,
+      }),
       serviceIds ? new Set(serviceIds) : null,
     );
   let bestTrial: string[] | undefined;
@@ -347,6 +410,34 @@ export function planIslandImport(
     const ev = runLattice(trials[i], coverageFloor);
     if (!pick || better(ev, pick)) { pick = ev; bestTrial = trials[i]; }
   }
+  // ═══ DIVINITÉ TUTÉLAIRE ═══════════════════════════════════════════════════════════════
+  // Le choix ne peut pas être fait à l'avance : il dépend de l'attribut qui MANQUE, et celui
+  // qui manque dépend du plan. On mesure donc le déficit sur le meilleur plan sans autel,
+  // on élit le dieu qui le comble, et on rejoue la recette gagnante avec lui.
+  //
+  // Un tri statique par « somme des gains vitaux » est inopérant : sur une île où la sécurité
+  // incendie est le goulot, Vulcain et Neptune valent des milliers d'habitants et les quatre
+  // autres divinités exactement zéro.
+  if (pick && instCands.some((i) => i.uniqueType === SHRINE_TYPE)) {
+    const rank = cityStatusAttrs(pick.residents, tier?.region ?? islandRegion);
+    const deficit: Record<string, number> = {};
+    for (const k of VITAL_ATTRS) {
+      deficit[k] = Math.max(0, -((pick.cand.attrsSum[k] ?? 0) + pick.cand.houses * (rank[k] ?? 0)));
+    }
+    // Aucun attribut en déficit : le plan tient déjà. On vise alors le plus serré — c'est
+    // lui qui bornera la production locale et la cascade de main-d'œuvre.
+    if (VITAL_ATTRS.every((k) => deficit[k] === 0)) {
+      const w = worstAttr({ ...pick.attrsTotal });
+      if (w) deficit[w.attr] = 1;
+    }
+    patron = pickPatron(instCands, deficit);
+    if (patron) {
+      const ev = runLattice(bestTrial, coverageFloor);
+      if (better(ev, pick)) pick = ev;
+      else patron = undefined; // l'autel ne paie pas son sol : on s'en passe
+    }
+  }
+
   // RAFFINAGE : la recette gagnante rejouée à un seuil de densification plus exigeant.
   // Mesuré +4,0 % (65 357 → 67 940 habitants) — le moteur pose une ou deux copies de plus
   // là où la couverture était juste, et récupère des maisons entières au palier cible.
@@ -362,7 +453,7 @@ export function planIslandImport(
   onProgress?.(total, total);
   if (landTiles <= 200_000) {
     const serviceIds = bestTrial;
-    const packed = planPacked(planGrid, req.tierGuid, lookup, { coverageFloor, serviceIds });
+    const packed = planPacked(planGrid, req.tierGuid, lookup, { coverageFloor, serviceIds, uniqueQuota: req.uniqueQuota });
     const ev = evaluate(packed, serviceIds ? new Set(serviceIds) : null);
     if (!pick || better(ev, pick)) pick = ev;
   }
@@ -419,12 +510,18 @@ export function planIslandImport(
   // Appelée APRÈS le routage d'eau : les sources ont déjà pris les slots montagne dont
   // elles avaient besoin, ce module ne voit que le complément. Il pose aussi les entrepôts
   // sans lesquels la production ne sortirait pas.
+  // VIVIER DE PALIERS : ceux qu'au moins une parcelle peut atteindre. Un bâtiment réclamant
+  // la main-d'œuvre d'un palier absent de ce vivier ne tournera jamais — aucune conversion
+  // ne peut le pourvoir. On ne le pose donc pas plutôt que d'occuper du sol pour rien.
+  const hostable = new Set<string>();
+  for (const p of dist.plots ?? []) for (const o of p.opts) hostable.add(o.guid);
+
   let exploited: ExploitedSlot[] = [];
   if (req.exploitSlots) {
     const sp = planSlots(
       req.grid, req.catalog, lookup, buildings, roads, water.usedSlots,
       (id) => residenceIds.has(id),
-      { fertilities: req.islandFertilities, region: islandRegion },
+      { fertilities: req.islandFertilities, region: islandRegion, hostable },
     );
     if (sp.removed.length) {
       const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
@@ -545,13 +642,29 @@ export function planIslandImport(
   // Le bilan d'attributs est un BUDGET : le surplus de Santé et d'Argent achète des ateliers
   // qui retirent leur bien du manifeste d'import. On s'arrête au premier qui ferait passer
   // un attribut vital sous zéro.
+  // ═══ CASCADE DE MAIN-D'ŒUVRE ═════════════════════════════════════════════════════════
+  // Chaque bâtiment posé réclame la main-d'œuvre d'UN palier précis, et il n'existe aucune
+  // substitution : une île de Patriciens purs ne fait tourner aucun atelier réclamant des
+  // Plébéiens. On rétrograde donc une part des maisons — ce qui ne démolit rien, les neuf
+  // résidences du jeu faisant toutes 3×3.
+  //
+  // Le comptoir fournit une part gratuite (25 unités du premier palier au niveau 1), seule
+  // main-d'œuvre qui ne vienne pas de la population.
+  const aliveUids = new Set(buildings.map((b) => b.uid));
+  const ledger = new WorkforceLedger(
+    (dist.plots ?? []).filter((p) => aliveUids.has(p.uid)),
+    workforceGrant(kontorDef?.id),
+    islandRegion,
+  );
+  ledger.charge(buildings.filter((b) => !residenceIds.has(b.defId)).map((b) => b.defId));
+
   let workshops: LocalWorkshop[] = [];
   if (req.localProduction) {
     const lp = planLocalProduction(
       req.grid, lookup, buildings, roads, residenceIds,
       importGoods.map((g) => ({ good: g.good, perMin: g.perMin })),
       attrsTotal,
-      { region: islandRegion },
+      { region: islandRegion, workforce: ledger },
     );
     if (lp.buildings.length) {
       const gone = new Set(lp.removed);
@@ -578,16 +691,60 @@ export function planIslandImport(
       residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
       fullyCovered = tierCounts[req.tierGuid] || 0;
       fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
-      // le manifeste perd ce qui est produit sur place
-      for (const w of workshops) {
-        const g = importGoods.find((x) => x.good === w.good);
-        if (!g) continue;
-        g.perMin = Math.max(0, Math.round((g.perMin - w.perMin) * 100) / 100);
+      // MANIFESTE : un atelier ne fait pas disparaître un besoin, il le DÉPLACE en amont.
+      // Produire des tuniques sur place, c'est cesser d'importer des tuniques et commencer
+      // à importer de la laine — sauf si la remontée de chaîne a aussi posé le producteur
+      // de laine, auquel cas le bilan se compense de lui-même. `netPerMin` porte les deux
+      // sens : positif = produit ici, négatif = à acheminer en plus.
+      for (const [good, net] of Object.entries(lp.netPerMin)) {
+        if (Math.abs(net) < 1e-6) continue;
+        let g = importGoods.find((x) => x.good === good);
+        if (!g) {
+          if (net >= 0) continue; // rien à retrancher d'un bien qu'on n'importait pas
+          g = { good, name: goodName(good), perMin: 0 };
+          importGoods.push(g);
+        }
+        g.perMin = Math.max(0, Math.round((g.perMin - net) * 100) / 100);
       }
+      // un bien entièrement produit sur place sort du manifeste
+      const still = importGoods.filter((g) => g.perMin > 0);
+      importGoods.length = 0;
+      importGoods.push(...still.sort((a, b) => b.perMin - a.perMin));
     }
     kontorGaps.push(...lp.gaps);
+    ledger.drop(lp.removed); // les maisons sous l'emprise d'un atelier ne fournissent plus rien
   }
 
+  // ═══ RÈGLEMENT DE LA MAIN-D'ŒUVRE ════════════════════════════════════════════════════
+  // Les conversions décidées par le grand-livre sont appliquées aux résidences posées : un
+  // simple changement de `defId`, les neuf résidences du jeu faisant toutes 3×3. Rien ne
+  // bouge, ni routes, ni couverture, ni réseau d'eau.
+  //
+  // On recalcule ensuite le rang de cité, puisque la population a baissé — c'est la seule
+  // rétroaction du système, et elle joue en notre faveur : moins d'habitants, malus plus
+  // doux. Le nombre de maisons, lui, est invariant.
+  const wf = ledger.settle();
+  if (wf.changed.size) {
+    for (const b of buildings) {
+      const to = wf.changed.get(b.uid);
+      if (to) b.defId = to;
+    }
+    const rankBefore = cityStatusAttrs(residents, tier?.region ?? islandRegion);
+    for (const k of Object.keys(tierCounts)) delete tierCounts[k];
+    Object.assign(tierCounts, wf.tierCounts);
+    for (const k of Object.keys(capByTier)) delete capByTier[k];
+    Object.assign(capByTier, wf.capByTier);
+    houses = wf.houses;
+    residents = wf.residents;
+    fullyCovered = tierCounts[req.tierGuid] || 0;
+    fullyCoveredPct = houses ? Math.round((fullyCovered / houses) * 100) : 0;
+    const rankAfter = cityStatusAttrs(residents, tier?.region ?? islandRegion);
+    for (const k of VITAL_ATTRS) {
+      attrsTotal[k] = (attrsTotal[k] ?? 0)
+        + (wf.attrsDelta[k] ?? 0)
+        + houses * ((rankAfter[k] ?? 0) - (rankBefore[k] ?? 0));
+    }
+  }
 
   // bonus d'attributs cumulés (par tier atteint × maisons de ce tier)
   const attributes: Record<string, number> = {};
@@ -622,6 +779,21 @@ export function planIslandImport(
     }
   }
   if (removedHouses) gaps.push(`${removedHouses} maison(s) rasée(s) pour raccorder le comptoir`);
+  // MAIN-D'ŒUVRE. Un déficit n'est jamais silencieux : en jeu, les bâtiments concernés
+  // tournent au ralenti. Une demande « hors monde » est pire — aucune maison de l'île ne
+  // peut la satisfaire, quel que soit le nombre de conversions.
+  for (const [guid, miss] of Object.entries(wf.alien)) {
+    const t = tierByGuid(guid);
+    gaps.push(`${miss.toFixed(0)} main-d'œuvre ${t?.name ?? guid} demandée, palier absent de ce monde`);
+  }
+  for (const [guid, miss] of Object.entries(wf.deficit)) {
+    const t = tierByGuid(guid);
+    gaps.push(`Main-d'œuvre ${t?.name ?? guid} : ${miss.toFixed(0)} manquante(s) — production au ralenti`);
+  }
+  for (const c of wf.conversions) {
+    const a = tierByGuid(c.from)?.name ?? c.from, b = tierByGuid(c.to)?.name ?? c.to;
+    gaps.push(`${c.houses} maison(s) ${a} → ${b} pour la main-d'œuvre (−${c.popLost} habitants)`);
+  }
   {
     const w = worstAttr(attrsTotal);
     if (w) {
@@ -657,6 +829,11 @@ export function planIslandImport(
     exploited,
     workshops,
     attrsTotal,
+    workforce: {
+      offer: wf.offer, demand: wf.demand, deficit: wf.deficit, alien: wf.alien,
+      convertible: wf.convertible,
+      conversions: wf.conversions,
+    },
     viable: planViable,
     tierCounts,
     coverage,

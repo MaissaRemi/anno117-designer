@@ -5,6 +5,7 @@ import { economy } from "../economy/economy";
 import { buildIslandGrid } from "../data/islandGrid";
 import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
+import { priceOf } from "../economy/economy";
 import { VITAL_ATTRS } from "../economy/attributes";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
@@ -23,11 +24,38 @@ describe("production finale sur l'île", () => {
 
   it("option activée : des ateliers sont posés et le manifeste d'import baisse", () => {
     expect(on.workshops.length).toBeGreaterThan(0);
-    const total = (r: typeof off) => r.importGoods.reduce((a, g) => a + g.perMin, 0);
-    expect(total(on)).toBeLessThan(total(off));
     for (const w of on.workshops) {
       expect(w.copies).toBeGreaterThan(0);
       expect(w.perMin).toBeGreaterThan(0);
+    }
+
+    // Le gain se mesure en VALEUR, pas en tonnage. Un atelier ne supprime pas un besoin, il
+    // le DÉPLACE en amont : produire des tuniques sur place, c'est cesser d'importer des
+    // tuniques et commencer à importer de la laine. Le tonnage total peut donc monter — il
+    // le fait, mesuré 155,7 → 158,4 u/min — parce qu'une recette consomme souvent plus
+    // d'unités qu'elle n'en produit. Ce qu'on économise, c'est la valeur ajoutée.
+    const value = (r: typeof off) => r.importGoods.reduce((a, g) => a + g.perMin * priceOf(g.good), 0);
+    expect(value(on)).toBeLessThan(value(off));
+
+    // et les biens finis produits ici pèsent moins au manifeste qu'avant
+    for (const w of on.workshops) {
+      const before = off.importGoods.find((g) => g.good === w.good)?.perMin ?? 0;
+      const after = on.importGoods.find((g) => g.good === w.good)?.perMin ?? 0;
+      if (before > 0) expect(after).toBeLessThan(before);
+    }
+  });
+
+  it("les intrants des ateliers sont AU MANIFESTE, ou produits sur place", () => {
+    // Régression : seule la moitié du bilan était comptée — le bien fini disparaissait du
+    // manifeste, son intrant n'y entrait jamais. Le manifeste promettait une île qui
+    // n'aurait pas tourné.
+    const produced = new Set(on.workshops.map((w) => w.good));
+    for (const w of on.workshops) {
+      for (const inp of w.inputs) {
+        const imported = on.importGoods.find((g) => g.good === inp.good)?.perMin ?? 0;
+        // soit l'intrant est acheminé, soit un atelier amont le fabrique ici
+        expect(imported > 0 || produced.has(inp.good)).toBe(true);
+      }
     }
   });
 

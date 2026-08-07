@@ -1,7 +1,7 @@
 import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
-import { cityStatusLadder, economy, effectOf, residentialChain } from "../economy/economy";
+import { cityStatusLadder, economy, effectOf, residentialChainExtended } from "../economy/economy";
 import { VITAL_ATTRS } from "../economy/attributes";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
@@ -34,7 +34,19 @@ export interface LatticeOpts {
   /** Arrêter de bâtir quand le BILAN DE L'ÎLE passerait sous zéro sur un attribut vital.
    *  Défaut true. */
   viabilityGate?: boolean;
+  /** Plafond par `UniqueType`, tous bâtiments confondus. Voir `DEFAULT_UNIQUE_QUOTA`. */
+  uniqueQuota?: Record<string, number>;
 }
+
+/**
+ * Plafonds par `UniqueType`, sur l'île (`UniqueScope=Area`).
+ *
+ * `Shrine` couvre les seize autels de dieux et n'a PAS d'`AllowedAmount` dans les fichiers :
+ * le nombre autorisé est celui des permis de sanctuaire détenus (produit 93771), qui
+ * s'obtiennent par la dévotion et la recherche — dont une technologie répétable. On retient
+ * 2 par défaut, valeur réaliste en cours de partie, réglable par l'utilisateur.
+ */
+export const DEFAULT_UNIQUE_QUOTA: Record<string, number> = { Shrine: 2, Monument01: 1 };
 
 /**
  * Espacement des épines verticales du peigne de routes.
@@ -61,8 +73,30 @@ export interface LatticeOpts {
  */
 export const SPINE_STEP = 13;
 
+/**
+ * Une PARCELLE bâtie et les paliers qu'elle peut légalement accueillir, d'après les services
+ * qui la couvrent. C'est la matière première de la cascade de main-d'œuvre : rétrograder une
+ * maison vers un palier ouvrier ne déplace ni ne démolit rien, puisque les neuf résidences
+ * du jeu font toutes 3×3.
+ */
+export interface HousePlot {
+  uid: string;
+  /** palier effectivement retenu à la pose (le meilleur atteignable) */
+  guid: string;
+  opts: {
+    guid: string;
+    defId: string;
+    cap: number;
+    money: number;
+    /** attributs vitaux de la maison à ce palier, institutions comprises, hors rang de cité */
+    attrs: Record<string, number>;
+  }[];
+}
+
 export interface LatticeResult {
   buildings: PlacedBuilding[];
+  /** parcelles retenues et leurs paliers atteignables (cascade de main-d'œuvre) */
+  plots: HousePlot[];
   roads: RoadTile[];
   fields: FieldTile[];
   houses: number;
@@ -144,7 +178,7 @@ export function planLattice(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, attrsSum: {}, capByTier: {}, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], plots: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, attrsSum: {}, capByTier: {}, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
@@ -205,6 +239,7 @@ export function planLattice(
     }
     buildings.push({ uid: uid("lat"), defId: def.id, x, y, rotation: rot ? 90 : 0, locked: false });
     servicesPlaced[def.id] = (servicesPlaced[def.id] ?? 0) + 1;
+    if (def.uniqueType) uniqueUsed.set(def.uniqueType, (uniqueUsed.get(def.uniqueType) ?? 0) + 1);
     const arr = placements.get(def.id) ?? [];
     arr.push({ x, y, w, h });
     placements.set(def.id, arr);
@@ -214,6 +249,20 @@ export function planLattice(
     const ring = layRing(x, y, w, h);
     if (ring.length) connectRing(ring);
   };
+  /**
+   * QUOTA D'UNICITÉ PARTAGÉ. `BuildingUnique` ne plafonne pas un bâtiment mais un TYPE :
+   * les seize autels de dieux — huit divinités × deux régions — portent tous
+   * `UniqueType=Shrine` avec `UniqueScope=Area`, si bien que le total autorisé sur l'île
+   * est commun à toutes les divinités. Le placeur ne connaissait que le drapeau booléen et
+   * en posait donc une copie par DIVINITÉ : 72 autels mesurés sur roman_island_medium_01,
+   * 84 sur celtic_island_large_07, là où le jeu en autorise le nombre de permis détenus.
+   */
+  const uniqueUsed = new Map<string, number>();
+  const quotaOf = (d: BuildingDef): number =>
+    d.uniqueType ? (opts.uniqueQuota?.[d.uniqueType] ?? DEFAULT_UNIQUE_QUOTA[d.uniqueType] ?? 1) : Infinity;
+  const remainingQuota = (d: BuildingDef): number =>
+    d.uniqueType ? quotaOf(d) - (uniqueUsed.get(d.uniqueType) ?? 0) : Infinity;
+
   // pose une copie au plus près de (tx,ty) dans un rayon maxRad (spirale Chebyshev)
   const placeNear = (def: BuildingDef, tx: number, ty: number, maxRad: number, rot: 0 | 1 = 0): boolean => {
     const w = rot ? def.size.h : def.size.w, h = rot ? def.size.w : def.size.h;
@@ -349,8 +398,11 @@ export function planLattice(
     // minGain plafonné à 30 % de la terre : un type à portée >= taille d'île (Colisée
     // 250) aurait sinon un seuil inatteignable → jamais posé
     const minGain = Math.max(60, Math.min(Math.floor(2 * r * r * 0.25), Math.floor(landCount * 0.3)));
-    // BuildingUnique (Colisée…) : 1 seul exemplaire — sa portée (250) couvre l'île
-    const maxCopies = d.unique ? 1 : Math.ceil(landCount / (2 * r * r)) * 2 + 2;
+    // Le quota est PARTAGÉ entre bâtiments de même `uniqueType` : on ne borne donc pas à 1
+    // par bâtiment mais au reliquat commun. Le Colisée reste à 1, les autels se partagent
+    // les permis de sanctuaire.
+    const maxCopies = Math.min(remainingQuota(d), Math.ceil(landCount / (2 * r * r)) * 2 + 2);
+    if (maxCopies <= 0) return;
     greedyCover(anchors, distMap, r, minGain, maxCopies, (a) => {
       const before = (placements.get(d.id) ?? []).length;
       placeNear(d, a.x, a.y, Math.floor(r / 2) + 4);
@@ -377,7 +429,15 @@ export function planLattice(
   const tryStrip = (cx: number, ly: number): boolean => {
     let xa = cx, xb = cx, above = true;
     const pos: { d: BuildingDef; x: number; y: number; rot: 0 | 1 }[] = [];
+    // Le quota compte AUSSI ce que ce strip a déjà retenu : sans ce compteur local, un même
+    // strip posait un autel par divinité d'un coup, quota ou pas.
+    const localUse = new Map<string, number>();
     for (const d of smallByH) {
+      if (d.uniqueType) {
+        const used = (localUse.get(d.uniqueType) ?? 0);
+        if (remainingQuota(d) - used <= 0) continue;
+        localUse.set(d.uniqueType, used + 1);
+      }
       const rot: 0 | 1 = d.size.h > STEPH - 1 && d.size.w <= STEPH - 1 ? 1 : 0;
       const w = rot ? d.size.h : d.size.w, h = rot ? d.size.w : d.size.h;
       const ty = above ? ly - h : ly + 1; // flush contre la route
@@ -392,6 +452,10 @@ export function planLattice(
   };
   const placeClusterLattice = () => {
     if (!smallDefs.length) return;
+    // NOTE : les bâtiments à quota restent dans ce calcul, bien qu'on n'en pose qu'un ou
+    // deux. Les en exclure élargit la trame et dégrade mesurablement la connexité routière
+    // (0,95 → 0,70) et le raccordement à l'eau (0,60 → 0,54) : c'est une question
+    // d'optimisation à traiter séparément, pas un effet du quota d'unicité.
     const rC = Math.min(...smallDefs.map((d) => effR(d)));
     const cstep = Math.max(4, Math.floor(rC / 2));
     // ancres : centroïde + grille fine SNAPPÉE aux lignes du peigne (flush)
@@ -552,7 +616,7 @@ export function planLattice(
   const types = [...typeCov.values()].filter((tc) => (placements.get(tc.def.id) ?? []).length > 0);
   const covArr = types.map((tc) => covByType.get(tc.def.id) ?? coveredOrigins(tc));
 
-  const chain = residentialChain(tierGuid); // base → cible
+  const chain = residentialChainExtended(tierGuid); // base → cible
   const resIdSet = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));
   // L'évaluateur est scopé aux services RETENUS (`wanted`) : un type écarté ne compte ni
   // pour les seuils ni pour la capacité — c'est ce qui rendait le mode « seuils »
@@ -577,13 +641,20 @@ export function planLattice(
     .map((tc, i) => ({ i, id: tc.def.id, fx: effectOf(tc.def.id) }))
     .filter((e) => instIds.includes(e.id) && !!e.fx);
 
-  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsSum"> => {
+  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsSum" | "plots"> => {
     let houses = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
     const tierCounts: Record<string, number> = {};
     const capByTier: Record<string, number> = {};
     const attrsSum: Record<string, number> = {};
     for (const k of VITAL_ATTRS) attrsSum[k] = 0;
-    const placed: { b: PlacedBuilding; cap: number; money: number; guid: string; attrs: Record<string, number> }[] = [];
+    const placed: {
+      b: PlacedBuilding; cap: number; money: number; guid: string; attrs: Record<string, number>;
+      /** masque des services qui couvrent cette parcelle — sert à réévaluer la maison à un
+       *  palier INFÉRIEUR lors de la cascade de main-d'œuvre */
+      mask: number;
+      /** attributs des institutions : indépendants du palier, donc constants par conversion */
+      inst: Record<string, number>;
+    }[] = [];
     const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
     for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
       if (!fitsHouse(x, y) || !touchesRoad(x, y)) continue;
@@ -596,17 +667,19 @@ export function planLattice(
       const reach = evaluator.evaluate(coveredMask);
       // bilan d'attributs de CETTE maison : besoins remplis + institutions qui la couvrent.
       // Le malus de rang de cité s'ajoute plus bas (il dépend de la population totale).
-      const attrs: Record<string, number> = { ...evaluator.attrsOf(coveredMask) };
+      const inst: Record<string, number> = {};
       for (const e of instTypes) {
         if (!activeType[e.i] || !covArr[e.i][o]) continue;
-        for (const [k, v] of Object.entries(e.fx!.attrs)) attrs[k] = (attrs[k] ?? 0) + v;
+        for (const [k, v] of Object.entries(e.fx!.attrs)) inst[k] = (inst[k] ?? 0) + v;
       }
+      const attrs: Record<string, number> = { ...evaluator.attrsOf(coveredMask) };
+      for (const [k, v] of Object.entries(inst)) attrs[k] = (attrs[k] ?? 0) + v;
       const defId = reach.tier.residenceId ?? residenceId;
       for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
       const b: PlacedBuilding = { uid: uid("lat"), defId, x, y, rotation: 0, locked: false };
       buildings.push(b);
       markAdj(x, y, rw, rh);
-      placed.push({ b, cap: reach.cap, money: reach.money, guid: reach.tier.guid, attrs });
+      placed.push({ b, cap: reach.cap, money: reach.money, guid: reach.tier.guid, attrs, mask: coveredMask, inst });
     }
 
     // ═══ SÉLECTION SOUS CONTRAINTE DE VIABILITÉ ═══════════════════════════════════════
@@ -669,6 +742,7 @@ export function planLattice(
       }
     }
 
+    const plots: HousePlot[] = [];
     for (const p of keep) {
       houses++;
       residents += p.cap;
@@ -677,8 +751,25 @@ export function planLattice(
       capByTier[p.guid] = (capByTier[p.guid] ?? 0) + p.cap;
       if (p.guid === targetGuid) fullyCovered++;
       for (const k of VITAL_ATTRS) attrsSum[k] += p.attrs[k] ?? 0;
+
+      // PALIERS ATTEIGNABLES sur cette parcelle. Laisser une maison à un palier inférieur
+      // alors que sa desserte lui permettrait mieux est un état de jeu parfaitement légal :
+      // la montée de palier est un acte MANUEL du joueur. C'est ce qui rend la cascade de
+      // main-d'œuvre possible sans rien démolir — les 9 résidences font 3×3, une conversion
+      // n'est qu'un changement de `defId`.
+      const opts: HousePlot["opts"] = [];
+      for (let k = 0; k < chain.length; k++) {
+        const r = evaluator.evaluateAt(k, p.mask);
+        if (!r || !r.tier.residenceId) continue;
+        const attrs: Record<string, number> = {};
+        for (const key of VITAL_ATTRS) {
+          attrs[key] = (evaluator.attrsAt(k, p.mask)[key] ?? 0) + (p.inst[key] ?? 0);
+        }
+        opts.push({ guid: r.tier.guid, defId: r.tier.residenceId, cap: r.cap, money: r.money, attrs });
+      }
+      plots.push({ uid: p.b.uid, guid: p.guid, opts });
     }
-    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum };
+    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum, plots };
   };
 
   // ═══ PHASE élagage routes : adjacentes aux bâtiments + chemins maison→service ═══

@@ -38,6 +38,16 @@ export interface SlotPlanOptions {
   fertilities?: string[];
   /** Région de l'île ("Roman" / "Celtic") : un bâtiment d'une autre région est écarté. */
   region?: string;
+  /**
+   * Paliers que l'île peut réellement HÉBERGER, d'après la desserte de ses parcelles.
+   *
+   * Un bâtiment réclamant la main-d'œuvre d'un palier absent de ce vivier ne tournera
+   * jamais : aucune conversion de maison ne peut le pourvoir, faute de parcelle capable
+   * d'atteindre ce palier. Le poser reviendrait à occuper du sol pour rien — mesuré sur
+   * roman_island_medium_01, quatre laveurs d'or réclamaient 16 unités plébéiennes pour un
+   * vivier plébéien vide. Absent = aucun filtre.
+   */
+  hostable?: Set<string>;
 }
 
 export interface ExploitedSlot {
@@ -91,6 +101,9 @@ export function pickSlotBuilding(
       const fert = economy.buildingProd[d.id]?.fertility;
       return !fert || !have || have.has(fert);
     })
+    // MAIN-D'ŒUVRE : écarte ce que l'île ne pourra jamais armer.
+    .filter((d) => !opts.hostable
+      || (economy.buildingWorkforce[d.id] ?? []).every((w) => opts.hostable!.has(w.tier)))
     .map((d) => {
       const r = ratePerMin(d.id);
       return { d, value: r ? r.perMin * priceOf(r.good) : 0 };

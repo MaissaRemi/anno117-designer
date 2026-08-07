@@ -2327,6 +2327,7 @@
       "radius": 10,
       "area": 140
     },
+    "slotType": "meadow",
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -2336,8 +2337,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "meadow"
+    }
   },
   {
     "id": "g8586",
@@ -2361,6 +2361,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -2371,8 +2372,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40,
-    "slotType": "coastal"
+    "transporterRange": 40
   },
   {
     "id": "g3174",
@@ -2589,6 +2589,7 @@
       "radius": 8,
       "area": 80
     },
+    "slotType": "forest",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -2598,8 +2599,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "forest"
+    }
   },
   {
     "id": "g5976",
@@ -2626,6 +2626,7 @@
       "radius": 8,
       "area": 80
     },
+    "slotType": "forest",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -2635,8 +2636,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "forest"
+    }
   },
   {
     "id": "g2955",
@@ -2660,6 +2660,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2670,8 +2671,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40,
-    "slotType": "coastal"
+    "transporterRange": 40
   },
   {
     "id": "g2956",
@@ -2695,6 +2695,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2704,8 +2705,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "coastal"
+    }
   },
   {
     "id": "g145229",
@@ -2846,6 +2846,7 @@
       "range": 22
     },
     "streetRange": 22,
+    "slotType": "river",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -2855,8 +2856,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "river"
+    }
   },
   {
     "id": "g2916",
@@ -2879,6 +2879,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -2889,8 +2890,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g5978",
@@ -2913,6 +2913,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -2923,8 +2924,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g5295",
@@ -2947,6 +2947,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -2957,8 +2958,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g2954",
@@ -2981,6 +2981,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -2991,8 +2992,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g2920",
@@ -3015,6 +3015,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -3025,8 +3026,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g2800",
@@ -3131,6 +3131,7 @@
       "radius": 9,
       "area": 80
     },
+    "slotType": "forest",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -3141,8 +3142,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "forest"
+    "transporterRange": 30
   },
   {
     "id": "g5977",
@@ -3169,6 +3169,7 @@
       "radius": 9,
       "area": 80
     },
+    "slotType": "forest",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -3179,8 +3180,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "forest"
+    "transporterRange": 30
   },
   {
     "id": "g5851",
@@ -3207,6 +3207,7 @@
       "radius": 10,
       "area": 180
     },
+    "slotType": "marsh",
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3216,8 +3217,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "marsh"
+    }
   },
   {
     "id": "g31773",
@@ -3286,6 +3286,7 @@
       "radius": 8,
       "area": 45
     },
+    "slotType": "forest",
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -3295,8 +3296,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "forest"
+    }
   },
   {
     "id": "g31761",
@@ -3323,6 +3323,7 @@
       "radius": 8,
       "area": 45
     },
+    "slotType": "forest",
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -3332,8 +3333,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "forest"
+    }
   },
   {
     "id": "g5608",
@@ -3559,6 +3559,7 @@
       "tiles": 140,
       "fieldType": "roseaux"
     },
+    "slotType": "marsh",
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -3568,8 +3569,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "marsh"
+    }
   },
   {
     "id": "g2796",
@@ -3593,6 +3593,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3602,8 +3603,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "coastal"
+    }
   },
   {
     "id": "g2699",
@@ -3780,6 +3780,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -3790,8 +3791,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40,
-    "slotType": "coastal"
+    "transporterRange": 40
   },
   {
     "id": "g31756",
@@ -4501,6 +4501,7 @@
       "tiles": 5,
       "fieldType": "b_ufs"
     },
+    "slotType": "marsh",
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -4511,8 +4512,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "marsh"
+    "transporterRange": 30
   },
   {
     "id": "g5605",
@@ -5116,6 +5116,7 @@
       "range": 22
     },
     "streetRange": 22,
+    "slotType": "river",
     "production": {
       "cycleTime": 240,
       "outputs": [
@@ -5125,8 +5126,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "river"
+    }
   },
   {
     "id": "g4832",
@@ -5353,6 +5353,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -5363,8 +5364,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 80,
-    "slotType": "coastal"
+    "transporterRange": 80
   },
   {
     "id": "g5980",
@@ -5387,6 +5387,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -5397,8 +5398,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g50280",
@@ -5421,6 +5421,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 150,
       "outputs": [
@@ -5431,8 +5432,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g5291",
@@ -5455,6 +5455,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -5465,8 +5466,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g144810",
@@ -5489,6 +5489,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -5499,8 +5500,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g144811",
@@ -5523,6 +5523,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -5533,8 +5534,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g5290",
@@ -5557,6 +5557,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -5567,8 +5568,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g2918",
@@ -5591,6 +5591,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -5601,8 +5602,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g5982",
@@ -5625,6 +5625,7 @@
       "range": 20
     },
     "streetRange": 24,
+    "slotType": "mountain",
     "production": {
       "cycleTime": 30,
       "outputs": [
@@ -5635,8 +5636,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 30,
-    "slotType": "mountain"
+    "transporterRange": 30
   },
   {
     "id": "g3075",
@@ -5975,6 +5975,7 @@
       "radius": 9,
       "area": 140
     },
+    "slotType": "marsh",
     "production": {
       "cycleTime": 60,
       "outputs": [
@@ -5985,8 +5986,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40,
-    "slotType": "marsh"
+    "transporterRange": 40
   },
   {
     "id": "g2958",
@@ -6010,6 +6010,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -6020,8 +6021,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 80,
-    "slotType": "coastal"
+    "transporterRange": 80
   },
   {
     "id": "g10929",
@@ -6045,6 +6045,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -6054,8 +6055,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "coastal"
+    }
   },
   {
     "id": "g5278",
@@ -6079,6 +6079,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -6089,8 +6090,7 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40,
-    "slotType": "coastal"
+    "transporterRange": 40
   },
   {
     "id": "g8431",
@@ -6114,6 +6114,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "coastal",
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -6123,8 +6124,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "coastal"
+    }
   },
   {
     "id": "g2795",
@@ -6151,6 +6151,7 @@
       "radius": 8,
       "area": 80
     },
+    "slotType": "meadow",
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -6160,8 +6161,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "meadow"
+    }
   },
   {
     "id": "g8427",
@@ -6188,6 +6188,7 @@
       "radius": 8,
       "area": 80
     },
+    "slotType": "meadow",
     "production": {
       "cycleTime": 45,
       "outputs": [
@@ -6197,8 +6198,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "meadow"
+    }
   },
   {
     "id": "g5959",
@@ -6477,6 +6477,7 @@
       "range": 22
     },
     "streetRange": 26,
+    "slotType": "marsh",
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -6486,8 +6487,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "marsh"
+    }
   },
   {
     "id": "g3201",
@@ -6834,6 +6834,7 @@
       "radius": 10,
       "area": 180
     },
+    "slotType": "marsh",
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -6843,8 +6844,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "marsh"
+    }
   },
   {
     "id": "g8893",
@@ -7062,6 +7062,7 @@
       "range": 22
     },
     "streetRange": 22,
+    "slotType": "river",
     "production": {
       "cycleTime": 90,
       "outputs": [
@@ -7071,8 +7072,7 @@
         }
       ],
       "inputs": []
-    },
-    "slotType": "river"
+    }
   },
   {
     "id": "g2786",
@@ -7459,7 +7459,8 @@
       "range": 250
     },
     "streetRange": 250,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Monument01"
   },
   {
     "id": "g36912",
@@ -7478,6 +7479,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7522,6 +7524,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7566,6 +7569,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7602,6 +7606,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7638,6 +7643,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7678,6 +7684,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7722,7 +7729,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g144813",
@@ -7745,7 +7753,8 @@
       "range": 18
     },
     "streetRange": 22,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g3620",
@@ -7852,6 +7861,7 @@
     "color": "#7cb342",
     "icon": "icons/icon_3d_colosseum.png",
     "unique": true,
+    "uniqueType": "Monument01",
     "production": {
       "cycleTime": 60,
       "outputs": [],
@@ -7938,6 +7948,24 @@
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
+    "id": "g7037",
+    "guid": 7037,
+    "name": "Comptoir",
+    "nameInternal": "Harbor Warehouse Roman Celtic 01",
+    "template": "HarborWarehouse",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "roadRoot": true,
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
     "id": "g3403",
     "guid": 3403,
     "name": "Comptoir amélioré",
@@ -7956,6 +7984,24 @@
     "icon": "icons/icon_3d_harbour_kontor.png"
   },
   {
+    "id": "g7038",
+    "guid": 7038,
+    "name": "Comptoir amélioré",
+    "nameInternal": "Harbor Warehouse Roman Celtic 02",
+    "template": "HarborWarehouse",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "roadRoot": true,
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
     "id": "g3406",
     "guid": 3406,
     "name": "Comptoir grandiose",
@@ -7963,6 +8009,24 @@
     "template": "HarborWarehouse",
     "category": "public",
     "region": "Roman",
+    "size": {
+      "w": 8,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "roadRoot": true,
+    "icon": "icons/icon_3d_harbour_kontor.png"
+  },
+  {
+    "id": "g7039",
+    "guid": 7039,
+    "name": "Comptoir grandiose",
+    "nameInternal": "Harbor Warehouse Roman Celtic 03",
+    "template": "HarborWarehouse",
+    "category": "public",
+    "region": "Celtic",
     "size": {
       "w": 8,
       "h": 7
@@ -8644,7 +8708,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82491",
@@ -8667,7 +8732,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81072",
@@ -8690,7 +8756,8 @@
       "range": 18
     },
     "streetRange": 22,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82492",
@@ -8713,7 +8780,8 @@
       "range": 20
     },
     "streetRange": 24,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81021",
@@ -8736,7 +8804,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82487",
@@ -8759,7 +8828,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g80710",
@@ -8782,7 +8852,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82486",
@@ -8805,7 +8876,8 @@
       "range": 18
     },
     "streetRange": 22,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81070",
@@ -8828,7 +8900,8 @@
       "range": 14
     },
     "streetRange": 18,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82490",
@@ -8851,7 +8924,8 @@
       "range": 12
     },
     "streetRange": 16,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81069",
@@ -8874,7 +8948,8 @@
       "range": 18
     },
     "streetRange": 22,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82489",
@@ -8897,7 +8972,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g81068",
@@ -8920,7 +8996,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g82488",
@@ -8943,7 +9020,8 @@
       "range": 16
     },
     "streetRange": 20,
-    "unique": true
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g19691",

@@ -208,3 +208,48 @@ export function candidateRecipes(
   }
   return out;
 }
+
+/**
+ * Complète une recette pour que les paliers OUVRIERS de la chaîne restent atteignables.
+ *
+ * Les listes de services d'Anno sont emboîtées — celles des Plébéiens sont incluses dans
+ * celles des Equites, elles-mêmes dans celles des Patriciens — mais les SCORES ne le sont
+ * pas : chaque palier ne compte que les services de sa propre liste. Une recette optimisée
+ * pour la cible peut donc ne garder que les services lourds (aqueduc 4, thermes 4), qui
+ * donnent Public 8 aux Equites et Public 0 aux Plébéiens.
+ *
+ * Sans cette complétion, la cascade de main-d'œuvre n'a aucun candidat : mesuré sur
+ * roman_island_medium_01, le vivier contenait 799 Liberti, 688 Equites, 617 Patriciens et
+ * ZÉRO Plébéien, alors que 16 unités de main-d'œuvre plébéienne étaient réclamées.
+ *
+ * On ajoute le minimum : pour chaque palier déficitaire, ses propres services par poids
+ * décroissant jusqu'à franchir le seuil. Ces services servent aussi au palier cible, dont
+ * la liste les contient — le surcoût de sol est donc partiellement récupéré.
+ */
+export function unlockWorkerTiers(serviceIds: string[] | undefined, chain: Tier[]): string[] | undefined {
+  if (!serviceIds) return serviceIds; // recette complète : rien à compléter
+  const keep = new Set(serviceIds);
+  for (const tier of chain.slice(0, -1)) { // la cible est déjà servie par construction
+    const score: Record<string, number> = {};
+    for (const s of tier.services) {
+      if (s.building && keep.has(s.building)) score[s.category] = (score[s.category] ?? 0) + (s.weight ?? 0);
+    }
+    for (const [cat, need] of Object.entries(tier.upgradeThresholds || {})) {
+      // Les catégories de BIENS sont couvertes par l'import (hypothèse `goodsMet`) : seules
+      // les catégories alimentées par des services peuvent manquer.
+      const pool = tier.services
+        .filter((s) => s.category === cat && s.building && !keep.has(s.building))
+        .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+      if (!pool.length) continue;
+      let have = score[cat] ?? 0;
+      const fromGoods = tier.goods.filter((g) => g.category === cat).reduce((a, g) => a + (g.weight ?? 0), 0);
+      have += fromGoods;
+      for (const s of pool) {
+        if (have >= need) break;
+        keep.add(s.building!);
+        have += s.weight ?? 0;
+      }
+    }
+  }
+  return [...keep];
+}

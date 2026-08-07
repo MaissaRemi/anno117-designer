@@ -201,6 +201,66 @@ Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
   moins une tuile touche le bâtiment de ferme. Planner : croissance BFS (greedy.ts
   placeFields), acceptation d'une ferme = cases ATTEIGNABLES ≥ tuiles requises.
 
+## 5 bis. MAIN-D'ŒUVRE [FICHIERS, 2026-08-06]
+
+Chaque palier fournit **un** bien de main-d'œuvre qui lui est propre
+(`PopulationLevel/ConnectedWorkforce`), en quantité `habitants × PopulationToWorkforceFactor`.
+Ces biens portent `IsWorkforce=1` et `StorageLevel=Area` : **le pool est par ÎLE**, rien ne
+circule entre îles (`WorkforceTransferConfig` ne décrit que l'animation des dockers).
+
+| monde | palier | bien | facteur |
+|---|---|---|---|
+| Latium | Liberti / Plébéiens / Equites / Patriciens | 2181 / 2184 / 2185 / 2186 | 0,5 / 0,3 / 0,2 / 0,1 |
+| Albion natif | Tourbiers / Forgerons / Aldermen | 2192 / 2196 / 2197 | 0,5 / 0,3 / 0,2 |
+| Albion romanisé | Mercators / Nobles | 2198 / 2199 | 0,3 / 0,2 |
+
+⚠ **AUCUNE SUBSTITUTION ENTRE PALIERS.** Aucune table de conversion n'existe dans les
+fichiers. Un palier supérieur ne remplace **jamais** un palier inférieur : une île de
+Patriciens purs ne fait tourner **aucun** atelier réclamant des Plébéiens, quelle que soit
+sa population. Le coût est déclaré par `Maintenance/Maintenances/Item` dont le `Product` est
+un bien de main-d'œuvre — et sur les 151 bâtiments extraits, **aucun n'en réclame deux**.
+La contrainte est donc un simple système d'inégalités, une par palier.
+
+**MAIN-D'ŒUVRE OFFERTE.** Le comptoir alimente le pool sans aucune maison, via
+`Distribution/Deltas`. Le net n'est pas monotone en niveau, le comptoir se prélevant sa part :
+
+| comptoir | offert (Medium) | prélevé | **net** |
+|---|---|---|---|
+| niveau 1 (3402 / 7037) | 25 | 0 | **+25** |
+| niveau 2 (3403 / 7038) | 35 | 8 | **+27** |
+| niveau 3 (3406 / 7039) | 50 | 12 | **+38** |
+
+Les comptoirs d'Albion 7037/7038/7039 sont des assets **dérivés** : pas de `<Template>`, tout
+hérité de `BaseAssetGUID`, seul le bien de main-d'œuvre est surchargé (2181 → 2192).
+
+**PÉNURIE — [OUVERT].** `WorkforceThresholdInPercent=10` n'est PAS une règle de production :
+c'est le seuil de la notification 501310. Les fichiers ne disent nulle part comment la
+productivité cible est calculée quand la main-d'œuvre manque. Deux indices contradictoires :
+`InfolayerBalancing` (140695) définit deux seuils d'affichage (Low 90 %, Critical 50 %) qui
+suggèrent une variable **continue**, tandis que l'allocation réelle suit `ConsumerPriority`
+(1 à 9, Kontor = 9). L'optimiseur impose donc `offre ≥ demande` par palier — hypothèse sûre.
+
+⚠ ⚠ **DEUX LIGNÉES EN ALBION.** La native (Tourbiers → Forgerons → Aldermen) et la romanisée
+(Tourbiers → Mercators → Nobles) divergent dès le premier palier, et les services de l'une ne
+sont PAS inclus dans ceux de l'autre. Or **21 biens celtiques n'ont de producteur que dans la
+lignée native** (Bière g5570, Fromage g6586, Bronze g5470, Minerai de cuivre g5290, Granite
+g41811…), et carrières de granite comme mines d'étain réclament des Forgerons. Une île visant
+les Nobles doit donc pouvoir héberger aussi la lignée native : il lui manque un seul service
+pour les Forgerons (Aire récréative g6725, 7×9), quelques-uns pour les Aldermen. Cf.
+`economy/economy.ts → residentialChainExtended`.
+
+⚠ **UN ATELIER DÉPLACE LE BESOIN, IL NE LE SUPPRIME PAS.** Produire des tuniques sur place,
+c'est cesser d'importer des tuniques et commencer à importer de la laine. Le tonnage total du
+manifeste peut donc MONTER (mesuré 155,7 → 158,4 u/min), une recette consommant souvent plus
+d'unités qu'elle n'en produit. Le gain se lit en VALEUR, pas en volume.
+
+⚠ **PIÈGE DE PLANIFICATION.** Les listes de services sont emboîtées, mais les scores ne le
+sont pas : chaque palier ne compte que les services de **sa propre** liste. Une recette qui
+ne garde que les services lourds donne Public 8 ≥ 7 aux Equites et Public **0** aux
+Plébéiens, dont la liste s'arrête au marché et à la taverne. Mesuré : le vivier de conversion
+contenait 799 Liberti, 688 Equites, 617 Patriciens et **zéro** Plébéien. Cf.
+`optimizer/recipes.ts → unlockWorkerTiers`.
+
 ## 6. Logistique & entrepôts [FICHIERS]
 
 - **Entrepôts TERRESTRES : `StorageMax = 0`** — ils n'ajoutent AUCUNE capacité de
@@ -260,6 +320,49 @@ Les slots montagne (7 sur medium_01) deviennent une ressource de design rare.
 - **[FICHIERS]** Catégorie Culture (seuil T4 = 8) : biens de luxe Lyres (2785),
   Chars (2781), Jeux de plateau (145225) — w=8 chacun → UN des trois suffit.
 - Pas de Circus Maximus constructible (textes narratifs seulement).
+
+## 9 bis. DIVINITÉS, TEMPLES ET AUTELS [FICHIERS, 2026-08-06]
+
+Trois règles distinctes, à ne pas confondre.
+
+**1. Le dieu tutélaire — un par île.** « Chaque île a un dieu tutélaire que vénère sa
+population » (`texts_french.xml`, LineId -6911304497477006556). C'est un choix d'interface,
+pas un bâtiment. Huit divinités, assets `Template=Patron` : Mars (80562), Cérès (43594),
+Neptune (27899), Minerve (27900), Mercure-Lug (50311), Epona (80861), Cernunnos (50242),
+Vulcain (144800, DLC01). Des îles différentes peuvent avoir des dieux différents ; changer
+le dieu d'une île remet sa Dévotion à zéro.
+
+**2. Temples, sanctuaires et fanums — non liés à un dieu.** Les quatre bâtiments religieux
+(3615 Sanctuaire, 3619 Temple, 6728 Fanum, 6729 Temple celte) portent
+`<VariationControl>Religion</VariationControl>` : leur **modèle 3D** change selon le dieu
+tutélaire, mais c'est le même asset, sans contrainte d'unicité. Ce sont eux qui remplissent
+les besoins Public/Wonders des paliers ; les autels n'en remplissent aucun.
+
+**3. Les autels de dieux — quota PARTAGÉ.** Seize assets 3×3 (huit divinités × deux régions),
+portée-rue 16 à 24. Tous portent le **même** `UniqueType=Shrine` avec `UniqueScope=Area` :
+le plafond est commun à l'île, toutes divinités confondues. Il n'y a pas d'`AllowedAmount` —
+le nombre autorisé vaut le stock de **permis de sanctuaire** (produit 93771), obtenus par la
+dévotion et la recherche, dont une technologie répétable.
+
+| dieu | autel Latium / Albion | effet de zone |
+|---|---|---|
+| Mars | 80710 / 82486 | Population +1, Prestige +1 |
+| Cérès | 81021 / 82487 | Population +1, Santé +1 |
+| Neptune | 81068 / 82488 | Revenus +1, Incendie +1 |
+| Minerve | 81069 / 82489 | Connaissance +1, Prestige +1 |
+| Mercure-Lug | 81070 / 82490 | Revenus +2 |
+| Epona | 81071 / 82491 | Population +1, Bonheur +1 |
+| Cernunnos | 81072 / 82492 | Santé +1, Foi +1 |
+| Vulcain | 144812 / 144813 | Incendie +2 |
+
+⚠ **Le choix du dieu se fait sur l'attribut LIMITANT, jamais sur la somme des gains.** Mesuré
+sur `roman_island_medium_01`, où la sécurité incendie est le goulot : Vulcain et Neptune
+valent des milliers d'habitants, Cérès, Epona, Cernunnos et Mercure-Lug exactement zéro.
+
+⚠ **Régression corrigée le 2026-08-06.** Le placeur ne lisait qu'un booléen `unique` et posait
+donc une copie par DIVINITÉ : **72 autels** mesurés sur `roman_island_medium_01`, **84** sur
+`celtic_island_large_07`. Cf. `optimizer/planLattice.ts → DEFAULT_UNIQUE_QUOTA` et
+`economy/attributes.ts → pickPatron`.
 
 ## 10. Incidents
 

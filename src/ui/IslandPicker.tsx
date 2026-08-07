@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { decodeMask, islands, regionOfIsland, worldLabel, type Island } from "../data/islands";
+import { decodeMask, islands, regionOfIsland, WORLDS, worldLabel, type Island } from "../data/islands";
 import { useStore } from "../state/store";
 import { Modal } from "./Modal";
 
@@ -45,6 +45,7 @@ export function IslandPicker({ onClose }: Props) {
   const loadIsland = useStore((s) => s.loadIsland);
   const hasWork = useStore((s) => s.layout.buildings.length > 0 || s.layout.roads.length > 0);
   const world = useStore((s) => s.world);
+  const setWorld = useStore((s) => s.setWorld);
   // Les îles DLC sont romaines : elles suivent le Latium.
   const list = useMemo(
     () => islands.filter((i) => regionOfIsland(i.id) === world),
@@ -64,9 +65,20 @@ export function IslandPicker({ onClose }: Props) {
     <Modal className="islands" onClose={onClose}>
       <div className="panel-head">
           <h3>🏝 Îles — {worldLabel(world)} ({list.length})</h3>
-          <span className="muted" style={{ fontSize: 12 }}>
-            Change de monde dans la barre de gauche
-          </span>
+          {/* La bascule vit aussi dans la barre de navigation, mais cette fenêtre la
+              recouvre : sans copie ici, on ne pouvait tout simplement pas atteindre les
+              îles d'Albion depuis le sélecteur. */}
+          <div className="world-switch" role="group" aria-label="Monde de jeu">
+            {WORLDS.map((w) => (
+              <button
+                key={w.region}
+                className={world === w.region ? "active" : ""}
+                onClick={() => setWorld(w.region)}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="island-grid">

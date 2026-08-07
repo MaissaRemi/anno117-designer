@@ -83,6 +83,41 @@ def load_template_effect_ranges():
     return out
 
 
+def _num(s):
+    try:
+        return float(s)
+    except (TypeError, ValueError):
+        return None
+
+
+def read_delta_items(node):
+    """Items de `Distribution/Deltas` : quantite de main-d'oeuvre offerte, par difficulte."""
+    if node is None:
+        return []
+    out = []
+    for it in node.findall("Item"):
+        amt = it.find("Amount")
+        out.append({
+            "idx": int(it.findtext("./VectorElement/InheritedIndex") or -1) if it.find("./VectorElement/InheritedIndex") is not None else None,
+            "product": it.findtext("Product") or None,
+            "plenty": _num(amt.findtext("Plenty")) if amt is not None else None,
+            "medium": _num(amt.findtext("Medium")) if amt is not None else None,
+            "spare": _num(amt.findtext("Spare")) if amt is not None else None,
+        })
+    return out
+
+
+def read_maint_items(node):
+    """Items de `Maintenance/Maintenances` : ce que le batiment PRELEVE."""
+    if node is None:
+        return []
+    return [{
+        "idx": int(it.findtext("./VectorElement/InheritedIndex") or -1) if it.find("./VectorElement/InheritedIndex") is not None else None,
+        "product": it.findtext("Product") or None,
+        "amount": _num(it.findtext("Amount")),
+    } for it in node.findall("Item")]
+
+
 def main():
     texts = load_texts()
     pop_levels = {}      # guid -> {name, region, workforce, factor}
@@ -110,6 +145,8 @@ def main():
     # EconomyFeature7/CityStatusFeature ; les effets, dans les assets CityStatus.
     cs_effects = {}      # GUID CityStatus -> {attrs}
     cs_ladder = {}       # region -> [{status, population}]
+    wf_grants = {}       # GUID comptoir -> {deltas, maint, population}
+    derived = {}         # GUID sans Template -> surcharges + GUID du parent
     tpl_ranges = load_template_effect_ranges()
 
     for _, el in ET.iterparse(ASSETS, events=("end",)):
@@ -165,6 +202,40 @@ def main():
                             steps.append({"status": st, "population": int(pop) if pop else 0})
                     if steps:
                         cs_ladder[reg.tag] = steps
+            el.clear(); continue
+
+        # HERITAGE D'ASSET. Un asset sans <Template> mais avec <BaseAssetGUID> herite de tout
+        # son parent et ne surcharge que ce qu'il redeclare. Les trois comptoirs d'Albion
+        # (7037/7038/7039) sont dans ce cas : ils heritent des comptoirs romains et se
+        # contentent de remplacer le bien de main-d'oeuvre (2181 Liberti -> 2192 Tourbiers).
+        # Filtrer sur <Template> les faisait disparaitre : Albion se retrouvait sans comptoir.
+        if tpl is None and el.findtext("BaseAssetGUID"):
+            derived[guid] = {
+                "base": el.findtext("BaseAssetGUID"),
+                "deltas": read_delta_items(vals.find("./Distribution/Deltas")),
+                "maint": read_maint_items(vals.find("./Maintenance/Maintenances")),
+                "population": t(el, "./Values/AttributeProvider/Population"),
+            }
+            el.clear(); continue
+
+        if tpl == "HarborWarehouse":
+            # MAIN-D'OEUVRE OFFERTE PAR LE COMPTOIR. `Distribution/Deltas` ajoute directement
+            # au pool de main-d'oeuvre de l'ile — c'est la seule source qui ne vienne pas des
+            # maisons, et elle suffit a faire tourner les premiers ateliers sur une ile neuve.
+            #
+            # L'Item du comptoir romain n'a PAS de <Product> : il herite de la valeur du
+            # template, qu'on resout par <AttributeProvider><Population> (1499 = Liberti).
+            # Le comptoir celtique 7037 herite de 3402 (BaseAssetGUID) et surcharge, lui,
+            # <Product>2192</Product>. Les deux chemins doivent donc etre geres.
+            #
+            # Le comptoir CONSOMME aussi de la main-d'oeuvre a partir du niveau 2 : on stocke
+            # le brut et le cout separement, le net n'est pas monotone en niveau.
+            wf_grants[guid] = {
+                "base": None,
+                "deltas": read_delta_items(vals.find("./Distribution/Deltas")),
+                "maint": read_maint_items(vals.find("./Maintenance/Maintenances")),
+                "population": t(el, "./Values/AttributeProvider/Population"),
+            }
             el.clear(); continue
 
         if tpl == "Effect":
@@ -444,6 +515,55 @@ def main():
             "stackable": stackable,
         }
 
+    # Les assets derives d'un comptoir rejoignent wf_grants, en heritant item par item.
+    for g, d in derived.items():
+        if d["base"] in wf_grants:
+            wf_grants[g] = {**d, "base": d["base"]}
+
+    # MAIN-D'OEUVRE OFFERTE PAR LE COMPTOIR, resolue :
+    #   defId -> {bien -> {plenty, medium, spare, cost}}
+    # Le bien est explicite quand l'asset le surcharge (comptoirs d'Albion), sinon deduit du
+    # palier annonce par AttributeProvider/Population. `cost` est le prelevement du comptoir
+    # sur ce meme bien : le NET n'est PAS monotone en niveau (niveau 1 offre 25 sans rien
+    # couter, niveau 2 offre 35 mais en consomme 8, niveau 3 offre 50 et en consomme 12).
+    def grant_items(g, key, depth=0):
+        """Items d'un asset, fusionnes avec ceux de son parent via InheritedIndex."""
+        row = wf_grants.get(g)
+        if row is None or depth > 8:
+            return []
+        parent = grant_items(row["base"], key, depth + 1) if row.get("base") else []
+        out = [dict(x) for x in parent]
+        for it in row[key]:
+            i = it.get("idx")
+            if i is not None and i < len(out):
+                out[i] = {**out[i], **{k: v for k, v in it.items() if v is not None and k != "idx"}}
+            else:
+                out.append(it)
+        return out
+
+    workforce_grants = {}
+    for g, row in wf_grants.items():
+        pop_guid = row.get("population")
+        if not pop_guid and row.get("base"):
+            pop_guid = (wf_grants.get(row["base"]) or {}).get("population")
+        default_good = (pop_levels.get(pop_guid or "") or {}).get("workforce")
+        per_good = {}
+        for it in grant_items(g, "deltas"):
+            good = it.get("product") or default_good
+            if not good:
+                continue
+            slot = per_good.setdefault(good, {})
+            for lvl in ("plenty", "medium", "spare"):
+                if it.get(lvl) is not None:
+                    slot[lvl] = slot.get(lvl, 0.0) + it[lvl]
+        for it in grant_items(g, "maint"):
+            good = it.get("product")
+            if good in per_good and it.get("amount"):
+                per_good[good]["cost"] = per_good[good].get("cost", 0.0) + it["amount"]
+        per_good = {k: v for k, v in per_good.items() if any(x in v for x in ("plenty", "medium", "spare"))}
+        if per_good:
+            workforce_grants[f"g{g}"] = per_good
+
     # Echelle des rangs de cite, resolue et croissante. `cs_ladder` est indexe par MONDE
     # (les seuils de population), tandis que les effets dependent de la CULTURE du palier :
     # une meme ile en Albion applique la variante Mixed a ses Mercators et Regional a ses
@@ -463,6 +583,7 @@ def main():
         "producers": producers,
         "buildingProd": bprod,
         "buildingWorkforce": building_workforce,
+        "workforceGrants": workforce_grants,
         "buildingUpkeep": building_upkeep,
         "goodNames": products,
         "goodPrices": good_prices,

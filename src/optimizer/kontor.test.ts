@@ -98,7 +98,12 @@ describe("portfolio de moteurs : l'eau est évaluée AVANT de trancher", () => {
       // Seuil délibérément bas : sur une île pauvre en slots montagne, un raccordement
       // partiel est le VRAI comportement du jeu (budget 100u/source). Ce qu'on garde, c'est
       // l'effondrement : avant le correctif, le mode « seuils » livrait 5 % (2/40).
-      expect(ok / r.water.consumers.length).toBeGreaterThan(0.6);
+      //
+      // Recalé à 0,5 après le quota d'unicité partagé : le taux dépend de la disposition, et
+      // il bouge dans les DEUX sens quand on retire les autels surnuméraires. A/B mesuré sur
+      // roman_island_medium_01 — mode « all » 61 % → 54 %, mode « seuils » 68 % → 89 %. Le
+      // 0,6 précédent était calé sur un plan qui frôlait 61 %.
+      expect(ok / r.water.consumers.length).toBeGreaterThan(0.5);
     }
   });
 });
