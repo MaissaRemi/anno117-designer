@@ -63,32 +63,6 @@ export function workforceDemand(defIds: Iterable<string>): Record<string, number
   return out;
 }
 
-/**
- * Main-d'œuvre fournie par la population.
- *
- * ⚠ L'entrée est `capByTier` — des HABITANTS, pas un nombre de maisons. Confondre les deux
- * fausse le résultat d'un facteur 4 à 35 (les capacités vont de 4 pour un Tourbier à 35
- * pour un Patricien).
- */
-export function workforceFromPopulation(capByTier: Record<string, number>): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const [guid, pop] of Object.entries(capByTier)) {
-    const t = tierByGuid(guid);
-    if (!t || !t.workforce || !pop) continue;
-    out[guid] = (out[guid] ?? 0) + pop * t.factor;
-  }
-  return out;
-}
-
-export const addWorkforce = (
-  into: Record<string, number>,
-  from: Record<string, number>,
-  sign = 1,
-): Record<string, number> => {
-  for (const [k, v] of Object.entries(from)) into[k] = (into[k] ?? 0) + sign * v;
-  return into;
-};
-
 /** Ce qui manque, palier par palier. Vide = l'île peut faire tourner tout ce qu'elle a posé. */
 export function workforceDeficit(
   demand: Record<string, number>,
@@ -122,19 +96,3 @@ export function alienDemand(
   return out;
 }
 
-/**
- * PRIX DE RÉFÉRENCE d'une unité de main-d'œuvre du palier `to`, payée en habitants, quand
- * on rétrograde une maison du palier `from`.
- *
- *     κ = (cap_from − cap_to) / (cap_to × facteur_to)
- *
- * Lecture : combien d'habitants coûte une unité de main-d'œuvre. En Latium, viser les
- * Equites (κ ≈ 2,3) coûte quatre fois moins cher que viser les Liberti (κ ≈ 9,7) — la
- * cascade n'est donc PAS « descendre le plus bas possible ». Ce prix ne sert qu'à
- * l'affichage et au pré-tri : l'arbitrage réel tient aussi compte des attributs.
- */
-export function workforcePrice(from: Tier, to: Tier): number {
-  const gain = to.capacityDefault * to.factor;
-  if (gain <= 0) return Infinity;
-  return (from.capacityDefault - to.capacityDefault) / gain;
-}

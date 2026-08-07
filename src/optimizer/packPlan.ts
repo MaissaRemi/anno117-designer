@@ -4,7 +4,7 @@ import { economy, residentialChainExtended } from "../economy/economy";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { VITAL_ATTRS } from "../economy/attributes";
 import type { DefLookup } from "../engine/rules";
-import { DEFAULT_UNIQUE_QUOTA, type HousePlot } from "./planLattice";
+import { uniqueCap, type HousePlot } from "./planLattice";
 import { makeStreetGrid } from "./streetGrid";
 
 const SMALL_RANGE_MAX = 40; // services portée <= 40 = locaux
@@ -233,10 +233,8 @@ export function planPacked(
     // Le quota d'unicité est PARTAGÉ par `uniqueType`, pas par bâtiment : les seize autels
     // de dieux se partagent les permis de sanctuaire. Borner à 1 par bâtiment posait une
     // copie PAR DIVINITÉ — six autels là où le jeu en autorise deux.
-    const maxIters = tc.def.uniqueType
-      ? Math.max(0, (opts.uniqueQuota?.[tc.def.uniqueType] ?? DEFAULT_UNIQUE_QUOTA[tc.def.uniqueType] ?? 1)
-          - (uniqueUsed.get(tc.def.uniqueType) ?? 0))
-      : (tc.def.unique ? 1 : 60);
+    const used = tc.def.uniqueType ? (uniqueUsed.get(tc.def.uniqueType) ?? 0) : 0;
+    const maxIters = Math.max(0, Math.min(60, uniqueCap(tc.def, opts.uniqueQuota) - used));
     for (let iter = 0; iter < maxIters; iter++) {
       // uncov = maisons vivantes non couvertes (origines) ; cible du glouton
       const uncov = new Int32Array(N);

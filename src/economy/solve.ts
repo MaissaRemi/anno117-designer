@@ -60,12 +60,12 @@ export interface SolveResult {
 
 // Débits homogènes en "par minute".
 // cycleTime est en secondes ; NeedConsumptionRate est par minute et par résident.
-const prodRatePerMin = (p: BProd, good: string): number => {
+export const prodRatePerMin = (p: BProd, good: string): number => {
   const out = p.outputs.find((o) => o.good === good);
   if (!out || !p.cycleTime) return 0;
   return (out.amount / p.cycleTime) * 60;
 };
-const inputRatePerMin = (p: BProd, amount: number): number =>
+export const inputRatePerMin = (p: BProd, amount: number): number =>
   p.cycleTime ? (amount / p.cycleTime) * 60 : 0;
 
 // Entretien (argent/min) pour produire 1 unité/min d'un bien, chaîne incluse.

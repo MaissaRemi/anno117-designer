@@ -195,7 +195,14 @@ export function candidateRecipes(
   // intermédiaire. Mesuré : +61 % sur une île continentale, +13 % sur une très grande.
   // Ces variantes sont poussées de force, jamais triées : l'estimation ne voit pas ce gain
   // (elle raisonne sur la capacité du palier cible, pas sur celle des maisons ratées).
-  const fallbackTier = chain[chain.length - 2];
+  // Le prédécesseur RÉEL de la cible, pas le voisin dans le tableau. Depuis que la chaîne
+  // est étendue aux lignées parallèles (Albion), `chain[length - 2]` peut désigner un palier
+  // de l'AUTRE lignée — Aldermen sur une cible Nobles — dont les services ne mènent nulle
+  // part. Le filet doit se tendre sur un palier dont la cible hérite.
+  const goal = chain[chain.length - 1];
+  const goalSvc = new Set(goal?.services.map((s) => s.building).filter(Boolean) ?? []);
+  const fallbackTier = [...chain.slice(0, -1)].reverse()
+    .find((t) => t.services.every((s) => !s.building || goalSvc.has(s.building)));
   if (keepFallback > 0 && fallbackTier) {
     const nets = minimalRecipesFor(fallbackTier, lookup).map(score)
       .sort((a, b) => a.landTax - b.landTax || a.serviceIds.join(",").localeCompare(b.serviceIds.join(",")));

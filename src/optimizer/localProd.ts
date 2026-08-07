@@ -1,6 +1,7 @@
 import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import { economy, effectOf, goodName, pickProducerInWorld } from "../economy/economy";
+import { inputRatePerMin, prodRatePerMin } from "../economy/solve";
 import { VITAL_ATTRS } from "../economy/attributes";
 import type { DefLookup } from "../engine/rules";
 import type { BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
@@ -36,7 +37,7 @@ export interface LocalProdOptions {
    * faire tourner en jeu.
    */
   workforce?: {
-    quote(defIds: string[]): { attrs: Record<string, number>; popLost: number } | null;
+    quote(defIds: string[]): Record<string, number> | null;
     charge(defIds: string[]): void;
     /** attributs qu'emportent des maisons rasées */
     razeCost(uids: string[]): Record<string, number>;
@@ -81,9 +82,7 @@ export interface LocalProdResult {
 /** Débit d'un producteur en unités/minute, 0 si la donnée manque. */
 function ratePerMin(defId: string, good: string): number {
   const p = economy.buildingProd[defId];
-  const out = p?.outputs?.find((o) => o.good === good);
-  if (!p?.cycleTime || !out) return 0;
-  return (out.amount / p.cycleTime) * 60;
+  return p ? prodRatePerMin(p, good) : 0;
 }
 
 /**
@@ -230,7 +229,7 @@ export function planLocalProduction(
       }
       const doomed = [...doomedSet];
       const razed = opts.workforce?.razeCost(doomed) ?? {};
-      const total = (k: string) => (impact[k] ?? 0) + (wf?.attrs[k] ?? 0) - (razed[k] ?? 0);
+      const total = (k: string) => (impact[k] ?? 0) + (wf?.[k] ?? 0) - (razed[k] ?? 0);
       // le budget tiendrait-il ? sinon on renonce à CE bien et on passe au suivant
       const wouldBreak = VITAL_ATTRS.some((k) => budget[k] + total(k) < 0);
       if (wouldBreak) break;
@@ -245,7 +244,7 @@ export function planLocalProduction(
       // Le budget encaisse AUSSI le coût des conversions et des maisons rasées. Seul
       // `impact` remonte dans `attrsDelta` : les deux autres sont comptés par le
       // grand-livre au règlement final, les additionner ici les compterait deux fois.
-      for (const k of VITAL_ATTRS) budget[k] = (budget[k] ?? 0) + (wf?.attrs[k] ?? 0) - (razed[k] ?? 0);
+      for (const k of VITAL_ATTRS) budget[k] = (budget[k] ?? 0) + (wf?.[k] ?? 0) - (razed[k] ?? 0);
       const b: PlacedBuilding = { uid: uid("prod"), defId, x: pos.x, y: pos.y, rotation: 0, locked: false };
       const idx = all.length;
       all.push(b);
@@ -270,9 +269,9 @@ export function planLocalProduction(
     // et la main-d'œuvre bornent naturellement la remontée.
     out.netPerMin[ws.good] = (out.netPerMin[ws.good] ?? 0) + ws.perMin;
     const prod = economy.buildingProd[defId];
-    if (prod?.cycleTime) {
+    if (prod) {
       for (const inp of prod.inputs) {
-        const need = (inp.amount / prod.cycleTime) * 60 * ws.copies;
+        const need = inputRatePerMin(prod, inp.amount) * ws.copies;
         if (need <= 0) continue;
         ws.inputs.push({ good: inp.good, perMin: Math.round(need * 100) / 100 });
         out.netPerMin[inp.good] = (out.netPerMin[inp.good] ?? 0) - need;

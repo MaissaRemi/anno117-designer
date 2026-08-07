@@ -49,6 +49,15 @@ export interface LatticeOpts {
 export const DEFAULT_UNIQUE_QUOTA: Record<string, number> = { Shrine: 2, Monument01: 1 };
 
 /**
+ * Plafond d'un bâtiment, tous porteurs du même `uniqueType` confondus. `Infinity` s'il n'en
+ * porte aucun. Unique expression de la règle : les deux moteurs de placement l'appellent,
+ * au lieu d'en tenir chacun une copie.
+ */
+export const uniqueCap = (d: BuildingDef, quota?: Record<string, number>): number =>
+  d.uniqueType ? (quota?.[d.uniqueType] ?? DEFAULT_UNIQUE_QUOTA[d.uniqueType] ?? 1)
+    : (d.unique ? 1 : Infinity);
+
+/**
  * Espacement des épines verticales du peigne de routes.
  *
  * Le pas HORIZONTAL vaut `2·rh + 1` (= 7 pour des résidences 3×3) et il est optimal :
@@ -87,11 +96,17 @@ export interface HousePlot {
     guid: string;
     defId: string;
     cap: number;
-    money: number;
     /** attributs vitaux de la maison à ce palier, institutions comprises, hors rang de cité */
     attrs: Record<string, number>;
   }[];
 }
+
+/** Paliers qu'au moins une parcelle sait accueillir — le VIVIER de la cascade. */
+export const hostableTiers = (plots?: HousePlot[]): Set<string> => {
+  const s = new Set<string>();
+  for (const p of plots ?? []) for (const o of p.opts) s.add(o.guid);
+  return s;
+};
 
 export interface LatticeResult {
   buildings: PlacedBuilding[];
@@ -258,10 +273,8 @@ export function planLattice(
    * 84 sur celtic_island_large_07, là où le jeu en autorise le nombre de permis détenus.
    */
   const uniqueUsed = new Map<string, number>();
-  const quotaOf = (d: BuildingDef): number =>
-    d.uniqueType ? (opts.uniqueQuota?.[d.uniqueType] ?? DEFAULT_UNIQUE_QUOTA[d.uniqueType] ?? 1) : Infinity;
   const remainingQuota = (d: BuildingDef): number =>
-    d.uniqueType ? quotaOf(d) - (uniqueUsed.get(d.uniqueType) ?? 0) : Infinity;
+    uniqueCap(d, opts.uniqueQuota) - (d.uniqueType ? (uniqueUsed.get(d.uniqueType) ?? 0) : 0);
 
   // pose une copie au plus près de (tx,ty) dans un rayon maxRad (spirale Chebyshev)
   const placeNear = (def: BuildingDef, tx: number, ty: number, maxRad: number, rot: 0 | 1 = 0): boolean => {
@@ -765,7 +778,7 @@ export function planLattice(
         for (const key of VITAL_ATTRS) {
           attrs[key] = (evaluator.attrsAt(k, p.mask)[key] ?? 0) + (p.inst[key] ?? 0);
         }
-        opts.push({ guid: r.tier.guid, defId: r.tier.residenceId, cap: r.cap, money: r.money, attrs });
+        opts.push({ guid: r.tier.guid, defId: r.tier.residenceId, cap: r.cap, attrs });
       }
       plots.push({ uid: p.b.uid, guid: p.guid, opts });
     }

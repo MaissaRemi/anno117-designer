@@ -130,7 +130,10 @@ export const economy = data as unknown as EconomyData;
 
 export const tiers = economy.tiers;
 export const upkeepOf = (defId: string): number => economy.buildingUpkeep[defId] || 0;
-export const tierByGuid = (g: string): Tier | undefined => tiers.find((t) => t.guid === g);
+// Index plutôt que balayage : la cascade de main-d'œuvre l'appelle dans ses boucles chaudes,
+// une fois par parcelle et par option.
+const tierIndex = new Map(tiers.map((t) => [t.guid, t] as const));
+export const tierByGuid = (g: string): Tier | undefined => tierIndex.get(g);
 
 /**
  * Chaîne résidentielle menant au tier-cible : tiers de MÊME région dont l'ensemble

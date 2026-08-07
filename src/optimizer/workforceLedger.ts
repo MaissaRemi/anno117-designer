@@ -1,6 +1,6 @@
-import { tierByGuid, worldOf } from "../economy/economy";
+import { tierByGuid } from "../economy/economy";
 import { VITAL_ATTRS } from "../economy/attributes";
-import { workforceDemand } from "../economy/workforce";
+import { alienDemand, workforceDeficit, workforceDemand } from "../economy/workforce";
 import type { HousePlot } from "./planLattice";
 
 /**
@@ -42,8 +42,6 @@ export interface SettleResult {
   conversions: Conversion[];
   tierCounts: Record<string, number>;
   capByTier: Record<string, number>;
-  attrsSum: Record<string, number>;
-  houseMoney: number;
   residents: number;
   /** ce qui reste non pourvu : > 0 = des bâtiments tourneront au ralenti en jeu */
   deficit: Record<string, number>;
@@ -55,8 +53,6 @@ export interface SettleResult {
   houses: number;
   offer: Record<string, number>;
   demand: Record<string, number>;
-  /** vivier : nombre de maisons pouvant légalement accueillir chaque palier */
-  convertible: Record<string, number>;
 }
 
 const total = (r: Record<string, number>): number =>
@@ -139,9 +135,9 @@ export class WorkforceLedger {
    * d'attributs paie à la fois l'effet de zone de l'atelier ET les maisons qu'il faudra
    * rétrograder pour le faire tourner.
    */
-  quote(defIds: Iterable<string>): { attrs: Record<string, number>; popLost: number } | null {
+  quote(defIds: Iterable<string>): Record<string, number> | null {
     const extra = workforceDemand(defIds);
-    if (!Object.keys(extra).length) return { attrs: {}, popLost: 0 };
+    if (!Object.keys(extra).length) return {};
     const merged: Record<string, number> = { ...this.demand };
     for (const [k, v] of Object.entries(extra)) merged[k] = (merged[k] ?? 0) + v;
     const before = this.now();
@@ -152,7 +148,7 @@ export class WorkforceLedger {
     if (total(after.deficit) > before.short + 1e-6) return null;
     const attrs: Record<string, number> = {};
     for (const k of VITAL_ATTRS) attrs[k] = (after.attrs[k] ?? 0) - (before.attrs[k] ?? 0);
-    return { attrs, popLost: before.pop - after.pop };
+    return attrs;
   }
 
   /** Applique la cascade pour de bon et rend le nouvel état de l'île. */
@@ -164,7 +160,7 @@ export class WorkforceLedger {
     const capByTier: Record<string, number> = {};
     const attrsSum: Record<string, number> = {};
     for (const k of VITAL_ATTRS) attrsSum[k] = 0;
-    let houseMoney = 0, residents = 0, houses = 0;
+    let residents = 0, houses = 0;
     for (let i = 0; i < this.plots.length; i++) {
       if (this.dead.has(i)) continue;
       const p = this.plots[i];
@@ -183,13 +179,12 @@ export class WorkforceLedger {
       tierCounts[o.guid] = (tierCounts[o.guid] ?? 0) + 1;
       capByTier[o.guid] = (capByTier[o.guid] ?? 0) + o.cap;
       residents += o.cap;
-      houseMoney += o.money;
       for (const k of VITAL_ATTRS) attrsSum[k] += o.attrs[k] ?? 0;
     }
     return {
       changed,
       conversions: [...conv.values()].sort((a, b) => b.houses - a.houses),
-      tierCounts, capByTier, attrsSum, houseMoney,
+      tierCounts, capByTier,
       residents: Math.round(residents),
       deficit: r.deficit,
       alien: r.alien,
@@ -199,7 +194,6 @@ export class WorkforceLedger {
       houses,
       offer: this.supplyOf(this.cur),
       demand: { ...this.demand },
-      convertible: this.convertible(),
     };
   }
 
@@ -216,16 +210,6 @@ export class WorkforceLedger {
       const o = this.plots[i].opts[this.cur[i]];
       if (!o) continue;
       for (const k of VITAL_ATTRS) c[k] += o.attrs[k] ?? 0;
-    }
-    return c;
-  }
-
-  /** Combien de maisons vivantes pourraient accueillir chaque palier. */
-  private convertible(): Record<string, number> {
-    const c: Record<string, number> = {};
-    for (let i = 0; i < this.plots.length; i++) {
-      if (this.dead.has(i)) continue;
-      for (const o of this.plots[i].opts) c[o.guid] = (c[o.guid] ?? 0) + 1;
     }
     return c;
   }
@@ -254,13 +238,9 @@ export class WorkforceLedger {
   private run(assign: Int32Array, demand: Record<string, number>) {
     // Une demande adressée à un palier d'un AUTRE monde n'est jamais satisfiable : aucune
     // maison de l'île ne peut fournir ce bien. On l'isole plutôt que de boucler dessus.
-    const alien: Record<string, number> = {};
+    const alien = alienDemand(demand, this.world);
     const local: Record<string, number> = {};
-    for (const [guid, v] of Object.entries(demand)) {
-      const t = tierByGuid(guid);
-      if (!t || worldOf(t.region) !== this.world) alien[guid] = v;
-      else local[guid] = v;
-    }
+    for (const [guid, v] of Object.entries(demand)) if (!(guid in alien)) local[guid] = v;
 
     let supply = this.supplyOf(assign);
     const attrs = this.attrsOf(assign);
@@ -318,13 +298,8 @@ export class WorkforceLedger {
     }
 
     supply = this.supplyOf(assign);
-    const deficit: Record<string, number> = {};
-    for (const [guid, d] of Object.entries(local)) {
-      const miss = d - (supply[guid] ?? 0);
-      if (miss > 1e-6) deficit[guid] = Math.round(miss * 100) / 100;
-    }
-    const short = Object.keys(deficit).length > 0 || Object.keys(alien).length > 0;
-    return { attrs, pop, deficit, alien, short };
+    const deficit = workforceDeficit(local, supply);
+    return { attrs, pop, deficit, alien };
   }
 
   private attrsOf(assign: Int32Array): Record<string, number> {

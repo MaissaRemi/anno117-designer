@@ -106,8 +106,8 @@ export function houseAttrs(opts: {
  * ce sont les seuls bâtiments dont l'effet de zone corrige directement les attributs que le
  * rang de cité dégrade. Portée le long des rues.
  */
-export function institutionDefs(region?: string): { defId: string; attrs: Attrs; range: number; uniqueType?: string }[] {
-  const out: { defId: string; attrs: Attrs; range: number; uniqueType?: string }[] = [];
+export function institutionDefs(region?: string): { defId: string; attrs: Attrs; range: number }[] {
+  const out: { defId: string; attrs: Attrs; range: number }[] = [];
   for (const [defId, fx] of Object.entries(economy.buildingEffects ?? {})) {
     if (fx.scope !== "street") continue;
     // uniquement du bénéfice sur les attributs vitaux, et hors besoins de palier

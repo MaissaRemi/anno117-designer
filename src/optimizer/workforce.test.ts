@@ -6,7 +6,7 @@ import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
 import { economy, worldOf } from "../economy/economy";
 import { regionOfIsland } from "../data/islands";
-import { workforceGrant, workforceDemand, workforcePrice } from "../economy/workforce";
+import { workforceGrant, workforceDemand } from "../economy/workforce";
 import { WorkforceLedger } from "./workforceLedger";
 import { pickSlotBuilding } from "./slotPlan";
 import type { HousePlot } from "./planLattice";
@@ -36,12 +36,15 @@ describe("main-d'œuvre — données du jeu", () => {
 
   it("viser un palier intermédiaire coûte moins cher que descendre au plus bas", () => {
     // Contre-intuitif et décisif pour le tri : la cascade est LATÉRALE, pas descendante.
+    // Prix d'une unité de main-d'œuvre, en habitants perdus, depuis une maison patricienne :
+    //   κ = (cap_source − cap_cible) / (cap_cible × facteur_cible)
     const pat = tierNamed("Patriciens");
-    const eq = workforcePrice(pat, tierNamed("Equites"));
-    const lib = workforcePrice(pat, tierNamed("Liberti"));
-    expect(eq).toBeLessThan(lib);
-    expect(eq).toBeCloseTo(2.29, 1);
-    expect(lib).toBeCloseTo(9.67, 1);
+    const kappa = (to: ReturnType<typeof tierNamed>) =>
+      (pat.capacityDefault - to.capacityDefault) / (to.capacityDefault * to.factor);
+    expect(kappa(tierNamed("Equites"))).toBeCloseTo(2.29, 1);
+    expect(kappa(tierNamed("Plébéiens"))).toBeCloseTo(5.64, 1);
+    expect(kappa(tierNamed("Liberti"))).toBeCloseTo(9.67, 1);
+    expect(kappa(tierNamed("Equites"))).toBeLessThan(kappa(tierNamed("Liberti")));
   });
 });
 

@@ -9,7 +9,7 @@ import { effectOf } from "../economy/economy";
 import { footprintSize } from "../engine/geometry";
 import { candidateRecipes, unlockWorkerTiers } from "./recipes";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
-import { planLattice, type LatticeResult } from "./planLattice";
+import { hostableTiers, planLattice, type LatticeResult } from "./planLattice";
 import { planPacked, type PackResult } from "./packPlan";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, needsWater, planWater, type WaterConsumerReport, type WaterPlanResult } from "./waterPlan";
@@ -111,7 +111,6 @@ export interface IslandPlanResult {
     demand: Record<string, number>;
     deficit: Record<string, number>;
     alien: Record<string, number>;
-    convertible: Record<string, number>;
     conversions: { from: string; to: string; houses: number; popLost: number }[];
   };
   /** Le bilan de l'île tient-il sur les quatre attributs vitaux ? */
@@ -225,16 +224,14 @@ export function planIslandImport(
   // Mesuré : sans elles aucune ville ne dépasse 3 000 habitants avec tous ses attributs
   // positifs ; avec elles la recette complète tient jusqu'à 260 000.
   const instCands = institutionDefs(islandRegion)
-    .map((i) => ({ ...i, uniqueType: lookup(i.defId)?.uniqueType }))
-    .filter((i) => lookup(i.defId));
+    .flatMap((i) => { const d = lookup(i.defId); return d ? [{ ...i, uniqueType: d.uniqueType }] : []; });
   // DIVINITÉ TUTÉLAIRE : une seule par île. Le choix se fait sur le déficit d'attribut
   // observé, mesuré par une passe SANS autel — seul l'attribut limitant compte, et le
   // classement change complètement d'une île à l'autre. Il est fait plus bas, une fois ce
   // déficit connu ; ici on retient les institutions non religieuses, communes à tous les
   // essais, plus l'autel finalement élu.
-  const nonShrine = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE).map((i) => i.defId);
   let patron: string | undefined;
-  const institutions = nonShrine;
+  const institutions = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE).map((i) => i.defId);
   const kontorDef = pickKontorDef(req.catalog, islandRegion);
   const kontor = kontorDef ? reserveKontor(req.grid, kontorDef) : null;
 
@@ -343,7 +340,7 @@ export function planIslandImport(
     for (const k of VITAL_ATTRS) attrsTotal[k] = (cand.attrsSum[k] ?? 0) + cand.houses * (rank[k] ?? 0);
     return {
       cand, relevant, water, buildings, tierCounts, capByTier, deadTypes, houseMoney,
-      hostable: new Set((cand.plots ?? []).flatMap((p) => p.opts.map((o) => o.guid))).size,
+      hostable: needWorkers ? hostableTiers(cand.plots).size : 0,
       residents,
       waterPct: nCons ? nOk / nCons : 1,
       attrsTotal,
@@ -513,8 +510,7 @@ export function planIslandImport(
   // VIVIER DE PALIERS : ceux qu'au moins une parcelle peut atteindre. Un bâtiment réclamant
   // la main-d'œuvre d'un palier absent de ce vivier ne tournera jamais — aucune conversion
   // ne peut le pourvoir. On ne le pose donc pas plutôt que d'occuper du sol pour rien.
-  const hostable = new Set<string>();
-  for (const p of dist.plots ?? []) for (const o of p.opts) hostable.add(o.guid);
+  const hostable = hostableTiers(dist.plots);
 
   let exploited: ExploitedSlot[] = [];
   if (req.exploitSlots) {
@@ -831,7 +827,6 @@ export function planIslandImport(
     attrsTotal,
     workforce: {
       offer: wf.offer, demand: wf.demand, deficit: wf.deficit, alien: wf.alien,
-      convertible: wf.convertible,
       conversions: wf.conversions,
     },
     viable: planViable,
