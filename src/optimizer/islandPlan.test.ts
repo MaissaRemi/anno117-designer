@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import rawCatalog from "../data/catalog.generated.json";
 import { makeGrid } from "../model/factories";
 import type { BuildingDef } from "../model/types";
-import { economy } from "../economy/economy";
+import { economy, residentialChainExtended } from "../economy/economy";
 import { makeLookup } from "../engine/rules";
 import { solve } from "../economy/solve";
 import { buildIslandGrid } from "../data/islandGrid";
@@ -95,6 +95,28 @@ describe("planIslandImport (mode import)", () => {
     for (const k of ["Happiness", "Money", "Health", "FireSafety"]) {
       expect(r.attrsTotal[k]).toBeGreaterThanOrEqual(0);
     }
+  }, 120_000);
+
+  it("le balayage des paliers ne rend JAMAIS un plan pire que le palier demandé", () => {
+    // Un palier plus haut ne loge pas forcément plus de monde : ses services mangent plus de
+    // sol et son malus de rang de cité est plus lourd. Mesuré sur celtic_island_large_07,
+    // viser les Nobles (capacité 21) livre 9 844 habitants en 488 maisons, viser les Aldermen
+    // (capacité 18) en livre 22 114 en 1 698. Le balayage doit donc pouvoir DESCENDRE.
+    //
+    // L'invariant testé ici est celui qui compte et qui vaut sur toute île : le balayage
+    // inclut le palier demandé parmi ses candidats, donc son résultat ne peut pas être pire.
+    // Petite grille : c'est la propriété qu'on vérifie, pas un chiffre d'île.
+    const g = makeGrid(48, 48);
+    const t4 = [...economy.tiers].filter((t) => t.residenceId)
+      .sort((a, b) => b.capacityDefault - a.capacityDefault)[0]!;
+    const plain = planIslandImport({ catalog, grid: g, tierGuid: t4.guid, coverageFloor: 0.8 });
+    const auto = planIslandImport({ catalog, grid: g, tierGuid: t4.guid, coverageFloor: 0.8, autoTier: true });
+    expect(auto.residents).toBeGreaterThanOrEqual(plain.residents);
+    // le palier retenu appartient bien à la lignée demandée
+    const ladder = residentialChainExtended(t4.guid).map((t) => t.guid);
+    expect(ladder).toContain(auto.tierGuid);
+    // et il est annoncé s'il diffère — l'utilisateur ne doit pas avoir à le deviner
+    if (auto.tierGuid !== t4.guid) expect(auto.gaps.some((x) => x.includes("Palier"))).toBe(true);
   }, 120_000);
 
   it("l'arbitrage se fait sur le plan LIVRÉ, pas sur le plan nu", () => {

@@ -15,12 +15,15 @@ couverture minimale 56 % · bilan positif (🔥 +455) · main-d'œuvre couverte 
 | 1 — coût réel dans la sélection | ✅ fait, voie (b) | **+2,2 %** sur celtic, 0 % sur medium_01, +7 à 10 % de temps |
 | 2 — passe de réparation locale | ❌ réfuté | 0 % sur 7 configurations, −0,5 % sur la huitième, +12 à 42 % de temps |
 | 3 — terrain libre avant démolition | ✅ fait | **+3,6 %** sur medium_01, **+7,5 %** sur celtic |
+| 4 — balayage du palier cible | ✅ fait, en option | **+120 %** sur celtic (Nobles → Aldermen), 0 % sur medium_01 |
+| 5 — élargir le budget de recettes | ❌ réfuté | plan IDENTIQUE à 7, 11 et 15 recettes, +58 % de temps |
 
 La leçon commune : **le sol est la contrainte qui mord, pas la couverture.** Poser plus de
 services ne rapporte rien ; mieux CHOISIR entre les plans, et cesser d'en détruire, si.
 
 Cumul sur la session : `roman_island_medium_01` 16 660 → **17 266**,
-`celtic_island_large_07` 8 968 → **9 844** (+9,8 %).
+`celtic_island_large_07` 8 968 → **9 844** (+9,8 %), et **21 622** avec le balayage des
+paliers activé (+141 %).
 
 ---
 
@@ -156,6 +159,53 @@ signature : {9 820, 9 820, 9 956} devient {9 820, 9 956, 3 480}.
 **Ce qui reste sur ce levier.** La voie (a) — estimation bon marché du coût aval intégrée
 directement à `better()` — n'a pas été faite et n'est plus prioritaire : la voie (b) capte
 l'essentiel. Elle redeviendrait utile si le nombre de recettes essayées explosait.
+
+---
+
+## Levier 4 — BALAYAGE DU PALIER CIBLE : ✅ FAIT, en option (2026-08-08)
+
+Le palier cible était pris pour argent comptant. Or **un palier plus haut ne loge pas
+forcément plus de monde** : ses services mangent plus de sol, et son malus de rang de cité est
+plus lourd. Balayage complet, plan livré à chaque fois :
+
+| celtic_island_large_07 | cap/maison | habitants | maisons |
+|---|---|---|---|
+| Tourbiers | 4 | 7 142 | 1 978 |
+| Forgerons | 9 | 13 949 | 1 863 |
+| Mercators | 13 | 4 740 | 416 |
+| **Aldermen** | 18 | **22 114** | 1 698 |
+| Nobles *(sommet de lignée)* | 21 | 9 844 | 488 |
+
+**Viser les Aldermen loge 2,25 fois plus que viser les Nobles.** Les Nobles et les Mercators
+sont la population ROMANISÉE d'Albion : malus de rang bien plus lourd (−17,4 de Bonheur contre
+−12,6 pour un natif), services plus gourmands, et le garde-fou de viabilité rase les trois
+quarts du quartier. Les deux paliers romanisés sont d'ailleurs les deux pires de la lignée.
+
+Ce n'est pas une règle générale : sur `roman_island_medium_01`, monotone, le sommet gagne
+(Patriciens 17 266 contre Equites 7 409). D'où un balayage et non une heuristique.
+
+**En OPTION (`autoTier`), pas par défaut** : le palier cible reste un objectif de partie, pas
+un réglage, et le balayage coûte un plan complet par palier (37 s sur celtic contre 10 s). Le
+palier retenu ressort dans `tierGuid` / `tierName`, et un écart au palier demandé est annoncé
+en tête des trous — l'utilisateur n'a rien à deviner.
+
+---
+
+## Levier 5 — ÉLARGIR LE BUDGET DE RECETTES : ❌ RÉFUTÉ (2026-08-08)
+
+L'hypothèse : `budget = 7` datait d'une époque où la sélection ne prédisait rien, donc essayer
+plus ne servait à rien ; le levier 1 rendant la comparaison fiable, plus de diversité amont
+devait payer. Mesuré à 7, 11 et 15 recettes :
+
+| île | 7 | 11 | 15 |
+|---|---|---|---|
+| roman_island_medium_01 | 17 266 (7,1 s) | 17 266 (9,2 s) | 17 266 (11,2 s) |
+| celtic_island_large_07 | 9 844 (10,1 s) | 9 844 (13,2 s) | 9 844 (16,1 s) |
+
+Plan **strictement identique** dans les six cas, pour +58 % de temps. Les recettes au-delà de
+la septième ne gagnent jamais : `candidateRecipes` les émet déjà par ordre de promesse
+décroissante, et la queue de distribution est plate. Ne pas y revenir sans changer
+l'ÉNUMÉRATION elle-même.
 
 ---
 
