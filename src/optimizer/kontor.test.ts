@@ -8,7 +8,7 @@ import { makeLookup, rootedRoadSet } from "../engine/rules";
 import { footprintSize } from "../engine/geometry";
 import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
-import { pickKontorDef, reserveKontor } from "./kontor";
+import { keepMainLandmass, pickKontorDef, reserveKontor } from "./kontor";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -25,6 +25,51 @@ const tierRich = [...economy.tiers].filter((t) => t.residenceId).sort((a, b) => 
 function realIsland(id: string): GridShape {
   return downscaleGrid(buildIslandGrid(id)!);
 }
+
+describe("une seule masse continentale", () => {
+  it("ne garde que le tenant du comptoir", () => {
+    // Les « îles » du jeu ne sont pas des blocs pleins : 85 composantes de terre sur
+    // celtic_island_small_06, 112 sur celtic_island_small_01 dont une de 1 193 cases. Les
+    // moteurs y bâtissaient, aucune route ne franchissant la mer — 31 bâtiments INACTIFS en
+    // jeu sur une île de 67 maisons, marchés et puits compris, donc des maisons comptées
+    // comme desservies par des services qui ne tournent pas.
+    //
+    // Ni un détour plus long (essayé à 96 cases) ni le droit de raser des maisons pour ouvrir
+    // un passage (essayé aussi) n'y changeaient rien : on ne traverse pas la mer.
+    const grid = realIsland("celtic_island_small_01");
+    const W = grid.w, H = grid.h, N = W * H;
+    const kept = keepMainLandmass(grid);
+    const seen = new Uint8Array(N);
+    const sizes: number[] = [];
+    for (let i = 0; i < N; i++) {
+      if (!kept.usable[i] || seen[i]) continue;
+      let n = 0;
+      let fr = [i];
+      seen[i] = 1;
+      while (fr.length) {
+        const nx: number[] = [];
+        for (const c of fr) {
+          n++;
+          const x = c % W, y = (c / W) | 0;
+          for (const d of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
+            if (d >= 0 && kept.usable[d] && !seen[d]) { seen[d] = 1; nx.push(d); }
+          }
+        }
+        fr = nx;
+      }
+      sizes.push(n);
+    }
+    expect(sizes.length).toBe(1); // un seul tenant subsiste
+    const before = grid.usable.filter(Boolean).length;
+    expect(sizes[0]).toBeLessThan(before); // l'île en avait bien plusieurs
+    expect(sizes[0]).toBeGreaterThan(before * 0.5); // et on a gardé le principal
+  });
+
+  it("une grille d'un seul tenant est rendue telle quelle", () => {
+    const g = makeGrid(24, 24);
+    expect(keepMainLandmass(g)).toBe(g);
+  });
+});
 
 describe("comptoir (racine du réseau routier)", () => {
   it("pickKontorDef choisit un comptoir JOUEUR, pas un comptoir PNJ", () => {

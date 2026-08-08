@@ -27,6 +27,7 @@ deux ne se comparent pas entre eux — seulement chacun à lui-même.
 | 5 — élargir le budget de recettes | ❌ réfuté | plan IDENTIQUE à 7, 11 et 15 recettes, +58 % de temps |
 | 6 — les ateliers réservent leur sol | ✅ fait | **+2,0 %** sur medium_01, 70 maisons rasées → 7 |
 | 7 — packPlan à armes égales | ✅ fait, puis sorti du portefeuille | perd les 9 configurations ; −7,4 à −8,8 % de temps |
+| 8 — ne bâtir que sur le tenant du comptoir | ✅ fait | **justesse** : 93 bâtiments inactifs → 22 sur huit îles |
 
 La leçon commune : **le sol est la contrainte qui mord, pas la couverture.** Poser plus de
 services ne rapporte rien ; mieux CHOISIR entre les plans, et cesser d'en détruire, si.
@@ -216,6 +217,42 @@ Plan **strictement identique** dans les six cas, pour +58 % de temps. Les recett
 la septième ne gagnent jamais : `candidateRecipes` les émet déjà par ordre de promesse
 décroissante, et la queue de distribution est plate. Ne pas y revenir sans changer
 l'ÉNUMÉRATION elle-même.
+
+---
+
+## Levier 8 — NE BÂTIR QUE SUR LE TENANT DU COMPTOIR : ✅ FAIT (2026-08-08)
+
+Ce n'est pas de l'optimisation, c'est une **correction de justesse** : le plan contenait des
+bâtiments qui ne fonctionnent pas en jeu, et les comptait quand même.
+
+Les « îles » du jeu ne sont pas des blocs pleins. Composantes de terre mesurées :
+
+| île | composantes | tailles | bâtiments isolés |
+|---|---|---|---|
+| `celtic_island_small_01` | 112 | 12 472, **1 193**, 60, 59… | 29 |
+| `celtic_island_small_06` | 85 | 6 449, 51, 48, 25… | 31 sur 67 maisons |
+| `celtic_island_medium_04` | 70 | 22 695, **418**, 78… | 14 |
+| `celtic_island_medium_03` | 8 | 27 472, 3, 3, 1… | 0 |
+| `celtic_island_medium_07` | 6 | 23 324, 3, 1, 1… | 0 |
+
+La corrélation est parfaite : les îles à composante secondaire notable ont des bâtiments
+isolés, celles dont le reste tient en trois cases n'en ont aucun. Les moteurs bâtissaient sur
+ces lobes, aucune route ne franchissant la mer — **marchés, puits et fana INACTIFS en jeu**,
+et des maisons comptées comme desservies par des services qui ne tournent pas.
+
+Deux fausses pistes, mesurées avant d'abandonner : porter le détour de raccordement de 24 à
+96 cases (aucun effet), et autoriser la réparation à raser des maisons pour ouvrir un passage
+(31 → 31). On ne traverse pas la mer.
+
+**Correctif** : `keepMainLandmass` retire du masque constructible tout ce qui n'est pas d'un
+seul tenant avec le comptoir. Bâtiments isolés sur huit îles : **93 → 32**, puis **→ 22** en
+retirant aussi les RÉSIDENCES isolées, qui gonflaient la population annoncée de maisons
+mortes. Les services isolés restent — les retirer changerait une couverture déjà calculée —
+mais sont signalés nommément.
+
+Le message des trous comptait des CASES DE ROUTE ; il compte désormais des BÂTIMENTS, avec
+leurs noms. Reliquat connu : ~22 services isolés sur huit îles, dus à l'élagage des routes à
+l'intérieur du tenant principal.
 
 ---
 

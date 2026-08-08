@@ -12,7 +12,7 @@ import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { hostableTiers, planLattice, type LatticeResult } from "./planLattice";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, needsWater, planWater, type WaterConsumerReport, type WaterPlanResult } from "./waterPlan";
-import { connectKontor, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
+import { connectKontor, keepMainLandmass, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
 import { planSlots, type ExploitedSlot } from "./slotPlan";
 import { WorkforceLedger } from "./workforceLedger";
 import { workforceGrant } from "../economy/workforce";
@@ -284,7 +284,10 @@ export function planIslandImport(
 
   // moteurs sur grille SANS les zones montagne (non constructibles en vrai, et la
   // source d'aqueduc en a besoin) ; l'eau est planifiée sur la grille d'origine
-  const planGrid = blockMountains(kontor?.grid ?? req.grid);
+  // Un seul tenant : bâtir sur un lobe que la route ne peut pas atteindre depuis le comptoir
+  // produit des bâtiments INACTIFS en jeu, et des maisons comptées comme desservies par des
+  // services qui ne tournent pas. Voir `keepMainLandmass` pour la mesure.
+  const planGrid = blockMountains(keepMainLandmass(kontor?.grid ?? req.grid, kontor ?? undefined));
   const coverageFloor = req.coverageFloor ?? 1;
   const svcCount = (r: { servicesPlaced: Record<string, number> }) =>
     Object.values(r.servicesPlaced).reduce((a, b) => a + b, 0);
@@ -739,9 +742,33 @@ export function planIslandImport(
     // CONNEXITÉ : l'élagage des moteurs peut laisser des îlots de route (case d'accès dont le
     // connecteur a sauté). En jeu, un bâtiment desservi par une route coupée du comptoir est
     // INACTIF. On raccroche ce qui peut l'être et on signale le reste.
-    const repair = repairRoadConnectivity(req.grid, buildings, roads, lookup);
-    if (repair.orphans) {
-      kontorGaps.push(`${repair.orphans} case(s) de route isolées du comptoir (bâtiments desservis inactifs en jeu)`);
+    const repair = repairRoadConnectivity(
+      req.grid, buildings, roads, lookup, 24, (id) => residenceIds.has(id),
+    );
+    // Une RÉSIDENCE isolée du comptoir est inactive en jeu : elle n'héberge personne. La
+    // laisser au plan gonflait la population annoncée de maisons mortes. Elle tombe donc,
+    // au même titre que celles rasées pour rouvrir un passage. Les SERVICES isolés, eux,
+    // restent — les retirer changerait la couverture déjà calculée — mais sont signalés.
+    const deadUids = new Set([
+      ...repair.removed,
+      ...repair.stranded.filter((b) => residenceIds.has(b.defId)).map((b) => b.uid),
+    ]);
+    if (deadUids.size) razeHouses(deadUids);
+    const strandedSvc = repair.stranded.filter((b) => !residenceIds.has(b.defId));
+    if (strandedSvc.length) {
+      // Le message comptait des CASES DE ROUTE. L'utilisateur n'en fait rien : ce qui l'intéresse
+      // est quels BÂTIMENTS sont inactifs en jeu, et combien.
+      const byName = new Map<string, number>();
+      for (const b of strandedSvc) {
+        const n = lookup(b.defId)?.name ?? b.defId;
+        byName.set(n, (byName.get(n) ?? 0) + 1);
+      }
+      const detail = [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4)
+        .map(([n, c]) => (c > 1 ? `${n} ×${c}` : n)).join(", ");
+      kontorGaps.push(
+        `${strandedSvc.length} service(s) sans accès au comptoir — INACTIFS en jeu : ${detail}`
+        + (byName.size > 4 ? "…" : ""),
+      );
     }
 
     const layout: Layout = { grid: req.grid, buildings, roads: repair.roads, fields: dist.fields, aqueducts: water.aqueducts };
@@ -811,8 +838,12 @@ export function planIslandImport(
      */
     const settleWith = (kept: LocalWorkshop[]) => {
       const razed = new Set(kept.flatMap((w) => w.razed));
+      // L'ensemble des maisons debout est DÉRIVÉ du plan courant, pas d'un instantané pris
+      // plus haut : le raccordement du comptoir, les emplacements et la réouverture des
+      // routes en ont déjà retiré depuis. Un instantané figé les aurait fait vivre encore.
+      const alive = new Set(buildings.map((b) => b.uid));
       const l = new WorkforceLedger(
-        (dist.plots ?? []).filter((p) => aliveUids.has(p.uid) && !razed.has(p.uid)),
+        (dist.plots ?? []).filter((p) => alive.has(p.uid) && !razed.has(p.uid)),
         grants,
         islandRegion,
       );

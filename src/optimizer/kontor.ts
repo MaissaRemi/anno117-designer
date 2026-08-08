@@ -138,6 +138,62 @@ export function reserveKontor(grid: GridShape, def: BuildingDef): KontorReservat
   return null;
 }
 
+/**
+ * ═══ UNE SEULE MASSE CONTINENTALE ══════════════════════════════════════════════════════
+ *
+ * Retire du masque constructible tout ce qui n'est pas d'un seul tenant avec le comptoir.
+ *
+ * Les « îles » du jeu ne sont pas des blocs pleins : leur masque de terre compte des dizaines
+ * de composantes séparées — bancs, récifs, lobes détachés. Mesuré : 85 composantes sur
+ * `celtic_island_small_06`, 112 sur `celtic_island_small_01` dont une de 1 193 cases, 70 sur
+ * `celtic_island_medium_04` dont une de 418.
+ *
+ * Les moteurs y bâtissaient. Aucune route ne pouvant franchir la mer, ces bâtiments n'ont
+ * jamais d'accès au comptoir, donc sont INACTIFS en jeu — et les services qui s'y trouvaient
+ * comptaient quand même dans la couverture des maisons. Mesuré sur huit îles : six en avaient,
+ * jusqu'à 31 bâtiments morts sur une île de 67 maisons, marchés et puits compris. La
+ * réparation de connexité ne pouvait rien : ni un détour plus long (essayé à 96 cases) ni le
+ * droit de raser (essayé aussi) ne font traverser la mer.
+ *
+ * Les îles épargnées le confirment a contrario : `celtic_island_medium_03` et `_07` n'ont que
+ * des composantes secondaires de 1 à 3 cases, et aucun bâtiment isolé.
+ *
+ * Sans comptoir, on garde la plus grande composante — c'est là que le joueur s'installera.
+ */
+export function keepMainLandmass(grid: GridShape, seed?: { x: number; y: number }): GridShape {
+  const W = grid.w, H = grid.h, N = W * H;
+  const comp = new Int32Array(N).fill(-1);
+  let best = -1, bestSize = 0, seedComp = -1;
+  const seedIdx = seed && seed.x >= 0 && seed.y >= 0 && seed.x < W && seed.y < H
+    ? seed.y * W + seed.x : -1;
+  let nComp = 0;
+  for (let i = 0; i < N; i++) {
+    if (!grid.usable[i] || comp[i] >= 0) continue;
+    const id = nComp++;
+    let size = 0;
+    let fr = [i];
+    comp[i] = id;
+    while (fr.length) {
+      const next: number[] = [];
+      for (const c of fr) {
+        size++;
+        const x = c % W, y = (c / W) | 0;
+        for (const n of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
+          if (n >= 0 && grid.usable[n] && comp[n] < 0) { comp[n] = id; next.push(n); }
+        }
+      }
+      fr = next;
+    }
+    if (size > bestSize) { bestSize = size; best = id; }
+  }
+  if (seedIdx >= 0 && comp[seedIdx] >= 0) seedComp = comp[seedIdx];
+  const keep = seedComp >= 0 ? seedComp : best;
+  if (keep < 0 || nComp <= 1) return grid;
+  const usable = grid.usable.slice();
+  for (let i = 0; i < N; i++) if (usable[i] && comp[i] !== keep) usable[i] = false;
+  return { ...grid, usable };
+}
+
 export interface KontorPlacement {
   building: PlacedBuilding;
   /** Cases de route ajoutées pour raccorder le comptoir (souvent vide). */
@@ -259,7 +315,23 @@ export function repairRoadConnectivity(
   roads: RoadTile[],
   lookup: DefLookup,
   maxDetour = 24,
-): { roads: RoadTile[]; added: number; dropped: number; orphans: number } {
+  /**
+   * Bâtiments que le raccordement a le droit de RASER pour s'ouvrir un passage — les
+   * résidences, en pratique. Sans lui, la réparation ne traversait que des cases LIBRES ;
+   * or après le placement il n'en reste aucune, et tout îlot enclavé dans le tissu urbain
+   * était déclaré irrécupérable. Mesuré sur huit îles : six en avaient, jusqu'à 31 bâtiments
+   * inactifs sur une île de 73 maisons — marchés, puits et fana compris, donc des maisons
+   * comptées comme desservies alors qu'elles ne le sont pas.
+   *
+   * `connectKontor` s'autorise exactement la même chose, et pour la même raison.
+   */
+  demolishable?: (defId: string) => boolean,
+): {
+  roads: RoadTile[]; added: number; dropped: number; orphans: number;
+  stranded: PlacedBuilding[];
+  /** uids rasés pour rouvrir un passage vers le comptoir */
+  removed: string[];
+} {
   const W = grid.w, H = grid.h, N = W * H;
   const roadAt = new Uint8Array(N);
   for (const r of roads) if (r.x >= 0 && r.y >= 0 && r.x < W && r.y < H) roadAt[r.y * W + r.x] = 1;
@@ -305,7 +377,7 @@ export function repairRoadConnectivity(
       }
     }
   }
-  if (!seeds.length) return { roads, added: 0, dropped: 0, orphans: 0 };
+  if (!seeds.length) return { roads, added: 0, dropped: 0, orphans: 0, stranded: [], removed: [] };
   const grow = (from: number[]) => {
     let fr = from.filter((c) => !inCore[c]);
     for (const c of fr) inCore[c] = 1;
@@ -331,6 +403,10 @@ export function repairRoadConnectivity(
   const extra: number[] = [];
   const seen = new Uint8Array(N);
   let added = 0, dropped = 0, orphans = 0;
+  // Bâtiments dont le SEUL accès passe par un îlot irrécupérable : inactifs en jeu. C'est
+  // d'eux que l'utilisateur a besoin, pas du nombre de cases de route concernées.
+  const strandedIdx = new Set<number>();
+  const razedIdx = new Set<number>();
   for (let i = 0; i < N; i++) {
     if (!roadAt[i] || inCore[i] || seen[i]) continue;
     const comp: number[] = [];
@@ -356,6 +432,8 @@ export function repairRoadConnectivity(
           if (prev.has(n)) continue;
           if (inCore[n]) {
             for (let cur = c; cur >= 0 && !roadAt[cur]; cur = prev.get(cur)!) {
+              // la case appartenait à une résidence : elle tombe, tout entière
+              if (owner[cur] >= 0) razedIdx.add(owner[cur]);
               roadAt[cur] = 1;
               extra.push(cur);
               added++;
@@ -364,9 +442,11 @@ export function repairRoadConnectivity(
             break;
           }
           // les cases de route (y compris d'AUTRES îlots) sont traversables : un îlot peut
-          // rejoindre le noyau en passant par un îlot voisin. Seuls les bâtiments et la mer
-          // bloquent.
-          if (occ[n] || !grid.usable[n]) continue;
+          // rejoindre le noyau en passant par un îlot voisin. La mer bloque toujours ; un
+          // bâtiment aussi, SAUF s'il est démolissable — une poignée de maisons contre une
+          // dizaine de bâtiments rendus actifs est un échange évident.
+          if (!grid.usable[n]) continue;
+          if (occ[n] && !(owner[n] >= 0 && demolishable?.(buildings[owner[n]].defId))) continue;
           prev.set(n, c);
           next.push(n);
         }
@@ -389,6 +469,7 @@ export function repairRoadConnectivity(
       dropped += comp.length;
     } else {
       orphans += comp.length;
+      for (const bi of served) if (!servedByCore[bi]) strandedIdx.add(bi);
     }
   }
   const out: RoadTile[] = [];
@@ -396,5 +477,9 @@ export function repairRoadConnectivity(
     if (r.x < 0 || r.y < 0 || r.x >= W || r.y >= H || !drop[r.y * W + r.x]) out.push(r);
   }
   for (const c of extra) out.push({ x: c % W, y: (c / W) | 0 });
-  return { roads: out, added, dropped, orphans };
+  return {
+    roads: out, added, dropped, orphans,
+    stranded: [...strandedIdx].filter((bi) => !razedIdx.has(bi)).map((bi) => buildings[bi]),
+    removed: [...razedIdx].map((bi) => buildings[bi].uid),
+  };
 }
