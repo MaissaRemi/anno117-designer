@@ -643,7 +643,22 @@ export function planIslandImport(
         const seen = new Set(roads.map((r) => `${r.x},${r.y}`));
         for (const r of kp.roads) if (!seen.has(`${r.x},${r.y}`)) { seen.add(`${r.x},${r.y}`); roads.push(r); }
       } else {
-        kontorGaps.push("Comptoir non raccordable au réseau routier (île saturée ou littoral isolé)");
+        // ÉCHEC DU RACCORDEMENT — on pose le comptoir QUAND MÊME.
+        //
+        // Il était purement abandonné, et le plan partait alors SANS AUCUN BÂTIMENT RACINE :
+        // en jeu, un réseau routier sans comptoir laisse la ville entière inactive. Le
+        // signalement se noyait dans les trous, à égalité avec « 3 % des maisons non
+        // couvertes ». Mesuré par l'invariant `comptoir-present` : trois îles sur cinquante-
+        // cinq livraient un plan entièrement injouable.
+        //
+        // Un comptoir dont la route est à tracer à la main vaut infiniment mieux que pas de
+        // comptoir : son emprise est réservée depuis le début, elle est libre, et le joueur
+        // n'a qu'un bout de route à poser.
+        buildings.push(kp.building);
+        kontorGaps.push(
+          "Comptoir posé mais NON RACCORDÉ au réseau routier — à relier à la main,"
+          + " sinon toute l'île reste inactive en jeu",
+        );
       }
     } else {
       kontorGaps.push("Aucun comptoir posable : pas de littoral exploitable → réseau routier sans racine");
