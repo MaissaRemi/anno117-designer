@@ -748,6 +748,89 @@ export function planLattice(
         }
       }
     }
+    // ═══ L'ÉLAGAGE DOIT CONNAÎTRE LA RACINE DU RÉSEAU ═════════════════════════════════
+    //
+    // `keep` réunit deux ensembles — routes adjacentes à un bâtiment, chemins maison→service
+    // — sans que rien ne garantisse qu'ils tiennent ENSEMBLE, ni surtout qu'ils tiennent au
+    // COMPTOIR. Résultat mesuré sur celtic_island_large_05 : 96 composantes de route dans le
+    // plan final, un tronc de 12 693 cases et 1 240 hors du réseau enraciné, pour 61 services
+    // inactifs en jeu — dont 52 avaient bel et bien une route adjacente, simplement pas dans
+    // la bonne composante.
+    //
+    // Deux corrections ont échoué avant celle-ci, et pour la MÊME raison : elles rendaient des
+    // routes sans savoir de quel côté du comptoir. Reconnecter autour de « la plus grosse
+    // composante » a fait passer les services isolés de 61 à 147 ; donner la réserve élaguée à
+    // la réparation d'après coup, de 61 à 166. Ce n'est pas de route qu'il manquait.
+    //
+    // Ce qui manquait, c'est la RACINE. Sa position est fixée avant les moteurs par
+    // `reserveKontor` et arrive ici dans `opts.reserved` : on ancre donc l'élagage dessus.
+    // Restituer une case ne coûte rien en sol — l'élagage passe après `placeHouses` sans
+    // toucher `roadAt`, donc aucune maison ne s'y est posée.
+    const R = opts.reserved;
+    if (R) {
+      const rootRing: number[] = [];
+      for (let i = 0; i < R.w; i++) {
+        for (const yy of [R.y - 1, R.y + R.h]) {
+          const x = R.x + i;
+          if (yy >= 0 && yy < H && x >= 0 && x < W) rootRing.push(yy * W + x);
+        }
+      }
+      for (let j = 0; j < R.h; j++) {
+        for (const xx of [R.x - 1, R.x + R.w]) {
+          const y = R.y + j;
+          if (xx >= 0 && xx < W && y >= 0 && y < H) rootRing.push(y * W + xx);
+        }
+      }
+      const roots = rootRing.filter((c) => roadAt[c]);
+      if (roots.length) {
+        const nb4 = (c: number): number[] => {
+          const x = c % W, y = (c / W) | 0;
+          const out: number[] = [];
+          if (x > 0) out.push(c - 1);
+          if (x < W - 1) out.push(c + 1);
+          if (y > 0) out.push(c - W);
+          if (y < H - 1) out.push(c + W);
+          return out;
+        };
+        // chemins sur le peigne COMPLET, élaguées comprises, depuis l'anneau du comptoir
+        const parent = new Int32Array(N).fill(-2);
+        let fr: number[] = [...roots];
+        for (const c of roots) parent[c] = -1;
+        while (fr.length) {
+          const next: number[] = [];
+          for (const c of fr) {
+            for (const n of nb4(c)) {
+              if (roadAt[n] && parent[n] === -2) { parent[n] = c; next.push(n); }
+            }
+          }
+          fr = next;
+        }
+        // ce que `keep` relie DÉJÀ à la racine
+        const rooted = new Uint8Array(N);
+        const growRooted = (from: number[]) => {
+          let f = from.filter((c) => keep[c] && !rooted[c]);
+          for (const c of f) rooted[c] = 1;
+          while (f.length) {
+            const next: number[] = [];
+            for (const c of f) {
+              for (const n of nb4(c)) if (keep[n] && !rooted[n]) { rooted[n] = 1; next.push(n); }
+            }
+            f = next;
+          }
+        };
+        for (const c of roots) keep[c] = 1; // l'accès du comptoir n'est jamais élagué
+        growRooted(roots);
+        for (let i = 0; i < N; i++) {
+          if (!keep[i] || rooted[i] || parent[i] === -2) continue;
+          // remonter vers la racine en restituant, jusqu'à retomber sur du déjà relié
+          const path: number[] = [];
+          for (let cur = parent[i]; cur >= 0 && !rooted[cur]; cur = parent[cur]) path.push(cur);
+          for (const c of path) keep[c] = 1;
+          growRooted([i, ...path]);
+        }
+      }
+    }
+
     const roads: RoadTile[] = [];
     for (let i = 0; i < N; i++) if (keep[i]) roads.push({ x: i % W, y: (i / W) | 0 });
     return roads;
