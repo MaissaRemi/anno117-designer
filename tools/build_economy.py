@@ -128,6 +128,7 @@ def main():
     producers = defaultdict(list)  # productGuid -> [defId]
     bprod = {}           # defId -> {cycleTime, inputs, outputs, maintenanceProducts:[{product,amount}], icon, public}
     icon_to_def = {}     # icon basename -> defId (bâtiments publics surtout)
+    icon_to_defs = defaultdict(list)  # icon basename -> [defId], TOUS mondes confondus
     building_upkeep = {} # defId -> entretien argent/min
     public_effects = {}  # defId -> functional effect guids (pour services)
     fertilities = {}     # GUID Fertility/Deposit -> nom FR (saisie île + filtrage chaînes)
@@ -340,6 +341,7 @@ def main():
         icon = os.path.basename(t(el, "./Values/Standard/IconFilename") or "")
         if icon:
             icon_to_def.setdefault(icon, defId)
+            icon_to_defs[icon].append(defId)
 
         # entretien en argent (Product credits 1010017), par minute
         money = 0.0
@@ -435,6 +437,73 @@ def main():
             return "Roman"
         return "?"
 
+    # REGION DE CHAQUE BATIMENT, lue du catalogue deja genere. Chargee ICI et non plus apres
+    # la boucle des paliers : la resolution des services en a besoin (cf. `service_def`).
+    building_region = {}
+    building_name = {}
+    catalog_ids = set()
+    cat_path = os.path.join(HERE, "src", "data", "catalog.generated.json")
+    if os.path.exists(cat_path):
+        for b in json.load(open(cat_path, encoding="utf-8")):
+            catalog_ids.add(b["id"])
+            building_name[b["id"]] = b.get("name")
+            if b.get("region"):
+                building_region[b["id"]] = b["region"]
+
+    def world_of(reg):
+        """Monde d'une culture : les romano-celtiques vivent en Albion."""
+        return "Roman" if reg == "Roman" else "Celtic"
+
+    def twin_in_world(def_id, want):
+        """Jumeau du MEME NOM dans le monde voulu.
+
+        Les deux mondes ont un Marche, un Temple, des Bains, un Grammaticus, un Theatre — memes
+        noms, batiments distincts, et ICONES DIFFERENTES. Le match par icone ne trouvait donc
+        que la version romaine, et la version celtique restait invisible. Le nom, lui, est
+        commun : c'est le seul pont fiable entre les deux catalogues.
+        """
+        name = building_name.get(def_id)
+        if not name:
+            return None
+        for other, r in building_region.items():
+            if other != def_id and building_name.get(other) == name and world_of(r) == want:
+                return other
+        return None
+
+    def service_def(need_guid, nd, reg):
+        """Batiment qui remplit un besoin de SERVICE, POUR LE MONDE DU PALIER.
+
+        Les besoins sont resolus par ICONE, et l'icone est commune aux deux mondes : le Marche
+        romain et le Marche celtique la partagent, comme le Temple et le Fanum. La table
+        `icon_to_def` n'en gardait qu'un — le premier vu, romain dans l'ordre de lecture. Les
+        paliers CELTIQUES se retrouvaient donc avec un Marche et un Theatre ROMAINS parmi leurs
+        services, non constructibles en jeu sur Albion. Detecte par l'invariant `monde-unique`,
+        qui signalait dix batiments d'un autre monde sur celtic_island_small_06.
+
+        On choisit desormais parmi TOUS les candidats celui du monde du palier ; a defaut un
+        batiment sans region declaree ; a defaut l'ancien comportement.
+        """
+        want = world_of(reg)
+        cands = icon_to_defs.get(nd["icon"]) if nd else None
+        base = SERVICE_BUILDING_OVERRIDES.get(need_guid)
+        if not base:
+            for d in (cands or []):
+                r = building_region.get(d)
+                if r and world_of(r) == want:
+                    return d
+            for d in (cands or []):
+                if not building_region.get(d):
+                    return d
+            base = icon_to_def.get(nd["icon"]) if nd else None
+        if not base:
+            return None
+        # Le batiment retenu — override compris — peut etre du mauvais monde : on le remplace
+        # par son jumeau de meme nom quand il en existe un.
+        r = building_region.get(base)
+        if r and world_of(r) != want:
+            return twin_in_world(base, want) or base
+        return base
+
     tiers = []
     # ordre Roman puis Celtic, par apparition
     ordered = sorted(pop_levels.items(), key=lambda kv: kv[0])
@@ -465,7 +534,7 @@ def main():
                 capacity += attrs.get("Population", 0)
             for sneed in res["services"]:
                 nd = needs.get(sneed)
-                sdef = SERVICE_BUILDING_OVERRIDES.get(sneed) or (icon_to_def.get(nd["icon"]) if nd else None)
+                sdef = service_def(sneed, nd, reg)
                 attrs = nd["attrs"] if nd else {}
                 services.append({
                     "need": sneed, "building": sdef,
@@ -495,16 +564,6 @@ def main():
             # requis pour MONTER au tier suivant)
             "upgradeThresholds": (res or {}).get("thresholds", {}),
         })
-
-    # région des bâtiments : réutilise le catalogue déjà généré (AssociatedRegions décodé)
-    building_region = {}
-    catalog_ids = set()
-    cat_path = os.path.join(HERE, "src", "data", "catalog.generated.json")
-    if os.path.exists(cat_path):
-        for b in json.load(open(cat_path, encoding="utf-8")):
-            catalog_ids.add(b["id"])
-            if b.get("region"):
-                building_region[b["id"]] = b["region"]
 
     # garde-fou : un override de service périmé (besoin OU bâtiment introuvable après un
     # patch du jeu) ferait disparaître un service d'un tier en silence → on le crie.
