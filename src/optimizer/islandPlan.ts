@@ -562,19 +562,28 @@ export function planIslandImport(
   // malus de Santé −2 CUMULABLE dans un rayon EUCLIDIEN de 20 à 24. Elles sont posées après
   // les moteurs, donc leur effet échappait au bilan calculé par ceux-ci. On le rattrape ici,
   // sur les maisons réellement à portée.
-  const zoneDelta: Record<string, number> = {};
-  {
-    const houseList = buildings.filter((b) => residenceIds.has(b.defId));
+  /**
+   * Effet de zone EUCLIDIEN des bâtiments posés hors moteur — mines, carrières, ferme à
+   * bœufs, ateliers. Les moteurs ne les voient pas : ils sont posés après.
+   *
+   * Paramétré par les maisons RASÉES, parce qu'il ne doit compter que celles encore debout.
+   * Il était calculé une seule fois, sur toutes les maisons, puis versé dans un bilan qui,
+   * lui, n'en compte qu'une partie : le malus des mines pesait donc sur des maisons que les
+   * ateliers avaient démolies. Même forme que l'accumulation de deltas corrigée par ailleurs.
+   */
+  const zoneAttrsOf = (razed: ReadonlySet<string>, extra: PlacedBuilding[] = []) => {
+    const out: Record<string, number> = {};
     const svcOfTiers = new Set(chain.flatMap((t) => t.services.map((s) => s.building)));
     const centre = (b: PlacedBuilding) => {
       const d = lookup(b.defId);
       const fp = d ? footprintSize(d, b.rotation) : { w: 1, h: 1 };
       return { x: b.x + fp.w / 2, y: b.y + fp.h / 2 };
     };
-    const houseCentres = houseList.map(centre);
-    // non cumulable : une seule fois par type et par maison
+    const houseCentres = buildings
+      .filter((b) => residenceIds.has(b.defId) && !razed.has(b.uid))
+      .map(centre);
     const seenOnce = new Map<string, Set<number>>();
-    for (const b of buildings) {
+    for (const b of [...buildings, ...extra]) {
       const fx = effectOf(b.defId);
       if (!fx || fx.scope !== "radius" || svcOfTiers.has(b.defId)) continue;
       const c = centre(b);
@@ -589,10 +598,11 @@ export function planIslandImport(
           if (set.has(i)) continue;
           set.add(i);
         }
-        for (const [k, v] of Object.entries(fx.attrs)) zoneDelta[k] = (zoneDelta[k] ?? 0) + v;
+        for (const [k, v] of Object.entries(fx.attrs)) out[k] = (out[k] ?? 0) + v;
       }
     }
-  }
+    return out;
+  };
 
   // CONNEXITÉ : l'élagage des moteurs peut laisser des îlots de route (case d'accès dont le
   // connecteur a sauté). En jeu, un bâtiment desservi par une route coupée du comptoir est
@@ -678,12 +688,16 @@ export function planIslandImport(
     l.charge(kept.flatMap((w) => w.placed.map((b) => b.defId)));
     const wfk = l.settle();
     const rank = cityStatusAttrs(wfk.residents, tier?.region ?? islandRegion);
+    // Les effets de zone sont RECALCULÉS sur les maisons que ce sous-ensemble laisse debout,
+    // ateliers gardés compris. Réutiliser l'instantané figé à la pose (`w.attrs`) aurait
+    // reconduit le défaut : il compte les maisons vivantes AU MOMENT de la pose, et le recul
+    // en ressuscite.
+    const zone = zoneAttrsOf(razed, kept.flatMap((w) => w.placed));
     const attrs: Record<string, number> = {};
     for (const k of VITAL_ATTRS) {
-      attrs[k] = (wfk.attrsSum[k] ?? 0)                                  // maisons debout
-        + (zoneDelta[k] ?? 0)                                            // mines, carrières…
-        + kept.reduce((a, w) => a + (w.attrs[k] ?? 0), 0)                // ateliers gardés
-        + wfk.houses * (rank[k] ?? 0);                                   // rang de cité
+      attrs[k] = (wfk.attrsSum[k] ?? 0)       // maisons debout, affectation finale
+        + (zone[k] ?? 0)                      // mines, carrières, ateliers — portée euclidienne
+        + wfk.houses * (rank[k] ?? 0);        // rang de cité
     }
     return { wf: wfk, attrs };
   };
