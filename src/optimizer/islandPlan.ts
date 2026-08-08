@@ -270,6 +270,15 @@ export function planIslandImport(
     hostable: number;
     /** le bilan de l'île tient-il ? */
     viable: boolean;
+    /**
+     * SIGNATURE GÉOMÉTRIQUE du plan posé. `finalize` est déterministe : deux candidats de
+     * géométrie identique en rendront le même résultat, donc en finaliser un second est du
+     * temps perdu — prouvé, pas supposé. Mesuré : la passe de divinité tutélaire rejoue la
+     * recette gagnante et, quand l'autel ne change rien, produit un plan strictement égal ;
+     * sur celtic_island_large_07 les finalistes #0 et #1 étaient ce même plan, soit un rang
+     * sur trois gaspillé alors que le vrai gagnant était #2, de justesse.
+     */
+    sig: string;
   }
   const evaluate = (cand: Cand, relevant: Set<string> | null): Evaluated => {
     // évaluateur scopé à CE jeu de services : un service hors recette ne compte ni pour
@@ -324,6 +333,13 @@ export function planIslandImport(
       const after = Object.values(capByTier).reduce((a, b) => a + b, 0);
       houseMoney = before > 0 ? houseMoney * (after / before) : 0;
     }
+    // Ordre-indépendante et bon marché : somme de position et de type sur les emprises.
+    let sig = 0;
+    for (const b of buildings) {
+      let h = 5381;
+      for (let i = 0; i < b.defId.length; i++) h = (h * 33 + b.defId.charCodeAt(i)) | 0;
+      sig = (sig + Math.imul(h, 2654435761) + b.x * 73856093 + b.y * 19349663) | 0;
+    }
     const nCons = water.consumers.length;
     const nOk = water.consumers.filter((c) => c.connected).length;
     const residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
@@ -344,6 +360,7 @@ export function planIslandImport(
       waterPct: nCons ? nOk / nCons : 1,
       attrsTotal,
       viable: isViable(attrsTotal),
+      sig: `${buildings.length}:${sig}`,
     };
   };
   // Critère LEXICOGRAPHIQUE, faisabilité d'abord.
@@ -953,11 +970,16 @@ export function planIslandImport(
   // `better()` n'est pas transitif — sa bande d'égalité à 2 % sur la population l'en empêche —
   // et un tri sur un comparateur non transitif rend un ordre arbitraire.
   const shortlist: Evaluated[] = [];
+  const seen = new Set<string>();
   const pool = [...cands];
   while (shortlist.length < FINALISTS && pool.length) {
     let bi = 0;
     for (let i = 1; i < pool.length; i++) if (better(pool[i], pool[bi])) bi = i;
-    shortlist.push(pool.splice(bi, 1)[0]);
+    const c = pool.splice(bi, 1)[0];
+    // Un doublon géométrique rendrait le même plan final : on ne lui donne pas un rang.
+    if (seen.has(c.sig)) continue;
+    seen.add(c.sig);
+    shortlist.push(c);
   }
   if (!shortlist.length) shortlist.push(pick!);
 
