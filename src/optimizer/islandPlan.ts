@@ -1,4 +1,4 @@
-import { makeLookup } from "../engine/rules";
+import { makeLookup, roadConnected, rootedRoadSet } from "../engine/rules";
 import type { AqueductTile, BuildingDef, FieldTile, GridShape, Layout, PlacedBuilding, RoadTile } from "../model/types";
 import { economy, residentialChainExtended, upkeepOf } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
@@ -284,6 +284,11 @@ export function planIslandImport(
   // produit des bâtiments INACTIFS en jeu, et des maisons comptées comme desservies par des
   // services qui ne tournent pas. Voir `keepMainLandmass` pour la mesure.
   const planGrid = blockMountains(keepMainLandmass(kontor?.grid ?? req.grid, kontor ?? undefined));
+  // Emprise du comptoir, à protéger AUSSI du réseau d'eau : les sources d'aqueduc se posent
+  // sur des cases hors masque de terre, que la réservation ne couvre donc pas.
+  const kontorRect = kontor
+    ? { x: kontor.x, y: kontor.y, ...footprintSize(kontor.def, kontor.rotation) }
+    : undefined;
   const coverageFloor = req.coverageFloor ?? 1;
   const svcCount = (r: { servicesPlaced: Record<string, number> }) =>
     Object.values(r.servicesPlaced).reduce((a, b) => a + b, 0);
@@ -331,7 +336,8 @@ export function planIslandImport(
     // évaluateur scopé à CE jeu de services : un service hors recette ne compte ni pour
     // les seuils ni pour la capacité (utilisé ici seulement par le repli de démotion)
     const evaluator = compileTierEvaluator(chain, { goodsMet: true, relevant: relevant ?? undefined });
-    const water = cand.water ?? planWater(req.grid, cand.buildings, cand.roads, lookup, req.heights);
+    const water = cand.water
+      ?? planWater(req.grid, cand.buildings, cand.roads, lookup, req.heights, kontorRect);
     const buildings = cand.water ? cand.buildings : [...cand.buildings, ...water.sources];
     // types de service dont AUCUN exemplaire n'est raccordé → inactifs en jeu
     const defOfUid = new Map(buildings.map((b) => [b.uid, b.defId]));
@@ -470,7 +476,7 @@ export function planIslandImport(
       planLattice(g, req.tierGuid, lookup, {
         coverageFloor: floor, serviceIds, water: true, heights: req.heights,
         institutions: patron ? [...institutions, patron] : institutions,
-        permits: req.permits,
+        permits: req.permits, reserved: kontorRect,
       }),
       serviceIds ? new Set(serviceIds) : null,
     );
@@ -761,6 +767,29 @@ export function planIslandImport(
       ...repair.stranded.filter((b) => residenceIds.has(b.defId)).map((b) => b.uid),
     ]);
     if (deadUids.size) razeHouses(deadUids);
+
+    // ═══ AUCUNE RÉSIDENCE COMPTÉE SANS ACCÈS RÉEL ════════════════════════════════════════
+    //
+    // `repairRoadConnectivity` ne voit que les ÎLOTS de route : une maison qui, après
+    // l'élagage, ne touche plus aucune route lui est invisible. Elle restait donc au plan et
+    // dans la population, alors qu'en jeu elle n'héberge personne — le réseau enraciné au
+    // comptoir ne l'atteint pas.
+    //
+    // On tranche ici sur le critère du jeu lui-même (`rootedRoadSet` + `roadConnected`), le
+    // même que l'invariant `acces-comptoir-maisons`. Une passe, après toutes les démolitions.
+    {
+      const lay: Layout = { grid: req.grid, buildings, roads: repair.roads, fields: dist.fields };
+      const { set: rootSet, hasRoot } = rootedRoadSet(lay, lookup);
+      if (hasRoot) {
+        const cut = new Set(buildings
+          .filter((b) => residenceIds.has(b.defId) && !roadConnected(lay, lookup, b, rootSet))
+          .map((b) => b.uid));
+        if (cut.size) {
+          razeHouses(cut);
+          kontorGaps.push(`${cut.size} maison(s) sans accès au comptoir, retirée(s) du plan`);
+        }
+      }
+    }
     const strandedSvc = repair.stranded.filter((b) => !residenceIds.has(b.defId));
     if (strandedSvc.length) {
       // Le message comptait des CASES DE ROUTE. L'utilisateur n'en fait rien : ce qui l'intéresse

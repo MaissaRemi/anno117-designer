@@ -110,6 +110,16 @@ export function planWater(
   roads: RoadTile[],
   lookup: DefLookup,
   heights?: Int8Array | null,
+  /**
+   * Emprise RÉSERVÉE à un bâtiment que l'appelant posera PLUS TARD — le comptoir.
+   *
+   * `reserveKontor` protège son emplacement en le retirant du masque de terre. Cela suffit
+   * aux moteurs de placement, mais PAS ici : une source d'aqueduc se pose justement sur des
+   * cases hors masque, celles des zones montagne. Elle atterrissait donc sur le comptoir.
+   * Mesuré sur roman_island_small_02 : 7 cases occupées deux fois, un chevauchement illégal
+   * en jeu, detecté par l'invariant `pas-de-chevauchement`.
+   */
+  reserved?: { x: number; y: number; w: number; h: number },
 ): WaterPlanResult {
   const W = grid.w, H = grid.h, N = W * H;
   const gaps: string[] = [];
@@ -173,6 +183,12 @@ export function planWater(
     }
   }
   // case franchissable par une conduite (mer interdite, bâtiments interdits)
+  if (reserved) {
+    for (let j = 0; j < reserved.h; j++) for (let i = 0; i < reserved.w; i++) {
+      const x = reserved.x + i, y = reserved.y + j;
+      if (x >= 0 && y >= 0 && x < W && y < H) bldOcc[y * W + x] = 1;
+    }
+  }
   const pass = (c: number): boolean => !bldOcc[c] && (grid.usable[c] || mzone[c] === 1);
   // « l'eau ne monte pas » : une conduite reliée à une source ne grimpe jamais au-dessus
   // de la TÊTE DE CETTE source (+marge). `maxSrcQ` = max global, utilisé comme borne

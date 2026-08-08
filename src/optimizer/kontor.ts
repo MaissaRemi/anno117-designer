@@ -272,8 +272,18 @@ export function connectKontor(
     }
   }
 
+  // PÉRIMÈTRE ORTHO — sans les coins.
+  //
+  // Il courait de -1 à w, coins compris. Or un coin est DIAGONAL à l'emprise, et l'accès
+  // routier du jeu est orthogonal : une route posée là faisait répondre « déjà raccordé »,
+  // le raccordement s'arrêtait aussitôt, et l'anneau du comptoir restait vide. Mesuré sur
+  // celtic_island_large_05 : 0 route sur les 30 cases ortho du comptoir, dont 29 sur terre,
+  // pour un plan qui compte 13 933 cases de route — et 147 services isolés en conséquence,
+  // puisque `rootedRoadSet` ne trouvait aucune racine. Sur roman_island_small_02, une seule.
+  //
+  // Même forme que `orthoRoadCells` (streetGrid), qui sert partout ailleurs.
   const perimeter: number[] = [];
-  for (let i = -1; i <= w; i++) {
+  for (let i = 0; i < w; i++) {
     for (const yy of [res.y - 1, res.y + h]) {
       const x = res.x + i;
       if (yy >= 0 && yy < H && x >= 0 && x < W) perimeter.push(yy * W + x);

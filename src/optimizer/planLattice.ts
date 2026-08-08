@@ -38,6 +38,9 @@ export interface LatticeOpts {
   viabilityGate?: boolean;
   /** Permis détenus en partie, par GUID de permis. Voir `economy/uniques`. */
   permits?: Record<string, number>;
+  /** Emprise réservée à un bâtiment posé plus tard (le comptoir) : le réseau d'eau doit
+   *  l'éviter, le masque de terre ne suffit pas à l'en protéger. */
+  reserved?: { x: number; y: number; w: number; h: number };
 }
 
 /**
@@ -584,7 +587,7 @@ export function planLattice(
   if (opts.water) {
     const roadsNow: RoadTile[] = [];
     for (let i = 0; i < N; i++) if (roadAt[i]) roadsNow.push({ x: i % W, y: (i / W) | 0 });
-    water = planWater(grid, buildings, roadsNow, lookup, opts.heights);
+    water = planWater(grid, buildings, roadsNow, lookup, opts.heights, opts.reserved);
     for (const s of water.sources) {
       const { w, h } = footprintSize(lookup(s.defId)!, s.rotation);
       for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
