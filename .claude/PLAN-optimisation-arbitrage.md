@@ -8,15 +8,56 @@ Mesure de référence à l'ouverture, `roman_island_medium_01` en pleine résolu
 + production locale cochés : 22 901 habitants · 640/817 maisons au palier cible (78 %) ·
 couverture minimale 56 % · bilan positif (🔥 +455) · main-d'œuvre couverte · ~5 à 12 s.
 
-**État des deux leviers, après mesure :**
+**État, après mesure :**
 
 | levier | verdict | effet mesuré |
 |---|---|---|
-| 1 — coût réel dans la sélection | ✅ fait, voie (b) | **+2,2 %** d'habitants sur celtic, 0 % sur medium_01, +7 à 10 % de temps |
+| 1 — coût réel dans la sélection | ✅ fait, voie (b) | **+2,2 %** sur celtic, 0 % sur medium_01, +7 à 10 % de temps |
 | 2 — passe de réparation locale | ❌ réfuté | 0 % sur 7 configurations, −0,5 % sur la huitième, +12 à 42 % de temps |
+| 3 — terrain libre avant démolition | ✅ fait | **+3,6 %** sur medium_01, **+7,5 %** sur celtic |
 
 La leçon commune : **le sol est la contrainte qui mord, pas la couverture.** Poser plus de
-services ne rapporte rien ; mieux CHOISIR entre les plans, si.
+services ne rapporte rien ; mieux CHOISIR entre les plans, et cesser d'en détruire, si.
+
+Cumul sur la session : `roman_island_medium_01` 16 660 → **17 266**,
+`celtic_island_large_07` 8 968 → **9 844** (+9,8 %).
+
+---
+
+## Levier 3 — TERRAIN LIBRE AVANT DÉMOLITION : ✅ FAIT (2026-08-08)
+
+**D'abord la mesure, pour ne pas repayer l'erreur du levier 2.** L'écart plan nu → plan livré
+(−9 à −12 %) a été VENTILÉ, jalon par jalon, avant d'écrire une ligne :
+
+| étape | medium_01 | celtic |
+|---|---|---|
+| plan nu | 18 944 | 9 956 |
+| comptoir | 18 944 — **0** | 9 956 — **0** |
+| emplacements | 18 767 — −177 (−0,9 %) | 9 874 — −82 (−0,8 %) |
+| **ateliers** | **16 609 — −2 158 (−11,4 %), 89 maisons rasées** | **9 120 — −754 (−7,6 %), 41 rasées** |
+| main-d'œuvre | 16 660 — **+51** | 9 161 — **+41** |
+
+Verdict sans ambiguïté : le comptoir ne coûte rien, les emplacements ~1 %, et la cascade de
+main-d'œuvre est **nette positive** — le malus de rang se détend plus que les conversions ne
+coûtent. Tout l'écart est dans les ateliers.
+
+**La cause.** `place()` (`localProd.ts`) spiralait depuis le barycentre des maisons et retenait
+la PREMIÈRE position que `fits` acceptait — or `fits` accepte les cases occupées par des
+résidences, qu'il rase. Le moteur bulldozait le centre-ville plutôt que d'aller chercher du
+vide quelques tuiles plus loin. 89 maisons, soit ~90 cases de résidence, pour des bâtiments
+qui en occupent 16 à 25.
+
+**Le correctif.** Deux spirales : terrain RÉELLEMENT vide et desservi par une route d'abord,
+démolition en repli seulement. S'écarter du barycentre ne coûte rien et rapporte deux fois —
+les maisons restent debout, ET le malus de zone de l'atelier frappe moins de monde.
+
+| | rasées | copies d'atelier | habitants |
+|---|---|---|---|
+| avant | 69 | 26 | 23 263 |
+| après | 42 | 40 | **24 046** |
+
+Le budget d'attributs n'étant plus mangé par les maisons détruites, il finance 14 copies de
+plus. Verrouillé par un test sur le RATIO rasées/copie (2,65 → 1,05), pas sur un compte absolu.
 
 ---
 
@@ -104,6 +145,13 @@ des critères secondaires (vivier, raccordement, nombre de maisons) qui ne préd
 **Pourquoi 3 et pas plus.** Mesuré à 6 : les rangs 4 et 5 s'effondrent (2 886 et 9 793
 habitants livrés contre 9 161 et 16 660) — ce sont des recettes que le pré-tri écarte à juste
 titre. Le coût de l'aval est de 300 à 380 ms par finaliste, soit ~+7 % par plan.
+
+**Correctif de suite : pas de doublon dans la liste.** La passe de divinité tutélaire rejoue
+la recette gagnante et, quand l'autel ne change rien, rend un plan strictement égal. Sur
+celtic les finalistes #0 et #1 étaient ce même plan (9 820 nus, 8 968 livrés tous les deux),
+soit un rang sur trois joué pour rien — alors que le vrai gagnant était #2, de justesse.
+Chaque candidat porte désormais une signature géométrique et la liste n'en retient qu'un par
+signature : {9 820, 9 820, 9 956} devient {9 820, 9 956, 3 480}.
 
 **Ce qui reste sur ce levier.** La voie (a) — estimation bon marché du coût aval intégrée
 directement à `better()` — n'a pas été faite et n'est plus prioritaire : la voie (b) capte

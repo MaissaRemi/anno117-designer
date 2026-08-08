@@ -166,23 +166,68 @@ export function planLocalProduction(
     return true;
   };
 
+  /** Emplacement RÉELLEMENT vide — aucune maison dessous, donc aucune démolition. */
+  const vacant = (def: BuildingDef, x: number, y: number): boolean => {
+    const fp = footprintSize(def, 0);
+    if (x < 0 || y < 0 || x + fp.w > W || y + fp.h > H) return false;
+    for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
+      const c = (y + j) * W + (x + i);
+      if (!grid.usable[c] || roadAt[c] || owner[c] >= 0) return false;
+    }
+    return true;
+  };
+
+  /** Une case de l'anneau touche-t-elle une route ? Sans accès, le bâtiment est INACTIF en
+   *  jeu — contrainte gratuite au barycentre, où le peigne est partout, mais pas en bordure. */
+  const roadAccess = (def: BuildingDef, x: number, y: number): boolean => {
+    const fp = footprintSize(def, 0);
+    for (let i = 0; i < fp.w; i++) {
+      if (y > 0 && roadAt[(y - 1) * W + (x + i)]) return true;
+      if (y + fp.h < H && roadAt[(y + fp.h) * W + (x + i)]) return true;
+    }
+    for (let j = 0; j < fp.h; j++) {
+      if (x > 0 && roadAt[(y + j) * W + (x - 1)]) return true;
+      if (x + fp.w < W && roadAt[(y + j) * W + (x + fp.w)]) return true;
+    }
+    return false;
+  };
+
   // barycentre des maisons : on construit au plus près du tissu, là où les effets portent
   let gx = 0, gy = 0;
   for (const h of houses) { gx += h.x; gy += h.y; }
   gx = houses.length ? gx / houses.length : W / 2;
   gy = houses.length ? gy / houses.length : H / 2;
 
-  const place = (def: BuildingDef): { x: number; y: number } | null => {
+  const spiral = (ok: (x: number, y: number) => boolean): { x: number; y: number } | null => {
     const maxR = Math.max(W, H);
     for (let r = 0; r <= maxR; r += 2) {
       for (let dy = -r; dy <= r; dy += 2) for (let dx = -r; dx <= r; dx += 2) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const x = Math.round(gx + dx), y = Math.round(gy + dy);
-        if (fits(def, x, y)) return { x, y };
+        if (ok(x, y)) return { x, y };
       }
     }
     return null;
   };
+
+  /**
+   * TERRAIN LIBRE D'ABORD, démolition en dernier recours.
+   *
+   * La spirale partait du barycentre des maisons et retenait la PREMIÈRE position que `fits`
+   * acceptait — or `fits` accepte les cases occupées par des résidences, qu'il rase. Le
+   * moteur bulldozait donc le centre-ville plutôt que d'aller chercher du vide quelques
+   * tuiles plus loin. Mesuré sur roman_island_medium_01 : 89 maisons rasées pour 9 ateliers,
+   * soit ~2 158 habitants — 11,4 % du plan, et de loin le premier poste de perte de tout
+   * l'aval (le comptoir n'en coûte aucun, les emplacements 1 %, la cascade de main-d'œuvre
+   * est nette positive).
+   *
+   * S'écarter du barycentre ne coûte rien et rapporte deux fois : les maisons restent
+   * debout, ET le malus de zone de l'atelier (Santé −2, portée euclidienne) frappe moins de
+   * monde. Seule contrainte ajoutée : l'accès à la route, gratuit au centre mais pas au bord.
+   */
+  const place = (def: BuildingDef): { x: number; y: number } | null =>
+    spiral((x, y) => vacant(def, x, y) && roadAccess(def, x, y))
+    ?? spiral((x, y) => fits(def, x, y));
 
   // --- biens du manifeste, du plus lourd au plus léger ---------------------------------
   const wanted = [...demand].sort((a, b) => b.perMin - a.perMin || a.good.localeCompare(b.good));
