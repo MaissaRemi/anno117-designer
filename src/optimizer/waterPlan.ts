@@ -1,6 +1,8 @@
 import { uid } from "../model/factories";
 import { footprintSize } from "../engine/geometry";
 import type { AqueductTile, BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
+import { worldOf } from "../economy/economy";
+import { regionOfIsland } from "../data/islands";
 import type { DefLookup } from "../engine/rules";
 
 /**
@@ -135,7 +137,12 @@ export function planWater(
       gaps: ["Aucun slot montagne : pas de source d'eau possible (Bains/Forum/Citernes inactifs)"],
     };
   }
-  const srcDef = SOURCE_IDS.map((id) => lookup(id)).find((d): d is BuildingDef => !!d);
+  // SOURCE DU BON MONDE. Le premier identifiant de la liste etait pris tel quel : toute ile
+  // d'Albion recevait donc la source d'aqueduc ROMAINE, non constructible en jeu. Repli sur
+  // n'importe laquelle si le monde de l'ile n'en propose pas.
+  const srcWorld = worldOf(regionOfIsland(grid.islandId));
+  const srcCands = SOURCE_IDS.map((id) => lookup(id)).filter((d): d is BuildingDef => !!d);
+  const srcDef = srcCands.find((d) => !d.region || worldOf(d.region) === srcWorld) ?? srcCands[0];
   if (!srcDef) {
     return {
       sources: [], usedSlots: [], aqueducts: [], capacity: 0, used: 0,

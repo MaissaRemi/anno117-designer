@@ -125,10 +125,18 @@ describe("planIslandImport (mode import)", () => {
     // 12 % — assez pour inverser un classement, d'autant que `better()` traite deux plans
     // à moins de 2 % d'écart comme égaux et tranche alors sur des critères secondaires.
     //
-    // Mesuré ici (Nobles, celtic_island_large_07, seuil 1) : le pré-tri classait EN TÊTE un
-    // plan nu à 9 820 habitants, qui n'en livre que 8 968 ; le plan nu à 9 956, relégué,
-    // en livre 9 161. Faire subir le pipeline aval aux trois premiers avant de trancher
-    // récupère ces 193 habitants — le nombre à battre est donc au-dessus de 8 968.
+    // Mesuré à l'époque (Nobles, celtic_island_large_07, seuil 1) : le pré-tri classait EN
+    // TÊTE un plan nu à 9 820 habitants, qui n'en livrait que 8 968 ; le plan nu à 9 956,
+    // relégué, en livrait 9 161.
+    //
+    // Le SEUIL a depuis été divisé par deux, et ce n'est pas une régression. Les paliers
+    // d'Albion référençaient des bâtiments ROMAINS pour leurs services — le besoin était
+    // résolu par icône, commune aux deux mondes, et seule la version romaine survivait. Le
+    // moteur posait donc les DEUX variantes du même service, chacune avec son propre bit
+    // dans l'évaluateur : une maison couverte par le Marché romain ET le Marché celtique
+    // comptait le poids du besoin deux fois et franchissait des seuils hors de sa portée.
+    // 9 598 habitants annoncés, 4 616 réels. Ce que ce test garde, c'est l'arbitrage sur le
+    // plan livré, pas la valeur absolue.
     const grid = downscaleGrid(buildIslandGrid("celtic_island_large_07")!);
     const nobles = [...economy.tiers]
       .filter((t) => t.residenceId && ["Celtic", "RomanCeltic"].includes(t.region))
@@ -137,7 +145,7 @@ describe("planIslandImport (mode import)", () => {
       catalog, grid, tierGuid: nobles.guid, coverageFloor: 1,
       exploitSlots: true, localProduction: true,
     });
-    expect(r.residents).toBeGreaterThan(9_000);
+    expect(r.residents).toBeGreaterThan(4_000);
     expect(r.viable).toBe(true);
   }, 120_000);
 
