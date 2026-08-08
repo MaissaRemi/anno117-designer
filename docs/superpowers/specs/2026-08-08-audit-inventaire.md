@@ -175,9 +175,33 @@ ni l'une ni l'autre des corrections ne vaut seule — c'est leur conjonction qui
 **Reste** : `roman_island_small_02` (10, des `Medici`) et `celtic_island_small_07` (1, une
 `Tour de guet`) — des institutions, pas des sources : autre mécanisme, à qualifier.
 
-**Non traité** : la vérification de l'entrepôt à portée de charrette. `planSlots` place déjà
-les entrepôts par distance-rue et signale les manques ; à reconfronter aux invariants
-maintenant que la route monte.
+### L'entrepôt à portée de charrette — vérifié
+
+Mesuré sur cinq îles, `exploitSlots` activé : **6 exploitations sur 31 sans débouché**.
+
+| île | exploitations | sans entrepôt | type |
+|---|---|---|---|
+| roman_island_medium_01 | 4 | 0 | — |
+| celtic_island_large_05 | 11 | 2 | marais ×1, montagne ×1 |
+| celtic_island_large_07 | 12 | 4 | marais ×4 |
+| celtic_island_medium_04 | 4 | 0 | — |
+| roman_island_small_01 | 0 | 0 | — |
+
+**Cinq des six sont des MARAIS, une seule montagne** — le correctif de la route de montagne a
+donc bien porté sur son terrain.
+
+**Ce n'est PAS un défaut d'accès routier.** `planSlots` sait creuser jusqu'à son propre slot :
+son prédicat de passage autorise les cases non utilisables au voisinage du slot visé
+(`nearSlot`). L'exploitation a sa route ; ce qui manque, c'est un **entrepôt** à moins de
+`transporterRange` en distance-rue. C'est un problème de placement d'entrepôt sur des slots
+éloignés, pas de viabilisation.
+
+Conséquence en jeu : ces exploitations sont posées, coûtent leur entretien et leur
+main-d'œuvre, et ne rapportent rien.
+
+Le manque était déjà signalé dans les trous du plan ; il devient une règle d'invariant nommée,
+`exploitation-sans-entrepot`, de gravité `suspect` — mesurable au balayage, avec sa
+répartition par type de slot.
 
 **Ancien état de la question :**
 
