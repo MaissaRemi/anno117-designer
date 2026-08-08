@@ -217,6 +217,41 @@ l'ÉNUMÉRATION elle-même.
 
 ---
 
+## packPlan — remis à égalité, puis sorti du portefeuille (2026-08-08)
+
+**Le soupçon de départ** était mince : `packPlan` déclare `plots?: HousePlot[]` et ne le
+remplit jamais, donc la cascade de main-d'œuvre est morte sur ses plans et son vivier vaut 0
+dans le départage. La mesure a trouvé bien pire.
+
+**Il ne posait aucune INSTITUTION et n'appliquait aucun GARDE-FOU DE VIABILITÉ.** Sur les
+paliers bas il annonçait donc trois à quatre fois la population des plans lattice — 21 414
+contre 4 980 sur `roman_island_medium_01` / Plébéiens — et se faisait éliminer par `better()`
+au tout PREMIER critère, un plan au bilan négatif perdant contre n'importe quel plan viable.
+Ses chiffres étaient la même illusion que les 67 862 habitants d'avant la contrainte de
+viabilité : des maisons que le jeu aurait punies.
+
+Les trois manques sont corrigés — institutions blanketées comme dans le lattice, `viableSubset`
+partagé (nouveau module `optimizer/viability.ts`), parcelles publiées.
+
+**À armes égales, il perd partout.** Neuf configurations :
+
+| | lattice | packPlan |
+|---|---|---|
+| medium_01 / Liberti | 2 947 | 2 418 |
+| medium_01 / Plébéiens | 4 980 | 4 896 |
+| large_07 / Tourbiers | 7 086 | 6 409 |
+| large_07 / Forgerons | 13 919 | 10 158 |
+| 5 îles au palier haut | — | jamais dans les trois finalistes |
+
+Les paliers bas sont précisément ceux où son houses-first était censé payer, faute de
+consommateur d'eau. Il coûtait **703 ms et 1 321 ms**, soit 7,4 % et 8,8 % du temps de CHAQUE
+plan, pour un candidat jamais retenu — il sort du portefeuille. Le moteur reste maintenu et
+testé ; le remettre tient en une ligne.
+
+Population inchangée après retrait : 17 266 et 9 844.
+
+---
+
 ## Reliquat d'hygiène : ✅ FAIT (2026-08-08)
 
 Les trois `avg = capByTier[g] / tierCounts[g]` (`islandPlan.ts`, raccord du comptoir,

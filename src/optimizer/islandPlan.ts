@@ -10,7 +10,6 @@ import { footprintSize } from "../engine/geometry";
 import { candidateRecipes } from "./recipes";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { hostableTiers, planLattice, type LatticeResult } from "./planLattice";
-import { planPacked, type PackResult } from "./packPlan";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, needsWater, planWater, type WaterConsumerReport, type WaterPlanResult } from "./waterPlan";
 import { connectKontor, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
@@ -299,7 +298,9 @@ export function planIslandImport(
   // 2/40 consommateurs — contre 30/30 pour le lattice écarté. Critère de sélection ≠
   // métrique livrée. On route donc l'eau et on applique la démotion À CHAQUE candidat
   // AVANT de trancher.
-  type Cand = LatticeResult | PackResult;
+  // Un seul moteur au portefeuille depuis que packPlan en est sorti (cf. plus bas) ; l'alias
+  // reste, il documente l'intention d'en accueillir plusieurs.
+  type Cand = LatticeResult;
   interface Evaluated {
     cand: Cand;
     /** services que ce candidat était censé poser (undefined = tous ceux du palier) */
@@ -527,18 +528,26 @@ export function planIslandImport(
     cands.push(ev);
     if (!pick || better(ev, pick)) pick = ev;
   }
-  // packPlan sur la meilleure recette : il ne gagne jamais sur un palier à eau (il pose ses
-  // maisons avant de router), mais il reste pertinent sur les paliers qui n'en consomment
-  // pas. Sur les très grandes îles il coûte un plan complet pour un résultat toujours
-  // perdant (mesuré −0,7 % et −1,7 %) : on s'en passe.
   onProgress?.(trials.length + 2, total);
-  if (landTiles <= 200_000) {
-    const serviceIds = bestTrial;
-    const packed = planPacked(planGrid, req.tierGuid, lookup, { coverageFloor, serviceIds, permits: req.permits });
-    const ev = evaluate(packed, serviceIds ? new Set(serviceIds) : null);
-    cands.push(ev);
-    if (!pick || better(ev, pick)) pick = ev;
-  }
+  // ═══ packPlan N'EST PLUS DU PORTEFEUILLE ═════════════════════════════════════════════
+  //
+  // Le moteur houses-first reste maintenu et testé (`packPlan.ts`), mais il ne concourt plus.
+  //
+  // Il partait avec deux handicaps qui rendaient toute comparaison absurde : il ne posait
+  // aucune INSTITUTION, et il n'appliquait aucun GARDE-FOU DE VIABILITÉ. Il annonçait donc
+  // 21 414 habitants là où les plans lattice en annonçaient 4 980 sur la même île, et se
+  // faisait éliminer par `better()` au tout premier critère — un plan au bilan négatif perd
+  // contre n'importe quel plan viable. Les deux manques ont été corrigés.
+  //
+  // À armes égales, il perd partout. Mesuré sur neuf configurations : jamais dans les trois
+  // finalistes sur cinq îles au palier haut, et dernier du vivier sur les quatre essais aux
+  // paliers bas — ceux-là mêmes où son houses-first était censé payer (2 418 contre 2 947 ;
+  // 4 896 contre 4 980 ; 6 409 contre 7 086 ; 10 158 contre 13 919).
+  //
+  // Il coûtait 703 ms sur roman_island_medium_01 et 1 321 ms sur celtic_island_large_07, soit
+  // 7,4 % et 8,8 % du temps de CHAQUE plan, pour un candidat qui n'a jamais été retenu.
+  // Le remettre au portefeuille tient en une ligne, et le raisonnement ci-dessus dit à quoi
+  // il faudrait s'attendre.
 
   /**
    * ═══ LE PLAN COMPLET D'UN CANDIDAT ═══════════════════════════════════════════════════

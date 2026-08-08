@@ -21,6 +21,12 @@ function streetMin(layout: Layout) {
 const requiredIds = [...new Set(tier.services.map((s) => s.building).filter((b): b is string => !!b))]
   .filter((b) => { const d = lookup(b); return !!d && !!(d.streetRange || d.radius?.range); });
 
+// Les tests de GÉOMÉTRIE désarment le garde-fou de viabilité : ils mesurent la capacité du
+// packer à caler des maisons et à les couvrir, pas l'économie de l'île. Avec le garde-fou et
+// sans institutions à lui opposer — ces appels n'en passent aucune —, le bilan de l'île part
+// négatif et les trois quarts du quartier sont rasés : on ne mesurerait plus le packer.
+const GEOM = { viabilityGate: false } as const;
+
 describe("planPacked (houses-first + min-cover)", () => {
   it("pose maisons + tous les types de service, avec routes", () => {
     const grid = makeGrid(100, 100);
@@ -32,15 +38,37 @@ describe("planPacked (houses-first + min-cover)", () => {
 
   it("couverture distance-rue quasi totale (>=90%)", () => {
     const grid = makeGrid(120, 120);
-    const r = planPacked(grid, tier.guid, lookup);
+    const r = planPacked(grid, tier.guid, lookup, GEOM);
     const layout: Layout = { grid, buildings: r.buildings, roads: r.roads, fields: [] };
     expect(streetMin(layout)).toBeGreaterThanOrEqual(90);
   });
 
   it("plus de surface => plus de maisons", () => {
-    const small = planPacked(makeGrid(80, 80), tier.guid, lookup).houses;
-    const big = planPacked(makeGrid(160, 160), tier.guid, lookup).houses;
+    const small = planPacked(makeGrid(80, 80), tier.guid, lookup, GEOM).houses;
+    const big = planPacked(makeGrid(160, 160), tier.guid, lookup, GEOM).houses;
     expect(big).toBeGreaterThan(small);
+  });
+
+  it("le garde-fou de viabilité s'applique, et il publie ses parcelles", () => {
+    // Régression : packPlan empilait ses maisons sans jamais vérifier le bilan de l'île. Il
+    // annonçait 21 414 habitants là où les plans lattice en annonçaient 4 980 sur la même île,
+    // puis se faisait éliminer par `better()` au tout PREMIER critère — un plan au bilan
+    // négatif perd contre n'importe quel plan viable. Sa densité, trois à quatre fois
+    // supérieure sur les paliers bas, partait à la poubelle à chaque plan d'île.
+    //
+    // Il ne publiait pas non plus ses parcelles, si bien que la cascade de main-d'œuvre était
+    // morte sur ses plans et que le vivier valait 0 dans le départage.
+    const grid = makeGrid(120, 120);
+    const gated = planPacked(grid, tier.guid, lookup);
+    const raw = planPacked(grid, tier.guid, lookup, GEOM);
+    expect(gated.houses).toBeLessThan(raw.houses);
+    expect(gated.plots?.length).toBe(gated.houses);
+    for (const p of gated.plots ?? []) {
+      expect(p.opts.length).toBeGreaterThan(0);
+      expect(p.opts.some((o) => o.guid === p.guid)).toBe(true);
+    }
+    // Σ paliers = maisons, et la population suit les parcelles retenues
+    expect(Object.values(gated.tierCounts).reduce((a, b) => a + b, 0)).toBe(gated.houses);
   });
 
   it("pas de chevauchement entre bâtiments", () => {
@@ -64,7 +92,7 @@ describe("planPacked (houses-first + min-cover)", () => {
     const blobs = [[W * 0.3, W * 0.4, W * 0.18], [W * 0.6, W * 0.35, W * 0.15], [W * 0.5, W * 0.65, W * 0.2]] as const;
     for (let y = 0; y < W; y++) for (let x = 0; x < W; x++)
       for (const [bx, by, br] of blobs) if ((x - bx) ** 2 + (y - by) ** 2 <= br * br) { grid.usable[y * W + x] = true; break; }
-    const pack = planPacked(grid, tier.guid, lookup);
+    const pack = planPacked(grid, tier.guid, lookup, GEOM);
     const svc = Object.values(pack.servicesPlaced).reduce((a, b) => a + b, 0);
     expect(pack.houses).toBeGreaterThan(150);
     expect(pack.houses / svc).toBeGreaterThanOrEqual(4);
