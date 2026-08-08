@@ -32,9 +32,18 @@ deux ne se comparent pas entre eux — seulement chacun à lui-même.
 La leçon commune : **le sol est la contrainte qui mord, pas la couverture.** Poser plus de
 services ne rapporte rien ; mieux CHOISIR entre les plans, et cesser d'en détruire, si.
 
-Cumul sur la session : `roman_island_medium_01` 16 660 → **17 266**,
-`celtic_island_large_07` 8 968 → **9 844** (+9,8 %), et **21 622** avec le balayage des
-paliers activé (+141 %).
+**Cumul sur la session, bancs en grille tuile, seuil 1, emplacements + production locale :**
+
+| île | ouverture | clôture | |
+|---|---|---|---|
+| `roman_island_medium_01` | 16 660 | **18 722** | **+12,4 %** |
+| `celtic_island_large_07` | 8 968 | **9 577** | **+6,8 %** |
+| `celtic_island_large_07`, balayage des paliers activé | — | **≈21 600** | ×2,3 |
+
+Le chiffre de celtic passe par 9 844 avant le levier 8, qui lui en retire 267 : c'était de la
+population FANTÔME, logée sur des lobes de terre qu'aucune route ne relie au comptoir. La
+même correction fait GAGNER 6,3 % à medium_01 — le moteur, cessant d'éparpiller ses services
+sur du sol inutilisable, les concentre là où il y a des maisons.
 
 ---
 
