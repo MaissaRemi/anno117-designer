@@ -8,6 +8,14 @@ Mesure de référence à l'ouverture, `roman_island_medium_01` en pleine résolu
 + production locale cochés : 22 901 habitants · 640/817 maisons au palier cible (78 %) ·
 couverture minimale 56 % · bilan positif (🔥 +455) · main-d'œuvre couverte · ~5 à 12 s.
 
+**Même configuration, à la clôture — mesurée dans l'interface, pas dans un banc : 24 550
+habitants · 677/883 au palier cible · couverture minimale 56 % · bilan positif (🔥 +645).**
+Soit **+7,2 %** sur la référence exacte, réglages par défaut, sans le balayage des paliers.
+
+⚠ Les bancs de ce document tournent sur la grille TUILE (`downscaleGrid`, 27 456 cases de
+terre sur medium_01) ; l'interface travaille en demi-tuiles (109 824 cases). Les chiffres des
+deux ne se comparent pas entre eux — seulement chacun à lui-même.
+
 **État, après mesure :**
 
 | levier | verdict | effet mesuré |
@@ -209,33 +217,46 @@ l'ÉNUMÉRATION elle-même.
 
 ---
 
-## Reliquat d'hygiène (+0,2, une heure)
+## Reliquat d'hygiène : ✅ FAIT (2026-08-08)
 
 Les trois `avg = capByTier[g] / tierCounts[g]` (`islandPlan.ts`, raccord du comptoir,
-emplacements, production locale) décrémentent des agrégats DÉRIVÉS en utilisant une moyenne
-comme substitut de la maison réelle : le résultat dépend de l'ordre des retraits, et le
-`Math.max(0, …)` masque la dérive. Or `WorkforceLedger.settle()` recalcule déjà ces mêmes
-agrégats depuis les parcelles survivantes, et les écrase dès qu'il y a une conversion.
+emplacements, production locale) décrémentaient des agrégats DÉRIVÉS en utilisant une moyenne
+comme substitut de la maison réelle : le résultat dépendait de l'ordre des retraits, et le
+`Math.max(0, …)` masquait la dérive.
 
-Correctif : ne rien décrémenter. Tenir un ensemble d'uid morts et dériver
-`tierCounts` / `capByTier` / `residents` / `houses` de l'ensemble survivant, en un seul endroit.
-C'est la dernière survivance du motif « accumulation de deltas sur un état qui bouge » corrigé
-partout ailleurs.
+Remplacés par `razeHouses(gone, extra)` et `recount()` : les agrégats se DÉRIVENT des maisons
+encore debout, avec la capacité EXACTE de chaque parcelle (`HousePlot.opts`), jamais par
+décrément. Dernière survivance du motif « accumulation de deltas sur un état qui bouge ».
+
+**Gain de population : aucun** — mesuré identique (17 266 / 9 844). Attendu : le règlement de
+main-d'œuvre écrasait déjà ces agrégats dès qu'il y avait une conversion, et il y en a une sur
+les deux îles. C'est un correctif de robustesse, pas d'optimisation ; il le devient dès qu'un
+plan n'a aucune conversion.
+
+Repli conservé pour `packPlan` : il déclare le champ `plots` mais ne le remplit jamais — ce qui
+est aussi la raison pour laquelle la cascade de main-d'œuvre ne fait rien sur ses plans.
 
 ---
 
-## Réserve d'efficacité, si le levier 1 coûte trop cher en temps
+## Réserve d'efficacité
 
 Mesuré : 92 % du temps d'un plan est dans les passes de `planLattice`, ~13 passes par plan.
-Le grand-livre entier pèse 1 %. Pistes, dans l'ordre :
+Le grand-livre entier pèse 1 %.
+
+**✅ Fait — caches de `needsModel` en tables creuses.** C'étaient des tableaux DENSES de
+`2^nBits` par palier pour 4 à 42 entrées réellement utilisées (0,26 % d'occupation), sous un
+garde-fou `MAX_CACHED_BITS = 20` qui coupait purement le cache au-delà. Passés en `Map` :
+falaise mémoire de ~42 Mo supprimée, coupure supprimée (un plan à plus de vingt types de
+service est désormais mémoïsé au lieu d'être brutalement lent), et une branche de moins.
+Mesuré dos à dos, **neutre en temps** : 9,2–10,0 s contre 9,6–9,8 s sur medium_01, 12,8–14,6 s
+contre 13,4 s sur celtic — soit du bruit machine.
+
+**Restant, par ordre décroissant :**
 
 - `settle()` rejoue un `run()` complet — 4 balayages de parcelles sur 17 — alors que le glouton
-  sort à la première itération quand la demande est déjà couverte.
+  sort à la première itération quand la demande est déjà couverte. ~1 % du plan.
 - Le recul sur pose est linéaire ; une dichotomie le ramènerait à ⌈log₂ n⌉ appels, mais c'est
   −69 % de 0,78 % : sans intérêt tant que le reste n'a pas bougé.
-- Les caches de `needsModel` sont des tableaux denses de `2^nBits` par palier pour 4 à 42
-  entrées réellement utilisées (0,26 % d'occupation). Passer en `Map` supprime aussi la falaise
-  mémoire latente à `MAX_CACHED_BITS = 20` (~42 Mo alloués d'un coup dans le worker).
 
 ---
 
@@ -256,3 +277,7 @@ Le grand-livre entier pèse 1 %. Pistes, dans l'ordre :
   goulot. Toute passe qui pose des services de plus repartira du même mur.
 - Ne jamais juger un plan sur la population BRUTE. Passer par `viableSubset` — le garde-fou de
   viabilité rase des maisons entières, et il rend négatif un gain qui semblait positif.
+- Ne pas lire la COUVERTURE MINIMALE comme une note de qualité. Elle est anti-corrélée à
+  l'objectif : sur celtic, le meilleur plan mesuré a 71 % de couverture contre 77 % au plan
+  battu. Une recette maigre couvre moins et loge bien plus. L'interface le dit désormais en
+  infobulle ; le chiffre qui compte est celui des habitants.

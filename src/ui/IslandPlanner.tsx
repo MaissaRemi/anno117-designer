@@ -262,7 +262,10 @@ export function IslandPlanner({ onClose }: Props) {
               <div className="muted" style={{ fontSize: "0.85em" }}>
                 {[...tiers].filter((t) => result.tierCounts[t.guid]).sort((a, b) => b.capacityDefault - a.capacityDefault)
                   .map((t) => `${t.name} ${result.tierCounts[t.guid].toLocaleString("fr")}`).join(" · ")}
-                {" · "}couverture min {result.coverageMin}%
+                {" · "}
+                <span title="Part des maisons desservies par le service le moins bien réparti. C'est un descriptif du plan, PAS une note : mesuré, le meilleur plan a souvent MOINS de couverture — une recette maigre laisse la place à bien plus de maisons, qui logent bien plus de monde. Le chiffre qui compte est celui des habitants.">
+                  couverture min {result.coverageMin}% <span className="muted">ⓘ</span>
+                </span>
               </div>
             </div>
             <div style={{ marginBottom: 6 }}>

@@ -574,27 +574,68 @@ export function planIslandImport(
     let removedHouses = 0;
     const tierCounts: Record<string, number> = { ...chosen.tierCounts };
     const capByTier: Record<string, number> = { ...chosen.capByTier };
+    const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
+    /** Capacité RÉELLE de chaque parcelle, à son palier retenu. */
+    const capOfPlot = new Map<string, number>();
+    for (const pl of dist.plots ?? []) {
+      capOfPlot.set(pl.uid, pl.opts.find((op) => op.guid === pl.guid)?.cap ?? 0);
+    }
+
+    /**
+     * AGRÉGATS DÉRIVÉS des maisons encore debout — jamais décrémentés.
+     *
+     * Trois endroits rasaient des maisons (raccord du comptoir, emplacements, ateliers) et
+     * retiraient de `capByTier` la capacité MOYENNE du palier, faute de connaître celle de la
+     * maison réelle. Deux maisons du même palier n'hébergent pourtant pas autant — celle qui
+     * voit un service de plus loge davantage. Le résultat dépendait donc de l'ORDRE des
+     * retraits, et le `Math.max(0, …)` masquait la dérive au lieu de la signaler. Dernière
+     * survivance du motif « accumulation de deltas sur un état qui bouge », corrigé partout
+     * ailleurs — cf. `WorkforceLedger.settle()`, qui recalcule ces mêmes agrégats depuis les
+     * parcelles survivantes et les écrase dès qu'il y a une conversion.
+     *
+     * Rend `false` quand le candidat ne publie pas ses parcelles : `packPlan` déclare le
+     * champ mais ne le remplit jamais. L'appelant retombe alors sur la moyenne, faute de
+     * mieux — et c'est aussi pourquoi la cascade de main-d'œuvre ne fait rien sur ses plans.
+     */
+    const recount = (): boolean => {
+      if (!capOfPlot.size) return false;
+      for (const k of Object.keys(tierCounts)) delete tierCounts[k];
+      for (const k of Object.keys(capByTier)) delete capByTier[k];
+      for (const b of buildings) {
+        const g = tierOfRes.get(b.defId);
+        if (!g) continue;
+        tierCounts[g] = (tierCounts[g] ?? 0) + 1;
+        capByTier[g] = (capByTier[g] ?? 0) + (capOfPlot.get(b.uid) ?? 0);
+      }
+      return true;
+    };
+
+    /**
+     * Retire des maisons du plan et remet les compteurs d'aplomb. `extra` entre au même
+     * moment : ce qui rase pose en général quelque chose à la place.
+     */
+    const razeHouses = (gone: ReadonlySet<string>, extra: PlacedBuilding[] = []) => {
+      const fallback = !capOfPlot.size;
+      for (const b of buildings) {
+        if (!gone.has(b.uid)) continue;
+        const g = tierOfRes.get(b.defId);
+        if (!g) continue;
+        removedHouses++;
+        if (!fallback || !tierCounts[g]) continue;
+        const avg = (capByTier[g] || 0) / tierCounts[g];
+        tierCounts[g]--;
+        capByTier[g] = Math.max(0, (capByTier[g] || 0) - avg);
+      }
+      const keep = buildings.filter((b) => !gone.has(b.uid));
+      buildings.length = 0;
+      buildings.push(...keep, ...extra);
+      if (!fallback) recount();
+    };
     if (kontor) {
       const kp = connectKontor(req.grid, kontor, buildings, roads, lookup, (id) => residenceIds.has(id));
       if (kp.connected) {
         // les maisons rasées par le stub sortent du décompte (et de leur palier)
-        const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
-        const gone = new Set(kp.removed);
-        if (gone.size) {
-          for (const b of buildings) {
-            if (!gone.has(b.uid)) continue;
-            const g = tierOfRes.get(b.defId);
-            if (g && tierCounts[g]) {
-              const avg = (capByTier[g] || 0) / tierCounts[g];
-              tierCounts[g]--;
-              capByTier[g] = Math.max(0, (capByTier[g] || 0) - avg);
-              removedHouses++;
-            }
-          }
-        }
-        const keep = buildings.filter((b) => !gone.has(b.uid));
-        buildings.length = 0;
-        buildings.push(...keep, kp.building);
+        razeHouses(new Set(kp.removed), [kp.building]);
         const seen = new Set(roads.map((r) => `${r.x},${r.y}`));
         for (const r of kp.roads) if (!seen.has(`${r.x},${r.y}`)) { seen.add(`${r.x},${r.y}`); roads.push(r); }
       } else {
@@ -631,23 +672,7 @@ export function planIslandImport(
         (id) => residenceIds.has(id),
         { fertilities: req.islandFertilities, region: islandRegion, workforce: ledger },
       );
-      if (sp.removed.length) {
-        const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
-        const gone = new Set(sp.removed);
-        for (const b of buildings) {
-          if (!gone.has(b.uid)) continue;
-          const g = tierOfRes.get(b.defId);
-          if (g && tierCounts[g]) {
-            const avg = (capByTier[g] || 0) / tierCounts[g];
-            tierCounts[g]--;
-            capByTier[g] = Math.max(0, (capByTier[g] || 0) - avg);
-            removedHouses++;
-          }
-        }
-        const keep = buildings.filter((b) => !gone.has(b.uid));
-        buildings.length = 0;
-        buildings.push(...keep);
-      }
+      if (sp.removed.length) razeHouses(new Set(sp.removed));
       buildings.push(...sp.buildings);
       const seenR = new Set(roads.map((r) => `${r.x},${r.y}`));
       for (const r of sp.roads) if (!seenR.has(`${r.x},${r.y}`)) { seenR.add(`${r.x},${r.y}`); roads.push(r); }
@@ -832,21 +857,7 @@ export function planIslandImport(
       lp.netPerMin = netOf(kept);
 
       if (lp.buildings.length) {
-        const gone = new Set(lp.removed);
-        const tierOfRes = new Map(chain.filter((t) => t.residenceId).map((t) => [t.residenceId!, t.guid]));
-        for (const b of buildings) {
-          if (!gone.has(b.uid)) continue;
-          const g = tierOfRes.get(b.defId);
-          if (g && tierCounts[g]) {
-            const avg = (capByTier[g] || 0) / tierCounts[g];
-            tierCounts[g]--;
-            capByTier[g] = Math.max(0, (capByTier[g] || 0) - avg);
-            removedHouses++;
-          }
-        }
-        const keep = buildings.filter((b) => !gone.has(b.uid));
-        buildings.length = 0;
-        buildings.push(...keep, ...lp.buildings);
+        razeHouses(new Set(lp.removed), lp.buildings);
         workshops = lp.workshops;
         // les maisons rasées sortent des compteurs. Le manifeste, lui, a été calculé AVANT
         // la démolition : il surestime donc légèrement la demande, ce qui est conservateur —
