@@ -203,6 +203,29 @@ Le manque était déjà signalé dans les trous du plan ; il devient une règle 
 `exploitation-sans-entrepot`, de gravité `suspect` — mesurable au balayage, avec sa
 répartition par type de slot.
 
+#### Tentative de sauvetage — RÉFUTÉE
+
+Le glouton ne cherche des positions d'entrepôt qu'ADJACENTES aux routes déjà dans la portée de
+charrette, et `fitsWh` exige du sol constructible. J'ai ajouté un rattrapage : repartir de
+chaque exploitation abandonnée, avancer en distance-rue dans la limite de sa portée en creusant
+au besoin, et s'arrêter au premier emplacement où l'entrepôt tient.
+
+**Aucun effet** : 2 et 4 non desservies, identique. La cause est plus dure que le placement —
+autour d'un marais, les cases sont non constructibles, donc le parcours ne peut pas avancer, et
+le sol constructible est de toute façon **au-delà de la portée de charrette**. Retiré.
+
+#### La vraie question est en amont
+
+Ces exploitations ne sont pas mal servies, elles sont **inservables** : aucun entrepôt ne peut
+tenir dans leur rayon. Les poser quand même coûte leur entretien et leur main-d'œuvre pour zéro
+production.
+
+La correction n'est donc pas d'améliorer le placement d'entrepôt, mais de **ne pas exploiter un
+slot qu'on ne peut pas desservir** — décider avant de poser, ou retirer après coup. C'est un
+changement de comportement du plan, pas de géométrie, et il faut le mesurer sur la population
+et le bilan avant de l'adopter : moins d'exploitations, c'est aussi moins de main-d'œuvre
+mobilisée et moins d'entretien.
+
 **Ancien état de la question :**
 
 1. **Amener la route jusqu'aux slots montagne.** `blockMountains` retire la zone montagne du
