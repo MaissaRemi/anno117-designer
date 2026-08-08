@@ -636,6 +636,66 @@ export function planLattice(
     .map((tc, i) => ({ i, id: tc.def.id, fx: effectOf(tc.def.id) }))
     .filter((e) => instIds.includes(e.id) && !!e.fx);
 
+  /** Une maison candidate, réduite à ce dont la sélection sous contrainte a besoin. */
+  interface Weighed {
+    cap: number;
+    /** rang déterministe pour départager à contribution égale (= y·W + x) */
+    key: number;
+    attrs: Readonly<Record<string, number>>;
+  }
+
+  /**
+   * ═══ SÉLECTION SOUS CONTRAINTE DE VIABILITÉ ═══════════════════════════════════════════
+   *
+   * Une maison dont le Bonheur, l'Argent, la Santé ou la Sécurité incendie passe sous zéro
+   * déclenche émeutes, incendies et maladies. Le jugement porte sur le TOTAL de l'île, pas
+   * sur la pire maison : un quartier de bordure en déficit compensé par le cœur ne pose
+   * aucun problème.
+   *
+   * Difficulté : le malus de RANG DE CITÉ dépend de la population totale, qui dépend
+   * elle-même des maisons retenues. On ne résout pas ça par itération sur les paliers (elle
+   * oscille) mais en retirant par lots les maisons qui contribuent le plus négativement à
+   * l'attribut limitant — retirer baisse la population, donc le malus : la boucle converge.
+   *
+   * Isolé du corps de `placeHouses` parce que c'est LA définition de « ce que ce plan
+   * livre » : toute passe qui prétendrait juger un plan doit passer par ici. Mesuré lors de
+   * la tentative de réparation de seuil (cf. PLAN-optimisation-arbitrage.md) : une passe qui
+   * jugeait sur la population BRUTE acceptait des poses que ce garde-fou punissait ensuite
+   * en rasant des maisons entières, soit −1,2 % sur celtic_island_large_07 pour un gain
+   * annoncé positif.
+   */
+  const viableSubset = <T extends Weighed>(set: T[]): T[] => {
+    if (!viabilityGate) return set;
+    const ladder = cityStatusLadder(tier.region);
+    const rankAt = (pop: number): Record<string, number> => {
+      let a: Record<string, number> = {};
+      for (const st of ladder) { if (pop < st.population) break; a = st.attrs; }
+      return a;
+    };
+    // On retire par lots (2 %) pour ne pas refaire n² tours sur les grandes îles.
+    let keep: T[] = set;
+    for (let guard = 0; guard < 400 && keep.length; guard++) {
+      let pop = 0;
+      for (const p of keep) pop += p.cap;
+      const rank = rankAt(pop);
+      // Bilan de l'ÎLE : Σ des attributs des maisons retenues, plus le malus de rang appliqué
+      // à chacune. L'attribut le plus déficitaire commande le retrait.
+      let binding: string | null = null, worst = 0;
+      for (const k of VITAL_ATTRS) {
+        let t = keep.length * (rank[k] ?? 0);
+        for (const p of keep) t += p.attrs[k] ?? 0;
+        if (t < 0 && (binding === null || t < worst)) { binding = k; worst = t; }
+      }
+      if (!binding) break;
+      const b = binding;
+      // tri déterministe : contribution croissante, puis position — la pire d'abord.
+      // Le malus de rang est le même pour toutes, il s'annule dans la comparaison.
+      const sorted = [...keep].sort((p, q) => ((p.attrs[b] ?? 0) - (q.attrs[b] ?? 0)) || (p.key - q.key));
+      keep = sorted.slice(Math.max(1, Math.ceil(keep.length * 0.02)));
+    }
+    return keep;
+  };
+
   const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsSum" | "plots"> => {
     let houses = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
     const tierCounts: Record<string, number> = {};
@@ -643,7 +703,7 @@ export function planLattice(
     const attrsSum: Record<string, number> = {};
     for (const k of VITAL_ATTRS) attrsSum[k] = 0;
     const placed: {
-      b: PlacedBuilding; cap: number; money: number; guid: string; attrs: Record<string, number>;
+      b: PlacedBuilding; key: number; cap: number; money: number; guid: string; attrs: Record<string, number>;
       /** masque des services qui couvrent cette parcelle — sert à réévaluer la maison à un
        *  palier INFÉRIEUR lors de la cascade de main-d'œuvre */
       mask: number;
@@ -674,65 +734,23 @@ export function planLattice(
       const b: PlacedBuilding = { uid: uid("lat"), defId, x, y, rotation: 0, locked: false };
       buildings.push(b);
       markAdj(x, y, rw, rh);
-      placed.push({ b, cap: reach.cap, money: reach.money, guid: reach.tier.guid, attrs, mask: coveredMask, inst });
+      placed.push({ b, key: o, cap: reach.cap, money: reach.money, guid: reach.tier.guid, attrs, mask: coveredMask, inst });
     }
 
-    // ═══ SÉLECTION SOUS CONTRAINTE DE VIABILITÉ ═══════════════════════════════════════
-    // Une maison dont le Bonheur, l'Argent, la Santé ou la Sécurité incendie passe sous
-    // zéro déclenche émeutes, incendies et maladies. On ne la pose donc pas.
-    //
-    // Difficulté : le malus de RANG DE CITÉ dépend de la population totale, qui dépend
-    // elle-même des maisons retenues. On ne résout pas ça par itération (elle oscille) mais
-    // en balayant les paliers de rang, qui sont en nombre fini : pour chaque palier on
-    // calcule la population des maisons qui tiendraient sous CE malus, et on retient le
-    // plus haut palier COHÉRENT — celui dont la population retombe bien dans sa tranche.
-    let keep: typeof placed = placed;
-    if (viabilityGate) {
-      const ladder = cityStatusLadder(tier.region);
-      const rankAt = (pop: number): Record<string, number> => {
-        let a: Record<string, number> = {};
-        for (const st of ladder) { if (pop < st.population) break; a = st.attrs; }
-        return a;
-      };
-      // Bilan de l'ÎLE : Σ des attributs des maisons retenues, plus le malus de rang appliqué
-      // à chacune. Tant qu'un attribut vital est déficitaire, on retire les maisons qui y
-      // contribuent le plus négativement — ce sont les bordures mal desservies. Retirer
-      // baisse aussi la population, donc le malus de rang : la boucle converge.
-      // On retire par lots (2 %) pour ne pas refaire n² tours sur les grandes îles.
-      const totals = (set: typeof placed) => {
-        const pop = set.reduce((a, p) => a + p.cap, 0);
-        const rank = rankAt(pop);
-        const t: Record<string, number> = {};
-        for (const k of VITAL_ATTRS) {
-          t[k] = set.reduce((a, p) => a + (p.attrs[k] ?? 0), 0) + set.length * (rank[k] ?? 0);
-        }
-        return { t, rank };
-      };
-      for (let guard = 0; guard < 400 && keep.length; guard++) {
-        const { t, rank } = totals(keep);
-        let binding: string | null = null;
-        for (const k of VITAL_ATTRS) if (t[k] < 0 && (binding === null || t[k] < t[binding])) binding = k;
-        if (!binding) break;
-        const b = binding;
-        // tri déterministe : contribution croissante, puis position — la pire d'abord
-        const sorted = [...keep].sort((p, q) =>
-          ((p.attrs[b] ?? 0) + (rank[b] ?? 0)) - ((q.attrs[b] ?? 0) + (rank[b] ?? 0))
-          || p.b.y - q.b.y || p.b.x - q.b.x);
-        const drop = Math.max(1, Math.ceil(keep.length * 0.02));
-        keep = sorted.slice(drop);
-      }
-      if (keep.length !== placed.length) {
-        const gone = new Set(placed.filter((p) => !keep.includes(p)).map((p) => p.b.uid));
-        const kept = buildings.filter((b) => !gone.has(b.uid));
-        buildings.length = 0;
-        buildings.push(...kept);
-        // les emplacements libérés redeviennent constructibles pour l'élagage des routes
-        for (const p of placed) {
-          if (!gone.has(p.b.uid)) continue;
-          for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) {
-            const c = (p.b.y + j) * W + (p.b.x + i);
-            if (grid.usable[c]) occ[c] = 0;
-          }
+    // Garde-fou de viabilité (cf. `viableSubset`) : les maisons écartées sont démolies.
+    const keep = viableSubset(placed);
+    if (keep.length !== placed.length) {
+      const alive = new Set(keep.map((p) => p.b.uid));
+      const gone = new Set(placed.filter((p) => !alive.has(p.b.uid)).map((p) => p.b.uid));
+      const kept = buildings.filter((b) => !gone.has(b.uid));
+      buildings.length = 0;
+      buildings.push(...kept);
+      // les emplacements libérés redeviennent constructibles pour l'élagage des routes
+      for (const p of placed) {
+        if (!gone.has(p.b.uid)) continue;
+        for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) {
+          const c = (p.b.y + j) * W + (p.b.x + i);
+          if (grid.usable[c]) occ[c] = 0;
         }
       }
     }
