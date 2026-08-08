@@ -70,15 +70,22 @@ describe("production finale sur l'île", () => {
     expect(spent).toBe(true);
   });
 
-  it("les maisons rasées sont décomptées de la population", () => {
-    const lost = on.workshops.reduce((a, w) => a + w.razed.length, 0);
-    // `lost` peut être nul sur une île où le terrain libre suffit — l'assertion porte sur la
-    // COMPTABILITÉ, pas sur l'existence de démolitions.
-    if (lost > 0) expect(on.houses).toBeLessThan(off.houses);
-    expect(on.residents).toBeLessThan(off.residents);
+  it("les maisons rasées sortent VRAIMENT du plan et des compteurs", () => {
+    // L'assertion d'origine était « activer la production locale fait BAISSER la population ».
+    // Elle ne tient plus, et c'est un progrès : depuis que le plan réserve le sol des ateliers
+    // et les y épingle, le quartier se bâtit autour au lieu d'être démoli, et l'option ne coûte
+    // plus rien — mesuré 25 001 habitants avec, contre 24 953 sans.
+    //
+    // Ce qui doit rester vrai, c'est la COMPTABILITÉ : une maison rasée disparaît du plan et
+    // de son palier. On la vérifie donc directement, dans le plan lui-même.
+    const razed = new Set(on.workshops.flatMap((w) => w.razed));
+    const uids = new Set(on.buildings.map((b) => b.uid));
+    for (const u of razed) expect(uids.has(u)).toBe(false);
+    expect(Object.values(on.tierCounts).reduce((a, b) => a + b, 0)).toBe(on.houses);
+    expect(on.residents).toBeGreaterThan(0);
   });
 
-  it("les ateliers cherchent le TERRAIN LIBRE avant de raser", () => {
+  it("les ateliers cherchent le TERRAIN LIBRE avant de raser, et le plan leur en RÉSERVE", () => {
     // Régression : la spirale de placement partait du barycentre des maisons et retenait la
     // PREMIÈRE position tenable — or « tenable » incluait les cases occupées par des
     // résidences, qu'elle rasait. Le moteur bulldozait donc le centre-ville plutôt que
@@ -91,6 +98,13 @@ describe("production finale sur l'île", () => {
     //
     // Le seuil porte sur le RATIO, pas sur un compte absolu : le nombre d'ateliers posés
     // dépend du budget, mais une copie qui trouve du vide n'emporte aucune maison.
+    //
+    // Seconde étape, mesuree sur roman_island_medium_01 en plan complet : chercher le vide ne
+    // suffit pas la ou il en manque. Le plan rejoue alors sa recette gagnante sur une grille
+    // ou le sol des ateliers est RETIRE du masque constructible, et les y EPINGLE — le
+    // quartier se batit autour au lieu d'etre demoli. 70 maisons rasees -> 7, et 17 266 ->
+    // 17 608 habitants. Sans l'epinglage les ateliers se reinstallent ailleurs et rasent de
+    // nouveau : la reservation seule ne ramenait les demolitions qu'a 59, gain nul.
     const lost = on.workshops.reduce((a, w) => a + w.razed.length, 0);
     const copies = on.workshops.reduce((a, w) => a + w.copies, 0);
     expect(copies).toBeGreaterThan(0);

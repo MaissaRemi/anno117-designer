@@ -25,6 +25,8 @@ deux ne se comparent pas entre eux — seulement chacun à lui-même.
 | 3 — terrain libre avant démolition | ✅ fait | **+3,6 %** sur medium_01, **+7,5 %** sur celtic |
 | 4 — balayage du palier cible | ✅ fait, en option | **+120 %** sur celtic (Nobles → Aldermen), 0 % sur medium_01 |
 | 5 — élargir le budget de recettes | ❌ réfuté | plan IDENTIQUE à 7, 11 et 15 recettes, +58 % de temps |
+| 6 — les ateliers réservent leur sol | ✅ fait | **+2,0 %** sur medium_01, 70 maisons rasées → 7 |
+| 7 — packPlan à armes égales | ✅ fait, puis sorti du portefeuille | perd les 9 configurations ; −7,4 à −8,8 % de temps |
 
 La leçon commune : **le sol est la contrainte qui mord, pas la couverture.** Poser plus de
 services ne rapporte rien ; mieux CHOISIR entre les plans, et cesser d'en détruire, si.
@@ -214,6 +216,38 @@ Plan **strictement identique** dans les six cas, pour +58 % de temps. Les recett
 la septième ne gagnent jamais : `candidateRecipes` les émet déjà par ordre de promesse
 décroissante, et la queue de distribution est plate. Ne pas y revenir sans changer
 l'ÉNUMÉRATION elle-même.
+
+---
+
+## Levier 6 — LES ATELIERS RÉSERVENT LEUR SOL : ✅ FAIT (2026-08-08)
+
+Suite du levier 3. Chercher le terrain libre d'abord règle le problème là où il y a du vide ;
+sur `roman_island_medium_01` il s'épuise, et 70 maisons tombaient encore. Une emprise qui ne
+mord qu'UNE case d'une résidence emporte la maison entière, ses neuf cases et ses habitants :
+250 cases d'atelier détruisaient plus de 600 cases de logement.
+
+Le comptoir résout ce problème depuis longtemps, en RÉSERVANT son emprise avant que les
+moteurs bâtissent. Même remède, mais les emprises ne sont connues qu'après coup : la recette
+gagnante est rejouée sur une grille où le sol des ateliers du premier plan est retiré du
+masque constructible, puis les ateliers y sont **ÉPINGLÉS** (`LocalProdOptions.preferred`).
+
+| | rasées | maisons | habitants |
+|---|---|---|---|
+| avant | 70 | 585 | 17 266 |
+| réservation seule | 59 | 585 | 17 266 |
+| réservation + épinglage | **7** | **628** | **17 608** |
+
+**L'épinglage n'est pas un détail : sans lui le gain est nul.** Les ateliers de la seconde
+passe se réinstallent où bon leur semble et rasent de nouveau — la réservation seule ne
+ramenait les démolitions que de 70 à 59, pour zéro habitant.
+
+La passe est sautée quand le premier plan n'a rasé aucune maison : elle ne changerait que le
+sol déjà occupé, pour le prix d'une passe complète (mesuré +6 % de temps sur celtic, où la
+recherche de terrain libre suffit à tout loger).
+
+Effet de bord notable : **activer la production locale ne coûte plus de population.** Mesuré
+25 001 habitants avec, contre 24 953 sans. Un test qui affirmait l'inverse portait sur un coût
+qui n'existe plus ; il vérifie désormais la comptabilité, qui, elle, doit rester vraie.
 
 ---
 
