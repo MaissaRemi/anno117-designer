@@ -777,10 +777,16 @@ export function planIslandImport(
     // `inactiveBuildings` = consommateurs d'eau NON raccordés (inactifs en jeu) → une maison
     // servie uniquement par une copie sèche n'est PAS comptée couverte (corrige l'optimisme
     // du raccordement partiel : le gate eau par-def ne voyait que le cas 0-raccordé).
-    const inactiveWater = new Set(water.consumers.filter((c) => !c.connected).map((c) => c.uid));
+    // Un service SANS ACCÈS AU COMPTOIR est tout aussi mort qu'un service sec : les maisons
+    // qu'il couvre ne le sont pas en jeu. Il rejoint donc la même liste — sans quoi la
+    // couverture affichée créditait des maisons d'un service qui ne tourne pas.
+    const inactive = new Set([
+      ...water.consumers.filter((c) => !c.connected).map((c) => c.uid),
+      ...strandedSvc.map((b) => b.uid),
+    ]);
     const coverage = analyzeCoverage(layout, lookup, {
       ...(relevant ? { requiredServices: relevant } : {}),
-      inactiveBuildings: inactiveWater,
+      inactiveBuildings: inactive,
     });
     const analyzable = coverage.services.filter((s) => s.hasRadius && (!relevant || relevant.has(s.serviceId)));
     const coverageMin = analyzable.length ? Math.min(...analyzable.map((s) => s.pct)) : 100;
