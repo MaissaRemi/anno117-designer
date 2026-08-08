@@ -4,6 +4,7 @@ import { economy, goodName, priceOf } from "../economy/economy";
 import type { DefLookup } from "../engine/rules";
 import type { BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import { MOUNTAIN_BLOCK_RADIUS } from "./waterPlan";
+import { pickWarehouseDef } from "./kontor";
 
 /**
  * EXPLOITATION DES EMPLACEMENTS DE TERRAIN LAISSÉS LIBRES.
@@ -26,7 +27,6 @@ import { MOUNTAIN_BLOCK_RADIUS } from "./waterPlan";
  * gloutonne, et raccorde tout au réseau routier.
  */
 
-const WAREHOUSE_TPL = "Warehouse";
 const DEFAULT_RANGE = 30;
 /** Rayon de recherche autour d'un slot, aligné sur la zone montagne réservée. */
 const PLACE_RADIUS = MOUNTAIN_BLOCK_RADIUS + 2;
@@ -292,8 +292,7 @@ export function planSlots(
 
   // --- 3. entrepôts : couverture en DISTANCE-RUE ---------------------------------------
   // Un producteur n'expédie que si un entrepôt est à ≤ transporterRange le long des routes.
-  const whDef = catalog.find((d) => d.template === WAREHOUSE_TPL && d.region === opts.region)
-    ?? catalog.find((d) => d.template === WAREHOUSE_TPL);
+  const whDef = pickWarehouseDef(catalog, opts.region);
   if (!whDef) {
     gaps.push("Aucun entrepôt au catalogue : les exploitations ne peuvent pas expédier");
     return out;

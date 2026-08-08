@@ -186,12 +186,47 @@ export function keepMainLandmass(grid: GridShape, seed?: { x: number; y: number 
     }
     if (size > bestSize) { bestSize = size; best = id; }
   }
-  if (seedIdx >= 0 && comp[seedIdx] >= 0) seedComp = comp[seedIdx];
+  // L'ancre du comptoir a ete RETIREE du masque par `reserveKontor` : la lire telle quelle
+  // rend -1, et l'on retombait silencieusement sur la plus grande composante — qui n'est pas
+  // forcement celle du comptoir. On cherche donc la case utilisable la plus proche.
+  if (seedIdx >= 0) {
+    const sx = seedIdx % W, sy = (seedIdx / W) | 0;
+    outer: for (let rad = 0; rad <= 16 && seedComp < 0; rad++) {
+      for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== rad) continue;
+        const x = sx + dx, y = sy + dy;
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const c = y * W + x;
+        if (comp[c] >= 0) { seedComp = comp[c]; break outer; }
+      }
+    }
+  }
   const keep = seedComp >= 0 ? seedComp : best;
   if (keep < 0 || nComp <= 1) return grid;
   const usable = grid.usable.slice();
   for (let i = 0; i < N; i++) if (usable[i] && comp[i] !== keep) usable[i] = false;
   return { ...grid, usable };
+}
+
+/**
+ * ENTREPÔT DE L'ÎLE, du bon monde.
+ *
+ * Albion ne nomme pas son entrepôt comme le Latium : ses trois niveaux portent le template
+ * `Warehouse_Marsh` (« Warehouse Roman Celtic 01/02/03 ») là où le Latium utilise `Warehouse`.
+ * Les deux appelants ne cherchaient que `Warehouse` : ils ne trouvaient donc JAMAIS la version
+ * celtique et retombaient sur l'entrepôt romain, non constructible sur Albion. `prodPlan`
+ * faisait pire encore, en codant `region === "Roman"` en dur quelle que soit l'île.
+ *
+ * Détecté par l'invariant `monde-unique` : « 11 bâtiment(s) d'un autre monde que l'île
+ * (Entrepôt) » sur celtic_island_large_07, avec exploitations et production locale.
+ */
+const WAREHOUSE_TPLS = ["Warehouse", "Warehouse_Marsh"];
+
+export function pickWarehouseDef(catalog: BuildingDef[], region?: string): BuildingDef | undefined {
+  const all = catalog.filter((d) => WAREHOUSE_TPLS.includes(d.template ?? ""));
+  // niveau 1 d'abord : le plus petit GUID du monde voulu
+  const mine = all.filter((d) => !region || d.region === region).sort((a, b) => (a.guid ?? 0) - (b.guid ?? 0));
+  return mine[0] ?? all.sort((a, b) => (a.guid ?? 0) - (b.guid ?? 0))[0];
 }
 
 export interface KontorPlacement {

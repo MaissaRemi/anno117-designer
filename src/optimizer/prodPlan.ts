@@ -8,6 +8,7 @@ import { anneal } from "./anneal";
 import { DEFAULT_WEIGHTS } from "./types";
 import { blockMountains, MOUNTAIN_BLOCK_RADIUS } from "./waterPlan";
 import { regionOfIsland } from "../data/islands";
+import { pickWarehouseDef } from "./kontor";
 
 // zone posable/traversable autour d'un slot montagne (alignée sur waterPlan)
 const MOUNTAIN_ZONE = MOUNTAIN_BLOCK_RADIUS + 2;
@@ -49,7 +50,6 @@ export interface ProdPlanResult {
   gaps: string[];
 }
 
-const WAREHOUSE_TPL = "Warehouse";
 const MINE_TPL = "SlotFactoryBuilding7";
 const DEFAULT_RANGE = 30;
 
@@ -103,8 +103,7 @@ export function planIslandProduction(
   // Les ENTREPÔTS sont injectés dans le recuit (posés DANS les étagères, accès
   // route garanti) — les caser après coup échouait sur les zones denses en champs.
   onProgress?.(2, 4);
-  const whDef = catalog.find((d) => d.template === WAREHOUSE_TPL && d.region === "Roman")
-    ?? catalog.find((d) => d.template === WAREHOUSE_TPL);
+  const whDef = pickWarehouseDef(catalog, regionOfIsland(grid.islandId));
   const prodCount = sol.items.reduce((s, it) => s + (lookup(it.defId)?.production ? it.qty : 0), 0);
   const annealItems = whDef && prodCount
     ? [...others, { defId: whDef.id, qty: Math.ceil(prodCount / 8) + 1 }]

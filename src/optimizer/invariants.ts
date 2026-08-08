@@ -130,11 +130,20 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
     const d = defOf(b.defId);
     if (!d) continue;
     const fp = footprintSize(d, b.rotation);
+    // TROIS familles se posent legitimement hors du masque de TERRE, et les condamner serait
+    // une erreur de la regle, pas du moteur :
+    //  - les batiments PORTUAIRES (`placement: "water"`), sur l'eau ou la cote ;
+    //  - les exploitations d'EMPLACEMENT (`slotType`) — mine, carriere, marais : la montagne
+    //    et la riviere sont exclues du masque de terre, les slots etant listes a part ;
+    //  - la SOURCE D'AQUEDUC, posee sur un slot montagne pour la meme raison.
+    // Premiere version de cette regle : 42 iles sur 55 « en faute », toutes a tort. C'est
+    // exactement le faux positif que la confirmation par lecture doit intercepter.
+    const offGridOk = d.placement === "water" || !!d.slotType || d.template === "AqueductProducer";
     for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
       const x = b.x + i, y = b.y + j;
       if (x < 0 || y < 0 || x >= W || y >= H) { offLand++; continue; }
       const c = y * W + x;
-      if (!grid.usable[c]) offLand++;
+      if (!grid.usable[c] && !offGridOk) offLand++;
       if (occ.has(c)) overlaps++; else occ.set(c, b.uid);
     }
   }
@@ -151,10 +160,20 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
       const d = defOf(b.defId);
       return !!d && d.needsRoad && !d.roadRoot && !roadConnected(layout, lookup, b, rootSet);
     });
-    if (cut.length) {
-      const names = [...new Set(cut.map((b) => defOf(b.defId)?.name ?? b.defId))].slice(0, 3);
-      add("acces-comptoir", "faute",
-        `${cut.length} bâtiment(s) sans accès au réseau du comptoir (${names.join(", ")})`);
+    // Une RÉSIDENCE coupée du comptoir est un mensonge comptable : elle n'héberge personne en
+    // jeu, et le plan la compte. Un SERVICE coupé est une perte d'efficacité, déjà signalée
+    // dans les trous du plan et documentée comme reliquat de l'élagage des routes — d'où deux
+    // gravités distinctes, sinon la règle serait ingérable ou muette.
+    const cutHouses = cut.filter((b) => residenceIds.has(b.defId));
+    const cutSvc = cut.filter((b) => !residenceIds.has(b.defId));
+    if (cutHouses.length) {
+      add("acces-comptoir-maisons", "faute",
+        `${cutHouses.length} résidence(s) sans accès au comptoir, mais comptées`);
+    }
+    if (cutSvc.length) {
+      const names = [...new Set(cutSvc.map((b) => defOf(b.defId)?.name ?? b.defId))].slice(0, 3);
+      add("acces-comptoir-services", "suspect",
+        `${cutSvc.length} service(s) sans accès au comptoir (${names.join(", ")})`);
     }
   }
 
@@ -201,6 +220,16 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
   if (r.fullyCovered > r.houses) {
     add("cible-coherente", "faute",
       `${r.fullyCovered} maisons au palier cible pour ${r.houses} maisons`);
+  }
+
+  // Bâtiment dont la TAILLE n'a pas pu être lue des archives : l'extraction replie sur 3×3
+  // (cf. `sizeGuessed`, tools/build_catalog.py). Le plan le pose donc avec une emprise
+  // possiblement fausse — invisible autrement.
+  const guessed = r.buildings.filter((b) => (defOf(b.defId) as { sizeGuessed?: boolean } | undefined)?.sizeGuessed);
+  if (guessed.length) {
+    const names = [...new Set(guessed.map((b) => defOf(b.defId)?.name ?? b.defId))].slice(0, 3);
+    add("taille-devinee", "suspect",
+      `${guessed.length} bâtiment(s) à l'emprise non lue des archives (${names.join(", ")})`);
   }
 
   return out;
