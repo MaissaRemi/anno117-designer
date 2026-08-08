@@ -222,6 +222,23 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
       `${r.fullyCovered} maisons au palier cible pour ${r.houses} maisons`);
   }
 
+  // ═══ EXPLOITATIONS SANS DÉBOUCHÉ ════════════════════════════════════════════════════
+  // Une mine, une carrière ou une tourbière n'expédie que si un entrepôt est à moins de
+  // `transporterRange` EN DISTANCE-RUE. Sinon sa production ne sort pas : elle est posée,
+  // elle coûte son entretien et sa main-d'œuvre, et elle ne rapporte rien.
+  //
+  // Mesuré sur cinq îles : 6 exploitations sur 31 sans débouché, dont 5 en MARAIS et une en
+  // montagne. Ce n'est pas un défaut d'accès routier — `planSlots` sait creuser jusqu'à son
+  // propre slot — mais de PLACEMENT D'ENTREPÔT : aucun n'est assez près le long des routes.
+  const unserved = r.exploited.filter((e) => !e.served);
+  if (unserved.length) {
+    const byType = new Map<string, number>();
+    for (const e of unserved) byType.set(e.slotType, (byType.get(e.slotType) ?? 0) + 1);
+    add("exploitation-sans-entrepot", "suspect",
+      `${unserved.length}/${r.exploited.length} exploitation(s) sans entrepôt à portée `
+      + `(${[...byType.entries()].map(([t, n]) => `${t}×${n}`).join(", ")})`);
+  }
+
   // Bâtiment dont la TAILLE n'a pas pu être lue des archives : l'extraction replie sur 3×3
   // (cf. `sizeGuessed`, tools/build_catalog.py). Le plan le pose donc avec une emprise
   // possiblement fausse — invisible autrement.
