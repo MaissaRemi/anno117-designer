@@ -9,7 +9,7 @@ import { effectOf } from "../economy/economy";
 import { footprintSize } from "../engine/geometry";
 import { candidateRecipes } from "./recipes";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
-import { hostableTiers, planLattice, type LatticeResult } from "./planLattice";
+import { planLattice, type LatticeResult } from "./planLattice";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, needsWater, planWater, type WaterConsumerReport, type WaterPlanResult } from "./waterPlan";
 import { connectKontor, keepMainLandmass, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
@@ -221,10 +221,6 @@ export function planIslandImport(
   // et le routage d'eau l'inverse (chaque citerne coûte 10 u, une conduite, un corridor).
   let landTiles = 0;
   for (const u of req.grid.usable) if (u) landTiles++;
-  // Le plan aura-t-il besoin d'ouvriers ? Cela ne change PAS les recettes essayées (elles le
-  // sont toutes, sous leurs deux formes), seulement l'arbitrage entre plans à population
-  // comparable.
-  const needWorkers = !!req.exploitSlots || !!req.localProduction;
   const trials: (string[] | undefined)[] = [];
   if (needMode === "auto") {
     // budget adaptatif : une évaluation coûte ~0,1 s sur une île moyenne mais plusieurs
@@ -319,8 +315,6 @@ export function planIslandImport(
     waterPct: number;
     /** bilan de l'île par attribut vital, rang de cité compris */
     attrsTotal: Record<string, number>;
-    /** nombre de paliers que les parcelles de ce plan savent héberger (vivier) */
-    hostable: number;
     /** le bilan de l'île tient-il ? */
     viable: boolean;
     /**
@@ -408,7 +402,6 @@ export function planIslandImport(
     for (const k of VITAL_ATTRS) attrsTotal[k] = (cand.attrsSum[k] ?? 0) + cand.houses * (rank[k] ?? 0);
     return {
       cand, relevant, water, buildings, tierCounts, capByTier, deadTypes, houseMoney,
-      hostable: needWorkers ? hostableTiers(cand.plots).size : 0,
       residents,
       waterPct: nCons ? nOk / nCons : 1,
       attrsTotal,
@@ -443,11 +436,10 @@ export function planIslandImport(
     if (a.viable !== b.viable) return a.viable;
     const close = Math.abs(a.residents - b.residents) <= 0.02 * Math.max(a.residents, b.residents, 1);
     if (!close) return a.residents > b.residents;
-    // À population comparable, on préfère le plan dont le VIVIER est le plus riche : il
-    // pourra héberger des maisons ouvrières de plus de paliers, donc armer davantage
-    // d'ateliers et d'exploitations. C'est un départage, pas un sacrifice — la population
-    // reste le critère premier.
-    if (needWorkers && a.hostable !== b.hostable) return a.hostable > b.hostable;
+    // Un départage par la richesse du VIVIER de main-d'œuvre a existé ici. Il ne sert plus à
+    // rien depuis que `finalize` tranche sur le plan LIVRÉ : mesuré sur quatre îles avec
+    // exploitations et production locale, le résultat est identique au bâtiment près avec ou
+    // sans lui — et il coûtait un `hostableTiers` par candidat.
     if (a.waterPct !== b.waterPct) return a.waterPct > b.waterPct;
     if (a.cand.houses !== b.cand.houses) return a.cand.houses > b.cand.houses;
     return svcCount(a.cand) <= svcCount(b.cand);
