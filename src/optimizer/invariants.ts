@@ -165,24 +165,7 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
     // dans les trous du plan et documentée comme reliquat de l'élagage des routes — d'où deux
     // gravités distinctes, sinon la règle serait ingérable ou muette.
     const cutHouses = cut.filter((b) => residenceIds.has(b.defId));
-    // La SOURCE D'AQUEDUC sort du régime routier, comme elle sort du masque de terre : elle
-    // est posée sur un slot montagne, entourée de cases que `layRing` ne peut pas viabiliser,
-    // et elle alimente le réseau par des CONDUITES, pas par la route. Mesuré : sur trois îles,
-    // la TOTALITÉ des bâtiments sans route adjacente étaient des sources — 7, 5 et 9.
-    //
-    // ⚠ HYPOTHÈSE À VÉRIFIER. Le catalogue lui met `needsRoad: true`, dérivé de la présence
-    // d'un `StreetActivation` OU d'un `LogisticNode` dans les fichiers du jeu. Les deux n'ont
-    // pas le même sens : le premier exige une rue, le second sert au transport de biens. Il
-    // faudrait lire lequel des deux porte l'asset 19691 pour trancher — `ANNO_GAME_DIR`
-    // n'était pas disponible au moment de l'audit. En attendant, on la classe à part plutôt
-    // que de la noyer parmi les services : le signal reste visible et nommé.
-    const cutSvc = cut.filter((b) => !residenceIds.has(b.defId)
-      && defOf(b.defId)?.template !== "AqueductProducer");
-    const cutSrc = cut.filter((b) => defOf(b.defId)?.template === "AqueductProducer");
-    if (cutSrc.length) {
-      add("source-eau-sans-route", "suspect",
-        `${cutSrc.length} source(s) d'aqueduc sans route — régime de slot, à confirmer`);
-    }
+    const cutSvc = cut.filter((b) => !residenceIds.has(b.defId));
     if (cutHouses.length) {
       add("acces-comptoir-maisons", "faute",
         `${cutHouses.length} résidence(s) sans accès au comptoir, mais comptées`);

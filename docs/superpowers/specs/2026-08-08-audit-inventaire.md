@@ -134,6 +134,46 @@ Le mécanisme commun : rendre des routes fait grandir le réseau sans garantir q
 DU BON CÔTÉ du comptoir. La troisième tentative ne diffère que par ce point — elle sait où est
 la racine — et c'est tout l'écart entre −75 % et +170 %.
 
+### Reste : les bâtiments sans AUCUNE route adjacente
+
+Mesuré sur trois îles : **la totalité sont des sources d'aqueduc** — 7 sur
+`roman_island_medium_01`, 5 sur `roman_island_small_02`, 9 sur `celtic_island_large_05`.
+Aucun service de palier.
+
+**Hypothèse posée puis RÉFUTÉE par l'utilisateur.** J'avais conclu que la source sortait du
+régime routier — posée sur un slot montagne, entourée de cases hors masque de terre,
+alimentée par des conduites — et je l'avais classée à part en `suspect`. C'est faux :
+
+> « il faut qu'une route soit jusqu'à l'emplacement de montagne puisqu'il y aura des mines,
+> et il faut un entrepôt à proximité que la mine puisse atteindre »
+
+Le raisonnement « si le jeu exigeait une route, il rendrait le terrain constructible » ne
+tient pas : le slot montagne accueille une MINE, qui a besoin de la route comme tout bâtiment
+de production, et d'un entrepôt à portée de charrette pour expédier. L'exemption est retirée.
+
+**Ce qu'il reste à faire**, et ce n'est pas mince :
+
+1. **Amener la route jusqu'aux slots montagne.** `blockMountains` retire la zone montagne du
+   masque constructible, et `layRoad` refuse toute case non utilisable (`occ` est initialisé à
+   1 sur `!usable`) : le peigne ne peut donc structurellement pas y monter. Il faudra un
+   chemin dédié, sur le modèle du corridor que `planWater` réserve déjà pour ses conduites via
+   `mzone`.
+2. **Vérifier l'entrepôt à portée.** `planSlots` place déjà des entrepôts par distance-rue
+   (`transporterRange`) et signale les manques — « 4 exploitation(s) sans entrepôt à portée de
+   charrette » est un message existant. À confronter aux invariants une fois la route montée.
+
+### Le modèle ne connaît aucun TYPE de route
+
+Question posée pendant l'audit : la distance-rue est-elle calculée sur des routes de base ou
+en marbre ? **Ni l'une ni l'autre.** Le catalogue ne contient aucun asset de route —
+l'extraction filtre sur des templates de bâtiment, les rues n'en sont pas — et le moteur n'a
+nulle part de `roadType`. Une route est un booléen par case, la distance-rue un BFS à 1 par
+case : implicitement, la route de base.
+
+Si les routes pavées allongent la portée des services en jeu, ce bonus n'est ni extrait, ni
+modélisé, ni compté, et toutes les couvertures sont calculées au pire cas. À vérifier dans les
+fichiers du jeu.
+
 ### Diagnostic, pour mémoire
 
 Le reliquat `acces-comptoir-services` a été attaqué deux fois. Les deux corrections ont été
