@@ -10,42 +10,57 @@ minimale 56 %** · bilan positif (🔥 +455) · main-d'œuvre couverte · ~5 à 
 
 ---
 
-## Levier 2 — PASSE DE RÉPARATION LOCALE (+1, à faire en premier)
+## Levier 2 — PASSE DE RÉPARATION LOCALE : ❌ TENTÉ, MESURÉ, RÉFUTÉ (2026-08-08)
 
-**Le constat.** Couverture minimale 56 % : près d'une maison sur deux est hors de portée d'au
-moins un service. Et 22 % des maisons n'atteignent pas le palier visé — elles retombent au
-meilleur palier dont elles franchissent les seuils (comptabilité mixte), ce qui est correct
-mais laisse de la capacité sur la table.
+**L'hypothèse était :** couverture minimale 56 %, donc près d'une maison sur deux hors de
+portée d'au moins un service ; les moteurs posant les services sur des trames régulières, une
+maison qui rate un seuil le rate souvent *de peu*, et rien ne repasse derrière pour combler ce
+trou. Une passe de réparation devait donc être du gain facile.
 
-**Pourquoi c'est du gain facile.** Les moteurs posent les services sur des trames régulières
-calées sur leur portée. Une maison qui rate un seuil le rate souvent *de peu* — il lui manque
-un seul service, à quelques tuiles. Rien aujourd'hui ne repasse derrière pour combler ces
-trous : le plan retenu est livré tel quel.
+**Ce qui a été construit** (dans `planLattice`, pas après le choix du plan — toute la
+géométrie y est locale, la refaire ailleurs aurait dupliqué le moteur) : pour chaque type de
+service encore posable, le gain marginal en habitants d'une copie supplémentaire, emplacement
+par emplacement, `evaluate(masque | bit) − evaluate(masque)` ; puis pose au maximum du gain,
+remesure complète, et RECUL SUR POSE si le total livré n'a pas monté.
 
-**Forme proposée.** Après le choix du plan et AVANT le règlement de la main-d'œuvre :
+**Mesures, deux îles × quatre seuils de densification, A/B strict :**
 
-1. pour chaque parcelle, on connaît déjà son masque de couverture et ses paliers atteignables
-   (`HousePlot.opts`, `planLattice.ts`) ;
-2. repérer les parcelles dont le palier atteint est strictement inférieur au palier cible, et
-   pour lesquelles il ne manque qu'UNE catégorie de service au seuil ;
-3. grouper ces parcelles par service manquant, et chercher une position libre couvrant le plus
-   gros groupe (min-cover glouton, le même que `planSlots` utilise pour ses entrepôts) ;
-4. poser tant que le bilan d'attributs le permet — le budget existe déjà, et `settleWith`
-   sait le juger pour de bon.
+| île | floor | habitants OFF | ON | Δ | temps |
+|---|---|---|---|---|---|
+| medium_01 (Patriciens) | 1 / 0,9 / 0,8 | 13 574 / 13 574 / 14 498 | identique | 0,0 % | +12 à +18 % |
+| medium_01 | 0,6 | 15 697 | 15 620 | **−0,5 %** | +42 % |
+| large_07 (Nobles) | 1 / 0,9 / 0,8 / 0,6 | 9 966 | identique | 0,0 % | +13 à +25 % |
+| medium_01, plan complet | — | 16 660 | 16 640 | −0,1 % | +10 % |
 
-**Pourquoi c'est le bon point de départ.** Isolé (aucun moteur à toucher), mesurable
-immédiatement (la couverture minimale est affichée dans l'interface), et sans risque pour ce
-qui vient d'être stabilisé. Le garde-fou de viabilité et le recul sur pose encadrent déjà
-toute pose supplémentaire.
+Sept configurations sur huit rendent un plan **bit-à-bit identique** : la passe pose, mesure,
+et défait chacune de ses propositions.
 
-**Piège connu.** Densifier allonge la distance-rue moyenne et consomme du sol : au-delà d'un
-certain seuil le moteur sur-densifie et la population BAISSE. C'est déjà documenté pour le
-raffinage (`REFINE_FLOOR = 0.9`, `islandPlan.ts`). La passe doit donc être jugée sur la
-population livrée, pas sur la couverture — la couverture n'est qu'un indice.
+**Pourquoi.** Le sol est la contrainte qui mord, pas la couverture. La phase de densification
+existante sature déjà l'île : à seuil 1, toute copie supplémentaire détruit plus
+d'emplacements de maison qu'elle n'en fait monter de palier. Le seul régime où des poses
+passent le remesurage est le plan complet — et là le gain (+225, +499 habitants mesurés au
+niveau du lattice) ne survit pas à l'aval : le routage d'eau, la démotion `deadTypes` et la
+bande de 2 % de `better()` l'absorbent entièrement.
+
+**Deux enseignements gardés en dur :**
+
+- La fenêtre carrée `portée × 0,6 / √2` — celle que la densification utilise pour choisir
+  *où* poser — est **inutilisable comme critère de décision**. Elle surestime largement ce
+  qu'une copie atteint en distance-rue : dans la première version, les deux premiers tours
+  proposaient la MÊME position avec le MÊME gain, la copie posée ne couvrant rien de neuf.
+  Elle ne vaut que comme générateur de propositions.
+- `viableSubset` (`planLattice.ts`) a été extrait de `placeHouses` et documenté comme LA
+  définition de « ce que ce plan livre ». La première version de la passe jugeait sur la
+  population brute et acceptait des poses que le garde-fou punissait juste après en rasant des
+  maisons entières : −1,2 % sur `celtic_island_large_07` pour un gain annoncé positif. C'est
+  la seule chose de ce chantier qui reste dans le dépôt.
+
+**Ce que ça dit du reste.** L'upside restant n'est pas dans « poser plus de services ». Il est
+dans le levier 1 et dans l'arbitrage recette/palier.
 
 ---
 
-## Levier 1 — LE COÛT RÉEL DANS LA SÉLECTION (+1,5, refonte)
+## Levier 1 — LE COÛT RÉEL DANS LA SÉLECTION (+1,5, refonte) — **à faire en premier**
 
 **Le constat.** `better()` compare les plans candidats sur leurs habitants et la viabilité d'un
 plan NU. Les emplacements, les ateliers, les conversions de main-d'œuvre et leurs effets de
@@ -117,3 +132,9 @@ Le grand-livre entier pèse 1 %. Pistes, dans l'ordre :
   le déficit d'un plan et appliqué à un autre.
 - Ne jamais tenir le bilan de l'île par accumulation de deltas. Partir de la somme absolue
   publiée par `WorkforceLedger.settle()`.
+- Ne pas reprendre le levier 2 sous une autre forme (« min-cover sur les parcelles qui ratent
+  UNE catégorie », « densifier là où la couverture est la plus basse »…) sans avoir d'abord
+  desserré la contrainte de SOL. Huit configurations mesurées : la couverture n'est pas le
+  goulot. Toute passe qui pose des services de plus repartira du même mur.
+- Ne jamais juger un plan sur la population BRUTE. Passer par `viableSubset` — le garde-fou de
+  viabilité rase des maisons entières, et il rend négatif un gain qui semblait positif.
