@@ -7,7 +7,7 @@ import { uniqueCap } from "../economy/uniques";
 import { VITAL_ATTRS } from "../economy/attributes";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
-import { MAX_RUN, needsWater, planWater, type WaterPlanResult } from "./waterPlan";
+import { MAX_RUN, MOUNTAIN_BLOCK_RADIUS, needsWater, planWater, type WaterPlanResult } from "./waterPlan";
 import { makeStreetGrid } from "./streetGrid";
 
 // Portée de PLANIFICATION = streetRange (distance le long des rues, cf.
@@ -170,7 +170,11 @@ export function planLattice(
     .sort((a, b) => rangeOf(b) - rangeOf(a)); // grand → petit (espace contigu d'abord)
 
   const occ = new Uint8Array(N);
-  for (let i = 0; i < N; i++) if (!grid.usable[i]) occ[i] = 1;
+  // `occ` confond deux choses : le terrain impraticable et les bâtiments posés. On garde donc
+  // le masque TERRAIN à part — la route de montagne a besoin de savoir qu'une case est
+  // bloquée par le relief, pas par une construction.
+  const terrainBlocked = new Uint8Array(N);
+  for (let i = 0; i < N; i++) if (!grid.usable[i]) { occ[i] = 1; terrainBlocked[i] = 1; }
   const roadAt = new Uint8Array(N);
   const bldAdj = new Uint8Array(N);
 
@@ -594,11 +598,90 @@ export function planLattice(
         const c = (s.y + j) * W + (s.x + i);
         if (c >= 0 && c < N) { occ[c] = 1; if (roadAt[c]) roadAt[c] = 0; }
       }
+      // Marquer l'adjacence, comme le fait `stamp` pour tout autre bâtiment. Sans cela
+      // `bldAdj` reste vide autour de la source, et l'élagage — qui garde les routes sur le
+      // critère `roadAt && bldAdj` — retire son unique accès. C'est pourquoi TOUS les
+      // bâtiments sans route adjacente mesurés étaient des sources : elles en avaient une,
+      // l'élagage la reprenait.
+      markAdj(s.x, s.y, w, h);
       buildings.push(s);
     }
     for (const a of water.aqueducts) {
       const c = a.y * W + a.x;
       if (!roadAt[c]) occ[c] = 1; // croisement : la route reste, la conduite enjambe
+    }
+  }
+
+  // ═══ ROUTE JUSQU'AUX SLOTS MONTAGNE ═════════════════════════════════════════════════
+  //
+  // `blockMountains` retire la zone montagne du masque constructible, et `layRoad` refuse
+  // toute case non utilisable : le peigne ne peut donc STRUCTURELLEMENT pas y monter. Or le
+  // slot montagne accueille la source d'aqueduc ET les mines — qui ont besoin de la route
+  // comme tout bâtiment de production, et d'un entrepôt à portée de charrette pour expédier.
+  //
+  // Mesuré avant correction : sur trois îles, la TOTALITÉ des bâtiments sans aucune route
+  // adjacente étaient des sources d'aqueduc — 7, 5 et 9 — et le balayage des 55 îles montrait
+  // le même reliquat partout.
+  //
+  // On creuse donc un accès depuis chaque source vers le réseau existant. Le chemin traverse
+  // le RELIEF (cases bloquées par le terrain, jamais par un bâtiment : `fitsBld` exige
+  // `usable`, aucune construction n'y tient) et les cases libres, jamais un bâtiment. Les
+  // cases posées deviennent des routes ordinaires : l'élagage ancré au comptoir les rattache
+  // ensuite au réseau enraciné comme n'importe quelles autres.
+  if (water?.sources.length) {
+    const nearMountain = new Uint8Array(N);
+    const rad = MOUNTAIN_BLOCK_RADIUS + 2;
+    for (const sl of mountainSlots) {
+      for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+        const x = sl.x + dx, y = sl.y + dy;
+        if (x >= 0 && y >= 0 && x < W && y < H) nearMountain[y * W + x] = 1;
+      }
+    }
+    const passable = (c: number): boolean => {
+      if (roadAt[c]) return true;
+      if (terrainBlocked[c]) return nearMountain[c] === 1; // relief autour du slot
+      return !occ[c];
+    };
+    for (const src of water.sources) {
+      const fp = footprintSize(lookup(src.defId)!, src.rotation);
+      const ring: number[] = [];
+      for (let i = 0; i < fp.w; i++) {
+        for (const yy of [src.y - 1, src.y + fp.h]) {
+          const x = src.x + i;
+          if (yy >= 0 && yy < H && x >= 0 && x < W) ring.push(yy * W + x);
+        }
+      }
+      for (let j = 0; j < fp.h; j++) {
+        for (const xx of [src.x - 1, src.x + fp.w]) {
+          const y = src.y + j;
+          if (xx >= 0 && xx < W && y >= 0 && y < H) ring.push(y * W + xx);
+        }
+      }
+      if (ring.some((c) => roadAt[c])) continue; // déjà desservie
+      const prev = new Int32Array(N).fill(-2);
+      let fr: number[] = [];
+      for (const c of ring) if (prev[c] === -2 && passable(c)) { prev[c] = -1; fr.push(c); }
+      let hit = -1;
+      // borne généreuse : une source peut être loin, et le chemin ne coûte que des cases de
+      // relief que rien d'autre ne peut occuper
+      for (let depth = 0; depth < 200 && fr.length && hit < 0; depth++) {
+        const next: number[] = [];
+        for (const c of fr) {
+          for (const n of [c % W > 0 ? c - 1 : -1, c % W < W - 1 ? c + 1 : -1,
+            c >= W ? c - W : -1, c < N - W ? c + W : -1]) {
+            if (n < 0 || prev[n] !== -2 || !passable(n)) continue;
+            prev[n] = c;
+            if (roadAt[n]) { hit = n; break; }
+            next.push(n);
+          }
+          if (hit >= 0) break;
+        }
+        fr = next;
+      }
+      if (hit < 0) continue;
+      for (let cur = hit; cur >= 0; cur = prev[cur]) {
+        if (!roadAt[cur]) { roadAt[cur] = 1; occ[cur] = 0; }
+      }
     }
   }
 
