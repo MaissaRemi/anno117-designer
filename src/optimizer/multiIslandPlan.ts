@@ -6,6 +6,7 @@ import { downscaleGrid, scaleResultToHalfTile } from "./halfTileAdapter";
 import { planIslandImport, type ImportGood, type IslandPlanResult } from "./islandPlan";
 import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { regionOfIsland } from "../data/islands";
+import { economy, worldOf } from "../economy/economy";
 
 export type Role = "population" | "production" | "unused";
 
@@ -14,14 +15,22 @@ export interface IslandInput {
   grid: GridShape;
   profile: ResourceProfile;
   pinnedRole?: Role;
+  /** Hauteurs quantifiées de l'île — pente des aqueducs. Absentes, le réseau d'eau est
+   *  planifié sans vérifier la pente, donc optimiste (cf. `IslandPlanRequest.heights`). */
+  heights?: Int8Array;
 }
 
 export interface MultiIslandRequest {
   catalog: BuildingDef[];
   islands: IslandInput[];
   tierGuid: string;
-  needMode?: "all" | "thresholds";
+  needMode?: "auto" | "all" | "thresholds";
   mode: "dimension" | "place";
+  /** Transmis tel quel au planificateur mono-île. */
+  coverageFloor?: number;
+  exploitSlots?: boolean;
+  localProduction?: boolean;
+  permits?: Record<string, number>;
 }
 
 export interface Assignment {
@@ -41,6 +50,35 @@ export interface MultiIslandResult {
 }
 
 const regionOf = (id: string): string => regionOfIsland(id);
+
+/** Paliers résidentiels d'un MONDE, du plus petit au plus grand. */
+const ladderOf = (world: string) => [...economy.tiers]
+  .filter((t) => t.residenceId && worldOf(t.region) === world)
+  .sort((a, b) => a.capacityDefault - b.capacityDefault);
+
+/**
+ * PALIER ÉQUIVALENT DANS LE MONDE DE L'ÎLE.
+ *
+ * La requête ne porte qu'un `tierGuid`, pour toutes les îles à la fois. Il était appliqué tel
+ * quel : mêler une île du Latium et une île d'Albion dans un même plan produisait donc une
+ * ville ROMAINE sur Albion — résidences et services non constructibles en jeu, et une
+ * main-d'œuvre que l'autre monde ne peut pas fournir. Même classe de défaut que les ateliers
+ * romains posés sur une île celtique.
+ *
+ * On traduit par RANG dans l'échelle du monde, borné : le Latium en compte quatre, Albion
+ * cinq. Un palier déjà du bon monde est rendu inchangé.
+ */
+const tierForIsland = (tierGuid: string, islandId: string): string => {
+  const asked = economy.tiers.find((t) => t.guid === tierGuid);
+  if (!asked) return tierGuid;
+  const world = worldOf(regionOf(islandId));
+  if (worldOf(asked.region) === world) return tierGuid;
+  const from = ladderOf(worldOf(asked.region));
+  const to = ladderOf(world);
+  if (!from.length || !to.length) return tierGuid;
+  const rank = Math.max(0, from.findIndex((t) => t.guid === tierGuid));
+  return to[Math.min(rank, to.length - 1)].guid;
+};
 const landOf = (g: GridShape): number => {
   let n = 0;
   for (const u of g.usable) if (u) n++;
@@ -66,8 +104,11 @@ export function multiIslandPlan(req: MultiIslandRequest): MultiIslandResult {
   for (const isl of popCandidates) {
     const halfTile = (isl.grid.cellsPerTile ?? 1) === 2;
     const r = planIslandImport({
-      catalog: req.catalog, grid: downscaleGrid(isl.grid), tierGuid: req.tierGuid,
-      needMode: req.needMode, coverageFloor: 0.8,
+      catalog: req.catalog, grid: downscaleGrid(isl.grid),
+      tierGuid: tierForIsland(req.tierGuid, isl.islandId),
+      needMode: req.needMode, coverageFloor: req.coverageFloor ?? 0.8,
+      heights: isl.heights, exploitSlots: req.exploitSlots,
+      localProduction: req.localProduction, permits: req.permits,
     });
     popResult[isl.islandId] = scaleResultToHalfTile(r, halfTile);
   }

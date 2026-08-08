@@ -28,6 +28,7 @@ deux ne se comparent pas entre eux — seulement chacun à lui-même.
 | 6 — les ateliers réservent leur sol | ✅ fait | **+2,0 %** sur medium_01, 70 maisons rasées → 7 |
 | 7 — packPlan à armes égales | ✅ fait, puis sorti du portefeuille | perd les 9 configurations ; −7,4 à −8,8 % de temps |
 | 8 — ne bâtir que sur le tenant du comptoir | ✅ fait | **justesse** : 93 bâtiments inactifs → 22 sur huit îles |
+| 9 — multi-îles : palier par MONDE | ✅ fait | **justesse** : plus de ville romaine sur Albion |
 
 La leçon commune : **le sol est la contrainte qui mord, pas la couverture.** Poser plus de
 services ne rapporte rien ; mieux CHOISIR entre les plans, et cesser d'en détruire, si.
@@ -226,6 +227,31 @@ Plan **strictement identique** dans les six cas, pour +58 % de temps. Les recett
 la septième ne gagnent jamais : `candidateRecipes` les émet déjà par ordre de promesse
 décroissante, et la queue de distribution est plate. Ne pas y revenir sans changer
 l'ÉNUMÉRATION elle-même.
+
+---
+
+## Levier 9 — MULTI-ÎLES : UN PALIER PAR MONDE : ✅ FAIT (2026-08-08)
+
+Le planificateur multi-îles n'avait jamais été audité. Il délègue à `planIslandImport`, donc
+tous les correctifs du jour s'y appliquent d'office — mais il lui passait n'importe quoi.
+
+**Le défaut principal.** La requête ne porte qu'un `tierGuid`, pour toutes les îles à la fois,
+et il était appliqué tel quel. Mêler une île du Latium et une île d'Albion dans un même plan
+produisait donc une **ville ROMAINE sur Albion** : résidences et services non constructibles en
+jeu, main-d'œuvre que l'autre monde ne peut pas fournir. Même classe de défaut que les douze
+ateliers romains posés sur une île celtique. Le palier est désormais traduit par RANG dans
+l'échelle du monde de l'île, borné — le Latium en compte quatre, Albion cinq.
+
+**Trois oublis de transmission**, corrigés dans la foulée :
+
+- les **hauteurs de terrain** n'étaient jamais fournies : la pente des aqueducs n'était pas
+  vérifiée, donc le réseau d'eau de chaque île était optimiste. Décodées désormais dans le
+  worker, comme le fait le worker mono-île, avec la même garde sur les dimensions ;
+- `coverageFloor` était figé à 0,8, sans moyen de le régler ;
+- `exploitSlots`, `localProduction` et `permits` n'étaient pas transmissibles.
+
+`needMode` excluait `"auto"` de son type — le mode par défaut, et le meilleur (×1,48 mesuré).
+On ne pouvait donc pas le demander explicitement.
 
 ---
 
