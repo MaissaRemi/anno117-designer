@@ -63,6 +63,24 @@ export interface IslandPlanRequest {
    * `DEFAULT_PERMITS`.
    */
   permits?: Record<string, number>;
+  /**
+   * BALAYER LES PALIERS de la lignée et garder celui qui LOGE LE PLUS, au lieu de prendre
+   * `tierGuid` pour argent comptant. Défaut false — c'est une option coûteuse (un plan
+   * complet par palier) et le palier cible reste un objectif de partie, pas un simple
+   * réglage.
+   *
+   * Elle existe parce qu'un palier plus haut n'héberge pas forcément plus de monde, et que
+   * l'écart n'est pas marginal. Mesuré sur `celtic_island_large_07` : viser les Nobles
+   * (capacité 21) livre 9 844 habitants en 488 maisons, viser les Aldermen (capacité 18) en
+   * livre 22 114 en 1 698 maisons — soit 2,25 fois plus. Les Nobles sont la population
+   * ROMANISÉE d'Albion : leur malus de rang de cité est bien plus lourd (−17,4 de Bonheur
+   * contre −12,6 pour un natif) et leurs services mangent davantage de sol, si bien que le
+   * garde-fou de viabilité rase les trois quarts du quartier.
+   *
+   * Ce n'est pas systématique : sur `roman_island_medium_01`, monotone, le sommet gagne
+   * (Patriciens 17 266 contre Equites 7 409). D'où le balayage plutôt qu'une règle.
+   */
+  autoTier?: boolean;
 }
 
 export interface ImportGood {
@@ -162,6 +180,37 @@ export function planIslandImport(
   const tier = economy.tiers.find((t) => t.guid === req.tierGuid);
   if (!tier || !tier.residenceId) {
     throw new Error("Tier-cible invalide ou sans résidence.");
+  }
+  // ═══ BALAYAGE DES PALIERS (option) ═══════════════════════════════════════════════════
+  // Un plan complet par palier de la lignée, et on garde celui qui loge le plus. La
+  // récursion se fait drapeau BAISSÉ : chaque passe est un plan ordinaire. Le palier
+  // effectivement retenu ressort dans `tierGuid` / `tierName`, l'appelant n'a rien à
+  // deviner. Voir `IslandPlanRequest.autoTier` pour la mesure qui justifie l'option.
+  if (req.autoTier) {
+    const ladder = residentialChainExtended(req.tierGuid).filter((t) => t.residenceId);
+    if (ladder.length > 1) {
+      let best: IslandPlanResult | null = null;
+      for (let i = 0; i < ladder.length; i++) {
+        onProgress?.(i + 1, ladder.length);
+        const r = planIslandImport({ ...req, tierGuid: ladder[i].guid, autoTier: false });
+        const wins = !best
+          || (r.feasible !== best.feasible ? r.feasible
+            : r.viable !== best.viable ? r.viable
+              : r.residents !== best.residents ? r.residents > best.residents
+                : r.money.net > best.money.net);
+        if (wins) best = r;
+      }
+      if (best) {
+        if (best.tierGuid !== req.tierGuid) {
+          const asked = economy.tiers.find((t) => t.guid === req.tierGuid);
+          best.gaps.unshift(
+            `Palier ${best.tierName} retenu à la place de ${asked?.name ?? req.tierGuid}`
+            + " : il loge davantage sur cette île (balayage des paliers)",
+          );
+        }
+        return best;
+      }
+    }
   }
   const chain = residentialChainExtended(req.tierGuid);
   const residenceIds = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));

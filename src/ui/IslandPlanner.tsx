@@ -47,6 +47,7 @@ export function IslandPlanner({ onClose }: Props) {
   const [needMode, setNeedMode] = useState<NeedMode>("auto");
   const [exploitSlots, setExploitSlots] = useState(false);
   const [localProduction, setLocalProduction] = useState(false);
+  const [autoTier, setAutoTier] = useState(false);
   const [floor, setFloor] = useState(80);
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
@@ -94,6 +95,7 @@ export function IslandPlanner({ onClose }: Props) {
         catalog: s.catalog, grid, mode, tierGuid, coverageFloor: floor / 100, needMode,
         exploitSlots,
         localProduction,
+        autoTier,
         ...(mode === "production"
           ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: effProfile.fertilities.length ? effProfile.fertilities : undefined }
           : {}),
@@ -180,6 +182,18 @@ export function IslandPlanner({ onClose }: Props) {
                   Pose des ateliers pour fabriquer une partie des biens au lieu de tout importer.
                   Ils remplacent des maisons et pèsent sur les attributs : on s'arrête dès que le
                   bilan de l'île passerait sous zéro.
+                </span>
+              </span>
+            </label>
+            <label className="checkbox">
+              <input type="checkbox" checked={autoTier} onChange={(e) => setAutoTier(e.target.checked)} />
+              <span>
+                Chercher le meilleur palier
+                <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                  Un palier plus haut ne loge pas forcément plus de monde : ses services mangent
+                  plus de sol et son malus de rang de cité est plus lourd. Mesuré en Albion, viser
+                  les Aldermen loge 2,25 fois plus que viser les Nobles. Coûte un plan complet par
+                  palier de la lignée.
                 </span>
               </span>
             </label>
