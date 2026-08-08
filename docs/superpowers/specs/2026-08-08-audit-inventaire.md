@@ -151,7 +151,35 @@ Le raisonnement « si le jeu exigeait une route, il rendrait le terrain construc
 tient pas : le slot montagne accueille une MINE, qui a besoin de la route comme tout bâtiment
 de production, et d'un entrepôt à portée de charrette pour expédier. L'exemption est retirée.
 
-**Ce qu'il reste à faire**, et ce n'est pas mince :
+**RÉGLÉ.** Il fallait DEUX choses, et aucune ne suffit seule :
+
+1. **Creuser un accès depuis chaque source vers le réseau.** Le chemin traverse le RELIEF —
+   cases bloquées par le terrain, jamais par un bâtiment, puisque `fitsBld` exige `usable` et
+   qu'aucune construction n'y tient — ainsi que les cases libres.
+2. **Marquer l'adjacence de la source** (`markAdj`), comme `stamp` le fait pour tout autre
+   bâtiment. La phase eau empilait ses sources dans `buildings` sans le faire : `bldAdj`
+   restait vide autour d'elles, et l'élagage — qui garde sur le critère `roadAt && bldAdj` —
+   reprenait leur unique accès. C'est pourquoi TOUS les bâtiments sans route mesurés étaient
+   des sources : elles en avaient une, l'élagage la retirait.
+
+| services isolés | medium_01 | small_02 | large_05 | small_07 | large_07 | medium_05 | total |
+|---|---|---|---|---|---|---|---|
+| avant | 7 | 13 | 9 | 1 | 6 | 6 | **42** |
+| creusement seul | 7 | 13 | 9 | 1 | 6 | 6 | 42 |
+| `markAdj` seul | 7 | 13 | 9 | 1 | 6 | 6 | 42 |
+| les deux | **0** | 10 | **1** | 1 | **0** | **0** | **12** |
+
+Trois îles sur six passent à AUCUNE violation. Les deux mesures d'isolation confirment que
+ni l'une ni l'autre des corrections ne vaut seule — c'est leur conjonction qui compte.
+
+**Reste** : `roman_island_small_02` (10, des `Medici`) et `celtic_island_small_07` (1, une
+`Tour de guet`) — des institutions, pas des sources : autre mécanisme, à qualifier.
+
+**Non traité** : la vérification de l'entrepôt à portée de charrette. `planSlots` place déjà
+les entrepôts par distance-rue et signale les manques ; à reconfronter aux invariants
+maintenant que la route monte.
+
+**Ancien état de la question :**
 
 1. **Amener la route jusqu'aux slots montagne.** `blockMountains` retire la zone montagne du
    masque constructible, et `layRoad` refuse toute case non utilisable (`occ` est initialisé à
