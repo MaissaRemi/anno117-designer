@@ -1,12 +1,22 @@
-# Deux leviers pour la qualité des plans d'île
+# Leviers pour la qualité des plans d'île
 
-État au 2026-08-08, après la cascade de main-d'œuvre, les dieux et les chaînes de production.
-Note d'auto-évaluation de la feature : **6,3/10** — fidélité au jeu ~8, légalité des plans ~8,
-**qualité d'optimisation ~4**. Ce document décrit ce qui manque pour monter, et pourquoi.
+Ouvert au 2026-08-08 après la cascade de main-d'œuvre, les dieux et les chaînes de production.
+Note d'auto-évaluation de la feature à l'ouverture : **6,3/10** — fidélité au jeu ~8, légalité
+des plans ~8, **qualité d'optimisation ~4**.
 
-Mesure de référence, `roman_island_medium_01` en pleine résolution, emplacements + production
-locale cochés : 22 901 habitants · 640/817 maisons au palier cible (78 %) · **couverture
-minimale 56 %** · bilan positif (🔥 +455) · main-d'œuvre couverte · ~5 à 12 s.
+Mesure de référence à l'ouverture, `roman_island_medium_01` en pleine résolution, emplacements
++ production locale cochés : 22 901 habitants · 640/817 maisons au palier cible (78 %) ·
+couverture minimale 56 % · bilan positif (🔥 +455) · main-d'œuvre couverte · ~5 à 12 s.
+
+**État des deux leviers, après mesure :**
+
+| levier | verdict | effet mesuré |
+|---|---|---|
+| 1 — coût réel dans la sélection | ✅ fait, voie (b) | **+2,2 %** d'habitants sur celtic, 0 % sur medium_01, +7 à 10 % de temps |
+| 2 — passe de réparation locale | ❌ réfuté | 0 % sur 7 configurations, −0,5 % sur la huitième, +12 à 42 % de temps |
+
+La leçon commune : **le sol est la contrainte qui mord, pas la couverture.** Poser plus de
+services ne rapporte rien ; mieux CHOISIR entre les plans, si.
 
 ---
 
@@ -60,34 +70,44 @@ dans le levier 1 et dans l'arbitrage recette/palier.
 
 ---
 
-## Levier 1 — LE COÛT RÉEL DANS LA SÉLECTION (+1,5, refonte) — **à faire en premier**
+## Levier 1 — LE COÛT RÉEL DANS LA SÉLECTION : ✅ FAIT, voie (b) (2026-08-08)
 
-**Le constat.** `better()` compare les plans candidats sur leurs habitants et la viabilité d'un
-plan NU. Les emplacements, les ateliers, les conversions de main-d'œuvre et leurs effets de
-zone sont appliqués APRÈS que le plan a été choisi. On optimise donc une approximation, puis on
-corrige — et le correctif (le recul sur pose) ne peut que retrancher, jamais rattraper un
-mauvais choix de départ.
+**Le constat, qui était juste.** `better()` comparait les plans candidats sur les habitants et
+la viabilité d'un plan NU. Comptoir, exploitations, ateliers, conversions de main-d'œuvre et
+effets de zone étaient appliqués APRÈS le choix. On optimisait une approximation, puis on
+corrigeait — et le correctif (le recul sur pose) ne peut que retrancher, jamais rattraper un
+mauvais choix de départ. C'est ce décalage qui avait produit le bilan à −1.
 
-C'est ce décalage qui a produit le bilan à −1 : un plan retenu comme viable finissait négatif
-une fois ses coûts réels appliqués. Le recul le MASQUE proprement ; il ne l'élimine pas.
+**Ce qui a été fait.** Voie (b). Tout l'aval — de `chosen` jusqu'au `return` — est extrait en
+`finalize(chosen: Evaluated): IslandPlanResult`. Le pré-tri par `better()` ne décide plus, il
+PRÉSÉLECTIONNE : les trois premiers candidats subissent le pipeline complet, et `betterFinal`
+tranche sur ce qui sort (jouable, puis bilan tenu, puis habitants, puis solde net). Extraction
+du maximum plutôt que `sort` — `better()` n'est pas transitif, sa bande d'égalité à 2 % l'en
+empêche.
 
-**Ce qui rend la chose coûteuse.** Évaluer le coût réel d'un candidat suppose de lui faire
-subir tout le pipeline aval — `planSlots`, `planLocalProduction`, le règlement — soit
-plusieurs secondes par candidat, pour une douzaine de candidats.
+**Mesures, A/B strict (seuil 1, emplacements + production locale) :**
 
-**Deux voies, par ordre de faisabilité.**
+| île | 1 finaliste | 3 finalistes | Δ |
+|---|---|---|---|
+| roman_island_medium_01 (Patriciens) | 16 660 hab, 6 526 ms | 16 660 hab, 7 209 ms | 0 %, +10 % de temps |
+| celtic_island_large_07 (Nobles) | 8 968 hab, 10 426 ms | **9 161 hab**, 10 452 ms | **+2,2 %** |
 
-*(a) Estimation bon marché du coût aval, intégrée à `better()`.* Le gros du coût est
-prévisible sans poser quoi que ce soit : le nombre d'emplacements libres est connu, leur malus
-de zone est une donnée, et la demande de main-d'œuvre d'un atelier aussi. Une borne inférieure
-du coût suffirait à écarter les candidats qui n'ont aucune chance. Peu invasif, gain partiel.
+Le détail de celtic dit tout : le pré-tri classait EN TÊTE un plan nu à 9 820 habitants, qui
+n'en livre que 8 968 ; le plan nu à 9 956, relégué au troisième rang, en livre 9 161. Les deux
+sont à 1,4 % l'un de l'autre — dans la bande d'égalité — et le départage se faisait alors sur
+des critères secondaires (vivier, raccordement, nombre de maisons) qui ne prédisent rien.
 
-*(b) Pipeline complet sur les 2 ou 3 meilleurs candidats.* On garde le pré-tri actuel, puis on
-fait subir le pipeline aval aux finalistes seulement, et on tranche sur le résultat FINAL. Coût
-en temps : ×2 à ×3 sur la phase de sélection, qui pèse déjà 92 % du plan. À financer par le
-levier d'efficacité restant (cf. plus bas).
+**Écart plan nu → plan livré : −9 % à −12 %.** C'est l'ampleur de l'approximation que
+`better()` optimisait. Verrouillé par un test de non-régression (`islandPlan.test.ts`,
+« l'arbitrage se fait sur le plan LIVRÉ »), qui échoue sur l'ancien code.
 
-La voie (b) est la bonne réponse ; (a) est le repli si le temps de calcul devient inacceptable.
+**Pourquoi 3 et pas plus.** Mesuré à 6 : les rangs 4 et 5 s'effondrent (2 886 et 9 793
+habitants livrés contre 9 161 et 16 660) — ce sont des recettes que le pré-tri écarte à juste
+titre. Le coût de l'aval est de 300 à 380 ms par finaliste, soit ~+7 % par plan.
+
+**Ce qui reste sur ce levier.** La voie (a) — estimation bon marché du coût aval intégrée
+directement à `better()` — n'a pas été faite et n'est plus prioritaire : la voie (b) capte
+l'essentiel. Elle redeviendrait utile si le nombre de recettes essayées explosait.
 
 ---
 

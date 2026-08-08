@@ -97,6 +97,28 @@ describe("planIslandImport (mode import)", () => {
     }
   }, 120_000);
 
+  it("l'arbitrage se fait sur le plan LIVRÉ, pas sur le plan nu", () => {
+    // Le pré-tri compare des plans NUS : ni comptoir, ni exploitations, ni ateliers, ni
+    // règlement de la main-d'œuvre. L'écart avec ce qui est réellement livré atteint 9 à
+    // 12 % — assez pour inverser un classement, d'autant que `better()` traite deux plans
+    // à moins de 2 % d'écart comme égaux et tranche alors sur des critères secondaires.
+    //
+    // Mesuré ici (Nobles, celtic_island_large_07, seuil 1) : le pré-tri classait EN TÊTE un
+    // plan nu à 9 820 habitants, qui n'en livre que 8 968 ; le plan nu à 9 956, relégué,
+    // en livre 9 161. Faire subir le pipeline aval aux trois premiers avant de trancher
+    // récupère ces 193 habitants — le nombre à battre est donc au-dessus de 8 968.
+    const grid = downscaleGrid(buildIslandGrid("celtic_island_large_07")!);
+    const nobles = [...economy.tiers]
+      .filter((t) => t.residenceId && ["Celtic", "RomanCeltic"].includes(t.region))
+      .sort((a, b) => b.capacityDefault - a.capacityDefault)[0]!;
+    const r = planIslandImport({
+      catalog, grid, tierGuid: nobles.guid, coverageFloor: 1,
+      exploitSlots: true, localProduction: true,
+    });
+    expect(r.residents).toBeGreaterThan(9_000);
+    expect(r.viable).toBe(true);
+  }, 120_000);
+
   it("les DEUX modes de besoins atteignent le palier cible sur une île réelle", () => {
     // Régression 2026-08 : le palier était décidé par un ET booléen sur TOUS les services du
     // tier. En mode « seuils », qui écarte volontairement certains services, le masque devenait
