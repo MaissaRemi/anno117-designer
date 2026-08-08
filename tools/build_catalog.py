@@ -200,7 +200,12 @@ def collect_buildings(texts, template_effects):
 
         # Placement terrain : eau/côte si TerrainType marin ou AllowWaterPlacement.
         terrain = text_of(el, "./Values/Building/TerrainType")
-        allow_water = has_node(values.find("Building") or values, "AllowWaterPlacement")
+        # `elem or fallback` est un PIEGE sur ElementTree : la valeur de verite d'un element
+        # est celle de sa liste d'enfants. Un <Building> present mais VIDE valait donc False,
+        # et la recherche repartait de `values` — un noeud different, aux enfants differents.
+        # Le placement eau/cote se decidait ainsi sur le mauvais sous-arbre.
+        bnode = values.find("Building")
+        allow_water = has_node(bnode if bnode is not None else values, "AllowWaterPlacement")
         is_water = (terrain in ("Water_Including_Coast", "Coast", "Water", "Terrain_And_Water")) or allow_water
         placement = "water" if is_water else "land"
 
@@ -413,11 +418,22 @@ def resolve_sizes(buildings):
 
 def to_app_catalog(buildings, product_name):
     cat = []
+    guessed = []
     for b in buildings:
-        size = b.get("size") or {"w": 3, "h": 3}
+        # REPLI DE TAILLE. `resolve_sizes` abandonne en silence dans quatre cas — pas de `cfg`,
+        # `.ifo` introuvable dans les archives, extraction en echec, parsing nul — et le
+        # batiment gardait alors 3x3 sans que rien ne le distingue d'un vrai 3x3. Le
+        # planificateur le posait donc avec une EMPRISE FAUSSE, invisible a la relecture comme
+        # a l'execution. On marque desormais l'entree, et on crie la liste des batiments
+        # POSABLES concernes — un ornement mal dimensionne ne gene personne, un service si.
+        size = b.get("size")
+        if not size:
+            size = {"w": 3, "h": 3}
+            guessed.append(b)
         name = b.get("nameFr") or b.get("nameInternal") or f"GUID {b['guid']}"
         entry = {
             "id": f"g{b['guid']}",
+            **({"sizeGuessed": True} if not b.get("size") else {}),
             "guid": int(b["guid"]),
             "name": name,
             "nameInternal": b.get("nameInternal"),
@@ -468,6 +484,14 @@ def to_app_catalog(buildings, product_name):
         cat.append(entry)
     # tri : par categorie puis nom
     cat.sort(key=lambda e: (e["category"], e["name"]))
+    if guessed:
+        ornament = {"OrnamentalBuilding", "SimpleOrnamentalBuilding", "CultureBuilding"}
+        placeable = [g for g in guessed if (g.get("template") or "") not in ornament]
+        print(f"  ⚠ tailles NON resolues : {len(guessed)} batiment(s), dont {len(placeable)} posable(s)",
+              file=sys.stderr)
+        for g in placeable[:15]:
+            print(f"      {g.get('nameFr') or g.get('nameInternal')} (g{g['guid']}, {g.get('template')})",
+                  file=sys.stderr)
     return cat
 
 

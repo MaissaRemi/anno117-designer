@@ -213,6 +213,7 @@
   },
   {
     "id": "g149870",
+    "sizeGuessed": true,
     "guid": 149870,
     "name": "Arbre mort",
     "nameInternal": "HoF Ornament Celtic 1x1 Dead Tree",
@@ -400,6 +401,7 @@
   },
   {
     "id": "g149836",
+    "sizeGuessed": true,
     "guid": 149836,
     "name": "Bancs de marbre",
     "nameInternal": "HoF Ornament Roman 1x1 Benches",
@@ -417,6 +419,7 @@
   },
   {
     "id": "g95595",
+    "sizeGuessed": true,
     "guid": 95595,
     "name": "Bannière des trois tribus",
     "nameInternal": "Connect Ornament 1x1 Banner Plus",
@@ -434,6 +437,7 @@
   },
   {
     "id": "g95594",
+    "sizeGuessed": true,
     "guid": 95594,
     "name": "Bannière ornée",
     "nameInternal": "Connect Ornament 1x1 Banner",
@@ -502,6 +506,7 @@
   },
   {
     "id": "g149869",
+    "sizeGuessed": true,
     "guid": 149869,
     "name": "Bûcher celtique",
     "nameInternal": "HoF Ornament Celtic 1x1 Bonfire",
@@ -553,6 +558,7 @@
   },
   {
     "id": "g1000038",
+    "sizeGuessed": true,
     "guid": 1000038,
     "name": "CoastlinePreviewBuilding",
     "nameInternal": "CoastlinePreviewBuilding",
@@ -1080,6 +1086,7 @@
   },
   {
     "id": "g149861",
+    "sizeGuessed": true,
     "guid": 149861,
     "name": "Grand étal de marché",
     "nameInternal": "HoF Ornament Roman 3x3 Market Stall Large",
@@ -1233,6 +1240,7 @@
   },
   {
     "id": "g149831",
+    "sizeGuessed": true,
     "guid": 149831,
     "name": "Mausolée sylvestre",
     "nameInternal": "HoF Ornament Roman 7x8 Mausoleum",
@@ -1403,6 +1411,7 @@
   },
   {
     "id": "g14193",
+    "sizeGuessed": true,
     "guid": 14193,
     "name": "Ornament Celtic Culture 0.5x0.5 01 TODELETE",
     "nameInternal": "Ornament Celtic Culture 0.5x0.5 01 TODELETE",
@@ -1420,6 +1429,7 @@
   },
   {
     "id": "g14190",
+    "sizeGuessed": true,
     "guid": 14190,
     "name": "Ornament Celtic Statue 1x1 Obelisk",
     "nameInternal": "Ornament Celtic Statue 1x1 Obelisk",
@@ -1573,6 +1583,7 @@
   },
   {
     "id": "g149859",
+    "sizeGuessed": true,
     "guid": 149859,
     "name": "Petit étal de marché",
     "nameInternal": "HoF Ornament Roman 1x1 Market Stall Small",
@@ -1760,6 +1771,7 @@
   },
   {
     "id": "g149829",
+    "sizeGuessed": true,
     "guid": 149829,
     "name": "Statue de l'empereur Servius",
     "nameInternal": "HoF Ornament Roman 1x1 Emperor Statue",
@@ -1794,6 +1806,7 @@
   },
   {
     "id": "g149837",
+    "sizeGuessed": true,
     "guid": 149837,
     "name": "Table de jeu",
     "nameInternal": "HoF Ornament Roman 2x1 Benches",
@@ -1879,6 +1892,7 @@
   },
   {
     "id": "g149860",
+    "sizeGuessed": true,
     "guid": 149860,
     "name": "Étal de marché commun",
     "nameInternal": "HoF Ornament Roman 2x1 Market Stall Medium",
@@ -7824,6 +7838,7 @@
   },
   {
     "id": "g55981",
+    "sizeGuessed": true,
     "guid": 55981,
     "name": "Bosquet sacré",
     "nameInternal": "Wonder Celtic Sacred Grove",
@@ -8551,6 +8566,7 @@
   },
   {
     "id": "g145104",
+    "sizeGuessed": true,
     "guid": 145104,
     "name": "Port de Caecilia",
     "nameInternal": "Harbor DLC01 Volcano Warehouse (Caecilia)",
@@ -8605,6 +8621,7 @@
   },
   {
     "id": "g37203",
+    "sizeGuessed": true,
     "guid": 37203,
     "name": "Port du procurateur",
     "nameInternal": "Harbor Wettlands Trader02 (Procurator)",
