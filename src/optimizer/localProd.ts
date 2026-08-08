@@ -42,6 +42,9 @@ export interface LocalProdOptions {
     /** attributs qu'emportent des maisons rasées */
     razeCost(uids: string[]): Record<string, number>;
   };
+  /** Emplacements à essayer EN PRIORITÉ, dans l'ordre : du sol que l'appelant a réservé pour
+   *  les ateliers en faisant bâtir le quartier autour. */
+  preferred?: { x: number; y: number }[];
 }
 
 export interface LocalWorkshop {
@@ -225,9 +228,18 @@ export function planLocalProduction(
    * debout, ET le malus de zone de l'atelier (Santé −2, portée euclidienne) frappe moins de
    * monde. Seule contrainte ajoutée : l'accès à la route, gratuit au centre mais pas au bord.
    */
-  const place = (def: BuildingDef): { x: number; y: number } | null =>
-    spiral((x, y) => vacant(def, x, y) && roadAccess(def, x, y))
-    ?? spiral((x, y) => fits(def, x, y));
+  const place = (def: BuildingDef): { x: number; y: number } | null => {
+    // SOL RÉSERVÉ. L'appelant peut avoir fait bâtir le quartier AUTOUR d'emplacements qu'il
+    // destine aux ateliers (cf. la seconde passe d'`islandPlan`) : les y reposer est tout
+    // l'intérêt de la manœuvre, sinon la spirale les ignore et va raser ailleurs. Pas de
+    // comptabilité à tenir — une emprise posée rend ses cases non vides, donc la position
+    // sort d'elle-même du jeu.
+    for (const q of opts.preferred ?? []) {
+      if (vacant(def, q.x, q.y) && roadAccess(def, q.x, q.y)) return { x: q.x, y: q.y };
+    }
+    return spiral((x, y) => vacant(def, x, y) && roadAccess(def, x, y))
+      ?? spiral((x, y) => fits(def, x, y));
+  };
 
   // --- biens du manifeste, du plus lourd au plus léger ---------------------------------
   const wanted = [...demand].sort((a, b) => b.perMin - a.perMin || a.good.localeCompare(b.good));

@@ -470,9 +470,9 @@ export function planIslandImport(
   /** Tous les plans NUS évalués — le vivier dans lequel les finalistes sont pris. */
   const cands: Evaluated[] = [];
   let pick: Evaluated | null = null;
-  const runLattice = (serviceIds: string[] | undefined, floor: number): Evaluated =>
+  const runLattice = (serviceIds: string[] | undefined, floor: number, g: GridShape = planGrid): Evaluated =>
     evaluate(
-      planLattice(planGrid, req.tierGuid, lookup, {
+      planLattice(g, req.tierGuid, lookup, {
         coverageFloor: floor, serviceIds, water: true, heights: req.heights,
         institutions: patron ? [...institutions, patron] : institutions,
         permits: req.permits,
@@ -564,7 +564,7 @@ export function planIslandImport(
    * Le bloc devient donc une FONCTION, appliquée à chacun des finalistes ; c'est son résultat
    * livré — habitants réellement logés, bilan réellement tenu — qui tranche.
    */
-  const finalize = (chosen: Evaluated): IslandPlanResult => {
+  const finalize = (chosen: Evaluated, preferred?: { x: number; y: number }[]): IslandPlanResult => {
     const relevant = chosen.relevant;
     const dist = chosen.cand;
     const water = chosen.water;
@@ -842,7 +842,7 @@ export function planIslandImport(
         req.grid, lookup, buildings, roads, residenceIds,
         importGoods.map((g) => ({ good: g.good, perMin: g.perMin })),
         attrsTotal,
-        { region: islandRegion, workforce: ledger },
+        { region: islandRegion, workforce: ledger, preferred },
       );
       // ═══ RECUL SUR POSE ═══════════════════════════════════════════════════════════════
       // Le garde-fou de `planLocalProduction` compare un devis PRÉDICTIF à son budget, et ce
@@ -1065,6 +1065,56 @@ export function planIslandImport(
     onProgress?.(trials.length + 2 + i + 1, total);
     const r = finalize(shortlist[i]);
     if (!out || betterFinal(r, out)) out = r;
+  }
+
+  /**
+   * ═══ SECONDE PASSE : LES ATELIERS RÉSERVENT LEUR SOL ═══════════════════════════════
+   *
+   * Les ateliers sont posés APRÈS les maisons et rasent ce qui gêne. Une emprise qui ne mord
+   * qu'une case d'une résidence emporte la maison ENTIÈRE, ses neuf cases et ses habitants :
+   * mesuré sur roman_island_medium_01, 70 maisons détruites — plus de 600 cases de logement —
+   * pour une dizaine d'ateliers qui en occupent 250. Chercher le terrain libre d'abord a
+   * supprimé le gros du gaspillage sur les îles qui en ont ; là où il manque, il reste entier.
+   *
+   * Le comptoir avait ce problème et le résout depuis longtemps, en RÉSERVANT son emprise
+   * avant que les moteurs bâtissent (`reserveKontor`). Même remède ici, mais les emprises ne
+   * sont connues qu'après coup : on rejoue donc la recette gagnante sur une grille où le sol
+   * des ateliers du premier plan est retiré du masque constructible. Le moteur bâtit autour au
+   * lieu de démolir, et l'aval retrouve ces cases LIBRES — `planLocalProduction` cherche le
+   * terrain vide en premier, il s'y réinstalle de lui-même.
+   *
+   * Coût : une passe de placement et un pipeline aval, pas un plan entier. Le résultat n'est
+   * gardé que s'il bat le premier, jugé comme tous les autres sur ce qu'il livre.
+   */
+  // Rien à récupérer si aucun atelier n'a rasé : la réservation ne changerait que le sol qu'ils
+  // occupent déjà, pour le prix d'une passe complète. Mesuré sur celtic_island_large_07, où la
+  // recherche de terrain libre suffit à tout loger : +6 % de temps pour zéro habitant.
+  const razedByWorkshops = out ? out.workshops.reduce((a, w) => a + w.razed.length, 0) : 0;
+  if (req.localProduction && out && out.workshops.length && razedByWorkshops > 0) {
+    const cells: number[] = [];
+    const W = req.grid.w;
+    for (const w of out.workshops) {
+      for (const b of w.placed) {
+        const d = lookup(b.defId);
+        if (!d) continue;
+        const fp = footprintSize(d, b.rotation);
+        for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
+          const x = b.x + i, y = b.y + j;
+          if (x >= 0 && y >= 0 && x < W && y < req.grid.h) cells.push(y * W + x);
+        }
+      }
+    }
+    if (cells.length) {
+      onProgress?.(total, total);
+      const reserved: GridShape = { ...planGrid, usable: [...planGrid.usable] };
+      for (const c of cells) reserved.usable[c] = false;
+      // Les ateliers sont ÉPINGLÉS sur le sol réservé. Sans cela ils se réinstallent où bon
+      // leur semble et rasent de nouveau : mesuré, la réservation seule ne ramenait les
+      // démolitions que de 70 à 59, pour un gain de population nul.
+      const pin = out.workshops.flatMap((w) => w.placed.map((b) => ({ x: b.x, y: b.y })));
+      const r2 = finalize(runLattice(bestTrial, coverageFloor, reserved), pin);
+      if (betterFinal(r2, out)) out = r2;
+    }
   }
   return out!;
 }
