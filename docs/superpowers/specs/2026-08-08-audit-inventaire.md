@@ -92,7 +92,49 @@ l'être en jeu. Probablement le même mécanisme que A, en plus petit.
 routes à l'intérieur du tenant principal. Déjà documenté, déjà signalé à l'utilisateur, exclu
 de la couverture affichée depuis le correctif des services inactifs.
 
-## Le reliquat : DEUX tentatives, deux réfutations
+## Le reliquat : RÉGLÉ à la troisième tentative
+
+**Ce qui manquait n'était pas de la route, c'était la RACINE.** `pruneRoads` choisissait ce
+qu'il gardait sans savoir où se trouve le comptoir. Sa position est pourtant fixée avant les
+moteurs par `reserveKontor`, et elle arrivait déjà dans `LatticeOpts.reserved` — ajoutée pour
+empêcher la source d'aqueduc de s'y poser. Il suffisait d'ancrer l'élagage dessus.
+
+L'élagage force désormais l'anneau du comptoir dans le réseau gardé, puis, pour chaque morceau
+qui n'y tient pas, restitue le chemin qui l'y ramène — en puisant dans les routes élaguées, qui
+ne coûtent rien : l'élagage passe après `placeHouses` sans toucher `roadAt`, donc aucune maison
+ne s'y est posée.
+
+| île | services isolés | habitants |
+|---|---|---|
+| celtic_island_large_05 | 61 → **9** | 4 605 → **4 896** (+6,3 %) |
+| celtic_island_small_07 | 29 → **1** | 2 474 → 2 476 |
+| celtic_island_medium_05 | 22 → **6** | 4 861 → 4 873 |
+| celtic_island_large_07 | 33 → **6** | 4 925 → **4 978** |
+| roman_island_medium_01 | 7 → 7 | 18 303 → 18 313 |
+| roman_island_small_02 | 13 → 13 | inchangé |
+
+**165 → 42 services isolés, soit −75 %**, et la population monte partout. Les deux îles
+inchangées relèvent de l'autre moitié du problème : les services qui n'ont AUCUNE route
+adjacente (9 sur 61 sur large_05), que l'élagage ne peut pas raccrocher faute de point d'accroche.
+
+### Deux tentatives réfutées avant celle-là
+
+Elles valent d'être conservées : toutes deux consistaient à AJOUTER des routes après coup, et
+toutes deux ont aggravé le défaut.
+
+**Tentative 1 — rendre le réseau élagué connexe, dans `pruneRoads`, autour de « la plus grosse
+composante ».** 61 → **147** services isolés. Les 1 679 cases ajoutées déplacent l'endroit où le
+comptoir se raccroche : le tronc enraciné tombe de 12 693 à 11 487 cases.
+
+**Tentative 2 — donner la réserve élaguée à `repairRoadConnectivity`.** Une île sur six
+s'améliore (29 → 16), deux se dégradent lourdement : 61 → **166**, et 33 → **134** avec 4 925 →
+4 402 habitants.
+
+Le mécanisme commun : rendre des routes fait grandir le réseau sans garantir qu'il grandisse
+DU BON CÔTÉ du comptoir. La troisième tentative ne diffère que par ce point — elle sait où est
+la racine — et c'est tout l'écart entre −75 % et +170 %.
+
+### Diagnostic, pour mémoire
 
 Le reliquat `acces-comptoir-services` a été attaqué deux fois. Les deux corrections ont été
 mesurées, ont **aggravé** le défaut, et ont été retirées. Rien n'en subsiste dans le dépôt.
