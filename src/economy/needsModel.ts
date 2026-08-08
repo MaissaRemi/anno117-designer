@@ -107,9 +107,6 @@ interface CompiledTier {
   fullMask: number;
 }
 
-/** Au-delà, la table de mémoïsation par masque coûterait plus qu'elle ne rapporte. */
-const MAX_CACHED_BITS = 20;
-
 /**
  * Compile un évaluateur pour une chaîne résidentielle donnée. À faire UNE fois par plan :
  * `evaluate` est ensuite appelé une fois par emplacement de maison (des milliers de fois),
@@ -227,26 +224,27 @@ export function compileTierEvaluator(chain: Tier[], opts: EvaluatorOptions = {})
     return acc;
   };
 
-  const nBits = serviceIds.length;
-  let cache: (TierReach | undefined)[] | null = null;
-  let attrCache: (Record<string, number> | undefined)[] | null = null;
+  // MÉMOÏSATION PAR MASQUE, en tables CREUSES.
+  //
+  // C'étaient des tableaux DENSES de 2^n entrées par palier, sous un garde-fou
+  // `MAX_CACHED_BITS = 20` qui coupait purement le cache au-delà. Deux défauts : les tables
+  // étaient occupées à 0,26 % (4 à 42 masques réellement vus, pour un million d'entrées
+  // allouées d'un coup — ~42 Mo dans le worker au dernier palier autorisé), et le garde-fou
+  // rendait les plans à plus de vingt types de service brutalement lents au lieu de
+  // simplement les mémoïser. Une `Map` n'alloue que ce qui est vu, et supprime les deux.
+  //
   // ⚠ Les caches PLAFONNÉS sont indexés [palier][masque], jamais par le seul masque : deux
   // maisons au même masque mais plafonnées différemment n'ont ni la même capacité ni les
   // mêmes attributs. Partager le cache ferait silencieusement mentir toute la cascade.
-  let capCache: ((TierReach | null | undefined)[] | undefined)[] | null = null;
-  let capAttrCache: ((Record<string, number> | undefined)[] | undefined)[] | null = null;
-  if (nBits <= MAX_CACHED_BITS) {
-    cache = new Array<TierReach | undefined>(1 << nBits);
-    attrCache = new Array<Record<string, number> | undefined>(1 << nBits);
-    capCache = new Array(chain.length);
-    capAttrCache = new Array(chain.length);
-  }
+  const cache = new Map<number, TierReach>();
+  const attrCache = new Map<number, Record<string, number>>();
+  const capCache: Map<number, TierReach | null>[] = chain.map(() => new Map());
+  const capAttrCache: Map<number, Record<string, number>>[] = chain.map(() => new Map());
 
   const evaluateMask = (mask: number): TierReach => {
-    if (!cache) return compute(mask);
-    const hit = cache[mask];
-    if (hit) return hit;
-    return (cache[mask] = compute(mask));
+    let hit = cache.get(mask);
+    if (!hit) cache.set(mask, hit = compute(mask));
+    return hit;
   };
 
   return {
@@ -255,23 +253,26 @@ export function compileTierEvaluator(chain: Tier[], opts: EvaluatorOptions = {})
     serviceIds,
     evaluate: evaluateMask,
     attrsOf(mask: number): Readonly<Record<string, number>> {
-      if (!attrCache) return computeAttrs(mask);
-      const hit = attrCache[mask];
-      if (hit) return hit;
-      return (attrCache[mask] = computeAttrs(mask));
+      let hit = attrCache.get(mask);
+      if (!hit) attrCache.set(mask, hit = computeAttrs(mask));
+      return hit;
     },
     evaluateAt(index: number, mask: number): TierReach | null {
       const k = Math.max(0, Math.min(chain.length - 1, index));
-      if (!capCache) return computeAt(k, mask);
-      const row = (capCache[k] ??= new Array(1 << nBits));
-      const hit = row[mask];
-      return hit !== undefined ? hit : (row[mask] = computeAt(k, mask));
+      const row = capCache[k];
+      // `has`, pas la valeur : `computeAt` rend légitimement `null` (seuils non franchis),
+      // et le tester par fausseté recalculerait ce cas à chaque appel.
+      if (row.has(mask)) return row.get(mask)!;
+      const v = computeAt(k, mask);
+      row.set(mask, v);
+      return v;
     },
     attrsAt(index: number, mask: number): Readonly<Record<string, number>> {
       const k = Math.max(0, Math.min(chain.length - 1, index));
-      if (!capAttrCache) return computeAttrs(mask, k);
-      const row = (capAttrCache[k] ??= new Array(1 << nBits));
-      return (row[mask] ??= computeAttrs(mask, k));
+      const row = capAttrCache[k];
+      let hit = row.get(mask);
+      if (!hit) row.set(mask, hit = computeAttrs(mask, k));
+      return hit;
     },
     reference(index: number): TierReach {
       const k = Math.max(0, Math.min(chain.length - 1, index));
