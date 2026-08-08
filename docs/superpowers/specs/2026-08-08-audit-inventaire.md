@@ -92,6 +92,57 @@ l'être en jeu. Probablement le même mécanisme que A, en plus petit.
 routes à l'intérieur du tenant principal. Déjà documenté, déjà signalé à l'utilisateur, exclu
 de la couverture affichée depuis le correctif des services inactifs.
 
+## Le reliquat : DEUX tentatives, deux réfutations
+
+Le reliquat `acces-comptoir-services` a été attaqué deux fois. Les deux corrections ont été
+mesurées, ont **aggravé** le défaut, et ont été retirées. Rien n'en subsiste dans le dépôt.
+
+**Diagnostic établi** (`celtic_island_large_05`, palier sommet) :
+
+- le réseau routier final compte **96 composantes** : un tronc de 12 693 cases, puis 169, 143,
+  94, 74, 71, 50, 39… soit **1 240 cases hors du réseau enraciné** au comptoir ;
+- sur les 61 services isolés, **52 ont bel et bien une route adjacente** — elle n'est
+  simplement pas dans la composante du comptoir. Seuls 9 n'ont aucune route du tout. Ce sont
+  deux problèmes distincts, et le second est marginal.
+
+**Tentative 1 — rendre le réseau élagué connexe, dans `pruneRoads`.** Prendre le plus gros
+morceau pour tronc, parcourir le réseau complet, restituer le chemin de chaque morceau isolé.
+
+| | services isolés |
+|---|---|
+| référence | 61 |
+| reconnexion | **147** |
+
+Cause : la connexité qui compte n'est pas celle du réseau *en soi*, mais celle **au comptoir**
+— or le comptoir n'existe pas encore à l'élagage. Ajouter 1 679 cases de route déplace
+simplement l'endroit où il se raccroche : le tronc enraciné passe de 12 693 à 11 487 cases.
+
+**Tentative 2 — donner à `repairRoadConnectivity` la réserve des routes élaguées.** L'idée
+tenait debout : `pruneRoads` passe après `placeHouses` et ne touche pas `roadAt`, donc aucune
+maison ne s'est posée sur une case élaguée — la restituer est gratuite. Et la réparation, elle,
+s'exécute bien APRÈS la pose du comptoir, au bon moment.
+
+| île | référence | avec la réserve |
+|---|---|---|
+| celtic_island_large_05 | 61 | **166** |
+| celtic_island_large_07 | 33 | **134** (4 925 → 4 402 habitants) |
+| celtic_island_medium_05 | 22 | 38 |
+| celtic_island_small_07 | 29 | **16** |
+| roman_island_medium_01 | 7 | 7 |
+| roman_island_small_02 | 13 | 13 |
+
+Une île sur six s'améliore, deux se dégradent lourdement. Même mécanisme que la tentative 1 :
+rendre des routes fait grandir le réseau sans garantir qu'il grandisse DU BON CÔTÉ du comptoir.
+
+**Ce qu'il ne faut PAS refaire.** Toute correction qui consiste à AJOUTER des routes après coup
+se heurtera au même mur : la fragmentation ne vient pas d'un manque de routes — il en reste
+13 933 — mais du fait que `pruneRoads` choisit ce qu'il garde sans connaître la racine du
+réseau. La correction devra rendre l'élagage conscient du comptoir, dont la position est
+pourtant connue AVANT les moteurs (`reserveKontor` la fixe) : c'est cette information qui n'est
+pas transmise à `planLattice`, et c'est par là qu'il faudrait reprendre.
+
+---
+
 ## Zones sans invariant
 
 - **`src/ui`** (15 fichiers, 1 735 lignes, 0 test) : relu pour les quatre classes. Aucun `catch`
