@@ -1,6 +1,7 @@
 import { uid } from "../model/factories";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
-import { economy, residentialChainExtended } from "../economy/economy";
+import { economy, effectOf, residentialChainExtended } from "../economy/economy";
+import { viableSubset, type Weighed } from "./viability";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { VITAL_ATTRS } from "../economy/attributes";
 import type { DefLookup } from "../engine/rules";
@@ -21,13 +22,18 @@ export interface PackOpts {
   serviceIds?: string[];
   /** Permis détenus en partie, par GUID de permis (cf. `economy/uniques`). */
   permits?: Record<string, number>;
+  /** INSTITUTIONS à blanketer en plus des services du palier — même rôle que dans
+   *  planLattice : elles ne remplissent aucun besoin, mais leur effet de zone est le seul
+   *  contrepoids au malus de rang de cité. Sans elles, aucun plan dense ne tient. */
+  institutions?: string[];
+  /** Arrêter de bâtir quand le BILAN DE L'ÎLE passerait sous zéro. Défaut true. */
+  viabilityGate?: boolean;
 }
 
 export interface PackResult {
   buildings: PlacedBuilding[]; // services + maisons
-  /** Parcelles et paliers atteignables — interface commune avec planLattice. packPlan ne
-   *  produit pas cette information : la cascade de main-d'œuvre ne s'applique donc pas aux
-   *  plans qu'il génère, et le déficit éventuel est simplement signalé. */
+  /** Parcelles et paliers atteignables — interface commune avec planLattice, et matière
+   *  première de la cascade de main-d'œuvre. */
   plots?: HousePlot[];
   roads: RoadTile[];
   fields: FieldTile[];
@@ -41,8 +47,8 @@ export interface PackResult {
   houseMoney: number;
   /** Capacité cumulée PAR PALIER atteint (guid → habitants). */
   capByTier: Record<string, number>;
-  /** Σ des attributs vitaux sur les maisons, hors rang de cité (cf. LatticeResult.attrsSum).
-   *  packPlan ne pose pas d'institution : ce sont les seuls attributs des besoins. */
+  /** Σ des attributs vitaux sur les maisons, hors rang de cité (cf. LatticeResult.attrsSum),
+   *  institutions comprises. */
   attrsSum: Record<string, number>;
   servicesPlaced: Record<string, number>;
   /** Réseau d'eau intégré — jamais produit par packPlan (l'eau y serait routée
@@ -85,8 +91,12 @@ export function planPacked(
 
   // services requis à portée connue, petits / gros
   const wanted = opts.serviceIds ? new Set(opts.serviceIds) : null;
-  const svcDefs = [...new Set(tier.services.map((s) => s.building).filter((b): b is string => !!b))]
-    .filter((id) => !wanted || wanted.has(id))
+  const viabilityGate = opts.viabilityGate !== false;
+  const tierSvcIds = new Set(tier.services.map((s) => s.building).filter((b): b is string => !!b));
+  // Les institutions sont des types de service SUPPLÉMENTAIRES : même min-set-cover, même BFS
+  // de portée-rue. Elles n'entrent simplement pas dans l'évaluateur de palier (aucun bit).
+  const instIds = (opts.institutions ?? []).filter((id) => !tierSvcIds.has(id));
+  const svcDefs = [...new Set([...tierSvcIds].filter((id) => !wanted || wanted.has(id)).concat(instIds))]
     .map((id) => lookup(id))
     .filter((d): d is BuildingDef => !!d && rangeOf(d) > 0);
   const small = svcDefs.filter((d) => rangeOf(d) <= SMALL_RANGE_MAX);
@@ -327,11 +337,16 @@ export function planPacked(
   const typeBit = types.map((tc) => evaluator.bitOf.get(tc.def.id));
   const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
   const alive = houses.map((h) => h.alive);
-  const tierCounts: Record<string, number> = {};
-  const capByTier: Record<string, number> = {};
-  const attrsSum: Record<string, number> = {};
-  for (const k of VITAL_ATTRS) attrsSum[k] = 0;
-  let houseCount = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
+  // Institutions RÉELLEMENT posées : leur effet de zone s'ajoute au bilan de chaque maison
+  // qu'elles couvrent. Elles ne remplissent aucun besoin, donc aucun double comptage.
+  const instTypes = types
+    .map((tc, i) => ({ i, id: tc.def.id, fx: effectOf(tc.def.id) }))
+    .filter((e) => instIds.includes(e.id) && !!e.fx);
+
+  const placed: (Weighed & {
+    b: PlacedBuilding; money: number; guid: string; reachIdx: number; mask: number;
+    inst: Record<string, number>;
+  })[] = [];
   for (let i = 0; i < houses.length; i++) {
     if (!alive[i]) continue;
     let coveredMask = 0;
@@ -340,16 +355,61 @@ export function planPacked(
       if (b !== undefined && types[t].covered[i]) coveredMask |= 1 << b;
     }
     const reach = evaluator.evaluate(coveredMask);
-    const at = evaluator.attrsOf(coveredMask);
-    for (const k of VITAL_ATTRS) attrsSum[k] += at[k] ?? 0;
+    const inst: Record<string, number> = {};
+    for (const e of instTypes) {
+      if (!types[e.i].covered[i]) continue;
+      for (const [k, v] of Object.entries(e.fx!.attrs)) inst[k] = (inst[k] ?? 0) + v;
+    }
+    const attrs: Record<string, number> = { ...evaluator.attrsOf(coveredMask) };
+    for (const [k, v] of Object.entries(inst)) attrs[k] = (attrs[k] ?? 0) + v;
     const h = houses[i];
-    buildings.push({ uid: uid("pack"), defId: reach.tier.residenceId ?? tier.residenceId, x: h.x, y: h.y, rotation: 0, locked: false });
+    placed.push({
+      b: { uid: uid("pack"), defId: reach.tier.residenceId ?? tier.residenceId, x: h.x, y: h.y, rotation: 0, locked: false },
+      key: h.y * W + h.x, cap: reach.cap, money: reach.money, guid: reach.tier.guid,
+      reachIdx: reach.index, mask: coveredMask, attrs, inst,
+    });
+  }
+
+  // ═══ GARDE-FOU DE VIABILITÉ ══════════════════════════════════════════════════════════
+  // Il manquait. packPlan empilait ses maisons sans jamais vérifier le bilan de l'île, si
+  // bien qu'il annonçait 21 414 habitants là où les plans lattice en annonçaient 4 980 —
+  // puis se faisait éliminer par `better()` au tout premier critère, un plan au bilan négatif
+  // perdant contre n'importe quel plan viable. Sa densité, trois à quatre fois supérieure sur
+  // les paliers bas, partait à la poubelle à chaque plan. Même définition que planLattice
+  // (cf. optimizer/viability), sinon la comparaison entre les deux moteurs n'a aucun sens.
+  const kept = viabilityGate ? viableSubset(placed, tier.region) : placed;
+  const keptSet = new Set(kept.map((x) => x.b.uid));
+  for (let i = 0, j = 0; i < houses.length; i++) if (alive[i]) { /* réaligne alive sur kept */
+    alive[i] = keptSet.has(placed[j].b.uid);
+    j++;
+  }
+
+  const tierCounts: Record<string, number> = {};
+  const capByTier: Record<string, number> = {};
+  const attrsSum: Record<string, number> = {};
+  for (const k of VITAL_ATTRS) attrsSum[k] = 0;
+  const plots: HousePlot[] = [];
+  let houseCount = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
+  for (const pl of kept) {
+    buildings.push(pl.b);
     houseCount++;
-    residents += reach.cap;
-    houseMoney += reach.money;
-    tierCounts[reach.tier.guid] = (tierCounts[reach.tier.guid] ?? 0) + 1;
-    capByTier[reach.tier.guid] = (capByTier[reach.tier.guid] ?? 0) + reach.cap;
-    if (reach.tier.guid === targetGuid) fullyCovered++;
+    residents += pl.cap;
+    houseMoney += pl.money;
+    tierCounts[pl.guid] = (tierCounts[pl.guid] ?? 0) + 1;
+    capByTier[pl.guid] = (capByTier[pl.guid] ?? 0) + pl.cap;
+    if (pl.guid === targetGuid) fullyCovered++;
+    for (const k of VITAL_ATTRS) attrsSum[k] += pl.attrs[k] ?? 0;
+    // PALIERS ATTEIGNABLES : matière première de la cascade de main-d'œuvre. Les neuf
+    // résidences du jeu font 3×3, une conversion n'est qu'un changement de `defId`.
+    const optsOf: HousePlot["opts"] = [];
+    for (let k = 0; k < chain.length; k++) {
+      const r = evaluator.evaluateAt(k, pl.mask);
+      if (!r || !r.tier.residenceId) continue;
+      const at: Record<string, number> = {};
+      for (const key of VITAL_ATTRS) at[key] = (evaluator.attrsAt(k, pl.mask)[key] ?? 0) + (pl.inst[key] ?? 0);
+      optsOf.push({ guid: r.tier.guid, defId: r.tier.residenceId, cap: r.cap, attrs: at });
+    }
+    plots.push({ uid: pl.b.uid, guid: pl.guid, opts: optsOf });
   }
 
   // ===================== ÉLAGAGE ROUTES =====================
@@ -375,5 +435,5 @@ export function planPacked(
   const roads: RoadTile[] = [];
   for (let i = 0; i < N; i++) if (keep[i]) roads.push({ x: i % W, y: (i / W) | 0 });
 
-    return { buildings, roads, fields: [], houses: houseCount, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum, servicesPlaced };
+    return { buildings, plots, roads, fields: [], houses: houseCount, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum, servicesPlaced };
 }
