@@ -31,7 +31,47 @@ La discipline de confirmation a intercepté deux faux positifs, qui auraient con
 - **`acces-comptoir`** mêlait deux gravités. Une RÉSIDENCE coupée est un mensonge comptable ;
   un SERVICE coupé est une perte d'efficacité déjà signalée. Deux règles distinctes.
 
-## Reste à corriger — confirmé, non résolu
+## Confirmation finale
+
+Balayage rejoué après correction, code identique à celui du dépôt :
+
+| passe | avant | après |
+|---|---|---|
+| LARGE — 55 îles | 98 violations, **4 familles de `faute`** (`acces-comptoir` 52 îles, `dans-la-grille` 42, `comptoir-present` 3, `pas-de-chevauchement` 1) | 55 violations, **aucune `faute`** |
+| PROFONDE — 36 plans | 63 violations, 3 familles de `faute` | 33 violations, **aucune `faute`** |
+
+Ne subsiste que `acces-comptoir-services`, de gravité `suspect` : 1 à 61 services par île
+isolés par l'élagage des routes à l'intérieur du tenant principal. Déjà signalé à
+l'utilisateur dans les trous du plan, et exclu de la couverture affichée depuis le correctif
+des services inactifs.
+
+**Filet permanent** : `invariants.test.ts` rejoue les règles sur les trois îles qui ont révélé
+les défauts A, B et C, et fait échouer la suite sur toute violation `faute`. ~20 s.
+
+---
+
+## Corrigé au troisième lot
+
+**A. Le comptoir se déclarait raccordé sans toucher aucune route.** `connectKontor` construisait
+son périmètre COINS COMPRIS, et une route sur un coin — diagonale — faisait répondre « déjà
+raccordé ». Sur `celtic_island_large_05` : zéro route sur les 30 cases orthogonales du comptoir,
+dont 29 sur terre, dans un plan qui en compte 13 933. Aucune racine, 147 services inactifs.
+Périmètre orthogonal désormais : 147 → 61 services isolés, et `celtic_island_large_07` gagne
+4 616 → 4 925 habitants.
+
+**B. La source d'aqueduc se posait sur le comptoir.** La réservation retire l'emprise du masque
+de TERRE ; or une source vise justement les cases hors masque, celles des zones montagne. Et le
+comptoir, posé plus tard, n'est pas dans le `bldOcc` que consulte `planWater`. 7 cases occupées
+deux fois sur `roman_island_small_02`. `planWater` reçoit désormais l'emprise réservée.
+
+**C. Une résidence comptée sans accès.** `repairRoadConnectivity` ne voit que les ÎLOTS de
+route : une maison qui n'en touche plus aucune lui est invisible. La classe est fermée par une
+passe finale qui tranche sur le critère du jeu (`rootedRoadSet` + `roadConnected`) et retire
+toute résidence que le réseau enraciné n'atteint pas.
+
+---
+
+## Ancien état — pour mémoire
 
 **A. La case d'accès du comptoir disparaît du plan final.** `celtic_island_large_05` : le
 comptoir est posé ET raccordé (18 maisons rasées pour cela), mais la disposition finale ne
