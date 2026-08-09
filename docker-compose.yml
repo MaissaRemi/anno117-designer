@@ -1,11 +1,18 @@
 services:
   # Build de production servi par nginx. `docker compose up` suffit.
-  # Port hote surchargeable si 8080 est deja pris : ANNO_PORT=8090 docker compose up
+  #
+  # Le port hote par defaut est 8090, PAS 8080, et c'est deliberé : 8080 est le port le plus
+  # dispute de la machine, et surtout le defaut se lisait `${ANNO_PORT:-8080}`. Un `docker
+  # compose up --build` lance sans exporter ANNO_PORT recreait donc le conteneur sur 8080 en
+  # silence, l'onglet ouvert sur 8090 tombait, et ca ressemblait a un crash — alors que nginx
+  # repondait 200. Le defaut vaut maintenant ce qu'on utilise vraiment.
+  #
+  # Surchargeable au besoin : ANNO_PORT=8080 docker compose up
   app:
     build: .
     image: anno117-designer:latest
     ports:
-      - "${ANNO_PORT:-8080}:80"
+      - "${ANNO_PORT:-8090}:80"
     restart: unless-stopped
 
   # Serveur de developpement avec rechargement a chaud.
