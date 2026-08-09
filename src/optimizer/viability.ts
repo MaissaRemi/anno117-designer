@@ -35,33 +35,131 @@ export interface Weighed {
  *    parce qu'un plan au bilan négatif perd contre n'importe quel plan viable. Sa densité,
  *    trois à quatre fois supérieure sur les paliers bas, partait à la poubelle à chaque plan.
  */
-export function viableSubset<T extends Weighed>(set: T[], region: string): T[] {
+/** Réglages du garde-fou. */
+export interface ViabilityOpts {
+  /**
+   * DÉFICIT VITAL TOLÉRÉ PAR MAISON. `0` reproduit exactement le comportement historique.
+   *
+   * Le veto est binaire : un attribut vital négatif d'un point sur toute l'île fait raser
+   * jusqu'au retour à zéro. Or la donnée du jeu décrit l'incendie comme un TAUX DE RISQUE
+   * (`GAME_MECHANICS.md §10`, `CityStatus/IncidentInterval`), pas comme une interdiction — et
+   * l'échelle de rang compte quarante paliers jusqu'à 260 000 habitants, dont vingt-cinq que
+   * le veto binaire rend inatteignables. Le modèle contredit sa propre table.
+   *
+   * La tolérance ouvre cette marge sans la décider à la place du joueur : elle reste à zéro
+   * par défaut, et c'est l'interface qui l'expose.
+   */
+  tolerance?: number;
+}
+
+export function viableSubset<T extends Weighed>(
+  set: T[],
+  region: string,
+  opts?: ViabilityOpts,
+): T[] {
+  const tol = Math.max(0, opts?.tolerance ?? 0);
   const ladder = cityStatusLadder(region);
   const rankAt = (pop: number): Record<string, number> => {
     let a: Record<string, number> = {};
     for (const st of ladder) { if (pop < st.population) break; a = st.attrs; }
     return a;
   };
-  // On retire par lots (2 %) pour ne pas refaire n² tours sur les grandes îles.
+  /** Bilan par attribut vital pour un sous-ensemble donné, malus de rang compris. */
+  const balance = (n: number, pop: number, sum: Record<string, number>) => {
+    const rank = rankAt(pop);
+    const out: Record<string, number> = {};
+    for (const k of VITAL_ATTRS) out[k] = (sum[k] ?? 0) + n * (rank[k] ?? 0) + tol * n;
+    return out;
+  };
+
   let keep: T[] = set;
+  const removed: T[] = [];
+
+  // ─── RETRAIT ────────────────────────────────────────────────────────────────────────
+  // Par lots de 2 % : refaire n² tours coûterait des minutes sur une carte continentale.
   for (let guard = 0; guard < 400 && keep.length; guard++) {
     let pop = 0;
-    for (const p of keep) pop += p.cap;
-    const rank = rankAt(pop);
-    // Bilan de l'ÎLE : Σ des attributs des maisons retenues, plus le malus de rang appliqué à
-    // chacune. L'attribut le plus déficitaire commande le retrait.
-    let binding: string | null = null, worst = 0;
-    for (const k of VITAL_ATTRS) {
-      let t = keep.length * (rank[k] ?? 0);
-      for (const p of keep) t += p.attrs[k] ?? 0;
-      if (t < 0 && (binding === null || t < worst)) { binding = k; worst = t; }
+    const sum: Record<string, number> = {};
+    for (const p of keep) {
+      pop += p.cap;
+      for (const k of VITAL_ATTRS) sum[k] = (sum[k] ?? 0) + (p.attrs[k] ?? 0);
     }
-    if (!binding) break;
-    const b = binding;
-    // tri déterministe : contribution croissante, puis position — la pire d'abord. Le malus
-    // de rang est le même pour toutes, il s'annule dans la comparaison.
-    const sorted = [...keep].sort((p, q) => ((p.attrs[b] ?? 0) - (q.attrs[b] ?? 0)) || (p.key - q.key));
-    keep = sorted.slice(Math.max(1, Math.ceil(keep.length * 0.02)));
+    const bal = balance(keep.length, pop, sum);
+    const manquants = VITAL_ATTRS.filter((k) => bal[k]! < 0);
+    if (!manquants.length) break;
+
+    // ═══ ON TRIE SUR TOUS LES ATTRIBUTS EN DÉFICIT, PAS SUR LE PIRE ═══════════════════
+    //
+    // Le tri ne portait que sur l'attribut le plus déficitaire du moment. Mesuré sur la carte
+    // continentale du DLC : le Bonheur commande les quatre-vingt-dix-neuf premières
+    // itérations, alors que c'est la Sécurité incendie qui ferme la boucle. Le garde-fou
+    // détruisait donc des maisons bien pourvues en incendie au profit d'un attribut qui
+    // n'était même pas celui qui bloquerait à l'arrivée.
+    //
+    // Chaque attribut déficitaire est ramené à une échelle commune avant d'être sommé — sans
+    // quoi le Bonheur, dont les valeurs sont d'un ordre de grandeur supérieur, dominerait le
+    // score et le tri redeviendrait mono-attribut par accident.
+    const echelle: Record<string, number> = {};
+    for (const k of manquants) {
+      let m = 1;
+      for (const p of keep) { const v = Math.abs(p.attrs[k] ?? 0); if (v > m) m = v; }
+      echelle[k] = m;
+    }
+    const score = (p: T) => {
+      let s = 0;
+      for (const k of manquants) s += (p.attrs[k] ?? 0) / echelle[k]!;
+      return s;
+    };
+    // départage par position : c'est lui qui rend les plans reproductibles.
+    const sorted = [...keep].sort((p, q) => (score(p) - score(q)) || (p.key - q.key));
+    const coupe = Math.max(1, Math.ceil(keep.length * 0.02));
+    for (let i = 0; i < coupe; i++) removed.push(sorted[i]!);
+    keep = sorted.slice(coupe);
   }
+
+  // ─── RÉADMISSION ────────────────────────────────────────────────────────────────────
+  //
+  // Le retrait par lots DÉPASSE par construction : le dernier lot de 2 % emporte des maisons
+  // qui auraient tenu. Sur la continentale, cent soixante-douze itérations à 2 % ne laissent
+  // que 3 % de l'effectif — le résultat est alors dicté par le nombre d'itérations autant que
+  // par la contrainte.
+  //
+  // On rend donc au plan les meilleures maisons retirées, une à une, tant que le bilan tient.
+  // La passe ne peut que gagner : elle part du résultat du retrait et n'accepte qu'un ajout
+  // qui laisse l'île viable. Les totaux sont tenus en incrémental — recalculer le bilan à
+  // chaque essai serait quadratique.
+  if (removed.length) {
+    let pop = 0;
+    const sum: Record<string, number> = {};
+    for (const k of VITAL_ATTRS) sum[k] = 0;
+    for (const p of keep) {
+      pop += p.cap;
+      for (const k of VITAL_ATTRS) sum[k]! += p.attrs[k] ?? 0;
+    }
+    // marge la plus faible d'abord écartée : on tente les plus généreuses en tête.
+    const marge = (p: T) => {
+      let m = Infinity;
+      for (const k of VITAL_ATTRS) m = Math.min(m, p.attrs[k] ?? 0);
+      return m;
+    };
+    const cands = [...removed].sort((p, q) => (marge(q) - marge(p)) || (p.key - q.key));
+    // Une maison refusée peut le rester à cause de la population, pas de ses propres
+    // attributs : on s'arrête après une série d'échecs plutôt qu'au premier.
+    let echecs = 0;
+    for (const p of cands) {
+      if (echecs >= 64) break;
+      const nPop = pop + p.cap;
+      const nSum: Record<string, number> = {};
+      for (const k of VITAL_ATTRS) nSum[k] = sum[k]! + (p.attrs[k] ?? 0);
+      const bal = balance(keep.length + 1, nPop, nSum);
+      if (VITAL_ATTRS.some((k) => bal[k]! < 0)) { echecs++; continue; }
+      echecs = 0;
+      keep.push(p);
+      pop = nPop;
+      for (const k of VITAL_ATTRS) sum[k] = nSum[k]!;
+    }
+    keep.sort((p, q) => p.key - q.key); // ordre stable en sortie
+  }
+
   return keep;
 }

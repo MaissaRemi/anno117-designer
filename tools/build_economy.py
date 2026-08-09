@@ -46,17 +46,23 @@ SERVICE_BUILDING_OVERRIDES = {
     # Maison de jeu CELTIC (besoin 37176, icône celtic) : le bâtiment 37177 réutilise
     # l'icône ROMAINE → le match d'icône tombait sur la version romaine déjà prise.
     "37176": "g37177",
-    # SANCTUAIRE (besoin 2753) : le match d'icone tombait sur `g3615` « Public Roman
-    # Sanctuary », un ARCHETYPE 6x10 de portee 38 qui n'est pas constructible en jeu. Le
-    # batiment qui remplit reellement ce besoin est un sanctuaire de DIVINITE : 3x3, portee
-    # ~20, un par dieu et tous identiques a la taille pres. On en designe un — Mars, choix
-    # deterministe — et `twin_in_world` trouvera son equivalent celtique le cas echeant. Le
-    # dieu par defaut est CERNUNNOS : portee 22 (la plus longue avec Minerve) et surtout un
-    # bonus de SANTE, attribut VITAL — Mars et Minerve donnent Prestige et Connaissance, qui
-    # ne comptent pas dans le garde-fou de viabilite. Ecart mesure faible (20 879 -> 20 913
-    # habitants sur medium_01) : c'est la marge de securite qui tranche, pas la population.
-    # Le joueur remplace le dieu a la construction, l'emprise ne bouge pas.
-    "2753": "g81072",
+    # SANCTUAIRE (besoin 2753) : AUCUN OVERRIDE, et c'est le resultat d'une erreur corrigee.
+    #
+    # `g3615 Sanctuaire` avait ete pris pour un ARCHETYPE non constructible, et le besoin
+    # detourne vers un autel de divinite 3x3. C'etait faux sur toute la ligne :
+    #  - g3615 porte `<Constructable />` et figure au menu « Roman T2 Plebeians » ;
+    #  - le besoin 2753 « Need Roman Public Sanctuary » declare Bonheur +1 / Foi +2, soit
+    #    MOT POUR MOT l'effet de zone de g3615 — le match par icone etait juste ;
+    #  - AUCUN besoin du jeu n'a pour icone un autel de divinite (recherche exhaustive sur les
+    #    30 800 assets) : les autels ne remplissent aucun besoin. C'est aussi ce que dit
+    #    GAME_MECHANICS.md §9 bis.2.
+    #
+    # L'override faisait donc remplir un besoin par un batiment qui n'en remplit aucun, et
+    # creditait a chaque maison un Incendie +2 de SERVICE en plus de l'effet de zone de l'autel.
+    #
+    # Consequence, et elle est heureuse : l'autel n'a jamais eu a consommer le permis pour
+    # satisfaire un besoin. Le permis achete un bonus PUR, que `pickPatron` place librement sur
+    # l'attribut limitant — c'est le sens de la regle « un seul dieu par ile ».
     # COLISÉE : le match d'icône tombait sur la phase de chantier « fondations »
     # (36908, Monument, aucune portée). Le bâtiment FINAL est 3621 (MonumentEventBuilding,
     # street 250, eau 50u Mandatory) — cf. GAME_MECHANICS.md §9.

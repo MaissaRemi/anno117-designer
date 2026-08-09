@@ -4,7 +4,7 @@ import { economy, residentialChainExtended, upkeepOf } from "../economy/economy"
 import { buildTierProfile, solve } from "../economy/solve";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { cityStatusAttrs, tierByGuid } from "../economy/economy";
-import { institutionDefs, pickPatron, SHRINE_TYPE, isViable, VITAL_ATTRS, worstAttr } from "../economy/attributes";
+import { institutionDefs, pickPatron, SHRINE_TYPE, VITAL_ATTRS, worstAttr } from "../economy/attributes";
 import { effectOf } from "../economy/economy";
 import { footprintSize } from "../engine/geometry";
 import { candidateRecipes } from "./recipes";
@@ -62,6 +62,19 @@ export interface IslandPlanRequest {
    * `DEFAULT_PERMITS`.
    */
   permits?: Record<string, number>;
+  /**
+   * DÉFICIT VITAL TOLÉRÉ PAR MAISON. 0 (défaut) = le veto binaire historique.
+   *
+   * Le garde-fou rase jusqu'à ce que chaque attribut vital de l'île repasse à zéro. Sur une
+   * grande île ce veto est un plafond de POPULATION, pas de surface : une maison patricienne
+   * plafonne à +7 de sécurité incendie tandis que le malus de rang atteint −7 dès 30 000
+   * habitants. Au-delà, aucune maison ne peut avoir un bilan incendie positif — l'échelle de
+   * rang compte pourtant quarante paliers jusqu'à 260 000 habitants, dont vingt-cinq
+   * inatteignables. Le modèle contredit sa propre table.
+   *
+   * La tolérance laisse le joueur arbitrer ce risque plutôt que de le décider pour lui.
+   */
+  tolerance?: number;
   /**
    * LISTE DE VŒUX DE PRODUCTION — ce que l'utilisateur veut voir sur l'île.
    *
@@ -195,6 +208,15 @@ export function planIslandImport(
   onProgress?: (step: number, total: number) => void,
 ): IslandPlanResult {
   const needMode = req.needMode ?? "auto";
+  // LA TOLÉRANCE DOIT VALOIR POUR LE VERDICT AUSSI, PAS SEULEMENT POUR LA SÉLECTION.
+  //
+  // `viableSubset` garde les maisons tant que le déficit par maison reste sous la tolérance.
+  // Juger ensuite le plan avec un `isViable` strict le déclarait non viable alors qu'il
+  // respectait exactement la contrainte demandée — et `better()`, qui départage d'abord sur
+  // `viable`, aurait préféré un plan bridé à un plan conforme à l'option.
+  const tol = Math.max(0, req.tolerance ?? 0);
+  const viableAvecTolerance = (attrs: Record<string, number>, houses: number): boolean =>
+    VITAL_ATTRS.every((k) => (attrs[k] ?? 0) + tol * houses >= 0);
   const lookup = makeLookup(req.catalog);
   const tier = economy.tiers.find((t) => t.guid === req.tierGuid);
   if (!tier || !tier.residenceId) {
@@ -433,7 +455,7 @@ export function planIslandImport(
       residents,
       waterPct: nCons ? nOk / nCons : 1,
       attrsTotal,
-      viable: isViable(attrsTotal),
+      viable: viableAvecTolerance(attrsTotal, cand.houses),
       sig: `${buildings.length}:${sig}`,
     };
   };
@@ -498,7 +520,7 @@ export function planIslandImport(
       planLattice(g, req.tierGuid, lookup, {
         coverageFloor: floor, serviceIds, water: true, heights: req.heights,
         institutions: patron ? [...institutions, patron] : institutions,
-        permits: req.permits, reserved: kontorRect,
+        permits: req.permits, reserved: kontorRect, tolerance: req.tolerance,
       }),
       serviceIds ? new Set(serviceIds) : null,
     );
@@ -544,11 +566,29 @@ export function planIslandImport(
     for (const k of VITAL_ATTRS) {
       deficit[k] = Math.max(0, -((pick.cand.attrsSum[k] ?? 0) + pick.cand.houses * (rank[k] ?? 0)));
     }
-    // Aucun attribut en déficit : le plan tient déjà. On vise alors le plus serré — c'est
-    // lui qui bornera la production locale et la cascade de main-d'œuvre.
+    // ═══ LE DÉFICIT EST TOUJOURS NUL ICI, ET C'EST LE POINT ═══════════════════════════
+    //
+    // `pick` sort de `viableSubset`, qui a DÉJÀ rasé jusqu'au retour à zéro : aucun attribut
+    // vital n'y est négatif, donc la boucle ci-dessus rend systématiquement 0 partout. Le
+    // repli était censé viser « le plus serré », mais il passait par `worstAttr`, qui ne
+    // retourne que sur une valeur STRICTEMENT NÉGATIVE — donc `null`, donc un déficit nul.
+    //
+    // `pickPatron` retombait alors sur son départage par défaut : somme des gains vitaux, puis
+    // identifiant. Le dieu était élu par ordre alphabétique, ce que `GAME_MECHANICS.md §9`
+    // interdit explicitement.
+    //
+    // Le bon critère est la marge PAR MAISON, pas le total : sur la carte continentale du DLC
+    // l'incendie tient à +0,05 par maison quand le Bonheur est à +2,31 et l'Argent à +58. Ces
+    // trois nombres disent la même chose que le total ne dit pas — c'est l'incendie qui borne
+    // la croissance, et c'est donc Vulcain qu'il faut élire.
     if (VITAL_ATTRS.every((k) => deficit[k] === 0)) {
-      const w = worstAttr({ ...pick.attrsTotal });
-      if (w) deficit[w.attr] = 1;
+      const n = Math.max(1, pick.cand.houses);
+      let serre: string | null = null, marge = Infinity;
+      for (const k of VITAL_ATTRS) {
+        const m = (pick.attrsTotal[k] ?? 0) / n;
+        if (m < marge) { marge = m; serre = k; }
+      }
+      if (serre) deficit[serre] = 1;
     }
     patron = pickPatron(instCands, deficit);
     if (patron) {
@@ -988,7 +1028,12 @@ export function planIslandImport(
       // Le dernier essai est CONSERVÉ : c'est celui du sous-ensemble accepté, et le recalculer
       // plus bas serait un règlement complet jeté pour rien.
       trial = settleWith(kept);
-      while (kept.length && !isViable(trial.attrs)) {
+      // Le recul se juge avec la MÊME tolérance que le garde-fou, sans quoi les deux se
+      // contredisent : mesuré à tolérance 3 sur la carte continentale, ce test resté strict
+      // retirait des ateliers jusqu'à faire tomber le plan de 86 052 à 6 664 habitants — il
+      // défaisait ce que la tolérance venait d'autoriser.
+      const nMaisons = buildings.filter((b) => residenceIds.has(b.defId)).length;
+      while (kept.length && !viableAvecTolerance(trial.attrs, nMaisons)) {
         droppedCopies += kept.pop()!.copies;
         trial = settleWith(kept);
       }
@@ -1123,7 +1168,7 @@ export function planIslandImport(
       if (s.pct < 100) gaps.push(`${s.name} : ${s.pct}% des maisons couvertes (distance-rue)`);
     }
 
-    const planViable = isViable(attrsTotal);
+    const planViable = viableAvecTolerance(attrsTotal, houses);
     const hasWaterConsumers = water.consumers.length > 0;
     return {
       mode: "import",
