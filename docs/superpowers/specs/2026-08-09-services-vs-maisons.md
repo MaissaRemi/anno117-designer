@@ -114,9 +114,32 @@ Trois corrections, indissociables :
 2. **Les attributs suivent le batiment pose**, plus le besoin. Sans quoi le moteur promettait
    l'effet de l'archetype pour un batiment qui en emet un autre. Passe generale, no-op sur tous
    les autres services — l'equivalence y est reelle.
-3. **Un permis DEBLOQUE, il ne plafonne pas** (`src/economy/uniques.ts`). Le quota lu comme un
-   compte posait « deux sanctuaires » et masquait la vraie regle du jeu : autant de copies
-   qu'on veut, **d'un seul dieu**. C'est le `UniqueScope=Area` qui porte l'unicite du TYPE.
+3. **Un permis est CONSOMME par exemplaire** (`src/economy/uniques.ts`) — c'est bien un
+   plafond. Tente un temps de le lire comme un simple deverrouillage : refute par
+   l'observation, le plan posait alors **7 sanctuaires sur small_06 et 13 sur celtic**. Le
+   plafond ne dit rien de la DIVINITE : deux permis autorisent deux sanctuaires, jamais deux
+   dieux — l'unicite du dieu est une regle distincte, tenue par l'election du patron.
+
+### Combien de sanctuaires ? Un. Et c'est mesure
+
+Population LIVREE selon le nombre de permis, options par defaut de l'UI :
+
+| permis | small_06 | celtic_07 |
+|---|---|---|
+| **1** (retenu) | **10 279** | 4 921 |
+| 2 | 9 888 | 4 978 |
+| 3 | 10 531 | 4 913 |
+| aucun plafond (7 et 13 copies) | 10 137 | 4 929 |
+
+**La flopee de sanctuaires ne servait a rien** : un seul fait aussi bien, et mieux sur
+small_06. Le rayon d'un sanctuaire couvre deja l'essentiel du quartier qu'il sert ; les copies
+en trop prennent du sol sans rien rendre. `DEFAULT_PERMITS` vaut donc 1, et reste relevable
+par la requete si la partie a debloque plus de devotion.
+
+Effet de bord sur les tests : `packPlan.test.ts` mesurait la couverture MINIMALE sur tous les
+types a portee. Un sanctuaire unique de portee 22 couvre 2 % d'une grille 120x120 quoi que
+fasse le packer — les types plafonnes par un permis sont desormais exclus de ce minimum, qui
+mesure la geometrie du packer et non les regles d'unicite du jeu.
 
 L'election du patron est alors contrainte au dieu **deja pose**, pas a celui que le palier
 DECLARE : sur celtic le palier declare le besoin sans que le glouton ne pose jamais la copie, et

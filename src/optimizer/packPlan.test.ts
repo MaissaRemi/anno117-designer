@@ -6,6 +6,7 @@ import { economy } from "../economy/economy";
 import { makeLookup } from "../engine/rules";
 import { analyzeCoverage } from "../economy/coverage";
 import { planPacked } from "./packPlan";
+import { uniqueCap } from "../economy/uniques";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -13,8 +14,14 @@ const tier = economy.tiers.find(
   (t) => t.residenceId && t.services.filter((s) => s.building && (lookup(s.building)?.streetRange || lookup(s.building)?.radius?.range)).length >= 3,
 )!;
 
+// Couverture la plus BASSE parmi les types a portee — les types PLAFONNES PAR UN PERMIS
+// exclus. Un sanctuaire est borne a un exemplaire de portee 22 : sur une grille 120x120 il
+// couvre 2 % du quartier quoi que fasse le packer, et le minimum ne mesurerait plus que le
+// plafond. Ce test mesure la GEOMETRIE du packer, pas les regles d'unicite du jeu.
 function streetMin(layout: Layout) {
-  const an = analyzeCoverage(layout, lookup).services.filter((s) => s.hasRadius);
+  const an = analyzeCoverage(layout, lookup).services
+    .filter((s) => s.hasRadius)
+    .filter((s) => uniqueCap(lookup(s.serviceId)!) === Infinity);
   return an.length ? Math.min(...an.map((s) => s.pct)) : 100;
 }
 

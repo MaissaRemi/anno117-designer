@@ -11,7 +11,6 @@ import { regionOfIsland } from "../data/islands";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const byId = new Map(catalog.map((d) => [d.id, d]));
-const autelAny = catalog.find((d) => d.uniqueType === SHRINE_TYPE)!;
 const topTierOf = (world: string) =>
   [...economy.tiers].filter((t) => t.residenceId && worldOf(t.region) === world)
     .sort((a, b) => b.capacityDefault - a.capacityDefault)[0]!;
@@ -55,10 +54,10 @@ describe("divinité tutélaire — un seul dieu par île", () => {
       const shrines = r.buildings.filter((b) => byId.get(b.defId)?.uniqueType === SHRINE_TYPE);
       // UN SEUL dieu : « chaque île a un dieu tutélaire que vénère sa population ».
       expect(new Set(shrines.map((b) => b.defId)).size).toBeLessThanOrEqual(1);
-      // …mais AUTANT DE COPIES QU'ON VEUT de ce dieu : le permis débloque le sanctuaire, il
-      // n'en plafonne pas le nombre. Le `UniqueScope=Area` porte sur le TYPE — c'est la
-      // divinité qui est unique, pas l'exemplaire.
-      expect(uniqueCap(byId.get(shrines[0]?.defId ?? "") ?? autelAny)).toBe(Infinity);
+      // …et le quota des permis est respecté : un permis est CONSOMME par exemplaire. Le lire
+      // comme un simple deverrouillage posait 7 sanctuaires ici et 13 sur celtic, pour une
+      // population plus BASSE — les copies en trop prennent du sol sans rien rendre.
+      expect(shrines.length).toBeLessThanOrEqual(DEFAULT_PERMITS[SHRINE_PERMIT]);
       // le dieu retenu est bien de la région de l'île
       for (const b of shrines) expect(worldOf(byId.get(b.defId)!.region!)).toBe(world);
     }, 300_000);
@@ -73,13 +72,12 @@ describe("divinité tutélaire — un seul dieu par île", () => {
     const colisee = catalog.find((d) => d.uniqueType === "Monument01")!;
     expect(uniqueCap(colisee, { [SHRINE_PERMIT]: 99 })).toBe(1);
     // plafond par PERMIS : c'est un état de partie, pas une donnée du jeu
-    // …et il DEBLOQUE, il ne compte pas : un permis en poche → autant de copies qu'on veut,
-    // aucun permis → aucune. Le lire comme un quota faisait poser deux sanctuaires la ou le
-    // jeu en accepte une rangee, et masquait la vraie regle : un seul DIEU.
+    // …et il COMPTE : chaque exemplaire consomme un permis. Distinct de la regle du dieu
+    // unique, qui est tenue par l'election du patron — deux permis autorisent deux
+    // sanctuaires, jamais deux divinites.
     const autel = catalog.find((d) => d.uniqueType === SHRINE_TYPE)!;
-    expect(DEFAULT_PERMITS[SHRINE_PERMIT]).toBeGreaterThan(0);
-    expect(uniqueCap(autel)).toBe(Infinity);
-    expect(uniqueCap(autel, { [SHRINE_PERMIT]: 5 })).toBe(Infinity);
+    expect(uniqueCap(autel)).toBe(DEFAULT_PERMITS[SHRINE_PERMIT]);
+    expect(uniqueCap(autel, { [SHRINE_PERMIT]: 5 })).toBe(5);
     expect(uniqueCap(autel, { [SHRINE_PERMIT]: 0 })).toBe(0);
     // un bâtiment sans type d'unicité n'est jamais borné
     expect(uniqueCap(catalog.find((d) => !d.unique)!)).toBe(Infinity);
