@@ -54,6 +54,10 @@ export function IslandPlanner({ onClose }: Props) {
   const [slotWish, setSlotWish] = useState<Record<string, string>>({});
   const [wishSearch, setWishSearch] = useState("");
   const [floor, setFloor] = useState(80);
+  // Déficit vital toléré PAR MAISON. 0 = veto strict, le comportement historique. Voir
+  // `optimizer/viability.ts` : au-delà de 30 000 habitants le malus de rang de cité dépasse
+  // ce qu'une maison peut encaisser, et sans cette soupape aucune grande île ne se peuple.
+  const [tolerance, setTolerance] = useState(0);
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
       .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
@@ -129,6 +133,7 @@ export function IslandPlanner({ onClose }: Props) {
         exploitSlots,
         localProduction,
         autoTier,
+        ...(tolerance > 0 ? { tolerance } : {}),
         ...(wishes.length || Object.keys(slotWish).length
           ? { wanted: { workshops: wishes, slots: slotWish } }
           : {}),
@@ -309,6 +314,23 @@ export function IslandPlanner({ onClose }: Props) {
               <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
               <span className="muted">{floor}%</span>
             </label>
+            <label className="slider">
+              <span style={{ color: "var(--muted)", fontSize: 12 }}>Risque toléré</span>
+              <input type="range" min={0} max={50} step={5} value={Math.round(tolerance * 10)}
+                onChange={(e) => setTolerance(parseInt(e.target.value) / 10)} />
+              <span className="muted">{tolerance === 0 ? "aucun" : `−${tolerance.toFixed(1)}`}</span>
+            </label>
+            <span className="muted" style={{ fontSize: 11 }}>
+              {tolerance === 0
+                ? "Aucun attribut vital ne peut être négatif : une seule maison en déficit fait raser jusqu'au retour à zéro. C'est le comportement strict."
+                : `Chaque maison peut être en déficit de ${tolerance.toFixed(1)} sur un attribut vital. `
+                  + "En jeu la sécurité incendie est un TAUX DE RISQUE, pas une interdiction : "
+                  + "plus d'incendies et d'émeutes, mais une ville bien plus grande."}
+              {" "}Le malus de rang de cité s'applique par maison et atteint −7 dès 30 000 habitants,
+              alors qu'une maison plafonne à +7 : sans tolérance, aucune ville romaine ne dépasse
+              ce seuil, quelle que soit la surface. Mesuré sur la carte continentale du DLC :
+              7 186 habitants sans risque, 34 257 à −1,0, 70 057 à −3,0.
+            </span>
           </>
         )}
 
