@@ -65,6 +65,50 @@ export interface BProd {
  * `stackable` : plusieurs copies cumulent leur effet sur la même maison (c'est le cas des
  * malus — trois mines côte à côte valent −6 en Santé), sinon l'effet ne compte qu'une fois.
  */
+/** Un effet, tel que résolu depuis les assets du jeu. */
+export interface ResolvedEffect {
+  effect: string;
+  /** `Radius`, `StreetDistance`, `Area`, `ObjectsInArea`, `ObjectsInMeta`, `Meta`… */
+  scope: string | null;
+  attrs: Record<string, number>;
+  stackable: boolean;
+  /** Pools visés. `43097` = tous les bâtiments à attributs, sans restriction. */
+  targets: string[];
+  /**
+   * EFFETS GREFFÉS sur les cibles, au lieu d'attributs directs.
+   *
+   * Un buff peut poser un effet sur ce qu'il touche plutôt que de modifier ses attributs
+   * (`BuildingUpgrade/AdditionalFunctionalEffect`). C'est par là que passe l'effet dominant de
+   * Vulcain : il greffe sur CHAQUE FONDERIE un rayon Population +1 / Incendie +2 /
+   * Connaissance +1 / Prestige +1, sans consommer de permis d'autel.
+   */
+  grants?: ResolvedEffect[];
+}
+
+/**
+ * DIVINITÉ TUTÉLAIRE — une par île, choisie par le joueur.
+ *
+ * Ce n'est pas un bâtiment : c'est un choix d'île qui ouvre trois étages de bonus, dont aucun
+ * n'était extrait jusqu'ici. Les effets LOCAUX portent sur l'île et montent par paliers de
+ * dévotion (`milestones` : [dévotion, échelle]). L'effet DOMINANT porte sur l'empire entier et
+ * s'active au-delà de `religion.dominantThreshold`.
+ *
+ * Sept des huit dominants n'ont aucun buff porteur d'attributs de résidence — ils touchent les
+ * navires, les troupes, le stockage ou débloquent des bâtiments, hors du modèle d'attributs.
+ * Le huitième, Vulcain, est celui qui compte ici : voir `ResolvedEffect.grants`.
+ */
+export interface Patron {
+  id: string;
+  name: string;
+  /** Autel emblématique de ce dieu (`ShrineEffectIcon`), préfixé `g`. */
+  shrineDefId: string | null;
+  /** Pool de TOUS les autels de ce dieu. */
+  shrinePool: string | null;
+  wonder: string | null;
+  local: (ResolvedEffect & { milestones: [number, number][] })[];
+  dominant: ResolvedEffect[];
+}
+
 export interface BuildingEffect {
   scope: "radius" | "street";
   range: number;
@@ -136,6 +180,10 @@ interface EconomyData {
   goodPrices: Record<string, number>; // GUID -> BasePrice (valeur marchande de réf.)
   buildingRegion: Record<string, string>; // defId -> région ("Roman"/"Celtic")
   fertilities: Record<string, string>; // GUID Fertility/Deposit -> nom FR
+  /** Les huit divinités tutélaires. Voir `Patron`. */
+  patrons?: Patron[];
+  /** Seuils de dévotion (`ReligionBalancing`). */
+  religion?: { dominantThreshold?: number; wonderThreshold?: number; shrineThreshold?: number };
 }
 
 /** Fertilités/gisements requis par la chaîne de production d'un bien (récursif). */
