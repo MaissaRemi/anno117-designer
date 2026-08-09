@@ -413,7 +413,9 @@ export function planIslandImport(
       for (let i = 0; i < b.defId.length; i++) h = (h * 33 + b.defId.charCodeAt(i)) | 0;
       sig = (sig + Math.imul(h, 2654435761) + b.x * 73856093 + b.y * 19349663) | 0;
     }
-    const nCons = water.consumers.length;
+    // Les consommateurs RETIRÉS faute de raccordement comptent encore au dénominateur : le
+    // réseau se juge sur ce qu'il fallait alimenter, pas sur ce qui a survécu au ménage.
+    const nCons = water.consumers.length + (water.dropped ?? 0);
     const nOk = water.consumers.filter((c) => c.connected).length;
     const residents = Math.round(Object.values(capByTier).reduce((a, b) => a + b, 0));
     // BILAN DE L'ÎLE : somme des attributs sur toutes les maisons, plus le malus de RANG

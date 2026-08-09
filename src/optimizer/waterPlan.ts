@@ -58,6 +58,13 @@ export interface WaterPlanResult {
    *  L'eau est prioritaire : tout le reste ne peut exploiter que le complément. */
   usedSlots: { x: number; y: number }[];
   aqueducts: AqueductTile[]; // conduites (arbre source → consommateurs)
+  /**
+   * Consommateurs RETIRÉS du plan faute de raccordement (cf. planLattice). Ils ne sont plus
+   * dans `consumers`, mais la santé du réseau doit se juger sur ce qu'il FALLAIT alimenter :
+   * sans ce compte, une île où aucune source n'est possible verrait tous ses consommateurs
+   * disparaître et afficherait un réseau parfait.
+   */
+  dropped?: number;
   capacity: number; // somme des sources posées
   used: number; // conso raccordée
   consumers: WaterConsumerReport[];
