@@ -154,7 +154,8 @@ def main():
     # BuildingUpgrade/AdditionalAttributes donne les deltas d'attributs appliques aux
     # residences a portee. C'est la mecanique des « +1 Argent », « -2 Sante » autour des
     # ateliers et des mines. Trois tables intermediaires, resolues apres le parcours.
-    fx_effects = {}      # GUID Effect -> {scope, buffs:[GUID]}
+    fx_effects = {}      # GUID Effect -> {scope, buffs:[GUID], targets:[GUID pool]}
+    pool_min_tier = {}   # GUID AssetPoolNamed -> palier MINIMUM servi (1..4 ; 0 = aucun)
     fx_buffs = {}        # GUID BuildingBuff -> {attrs:{}, stackable}
     fx_owner = {}        # defId -> {fe:[GUID], template, radius, street}
     # RANG DE CITE (CityStatus) : palier atteint selon la POPULATION TOTALE de l'ile. Chaque
@@ -276,12 +277,24 @@ def main():
             }
             el.clear(); continue
 
+        if tpl == "AssetPoolNamed":
+            # CIBLES D'UN EFFET DE ZONE. Un effet ne s'applique pas a toutes les residences :
+            # il vise un POOL, et les pools publics sont nommes « Public Attribute Buff Tier N ».
+            # Un bâtiment de palier N sert le palier N ET TOUS CEUX AU-DESSUS — un service de
+            # Plebeiens profite aussi aux Equites et aux Patriciens, cumulativement. Le pool
+            # « All Attribute Buildings » ne restreint rien.
+            nm = t(el, "./Values/Standard/Name") or ""
+            m = re.search(r"Tier (\d)", nm)
+            pool_min_tier[guid] = int(m.group(1)) if m else 0
+            el.clear(); continue
+
         if tpl == "Effect":
             e = vals.find("Effect")
             if e is not None:
                 fx_effects[guid] = {
                     "scope": t(el, "./Values/Effect/EffectScope"),
                     "buffs": [i.findtext("GUID") for i in e.findall("./Buffs/Item") if i.findtext("GUID")],
+                    "targets": [i.findtext("GUID") for i in e.findall("./Targets/Item") if i.findtext("GUID")],
                 }
             el.clear(); continue
 
@@ -594,10 +607,14 @@ def main():
     building_effects = {}
     for def_id, own in fx_owner.items():
         attrs, stackable, scope = {}, False, None
+        min_tiers = set()
         for eg in own["fe"]:
             eff = fx_effects.get(eg)
             if not eff:
                 continue
+            # Palier minimum servi par CET effet : le moins restrictif de ses pools cibles.
+            tg = [pool_min_tier.get(g, 0) for g in eff.get("targets") or []]
+            min_tiers.add(min(tg) if tg else 0)
             for bg in eff["buffs"]:
                 bf = fx_buffs.get(bg)
                 if not bf or not bf["attrs"]:
@@ -613,12 +630,39 @@ def main():
         rng = own["radius"] if is_radius else own["street"]
         if not rng:
             continue
+        # Les effets d'un meme batiment sont SOMMES en un seul jeu d'attributs : s'ils ne
+        # visaient pas le meme palier minimum, la somme n'aurait pas de palier bien defini. On
+        # retient alors le moins restrictif et on le CRIE, plutot que de perdre l'information
+        # en silence. Aucun cas dans les donnees actuelles.
+        mt = min(min_tiers) if min_tiers else 0
+        if len(min_tiers) > 1:
+            print("  ! %s : effets a paliers minimums differents %s -> %d retenu"
+                  % (def_id, sorted(min_tiers), mt), file=sys.stderr)
         building_effects[def_id] = {
             "scope": "radius" if is_radius else "street",
             "range": int(rng),
             "attrs": attrs,
             "stackable": stackable,
+            **({"minTier": mt} if mt > 1 else {}),
         }
+
+    # ═══ RANG DE PALIER, DERIVE DE LA CAPACITE ══════════════════════════════════════════
+    #
+    # `minTier` compare un batiment a un RANG de palier : un effet « Tier 2 » sert le rang 2 et
+    # tous ceux au-dessus. Encore faut-il numeroter les paliers dans le bon ordre.
+    #
+    # L'index d'iteration ne convient pas : il suit l'ordre des assets, et donnait le rang 4 aux
+    # Liberti (capacite 6, le palier le plus BAS) contre 1 aux Plebeiens. La capacite, elle, est
+    # monotone le long de la lignee — Liberti 6, Plebeiens 13, Equites 24, Patriciens 35 — et
+    # donne la numerotation du jeu, celle des menus de construction : le Sanctuaire est en
+    # « T2 Plebeians », les Bains et le Forum en T3, le Temple et le Colisee en T4.
+    par_region = defaultdict(list)
+    for tr in tiers:
+        if tr.get("residenceId"):
+            par_region[tr["region"]].append(tr)
+    for lignee in par_region.values():
+        for n, tr in enumerate(sorted(lignee, key=lambda x: x["capacityDefault"]), start=1):
+            tr["rank"] = n
 
     # ═══ CE QUE LA MAISON GAGNE, C'EST CE QUE LE BATIMENT EMET ══════════════════════════
     #

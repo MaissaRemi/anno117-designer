@@ -36,6 +36,8 @@ export interface Tier {
    */
   upgradesTo: string[];
   capacityDefault: number; // habitants max/maison = Σ Population des besoins
+  /** Rang dans la lignée de sa région, 1-based, dérivé de la capacité. Comparé à `minTier`. */
+  rank?: number;
   perHouse: Record<string, number>; // attributs/maison pleine (Money, Happiness, …)
   goods: TierGood[];
   services: TierService[];
@@ -69,6 +71,19 @@ export interface BuildingEffect {
   /** Delta par attribut : Population, Money, Happiness, Health, FireSafety, Knowledge… */
   attrs: Record<string, number>;
   stackable: boolean;
+  /**
+   * PALIER MINIMUM SERVI, 1-based, absent si l'effet ne restreint rien.
+   *
+   * Un effet de zone ne vise pas toutes les résidences : il cible un pool, et les pools publics
+   * du jeu sont nommés « Public Attribute Buff Tier N ». Un bâtiment de palier N sert le palier
+   * N ET TOUS CEUX AU-DESSUS — un service de Plébéiens profite aussi aux Equites et aux
+   * Patriciens, cumulativement — mais PAS les paliers en dessous.
+   *
+   * Le champ `<Targets>` était ignoré par l'extraction, si bien que le moteur créditait le
+   * Temple (palier 4) ou les Bains (palier 3) même à une maison de Liberti. À comparer au
+   * `rank` du palier atteint par la maison.
+   */
+  minTier?: number;
 }
 
 /**
