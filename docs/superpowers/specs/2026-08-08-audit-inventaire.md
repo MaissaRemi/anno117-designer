@@ -308,3 +308,25 @@ pas transmise à `planLattice`, et c'est par là qu'il faudrait reprendre.
 - **`tools/`** (12 fichiers, 2 283 lignes, 0 test) : deux replis silencieux trouvés et rendus
   visibles (n° 5 ci-dessus, plus un piège `elem or fallback` sur ElementTree — latent, sans
   effet mesuré sur le catalogue régénéré).
+
+## Services isolés par l'élagage : pourquoi ce n'est pas un correctif d'une ligne
+
+Un service qu'aucune route rattachée au comptoir ne dessert est INACTIF en jeu : il ne rend
+rien et coûte son entretien. Le retirer devrait donc rapporter, exactement comme le retrait des
+consommateurs d'eau secs (+3,6 % sur `small_06`).
+
+L'ordre du pipeline l'interdit en l'état. Dans `planLattice` :
+
+```
+placeHouses()   ← calcule couverture, paliers atteints, attrsSum, habitants
+pruneRoads()    ← élague APRÈS
+```
+
+Retirer un service après l'élagage invaliderait tout ce que `placeHouses` vient de calculer :
+sa couverture disparaît, les maisons qu'il desservait retombent d'un palier, la population et
+le bilan d'attributs changent. C'est précisément parce que le retrait des services secs se
+faisait AVANT la pose des maisons qu'il était sûr.
+
+Le correctif est donc un réordonnancement : élaguer les routes d'abord, retirer les services
+privés d'accès, puis poser les maisons. Il touche le cœur du moteur et demande un balayage
+complet — à faire d'un seul tenant, pas en marge d'autre chose.
