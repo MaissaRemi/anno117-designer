@@ -68,17 +68,39 @@ Les quatre correctifs listés plus haut réparaient tous un vrai défaut, mais a
 celui-là : ils supposaient que `dieu=aucun` signifiait « autel rejeté », alors qu'il signifiait
 « autel retenu puis élagué plus tard ».
 
-## Par où reprendre
+## Corrigé : la divinité d'abord, l'autel ensuite
 
-Découpler complètement les deux décisions, dans cet ordre :
+L'ordre est inversé. `bestDeityAttrs(devotion)` choisit la divinité **sur données seules** —
+aucun plan n'est nécessaire, le résultat ne dépend que de la dévotion — et ses attributs
+s'appliquent à toutes les passes, raffinage compris. L'autel se décide après, comme n'importe
+quel bâtiment.
 
-1. **la DIVINITÉ** — choisie une fois, sur ce qu'elle rend aux résidences à la dévotion
-   courante, indépendamment de tout autel. Ses attributs s'appliquent à TOUTES les passes, y
-   compris le plan de base et le raffinage ;
-2. **l'AUTEL** — décidé après, comme n'importe quel bâtiment : il se pose s'il paie son sol.
+Cérès l'emporte à toute dévotion non nulle : Population ×1 à ×7, la seule divinité dont
+l'effet d'île loge des habitants.
 
-Aujourd'hui la seconde décision commande la première, et la dernière passe peut annuler les
-deux. Tant que cet ordre n'est pas inversé, aucun réglage de dévotion ne produira d'effet.
+| dévotion | 0 | 250 | 4 500 | 25 000 | 250 000 |
+|---|---|---|---|---|---|
+| gain par maison | — | Pop +1 | Pop +3 | Pop +5 | Pop +7 |
+
+`Population` est créditée à la CAPACITÉ (`reach.cap`), pas seulement à la carte d'attributs :
+les habitants viennent du modèle de besoins, et la créditer ailleurs ne logeait personne.
+
+## La dévotion COÛTE de la population, et c'est cohérent
+
+| île | dévotion 0 | dévotion 25 000 |
+|---|---|---|
+| `roman_island_small_06` | 13 835 | **13 555** (−2,0 %) |
+| `roman_dlc01_island_continental_01` | 7 186 | **5 716** (−20,5 %) |
+
+Contre-intuitif, et pourtant attendu : plus de population par maison signifie une population
+totale plus forte, donc un **malus de rang de cité plus lourd**, donc un garde-fou qui rase
+davantage. C'est exactement ce qu'avait déjà montré le balayage des divinités — Cérès et Epona,
+les deux dieux à Population +1, y perdaient la moitié de `medium_01`.
+
+La dévotion ne paiera donc qu'avec une **tolérance** non nulle, qui desserre le veto. Les deux
+réglages se tiennent, et c'est le joueur qui arbitre.
+
+Le défaut par défaut reste `devotion = 0` : sortie identique à l'octet près.
 
 ## Ancien diagnostic, conservé pour mémoire
 

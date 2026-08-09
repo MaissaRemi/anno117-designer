@@ -1,4 +1,4 @@
-import { cityStatusAttrs, economy, effectOf, type Tier } from "./economy";
+import { cityStatusAttrs, economy, effectOf, type Patron, type Tier } from "./economy";
 
 /**
  * BILAN D'ATTRIBUTS PAR MAISON.
@@ -155,4 +155,59 @@ export function pickPatron(
   return [...shrines].sort((a, b) =>
     score(b.attrs) - score(a.attrs) || gain(b.attrs) - gain(a.attrs) || a.defId.localeCompare(b.defId),
   )[0]?.defId;
+}
+
+/**
+ * ═══ DIVINITÉ TUTÉLAIRE : CE QU'ELLE REND À CHAQUE RÉSIDENCE ══════════════════════════
+ *
+ * Le dieu d'une île est un CHOIX, pas un bâtiment (`GAME_MECHANICS.md §9 bis.1`). Ses effets
+ * locaux valent dès que la DÉVOTION — un état de partie, comme les permis — les débloque, que
+ * son autel soit posé ou non.
+ *
+ * Deux filtres, chacun écartant du bruit qui fausserait le bilan :
+ *  - la CIBLE : seuls comptent les effets visant `31046 « All Residences »` ou `43097 « All
+ *    Attribute Buildings »`. Epona vise les bâtiments de production, Mercure les comptoirs :
+ *    créditer aux maisons le Prestige de Mercure, dont l'échelle monte à 350, n'aurait aucun
+ *    sens ;
+ *  - le PALIER : on retient le dernier franchi, rien en dessous du premier.
+ *
+ * L'échelle est un MULTIPLICATEUR, lisible dans la donnée : Cérès porte Population 1 avec une
+ * échelle 1→7, Epona Population 1 et Prestige 2 avec la même. Trois divinités seulement
+ * touchent les résidences : Cérès (Population), Cernunnos (Santé + Connaissance) et Minerve
+ * (Connaissance).
+ */
+const RESIDENCE_POOLS = new Set(["31046", "43097"]);
+
+/** Attributs qu'un patron ajoute à CHAQUE résidence de l'île, à une dévotion donnée. */
+export function patronResidenceAttrs(patron: Patron, devotion: number): Attrs {
+  const out: Attrs = {};
+  if (devotion <= 0) return out;
+  for (const e of patron.local) {
+    if (!e.targets.some((t) => RESIDENCE_POOLS.has(t))) continue;
+    let echelle = 0;
+    for (const [seuil, v] of e.milestones) { if (devotion >= seuil) echelle = v; }
+    if (!echelle) continue;
+    for (const [k, v] of Object.entries(e.attrs)) out[k] = (out[k] ?? 0) + v * echelle;
+  }
+  return out;
+}
+
+/**
+ * LA DIVINITÉ SE CHOISIT AVANT L'AUTEL, ET SUR DONNÉES SEULES.
+ *
+ * L'ordre inverse était le défaut : un autel gagnait la présélection sur son effet de zone, la
+ * divinité se trouvait verrouillée sur ce dieu — sans effet d'île — puis le raffinage retirait
+ * l'autel. Ni autel, ni dieu, et la dévotion ne servait à rien.
+ *
+ * Le choix ne demande aucun plan : il ne dépend que de la dévotion. La Population pèse dix fois
+ * le reste, parce que c'est elle qui loge.
+ */
+export function bestDeityAttrs(devotion: number): Attrs {
+  let best: Attrs = {}, score = 0;
+  for (const p of economy.patrons ?? []) {
+    const g = patronResidenceAttrs(p, devotion);
+    const s = (g.Population ?? 0) * 10 + Object.values(g).reduce((a, b) => a + b, 0);
+    if (s > score) { score = s; best = g; }
+  }
+  return best;
 }
