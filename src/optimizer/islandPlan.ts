@@ -577,29 +577,72 @@ export function planIslandImport(
     // identifiant. Le dieu était élu par ordre alphabétique, ce que `GAME_MECHANICS.md §9`
     // interdit explicitement.
     //
-    // Le bon critère est la marge PAR MAISON, pas le total : sur la carte continentale du DLC
-    // l'incendie tient à +0,05 par maison quand le Bonheur est à +2,31 et l'Argent à +58. Ces
-    // trois nombres disent la même chose que le total ne dit pas — c'est l'incendie qui borne
-    // la croissance, et c'est donc Vulcain qu'il faut élire.
-    if (VITAL_ATTRS.every((k) => deficit[k] === 0)) {
-      const n = Math.max(1, pick.cand.houses);
-      let serre: string | null = null, marge = Infinity;
-      for (const k of VITAL_ATTRS) {
-        const m = (pick.attrsTotal[k] ?? 0) / n;
-        if (m < marge) { marge = m; serre = k; }
-      }
-      if (serre) deficit[serre] = 1;
+    // Le bon critère est la marge PAR MAISON, et surtout PROJETÉE.
+    //
+    // La marge à la taille ACTUELLE ne désigne pas le bon dieu : elle dit quel attribut est
+    // tendu maintenant, pas lequel cédera quand la ville grandira. Mesuré sur
+    // `roman_island_medium_03` : le Bonheur y était momentanément plus serré que l'incendie,
+    // le critère élisait donc Epona (Bonheur +1) au lieu de Vulcain (Incendie +2) — et l'île
+    // perdait 19 % de sa population.
+    //
+    // Or le malus de rang de cité ne se dégrade pas au même rythme selon l'attribut : entre
+    // 3 000 et 220 000 habitants le Bonheur passe de −6 à −18 et la Santé de −4 à −14,5,
+    // tandis que l'incendie ne va que de −4 à −9,6. L'attribut qui BORNE la croissance est
+    // celui dont la marge par maison tombe le plus bas quand on projette ce malus sur une
+    // ville plus grande — pas celui qui est le plus juste à l'instant du choix.
+    //
+    // On projette donc sur une ville DEUX FOIS plus peuplée. Le facteur exact importe peu :
+    // ce qui compte est de comparer les attributs sur une même ville future plutôt que sur
+    // celle d'aujourd'hui. `attrsSum` est la somme HORS malus (cf. `LatticeResult`), le malus
+    // projeté s'y ajoute par maison.
+    // ═══ AUCUN CRITÈRE PAR ATTRIBUT NE PRÉDIT LA POPULATION LIVRÉE ════════════════════
+    //
+    // Deux critères ont été essayés et RÉFUTÉS par la mesure :
+    //  - la marge par maison à la taille actuelle : sur `roman_island_medium_03` elle élit
+    //    Epona (Bonheur +1) parce que le Bonheur y est momentanément le plus tendu, et l'île
+    //    livre 9 955 habitants là où Vulcain en donnait 12 325 — 19 % de moins ;
+    //  - la même marge projetée sur une ville deux fois plus peuplée, pour capter le fait que
+    //    le malus de rang se dégrade plus vite sur le Bonheur (−6 → −18) que sur l'incendie
+    //    (−4 → −9,6) : mesurée sur sept îles, elle ne déplace AUCUNE élection. 0,0 % partout.
+    //
+    // La raison de fond est que le dieu ne change pas seulement un total d'attributs : il
+    // change la géométrie du plan — une copie de plus ou de moins, posée ailleurs, qui déplace
+    // routes et maisons. Aucune formule sur les attributs ne capture ça.
+    //
+    // On cesse donc de deviner. Les attributs sont classés du plus tendu au moins tendu, on
+    // retient le dieu qui sert chacun des K premiers, et on REJOUE le plan pour chacun : c'est
+    // la population livrée qui tranche, avec le même `better()` que partout ailleurs.
+    const n = Math.max(1, pick.cand.houses);
+    const futur = cityStatusAttrs(pick.residents * 2, tier?.region ?? islandRegion);
+    const tendus = [...VITAL_ATTRS].sort((a, b) =>
+      ((pick!.cand.attrsSum[a] ?? 0) / n + (futur[a] ?? 0))
+      - ((pick!.cand.attrsSum[b] ?? 0) / n + (futur[b] ?? 0)));
+    // Chaque candidat coûte un plan complet. Le budget suit donc la taille de l'île : sur la
+    // carte continentale une passe dure ~70 s, on n'en tente qu'une.
+    const cells = req.grid.w * req.grid.h;
+    const K = cells > 400_000 ? 1 : cells > 150_000 ? 2 : 3;
+    const shortlist: string[] = [];
+    for (const k of tendus.slice(0, K)) {
+      const g = pickPatron(instCands, { ...deficit, [k]: Math.max(1, deficit[k] ?? 0) });
+      if (g && !shortlist.includes(g)) shortlist.push(g);
     }
-    patron = pickPatron(instCands, deficit);
-    if (patron) {
+    let meilleur: Evaluated | undefined, meilleurDieu: string | undefined;
+    for (const g of shortlist) {
+      // `runLattice` lit `patron` par fermeture : il faut l'affecter AVANT l'appel.
+      patron = g;
       // La passe est rejouée AU MÊME SEUIL que celle qui a servi à mesurer le déficit.
       // Tenté un temps de la fusionner avec le raffinage, pour économiser 1,15 s : le patron
       // était alors choisi sur un plan et appliqué à un autre, et le bilan de l'île finissait
       // à −1 en sécurité incendie. L'économie ne valait pas ça.
       const ev = runLattice(bestTrial, coverageFloor);
       cands.push(ev);
-      if (better(ev, pick)) pick = ev;
-      else patron = undefined; // l'autel ne paie pas son sol : on s'en passe
+      if (!meilleur || better(ev, meilleur)) { meilleur = ev; meilleurDieu = g; }
+    }
+    if (meilleur && better(meilleur, pick)) {
+      pick = meilleur;
+      patron = meilleurDieu;
+    } else {
+      patron = undefined; // l'autel ne paie pas son sol : on s'en passe
     }
   }
 
