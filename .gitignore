@@ -15,3 +15,6 @@ public/icons/
 src/**/__tmp*
 src/**/__bench*
 src/**/_bench*
+
+# sondes temporaires des agents d audit (jamais versionnees)
+src/optimizer/__*.test.ts
