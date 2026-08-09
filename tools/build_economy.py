@@ -156,6 +156,8 @@ def main():
     # ateliers et des mines. Trois tables intermediaires, resolues apres le parcours.
     fx_effects = {}      # GUID Effect -> {scope, buffs:[GUID], targets:[GUID pool]}
     pool_min_tier = {}   # GUID AssetPoolNamed -> palier MINIMUM servi (1..4 ; 0 = aucun)
+    patrons = {}         # GUID Patron -> {name, shrinePool, shrineDefId, wonder, local, dominant}
+    religion = {}        # seuils de devotion (ReligionBalancing)
     fx_buffs = {}        # GUID BuildingBuff -> {attrs:{}, stackable}
     fx_owner = {}        # defId -> {fe:[GUID], template, radius, street}
     # RANG DE CITE (CityStatus) : palier atteint selon la POPULATION TOTALE de l'ile. Chaque
@@ -277,6 +279,47 @@ def main():
             }
             el.clear(); continue
 
+        if tpl == "Patron":
+            # ═══ LES HUIT DIVINITES TUTELAIRES ═══════════════════════════════════════════
+            #
+            # « Chaque ile a un dieu tutelaire que venere sa population. » Ce n'est pas un
+            # batiment : c'est un choix d'ile qui debloque trois etages de bonus, dont AUCUN
+            # n'etait extrait jusqu'ici.
+            #
+            #  - LocalEffects : deux effets a l'echelle de l'ILE, qui montent par paliers de
+            #    Devotion (`Milestones`) ;
+            #  - DominantEffects : un effet a l'echelle de l'EMPIRE, actif au-dela du seuil de
+            #    dominance. Celui de Vulcain greffe un rayon Incendie +2 sur CHAQUE fonderie,
+            #    sans consommer de permis d'autel — sur une ile bornee par l'incendie, c'est
+            #    probablement le plus gros levier du jeu.
+            #  - Shrine : le pool des autels de ce dieu ; ShrineEffectIcon en designe un.
+            pn = vals.find("Patron")
+            if pn is not None:
+                def _milestones(item):
+                    return [[int(x.findtext("Devotion") or 0), int(x.findtext("BuffScaling") or 0)]
+                            for x in item.findall("./Milestones/Item")]
+                patrons[guid] = {
+                    "name": (t(el, "./Values/Standard/Name") or "").replace("Patron", "") or guid,
+                    "shrinePool": pn.findtext("Shrine") or None,
+                    "shrineDefId": pn.findtext("ShrineEffectIcon") or None,
+                    "wonder": pn.findtext("Wonder") or None,
+                    "local": [{"effect": i.findtext("GUID"), "milestones": _milestones(i)}
+                              for i in pn.findall("./LocalEffects/Item") if i.findtext("GUID")],
+                    "dominant": [i.findtext("GUID") for i in pn.findall("./DominantEffects/Item")
+                                 if i.findtext("GUID")],
+                }
+            el.clear(); continue
+
+        if tpl == "ReligionBalancing":
+            rb = vals.find("ReligionBalancing")
+            if rb is not None:
+                religion.update({
+                    "dominantThreshold": _num(rb.findtext("DominantPatronThreshold")),
+                    "wonderThreshold": _num(rb.findtext("WonderThreshold")),
+                    "shrineThreshold": _num(rb.findtext("ShrineTreshold")),
+                })
+            el.clear(); continue
+
         if tpl == "AssetPoolNamed":
             # CIBLES D'UN EFFET DE ZONE. Un effet ne s'applique pas a toutes les residences :
             # il vise un POOL, et les pools publics sont nommes « Public Attribute Buff Tier N ».
@@ -309,7 +352,13 @@ def main():
                             attrs[c.tag] = float(v)
                         except ValueError:
                             pass
+            # GREFFE D'EFFET. Un buff peut, au lieu de donner des attributs, POSER UN EFFET
+            # sur ses cibles : `BuildingUpgrade/AdditionalFunctionalEffect`. C'est par la que
+            # passe l'effet dominant de Vulcain — il greffe sur chaque fonderie un rayon
+            # Incendie +2 / Population +1 / Connaissance +1 / Prestige +1, sans consommer de
+            # permis d'autel. Sans ce second saut, l'effet ressortait avec des attributs VIDES.
             fx_buffs[guid] = {"attrs": attrs,
+                              "grants": t(el, "./Values/BuildingUpgrade/AdditionalFunctionalEffect"),
                               "stackable": t(el, "./Values/Buff/IsStackable") == "1"}
             el.clear(); continue
 
@@ -646,6 +695,64 @@ def main():
             **({"minTier": mt} if mt > 1 else {}),
         }
 
+    # ═══ EFFETS DES PATRONS, RESOLUS ════════════════════════════════════════════════════
+    #
+    # Un effet de patron passe par la meme chaine que les autres : Effect -> BuildingBuff ->
+    # AdditionalAttributes. On reutilise donc les tables deja remplies.
+    #
+    # AVERTISSEMENT HONNETE sur ce qui reste hors de portee : `fx_buffs` ne lit que la section
+    # `BuildingUpgrade/AdditionalAttributes`. Un effet de patron qui passerait par
+    # `ResidenceUpgrade`, `FactoryUpgrade` ou un buff non-BuildingBuff (TroopBuff, ShipBuff)
+    # rendra des attributs VIDES. On emet quand meme l'entree, avec ses GUID et ses paliers de
+    # devotion : mieux vaut une donnee incomplete et tracable qu'une absence silencieuse.
+    def _resolve_fx(eg, _vus=None):
+        eff = fx_effects.get(eg)
+        if not eff:
+            return None
+        _vus = _vus or set()
+        if eg in _vus:  # garde-fou : une greffe circulaire boucherait la recursion
+            return None
+        _vus = _vus | {eg}
+        at, stk, greffes = {}, False, []
+        for bg in eff["buffs"]:
+            bf = fx_buffs.get(bg)
+            if not bf:
+                continue
+            stk = stk or bf["stackable"]
+            for k, v in bf["attrs"].items():
+                at[k] = at.get(k, 0) + v
+            if bf.get("grants"):
+                g = _resolve_fx(bf["grants"], _vus)
+                if g:
+                    greffes.append(g)
+        out = {"effect": eg, "scope": eff["scope"], "attrs": at, "stackable": stk,
+               "targets": eff.get("targets") or []}
+        if greffes:
+            # L'effet ne s'applique pas lui-meme : il POSE `grants` sur ses cibles.
+            out["grants"] = greffes
+        return out
+
+    patrons_out = []
+    for g, p in sorted(patrons.items()):
+        loc = []
+        for it in p["local"]:
+            r = _resolve_fx(it["effect"])
+            if r:
+                r["milestones"] = it["milestones"]
+                loc.append(r)
+        dom = [r for r in (_resolve_fx(e) for e in p["dominant"]) if r]
+        patrons_out.append({
+            "id": g,
+            "name": p["name"],
+            "shrineDefId": ("g" + p["shrineDefId"]) if p["shrineDefId"] else None,
+            "shrinePool": p["shrinePool"],
+            "wonder": p["wonder"],
+            "local": loc,
+            "dominant": dom,
+        })
+    if not patrons_out:
+        print("  ! aucun Patron extrait (template absent ?)", file=sys.stderr)
+
     # ═══ RANG DE PALIER, DERIVE DE LA CAPACITE ══════════════════════════════════════════
     #
     # `minTier` compare un batiment a un RANG de palier : un effet « Tier 2 » sert le rang 2 et
@@ -777,6 +884,8 @@ def main():
         "goodPrices": good_prices,
         "buildingRegion": building_region,
         "fertilities": fertilities,
+        "patrons": patrons_out,
+        "religion": religion,
     }
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False)
     # résumé
