@@ -120,15 +120,75 @@ autel, ni dieu.
 
 ## 3. Chantiers ouverts, par ordre de valeur
 
-### 3.1 Refaire le balayage des 55 îles — BLOQUANT avant toute nouvelle livraison
+### 3.1 RÉGRESSION CONFIRMÉE : deux îles s'effondrent — À TRAITER EN PREMIER
 
-Trois correctifs sont entrés depuis le dernier balayage complet : élection du dieu par la
-mesure, prise en compte de `<Targets>`, dévotion. Seules cinq îles témoins ont été vérifiées.
+Le balayage des 55 îles a rendu son verdict, sur `dev` à `6de3cdf` (src identique à `347f8d4`),
+55/55 îles, aucun plantage.
 
-Protocole : palier le plus dense du monde de l'île, `coverageFloor: 0.7`, `exploitSlots: true`,
-`autoTier: true`, tolérance et dévotion à zéro. Référence : le balayage du commit `89956cc`,
-reproduit dans `docs/superpowers/specs/2026-08-09-services-vs-maisons.md`. Critère : habitants
-non décroissants à −0,5 % près, `viable` partout.
+| | nombre |
+|---|---|
+| en hausse (> +0,5 %) | 0 |
+| stables (± 0,5 %) | **49** |
+| en baisse (< −0,5 %) | **6** |
+
+Total : 1 154 688 → **1 129 131 habitants (−2,21 %)**. Mais **hors les deux îles effondrées, les
+53 autres font −0,06 %** — parfaitement dans l'attendu de `<Targets>`.
+
+| île | avant | après | écart |
+|---|---|---|---|
+| `roman_island_medium_05` | 19 986 | **4 992** | **−75,0 %** |
+| `roman_island_large_06` | 14 864 | **4 980** | **−66,5 %** |
+| `roman_island_small_02` | 11 360 | 11 121 | −2,1 % |
+| `celtic_island_medium_01` | 7 330 | 7 238 | −1,3 % |
+| `celtic_island_medium_04` | 14 132 | 14 010 | −0,9 % |
+| `roman_island_large_03` | 14 847 | 14 750 | −0,7 % |
+
+Les quatre derniers sont du bruit de placement. Les deux premiers ne le sont pas.
+
+#### Le mécanisme, mesuré palier par palier sur `roman_island_medium_05`
+
+```
+Liberti      maisons=600  hab= 2 999  viable=true
+Plébéiens    maisons=416  hab= 4 992  viable=true    <- RETENU par autoTier
+Equites      maisons=557  hab=13 143  viable=false
+Patriciens   maisons=625  hab=20 904  viable=false
+```
+
+`autoTier` classe par `feasible`, puis `viable`, puis `residents`. Les deux paliers hauts
+basculant non viables, il se rabat sur Plébéiens : **16 000 habitants perdus**. Même schéma
+exact sur `roman_island_large_06` (Patriciens 29 265 habitants, non viable → Plébéiens 4 980).
+
+**Et la non-viabilité tient à un cheveu** : `FireSafety = −21` sur 625 maisons, soit
+**−0,034 par maison**, quand Bonheur vaut +3 637, Argent +46 414 et Santé +2 883. Sur
+`large_06` : −26 sur 878 maisons, −0,030 par maison. Un déficit de vingt et un points coûte
+quinze mille neuf cents habitants.
+
+C'est cohérent avec `5ccb105` (`<Targets>`) : un petit bonus de zone qui atteignait ces paliers
+a légitimement disparu, et le drapeau `viable` BINAIRE, combiné à l'ordre lexicographique de
+`better()`, transforme 0,03 par maison en effondrement de 75 %.
+
+#### Ce qui NE marche pas comme correctif
+
+Raser des maisons jusqu'au retour à zéro : inefficace ici. La maison moyenne n'est déficitaire
+que de 0,034, donc en raser une ne rend que 0,034 — il en faudrait **plus de six cents**, soit
+un tiers de l'île. Le razage ne répare que les déficits concentrés, pas les déficits diffus.
+
+#### Les deux voies, à trancher
+
+1. **Corriger la falaise.** C'est le même défaut que partout ailleurs cette session : un veto
+   binaire produit un effet de seuil sans rapport avec l'enjeu. `better()` et le classement
+   d'`autoTier` devraient refuser qu'un écart de 0,03 par maison l'emporte sur un facteur
+   quatre de population. Attention : ne pas livrer silencieusement un plan non viable — le
+   drapeau doit rester juste, c'est le CLASSEMENT qui doit changer.
+2. **Réparer la viabilité au bon endroit.** Le plan sort VIABLE de `viableSubset` ; ce sont les
+   passes suivantes — production locale, cascade de main-d'œuvre, razage pour raccorder le
+   comptoir — qui le repoussent sous zéro. Rejouer la sélection de viabilité APRÈS ces passes
+   supprimerait le problème à la racine, mais demande de conserver les attributs par maison
+   jusque-là.
+
+La seconde est la bonne, la première est la rapide. La tolérance utilisateur (~0,05/maison)
+masquerait le symptôme sans corriger la cause, et elle vaut 0 par défaut : ce n'est pas une
+réponse.
 
 ### 3.2 Services isolés par l'élagage des routes — demande un réordonnancement
 
