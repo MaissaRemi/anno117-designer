@@ -811,6 +811,11 @@ export function planLattice(
       const inst: Record<string, number> = {};
       for (const e of instTypes) {
         if (!activeType[e.i] || !covArr[e.i][o]) continue;
+        // UN EFFET NE SERT QUE SON PALIER ET CEUX AU-DESSUS. Le Temple vise le palier 4, les
+        // Bains et le Forum le 3, le Sanctuaire le 2 : les créditer à une maison de Liberti
+        // était un gain que le jeu n'accorde pas. Cumulatif vers le haut, jamais vers le bas.
+        const mt = e.fx!.minTier ?? 0;
+        if (mt && (reach.tier.rank ?? 0) < mt) continue;
         for (const [k, v] of Object.entries(e.fx!.attrs)) inst[k] = (inst[k] ?? 0) + v;
       }
       const attrs: Record<string, number> = { ...evaluator.attrsOf(coveredMask) };
