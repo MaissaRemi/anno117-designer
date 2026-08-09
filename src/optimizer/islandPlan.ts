@@ -63,6 +63,26 @@ export interface IslandPlanRequest {
    */
   permits?: Record<string, number>;
   /**
+   * LISTE DE VŒUX DE PRODUCTION — ce que l'utilisateur veut voir sur l'île.
+   *
+   * `workshops` amorce la file de `planLocalProduction`, en unités de BÂTIMENT et non de bien,
+   * DANS L'ORDRE DONNÉ : c'est cet ordre que le moteur suit quand le budget se ferme. La file
+   * épuisée, il enchaîne sur son choix automatique avec ce qui reste, intrants compris.
+   *
+   * `slots` exprime une préférence PAR TYPE d'emplacement, pas par emplacement nommé. Elle ne
+   * peut que restreindre : hors région, gisement absent ou main-d'œuvre hors de portée restent
+   * écartés, et la préférence est alors ignorée puis signalée.
+   *
+   * ⚠ Une demande servie AVANT le manifeste déplace le plan : les ateliers que le moteur
+   * aurait choisis seuls ne seront peut-être plus finançables, et le plan livré peut LOGER
+   * MOINS DE MONDE qu'avec l'option décochée. C'est l'arbitrage demandé, pas une régression —
+   * mais il doit être affiché comme tel.
+   */
+  wanted?: {
+    workshops?: { defId: string; count: number }[];
+    slots?: Record<string, string>;
+  };
+  /**
    * BALAYER LES PALIERS de la lignée et garder celui qui LOGE LE PLUS, au lieu de prendre
    * `tierGuid` pour argent comptant. Défaut false — c'est une option coûteuse (un plan
    * complet par palier) et le palier cible reste un objectif de partie, pas un simple
@@ -695,7 +715,10 @@ export function planIslandImport(
       const sp = planSlots(
         req.grid, req.catalog, lookup, buildings, roads, water.usedSlots,
         (id) => residenceIds.has(id),
-        { fertilities: req.islandFertilities, region: islandRegion, workforce: ledger },
+        {
+          fertilities: req.islandFertilities, region: islandRegion, workforce: ledger,
+          slotPrefs: req.wanted?.slots,
+        },
       );
       if (sp.removed.length) razeHouses(new Set(sp.removed));
       buildings.push(...sp.buildings);
@@ -703,6 +726,19 @@ export function planIslandImport(
       for (const r of sp.roads) if (!seenR.has(`${r.x},${r.y}`)) { seenR.add(`${r.x},${r.y}`); roads.push(r); }
       exploited = sp.exploited;
       kontorGaps.push(...sp.gaps);
+      // PRÉFÉRENCE D'EMPLACEMENT IGNORÉE : le bâtiment demandé n'a été retenu sur aucun slot
+      // de ce type — autre monde, gisement absent, ou main-d'œuvre hors de portée. On le dit,
+      // plutôt que de laisser croire que le vœu a été suivi.
+      for (const [slotType, defId] of Object.entries(req.wanted?.slots ?? {})) {
+        const used = exploited.some((e) => e.slotType === slotType && e.defId === defId);
+        const anySlot = exploited.some((e) => e.slotType === slotType);
+        if (anySlot && !used) {
+          kontorGaps.push(
+            `${lookup(defId)?.name ?? defId} : préférence non retenue sur les emplacements `
+            + `${slotType} (monde, gisement ou main-d'œuvre)`,
+          );
+        }
+      }
     }
 
     // --- EFFETS DE ZONE DES BÂTIMENTS POSÉS HORS MOTEUR ---------------------------------
@@ -915,7 +951,7 @@ export function planIslandImport(
         req.grid, lookup, buildings, roads, residenceIds,
         importGoods.map((g) => ({ good: g.good, perMin: g.perMin })),
         attrsTotal,
-        { region: islandRegion, workforce: ledger, preferred },
+        { region: islandRegion, workforce: ledger, preferred, requested: req.wanted?.workshops },
       );
       // ═══ RECUL SUR POSE ═══════════════════════════════════════════════════════════════
       // Le garde-fou de `planLocalProduction` compare un devis PRÉDICTIF à son budget, et ce

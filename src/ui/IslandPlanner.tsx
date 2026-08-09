@@ -48,6 +48,11 @@ export function IslandPlanner({ onClose }: Props) {
   const [exploitSlots, setExploitSlots] = useState(false);
   const [localProduction, setLocalProduction] = useState(false);
   const [autoTier, setAutoTier] = useState(false);
+  /** Liste de vœux : ateliers demandés, DANS L'ORDRE — c'est la priorité. */
+  const [wishes, setWishes] = useState<{ defId: string; count: number }[]>([]);
+  /** Préférence par TYPE d'emplacement (montagne, rivière, marais). */
+  const [slotWish, setSlotWish] = useState<Record<string, string>>({});
+  const [wishSearch, setWishSearch] = useState("");
   const [floor, setFloor] = useState(80);
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
@@ -81,6 +86,34 @@ export function IslandPlanner({ onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effProfile.fertilities.join(","), islandRegion]);
 
+  /**
+   * Ateliers proposables : du monde de l'île, hors emplacement de terrain, et dont le bien
+   * produit est réellement productible ici d'après les fertilités déclarées. On ne propose pas
+   * ce que le moteur écartera de toute façon.
+   */
+  const wishCandidates = useMemo(() => {
+    const producible = producibleGoodsSet(effProfile, islandRegion);
+    const q = wishSearch.trim().toLowerCase();
+    return catalog
+      .filter((d) => !d.slotType && (!d.region || worldOf(d.region) === worldOf(islandRegion)))
+      .filter((d) => {
+        const out = economy.buildingProd[d.id]?.outputs?.[0]?.good;
+        return !!out && producible.has(out);
+      })
+      .filter((d) => !q || d.name.toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalog, effProfile.fertilities.join(","), islandRegion, wishSearch]);
+
+  /** Types d'emplacement RÉELLEMENT présents sur l'île — souvent un ou deux. */
+  const slotTypes = useMemo(
+    () => [...new Set((grid.slots ?? []).map((sl) => sl.type))].sort(),
+    [grid.slots],
+  );
+  const slotChoices = (type: string) => catalog
+    .filter((d) => d.slotType === type && (!d.region || worldOf(d.region) === worldOf(islandRegion)))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const cancelRef = useRef<(() => void) | null>(null);
   useEffect(() => () => cancelRef.current?.(), []);
 
@@ -96,6 +129,9 @@ export function IslandPlanner({ onClose }: Props) {
         exploitSlots,
         localProduction,
         autoTier,
+        ...(wishes.length || Object.keys(slotWish).length
+          ? { wanted: { workshops: wishes, slots: slotWish } }
+          : {}),
         ...(mode === "production"
           ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: effProfile.fertilities.length ? effProfile.fertilities : undefined }
           : {}),
@@ -185,6 +221,77 @@ export function IslandPlanner({ onClose }: Props) {
                 </span>
               </span>
             </label>
+            {localProduction && (
+              <div className="field" style={{ display: "block" }}>
+                <span>
+                  Bâtiments voulus{" "}
+                  <span className="muted" style={{ fontWeight: 400 }}>— servis en premier, dans l'ordre</span>
+                </span>
+                <input
+                  type="search" placeholder="Rechercher un atelier…" value={wishSearch}
+                  onChange={(e) => setWishSearch(e.target.value)}
+                  style={{ width: "100%", marginTop: 4 }}
+                />
+                {wishSearch.trim().length >= 2 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                    {wishCandidates.slice(0, 8).map((d) => (
+                      <button
+                        key={d.id} type="button" style={{ fontSize: 11, padding: "2px 6px" }}
+                        onClick={() => {
+                          setWishes((w) => (w.some((x) => x.defId === d.id) ? w : [...w, { defId: d.id, count: 1 }]));
+                          setWishSearch("");
+                        }}
+                      >+ {d.name}</button>
+                    ))}
+                    {!wishCandidates.length && <span className="muted" style={{ fontSize: 11 }}>aucun atelier productible ici</span>}
+                  </div>
+                )}
+                {wishes.map((w, i) => (
+                  <div key={w.defId} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                    <span style={{ flex: 1, fontSize: 12 }}>{lookup(w.defId)?.name ?? w.defId}</span>
+                    <input
+                      type="number" min={1} max={20} value={w.count} style={{ width: 52 }}
+                      onChange={(e) => {
+                        const n = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
+                        setWishes((prev) => prev.map((x, j) => (j === i ? { ...x, count: n } : x)));
+                      }}
+                    />
+                    <button
+                      type="button" title="Monter (priorité)" disabled={i === 0}
+                      onClick={() => setWishes((prev) => {
+                        const n = [...prev];
+                        [n[i - 1], n[i]] = [n[i], n[i - 1]];
+                        return n;
+                      })}
+                    >↑</button>
+                    <button type="button" title="Retirer" onClick={() => setWishes((prev) => prev.filter((_, j) => j !== i))}>✕</button>
+                  </div>
+                ))}
+                {exploitSlots && slotTypes.map((t) => (
+                  <div key={t} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                    <span style={{ fontSize: 12, minWidth: 92 }}>Emplacements {t}</span>
+                    <select
+                      value={slotWish[t] ?? ""} style={{ flex: 1 }}
+                      onChange={(e) => setSlotWish((prev) => {
+                        const n = { ...prev };
+                        if (e.target.value) n[t] = e.target.value; else delete n[t];
+                        return n;
+                      })}
+                    >
+                      <option value="">au choix du moteur</option>
+                      {slotChoices(t).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </div>
+                ))}
+                <span className="muted" style={{ display: "block", fontSize: 11, marginTop: 6 }}>
+                  Une liste de vœux est servie AVANT le choix automatique du moteur : le plan
+                  peut donc loger MOINS de monde qu'avec « Produire sur l'île » seule. Ce qui ne
+                  tient pas dans le budget ou la main-d'œuvre est annoncé dans les trous, avec
+                  sa cause. Une préférence d'emplacement ne peut que restreindre — jamais poser
+                  un bâtiment d'un autre monde ou sans son gisement.
+                </span>
+              </div>
+            )}
             <label className="checkbox">
               <input type="checkbox" checked={autoTier} onChange={(e) => setAutoTier(e.target.checked)} />
               <span>

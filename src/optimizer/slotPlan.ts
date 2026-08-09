@@ -36,6 +36,14 @@ const SLOT_MATCH = 2;
 export interface SlotPlanOptions {
   /** Fertilités/gisements déclarés de l'île. Vide/absent = toutes supposées présentes. */
   fertilities?: string[];
+  /**
+   * PRÉFÉRENCE par type d'emplacement — « sur les slots montagne, mets du fer ».
+   *
+   * Elle ne peut que restreindre le choix : un bâtiment hors région, sans le gisement déclaré
+   * ou que l'île ne saura pas armer reste écarté. Une préférence infaisable est ignorée et
+   * signalée, jamais imposée.
+   */
+  slotPrefs?: Record<string, string>;
   /** Région de l'île ("Roman" / "Celtic") : un bâtiment d'une autre région est écarté. */
   region?: string;
   /**
@@ -114,6 +122,16 @@ export function pickSlotBuilding(
     })
     // valeur décroissante, puis id — déterministe
     .sort((a, b) => b.value - a.value || a.d.id.localeCompare(b.d.id));
+  // PRÉFÉRENCE DE L'UTILISATEUR pour ce type d'emplacement. Elle ne peut que RESTREINDRE :
+  // un bâtiment d'un autre monde, sans le gisement déclaré, ou que l'île ne saura jamais
+  // armer, a déjà été écarté ci-dessus et ne revient pas par cette porte. Une préférence
+  // infaisable n'est donc pas une erreur — on retombe simplement sur le meilleur candidat,
+  // et l'appelant le signale.
+  const wish = opts.slotPrefs?.[slotType];
+  if (wish) {
+    const hit = scored.find((x) => x.d.id === wish);
+    if (hit) return hit.d;
+  }
   return scored[0]?.d;
 }
 
