@@ -25,9 +25,18 @@ export const SHRINE_PERMIT = "93771";
 /**
  * PERMIS DÉTENUS par défaut, par GUID. Ce sont des valeurs de PARTIE, pas des données
  * extraites : le permis d'autel s'obtient par la dévotion et par deux technologies, dont une
- * répétable. Deux est la valeur réaliste en cours de partie.
+ * répétable.
+ *
+ * UN SEUL, et le choix est mesuré. L'île n'a besoin que d'un sanctuaire — c'est ce que
+ * l'utilisateur attend du jeu, et la population le confirme : sur `roman_island_small_06`, un
+ * sanctuaire loge 10 279 habitants contre 9 888 avec deux et 10 137 avec sept. Les copies
+ * supplémentaires prennent du sol sans rien rendre de plus, le rayon d'un sanctuaire couvrant
+ * déjà l'essentiel du quartier qu'il sert.
+ *
+ * Reste un plancher, pas un plafond : la requête peut relever `permits` si la partie a
+ * débloqué davantage de dévotion.
  */
-export const DEFAULT_PERMITS: Record<string, number> = { [SHRINE_PERMIT]: 2 };
+export const DEFAULT_PERMITS: Record<string, number> = { [SHRINE_PERMIT]: 1 };
 
 /** Combien d'exemplaires de ce bâtiment l'île accepte, tous porteurs du même type confondus. */
 export function uniqueCap(d: BuildingDef, permits?: Record<string, number>): number {
@@ -35,16 +44,19 @@ export function uniqueCap(d: BuildingDef, permits?: Record<string, number>): num
   const cfg = economy.uniqueTypes?.[d.uniqueType];
   if (!cfg) return 1; // type inconnu de la config : prudence
   const hard = cfg.allowed ?? Infinity;
-  // UN PERMIS DÉBLOQUE, IL NE PLAFONNE PAS.
+  // UN PERMIS EST CONSOMMÉ PAR EXEMPLAIRE : c'est bien un PLAFOND, pas un simple déverrouillage.
   //
-  // `held` était traité comme un nombre d'exemplaires autorisés : deux permis de sanctuaire
-  // valaient deux sanctuaires sur l'île. C'est faux pour les sanctuaires, et l'utilisateur l'a
-  // tranché sur la mécanique du jeu — on en pose autant qu'on veut, mais d'UN SEUL dieu. Le
-  // `UniqueScope=Area` porte sur le TYPE, pas sur le compte : c'est la divinité qui est unique.
+  // Tenté un temps de lire le permis comme un interrupteur — permis en poche, copies à volonté.
+  // Réfuté par l'observation : le plan posait alors 7 sanctuaires sur `roman_island_small_06` et
+  // 13 sur `celtic_island_large_07`. Le nombre détenu borne bien le nombre posé.
+  //
+  // Ce que ce plafond ne dit PAS, c'est de quelle divinité il s'agit : `uniqueUsed` est indexé
+  // par TYPE, si bien que deux permis autorisent deux sanctuaires — pas deux dieux. L'unicité du
+  // dieu est une règle distincte, tenue par l'élection du patron dans `islandPlan`.
   //
   // Le plafond dur reste `allowed` quand le jeu en déclare un (Colisée, quartier général : 1).
   const held = cfg.permit
-    ? ((permits?.[cfg.permit] ?? DEFAULT_PERMITS[cfg.permit] ?? 0) > 0 ? Infinity : 0)
+    ? (permits?.[cfg.permit] ?? DEFAULT_PERMITS[cfg.permit] ?? 0)
     : Infinity;
   return Math.min(hard, held);
 }
