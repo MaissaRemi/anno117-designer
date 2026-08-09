@@ -36,6 +36,8 @@ export interface LatticeOpts {
   /** Arrêter de bâtir quand le BILAN DE L'ÎLE passerait sous zéro sur un attribut vital.
    *  Défaut true. */
   viabilityGate?: boolean;
+  /** Déficit vital TOLÉRÉ par maison, 0 par défaut. Voir `viability.ts`. */
+  tolerance?: number;
   /** Permis détenus en partie, par GUID de permis. Voir `economy/uniques`. */
   permits?: Record<string, number>;
   /** Emprise réservée à un bâtiment posé plus tard (le comptoir) : le réseau d'eau doit
@@ -822,7 +824,9 @@ export function planLattice(
     }
 
     // Garde-fou de viabilité (cf. `optimizer/viability`) : les écartées sont démolies.
-    const keep = viabilityGate ? viableSubset(placed, tier.region) : placed;
+    const keep = viabilityGate
+      ? viableSubset(placed, tier.region, { tolerance: opts.tolerance })
+      : placed;
     if (keep.length !== placed.length) {
       const alive = new Set(keep.map((p) => p.b.uid));
       const gone = new Set(placed.filter((p) => !alive.has(p.b.uid)).map((p) => p.b.uid));
