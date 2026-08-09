@@ -312,8 +312,15 @@ export function planPacked(
                  ...small.sort((a, b) => rangeOf(a) - rangeOf(b))];
   for (const d of order) coverType(typeCov.get(d.id)!);
 
-  // garantie : tout type requis à 0 copie posé près du centroïde
+  // Garantie : tout type requis à 0 copie posé près du centroïde.
+  //
+  // Le test porte sur `servicesPlaced[d.id]`, donc sur un DEFID, alors que l'unicité du jeu
+  // porte sur un TYPE. Sans le second test, chaque sanctuaire de `svcDefs` que le min-cover
+  // n'avait pas posé recevait un exemplaire d'office : UN DIEU PAR DEFID, exactement le
+  // symptôme signalé. Le quota est indexé par type — s'il est épuisé, une copie du type est
+  // déjà là et la garantie est satisfaite.
   for (const d of svcDefs) {
+    if (d.uniqueType && (uniqueUsed.get(d.uniqueType) ?? 0) >= uniqueCap(d, opts.permits)) continue;
     if (!servicesPlaced[d.id]) {
       placeNear(d, gx, gy, Math.max(W, H));
       const tc = typeCov.get(d.id)!;

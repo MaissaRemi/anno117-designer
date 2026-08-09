@@ -5,7 +5,7 @@ import { footprintSize } from "../engine/geometry";
 import { economy, residentialChainExtended, worldOf } from "../economy/economy";
 import { regionOfIsland } from "../data/islands";
 import { uniqueCap } from "../economy/uniques";
-import { VITAL_ATTRS } from "../economy/attributes";
+import { SHRINE_TYPE, VITAL_ATTRS } from "../economy/attributes";
 import type { IslandPlanResult } from "./islandPlan";
 
 /**
@@ -187,6 +187,26 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
     const d = r.buildings.map((b) => defOf(b.defId)).find((x) => x?.uniqueType === t);
     const cap = d ? uniqueCap(d, ctx.permits) : 1;
     if (n > cap) add("quota-unicite", "faute", `${n} exemplaires de type ${t} pour un plafond de ${cap}`);
+  }
+
+  // UN SEUL DIEU PAR ÎLE — règle DISTINCTE du quota qui précède.
+  //
+  // Le quota borne le NOMBRE d'exemplaires d'un type ; il ne dit rien de leur IDENTITÉ. Deux
+  // permis d'autel autorisent deux sanctuaires, et rien dans `uniqueCap` n'empêche que ce
+  // soient deux divinités différentes. L'unicité du dieu ne tient qu'à deux filtres
+  // d'`islandPlan`, tous deux lisant `uniqueType` depuis le catalogue — un catalogue où ce
+  // champ manque les désarme en silence, et le plan pose une divinité de chaque. C'est
+  // exactement ce qui s'est produit sur un poste dont le catalogue persisté était périmé :
+  // six dieux, quatre exemplaires chacun.
+  //
+  // La règle est donc verrouillée ici, indépendamment du chemin de placement.
+  const dieux = new Set(r.buildings
+    .filter((b) => defOf(b.defId)?.uniqueType === SHRINE_TYPE)
+    .map((b) => b.defId));
+  if (dieux.size > 1) {
+    const noms = [...dieux].map((id) => defOf(id)?.name ?? id);
+    add("un-seul-dieu", "faute",
+      `${dieux.size} divinités sur la même île (${noms.join(", ")}) — le jeu n'en accepte qu'une`);
   }
 
   // eau : un consommateur déclaré raccordé doit l'être

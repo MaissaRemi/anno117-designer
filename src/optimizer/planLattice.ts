@@ -539,8 +539,20 @@ export function planLattice(
   const repairBudget = new Map<string, number>();
   for (const tc of typeCov.values()) {
     const r = effR(tc.def);
-    // type unique (Colisée) : aucune densification (1 exemplaire déjà posé suffit)
-    repairBudget.set(tc.def.id, tc.def.unique ? 0 : Math.max(3, Math.ceil(landCount / (2 * r * r))));
+    // LE BUDGET NE PEUT PAS DÉPASSER CE QUI RESTE AU QUOTA.
+    //
+    // Le garde-fou était le seul booléen `def.unique` : vrai pour le Colisée, vrai aussi pour
+    // les seize sanctuaires — d'où l'illusion que la densification respectait l'unicité. Elle
+    // ne la respectait pas : `repairBudget` est indexé par DEFID et la pose qui en découle
+    // (`placeNear` → `stamp`) ne consulte AUCUN quota. Un type portant un `uniqueType` sans le
+    // drapeau `unique` — un plafond `allowed: 2`, par exemple — se serait vu densifier au-delà
+    // de son plafond, à raison d'une copie de secours par bâtiment du type.
+    //
+    // Le budget est donc borné par le quota restant, lui indexé par TYPE.
+    repairBudget.set(tc.def.id, Math.min(
+      remainingQuota(tc.def),
+      tc.def.unique ? 0 : Math.max(3, Math.ceil(landCount / (2 * r * r))),
+    ));
   }
   const maxRounds = 8 * svcDefs.length;
   for (let round = 0; round < maxRounds; round++) {
