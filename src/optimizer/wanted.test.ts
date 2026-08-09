@@ -46,9 +46,11 @@ describe("liste de vœux de production", () => {
     // main-d'œuvre. Le plan doit poser ce qu'il peut et NOMMER ce qui a manqué — pas échouer,
     // pas se taire.
     const def = someWorkshop();
-    const r = plan({ workshops: [{ defId: def.id, count: 40 }] });
+    // 60 copies dépassent le quota de bâtiments du moteur (40, tous ateliers confondus) autant
+    // que le budget d'attributs : la demande ne peut pas tenir, quelle que soit l'île.
+    const r = plan({ workshops: [{ defId: def.id, count: 60 }] });
     const mine = r.workshops.find((w) => w.defId === def.id);
-    expect(mine!.copies).toBeLessThan(40);
+    expect(mine!.copies).toBeLessThan(60);
     const said = r.gaps.find((g) => g.includes(def.name) && g.includes("demandé"));
     expect(said).toBeDefined();
     // la raison est explicite, pas un simple compte

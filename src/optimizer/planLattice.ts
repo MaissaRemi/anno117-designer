@@ -610,6 +610,51 @@ export function planLattice(
       const c = a.y * W + a.x;
       if (!roadAt[c]) occ[c] = 1; // croisement : la route reste, la conduite enjambe
     }
+
+    // ═══ LES CONSOMMATEURS D'EAU SECS SORTENT DU PLAN ═══════════════════════════════════
+    //
+    // Un service à eau non raccordé est INACTIF en jeu : il ne rend aucun service, il coûte
+    // son entretien, et il occupe une emprise souvent énorme — Forum, Bains, Citerne. Mesuré
+    // sur roman_island_small_06 : 5 secs sur 18, et 12 sur 19 dans la configuration signalée
+    // par l'utilisateur.
+    //
+    // Les retirer répare DEUX défauts d'un coup. Le sol revient aux maisons — c'est le gain
+    // évident. Mais surtout, leur COUVERTURE cesse de compter : `activeType` est calculé par
+    // TYPE, si bien qu'une seule copie raccordée rendait actives toutes les copies du type,
+    // sèches comprises, et une maison desservie par la seule copie sèche était comptée
+    // couverte. Le BFS de portée part de `placements` : en retirer la copie suffit, sans
+    // toucher au reste du moteur.
+    //
+    // Un type dont TOUTES les copies sont sèches disparaît alors, et les maisons retombent au
+    // palier qu'elles franchissent sans lui — ce qui est exactement ce que le jeu ferait.
+    const dry = new Set(water.consumers.filter((c) => !c.connected).map((c) => c.uid));
+    if (dry.size) {
+      const kept: PlacedBuilding[] = [];
+      for (const b of buildings) {
+        const d = dry.has(b.uid) ? lookup(b.defId) : undefined;
+        if (!d) { kept.push(b); continue; }
+        const fp = footprintSize(d, b.rotation);
+        for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
+          const c = (b.y + j) * W + (b.x + i);
+          if (c >= 0 && c < N && grid.usable[c]) occ[c] = 0; // le sol redevient constructible
+        }
+        const arr = placements.get(b.defId);
+        const k = arr ? arr.findIndex((q) => q.x === b.x && q.y === b.y) : -1;
+        if (arr && k >= 0) arr.splice(k, 1);
+        servicesPlaced[b.defId] = Math.max(0, (servicesPlaced[b.defId] ?? 1) - 1);
+        if (!servicesPlaced[b.defId]) delete servicesPlaced[b.defId];
+        if (d.uniqueType) {
+          uniqueUsed.set(d.uniqueType, Math.max(0, (uniqueUsed.get(d.uniqueType) ?? 1) - 1));
+        }
+      }
+      buildings.length = 0;
+      buildings.push(...kept);
+      water.consumers = water.consumers.filter((c) => !dry.has(c.uid));
+      water.dropped = (water.dropped ?? 0) + dry.size;
+      water.gaps.push(
+        `${dry.size} service(s) à eau non raccordable(s) retiré(s) du plan (inactifs en jeu)`,
+      );
+    }
   }
 
   // ═══ ROUTE JUSQU'AUX SLOTS MONTAGNE ═════════════════════════════════════════════════

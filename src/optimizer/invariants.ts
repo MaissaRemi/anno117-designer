@@ -197,6 +197,19 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
       add("eau-coherente", "suspect",
         `${unknown.length} consommateur(s) d'eau absents du plan`);
     }
+    // AUCUN SERVICE SEC NE DOIT SUBSISTER. Non raccordé, il est inactif en jeu : il ne rend
+    // rien, coûte son entretien, occupe une emprise souvent énorme — et sa couverture était
+    // comptée, puisque `activeType` raisonne par TYPE et qu'une seule copie raccordée suffisait
+    // à valider toutes les autres. Le moteur les retire désormais ; cette règle le garde.
+    const dry = r.water.consumers.filter((c) => !c.connected);
+    if (dry.length) {
+      const names = [...new Set(dry.map((c) => {
+        const b = r.buildings.find((x) => x.uid === c.uid);
+        return b ? (defOf(b.defId)?.name ?? b.defId) : "?";
+      }))].slice(0, 3);
+      add("pas-de-service-sec", "faute",
+        `${dry.length} service(s) à eau non raccordé(s), donc inactifs (${names.join(", ")})`);
+    }
   }
 
   // ═══ ÉCHECS SILENCIEUX ══════════════════════════════════════════════════════════════
