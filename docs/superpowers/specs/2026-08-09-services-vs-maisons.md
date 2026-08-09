@@ -97,10 +97,55 @@ Verrouillé par l'invariant `pas-de-service-sec`, de gravité `faute`.
 **Le palier Nobles est un mauvais choix sur celtic**, et c'est indépendant : le balayage des
 paliers donne Aldermen à 2,25 fois la population. L'option existe (`autoTier`).
 
-## Sur les sanctuaires
+## Sur les sanctuaires : l'archetype qui validait son propre mensonge
 
-Vérifié sur l'île signalée : **7 copies d'un SEUL et même `Sanctuaire` (g3615)**, aucun autel de
-divinité, aucun `uniqueType` porté par deux bâtiments distincts. Règle du jeu confirmée par
-l'utilisateur : autant de sanctuaires qu'on veut, mais **d'un seul dieu**, et comme ils font
-tous la même taille un placeholder suffit — il sera remplacé à la construction. Le
-comportement actuel est donc conforme.
+Le besoin « Sanctuaire » (2753) se resolvait vers `g3615 « Public Roman Sanctuary »` — un
+ARCHETYPE 6x10 de portee 38, sans `uniqueType`, non constructible en jeu. Les vrais batiments
+sont les sanctuaires de divinite : **3x3, portee 16 a 24**, un par dieu.
+
+Le piege est que l'invariant cense detecter ce genre d'erreur — *attributs du besoin == effet de
+zone du batiment* — **se validait lui-meme**. Le besoin declare `Bonheur+1 / Croyance+2`, mot
+pour mot l'effet de `g3615` et d'aucun dieu. Le match par icone tombait donc sur l'archetype,
+et l'invariant confirmait.
+
+Trois corrections, indissociables :
+
+1. **Override du besoin** vers un vrai sanctuaire (`tools/build_economy.py`).
+2. **Les attributs suivent le batiment pose**, plus le besoin. Sans quoi le moteur promettait
+   l'effet de l'archetype pour un batiment qui en emet un autre. Passe generale, no-op sur tous
+   les autres services — l'equivalence y est reelle.
+3. **Un permis DEBLOQUE, il ne plafonne pas** (`src/economy/uniques.ts`). Le quota lu comme un
+   compte posait « deux sanctuaires » et masquait la vraie regle du jeu : autant de copies
+   qu'on veut, **d'un seul dieu**. C'est le `UniqueScope=Area` qui porte l'unicite du TYPE.
+
+L'election du patron est alors contrainte au dieu **deja pose**, pas a celui que le palier
+DECLARE : sur celtic le palier declare le besoin sans que le glouton ne pose jamais la copie, et
+se fier a la declaration verrouillait l'election sur un dieu absent du plan.
+
+### Le dieu par defaut se mesure
+
+Une fois les attributs alignes, le dieu cesse d'etre interchangeable. Population LIVREE :
+
+| dieu | effet | small_06 | medium_01 |
+|---|---|---|---|
+| **Cernunnos** (retenu) | Sante+1 / Croyance+1, portee 22 | **10 001** | **21 105** |
+| Vulcain | Incendie+2, portee 20 | 9 716 | 20 760 |
+| Ceres | Population+1 / Sante+1 | 8 282 | 10 390 |
+| Epona | Population+1 / Bonheur+1 | 8 282 | 10 390 |
+
+Contre-intuitif : les deux dieux qui donnent **Population+1 perdent la moitie de medium_01**.
+Le gain de capacite gonfle la population, le rang de cite se degrade, et le garde-fou rase.
+
+### Ce que ca coute, et pourquoi ce n'est pas une perte
+
+| ile | avant | apres |
+|---|---|---|
+| small_06 | 418 maisons / 9 545 hab | 468 / **10 001** (+4,8 %) |
+| medium_01 | 896 / 24 034 | 801 / **21 105** (−12,2 %) |
+| celtic_07 | 242 / 4 867 | 238 / 4 745 (−2,5 %) |
+
+Le −12 % de medium_01 est le prix de la verite : la portee passe de 38 a 22. Le moteur
+promettait la couverture d'un batiment que le joueur ne peut pas poser — meme nature que le
+double comptage des marches ou les maisons comptees sans acces routier.
+
+Reste ouvert : celtic n'elit plus de patron et finit sans sanctuaire (−2,5 %).

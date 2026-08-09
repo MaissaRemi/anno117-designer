@@ -286,7 +286,7 @@ export function planIslandImport(
   // posait donc jamais — alors qu'elles sont le seul contrepoids au malus de rang de cité.
   // Mesuré : sans elles aucune ville ne dépasse 3 000 habitants avec tous ses attributs
   // positifs ; avec elles la recette complète tient jusqu'à 260 000.
-  const instCands = institutionDefs(islandRegion)
+  let instCands = institutionDefs(islandRegion)
     .flatMap((i) => { const d = lookup(i.defId); return d ? [{ ...i, uniqueType: d.uniqueType }] : []; });
   // DIVINITÉ TUTÉLAIRE : une seule par île. Le choix se fait sur le déficit d'attribut
   // observé, mesuré par une passe SANS autel — seul l'attribut limitant compte, et le
@@ -517,6 +517,27 @@ export function planIslandImport(
   // Un tri statique par « somme des gains vitaux » est inopérant : sur une île où la sécurité
   // incendie est le goulot, Vulcain et Neptune valent des milliers d'habitants et les quatre
   // autres divinités exactement zéro.
+  // UN SEUL DIEU, MAIS UN DIEU QUAND MÊME.
+  //
+  // Depuis que le besoin « Sanctuaire » se résout vers un vrai sanctuaire de divinité, le
+  // palier en désigne déjà un. Élire librement un patron mettrait DEUX dieux sur la même île,
+  // ce que le jeu interdit. Mais SUPPRIMER l'élection ne marche pas non plus : mesuré sur
+  // `celtic_island_large_07`, le palier déclare le besoin sans que le glouton ne pose jamais
+  // la copie, l'île se retrouvait alors sans aucun sanctuaire et perdait 2,5 % (4 867 → 4 745).
+  //
+  // On CONTRAINT donc l'élection au dieu DÉJÀ POSÉ au lieu de l'annuler : `pickPatron` garde
+  // son rôle — décider s'il vaut la peine de rejouer la passe avec des sanctuaires en plus —
+  // mais n'a plus qu'un seul choix possible dès qu'un dieu occupe le terrain.
+  //
+  // Le critère est bien le dieu POSÉ, pas celui que le palier DÉCLARE. Sur celtic le palier
+  // déclare le besoin sans que le glouton ne pose jamais la copie : se fier à la déclaration
+  // verrouillait l'élection sur un dieu absent du plan, et l'île finissait sans aucun
+  // sanctuaire. Tant qu'aucun n'est posé, le choix reste entier — c'est le joueur qui tranche.
+  const tierGod = pick?.buildings
+    .find((b) => lookup(b.defId)?.uniqueType === SHRINE_TYPE)?.defId;
+  if (tierGod) {
+    instCands = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE || i.defId === tierGod);
+  }
   if (pick && instCands.some((i) => i.uniqueType === SHRINE_TYPE)) {
     const rank = cityStatusAttrs(pick.residents, tier?.region ?? islandRegion);
     const deficit: Record<string, number> = {};

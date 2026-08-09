@@ -35,8 +35,16 @@ export function uniqueCap(d: BuildingDef, permits?: Record<string, number>): num
   const cfg = economy.uniqueTypes?.[d.uniqueType];
   if (!cfg) return 1; // type inconnu de la config : prudence
   const hard = cfg.allowed ?? Infinity;
+  // UN PERMIS DÉBLOQUE, IL NE PLAFONNE PAS.
+  //
+  // `held` était traité comme un nombre d'exemplaires autorisés : deux permis de sanctuaire
+  // valaient deux sanctuaires sur l'île. C'est faux pour les sanctuaires, et l'utilisateur l'a
+  // tranché sur la mécanique du jeu — on en pose autant qu'on veut, mais d'UN SEUL dieu. Le
+  // `UniqueScope=Area` porte sur le TYPE, pas sur le compte : c'est la divinité qui est unique.
+  //
+  // Le plafond dur reste `allowed` quand le jeu en déclare un (Colisée, quartier général : 1).
   const held = cfg.permit
-    ? (permits?.[cfg.permit] ?? DEFAULT_PERMITS[cfg.permit] ?? 0)
+    ? ((permits?.[cfg.permit] ?? DEFAULT_PERMITS[cfg.permit] ?? 0) > 0 ? Infinity : 0)
     : Infinity;
   return Math.min(hard, held);
 }

@@ -46,6 +46,17 @@ SERVICE_BUILDING_OVERRIDES = {
     # Maison de jeu CELTIC (besoin 37176, icône celtic) : le bâtiment 37177 réutilise
     # l'icône ROMAINE → le match d'icône tombait sur la version romaine déjà prise.
     "37176": "g37177",
+    # SANCTUAIRE (besoin 2753) : le match d'icone tombait sur `g3615` « Public Roman
+    # Sanctuary », un ARCHETYPE 6x10 de portee 38 qui n'est pas constructible en jeu. Le
+    # batiment qui remplit reellement ce besoin est un sanctuaire de DIVINITE : 3x3, portee
+    # ~20, un par dieu et tous identiques a la taille pres. On en designe un — Mars, choix
+    # deterministe — et `twin_in_world` trouvera son equivalent celtique le cas echeant. Le
+    # dieu par defaut est CERNUNNOS : portee 22 (la plus longue avec Minerve) et surtout un
+    # bonus de SANTE, attribut VITAL — Mars et Minerve donnent Prestige et Connaissance, qui
+    # ne comptent pas dans le garde-fou de viabilite. Ecart mesure faible (20 879 -> 20 913
+    # habitants sur medium_01) : c'est la marge de securite qui tranche, pas la population.
+    # Le joueur remplace le dieu a la construction, l'emprise ne bouge pas.
+    "2753": "g81072",
     # COLISÉE : le match d'icône tombait sur la phase de chantier « fondations »
     # (36908, Monument, aucune portée). Le bâtiment FINAL est 3621 (MonumentEventBuilding,
     # street 250, eau 50u Mandatory) — cf. GAME_MECHANICS.md §9.
@@ -602,6 +613,44 @@ def main():
             "attrs": attrs,
             "stackable": stackable,
         }
+
+    # ═══ CE QUE LA MAISON GAGNE, C'EST CE QUE LE BATIMENT EMET ══════════════════════════
+    #
+    # Les attributs d'un besoin de service etaient lus sur le BESOIN. Pour tous les services
+    # sauf un, c'est equivalent : un besoin, un batiment, memes attributs — un invariant du
+    # projet l'exige d'ailleurs, faute de quoi le moteur double-compterait.
+    #
+    # Le SANCTUAIRE brise l'equivalence, et c'est ce qui a masque le bug d'archetype. Le
+    # besoin 2753 declare `Bonheur+1 / Croyance+2` — c'est mot pour mot l'effet de `g3615`,
+    # l'archetype 6x10 non constructible. Le match par icone tombait donc dessus, et
+    # l'invariant se validait LUI-MEME. Les vrais sanctuaires sont les 3x3 de divinite, et
+    # chaque dieu emet autre chose : Cernunnos Sante+1/Croyance+1, Vulcain Incendie+2,
+    # Epona Population+1/Bonheur+1. Crediter les attributs du besoin reviendrait a promettre
+    # l'effet d'un batiment que le joueur ne peut pas poser.
+    #
+    # Cette passe realigne donc les attributs du service sur l'effet du batiment retenu, et
+    # reporte l'ecart sur `perHouse` et `capacityDefault`. No-op partout ailleurs.
+    for tr in tiers:
+        for sv in tr["services"]:
+            b = sv.get("building")
+            fx = building_effects.get(b) if b else None
+            if not fx or not fx["attrs"]:
+                continue
+            old, new = sv["attrs"], {k: v for k, v in fx["attrs"].items() if v}
+            if new == old:
+                continue
+            print("  ~ besoin %s aligne sur %s : %s -> %s" % (sv["need"], b, old, new),
+                  file=sys.stderr)
+            ph = dict(tr["perHouse"])
+            for k, v in old.items():
+                ph[k] = ph.get(k, 0) - v
+            for k, v in new.items():
+                ph[k] = ph.get(k, 0) + v
+            tr["perHouse"] = {k: v for k, v in ph.items() if v}
+            tr["capacityDefault"] += int(round(new.get("Population", 0) - old.get("Population", 0)))
+            sv["attrs"] = new
+            sv["pop"] = new.get("Population", 0)
+            sv["money"] = new.get("Money", 0)
 
     # Les assets derives d'un comptoir rejoignent wf_grants, en heritant item par item.
     for g, d in derived.items():
