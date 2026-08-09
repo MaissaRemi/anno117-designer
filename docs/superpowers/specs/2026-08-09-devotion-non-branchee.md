@@ -119,12 +119,21 @@ Si le bloc n'est pas entré, la cause probable est `instCands` : `institutionDef
 les bâtiments à effet de zone `street` bénéfique qui ne sont service d'aucun palier, et le
 filtre `tierGod` peut le réduire à vide.
 
-## Ce qui reste hors de portée, indépendamment
+## Ce qui reste hors de portée, VÉRIFIÉ DEUX FOIS
 
-L'effet **dominant** de Vulcain — Incendie +2 greffé sur chaque fonderie, sans permis — est
-extrait et testé, mais **inapplicable en l'état** : il vise le pool `50609 « All Smelters »`, et
-les pools sont VIDES dans l'export XML (0 sur 323 pools d'attributs renseignés). Il faudrait
-identifier les fonderies autrement — par template ou par chaîne de production — avant de
-pouvoir poser cet effet.
+L'effet **dominant** de Vulcain — un rayon greffé, Population +1 / Incendie +2 / Connaissance
++1 / Prestige +1 — est extrait et testé, mais **inapplicable**. Il vise le pool `50609
+« Production All Smelters »`, et les pools d'assets sont VIDES dans cet export : six `<Item>`
+ne contenant qu'un `<Asset />` auto-fermé, aucun membre.
 
-C'est pourtant le plus gros levier connu sur l'attribut qui borne toutes les grandes îles.
+Deux erreurs commises en voulant contredire ce constat, notées pour qu'on ne les refasse pas :
+
+1. une regex partant de `<Template>AssetPoolNamed</Template>` et fermant sur `</Asset>`
+   **déborde sur l'asset suivant** — les items étant auto-fermés, le premier `</Asset>`
+   rencontré n'est pas celui qu'on croit. Elle faisait apparaître un membre « 5470 Fondeur de
+   bronze » absent du pool ;
+2. un comptage bâti sur la même regex annonçait « 322 pools sur 323 renseignés ». Le parseur
+   XML n'en trouve aucun. **C'est le parseur qui fait foi, pas la regex.**
+
+Tant que la membership n'est pas disponible, on ne peut ni identifier les fonderies ni appliquer
+ce greffon. Il faudrait passer par le template, la chaîne de production, ou un autre export.
