@@ -4,7 +4,7 @@ import { economy, residentialChainExtended, upkeepOf } from "../economy/economy"
 import { buildTierProfile, solve } from "../economy/solve";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { cityStatusAttrs, tierByGuid } from "../economy/economy";
-import { institutionDefs, pickPatron, SHRINE_TYPE, VITAL_ATTRS, worstAttr } from "../economy/attributes";
+import { bestDeityAttrs, institutionDefs, pickPatron, SHRINE_TYPE, VITAL_ATTRS, worstAttr } from "../economy/attributes";
 import { effectOf } from "../economy/economy";
 import { footprintSize } from "../engine/geometry";
 import { candidateRecipes } from "./recipes";
@@ -75,6 +75,13 @@ export interface IslandPlanRequest {
    * La tolérance laisse le joueur arbitrer ce risque plutôt que de le décider pour lui.
    */
   tolerance?: number;
+  /**
+   * DÉVOTION de l'île, 0 par défaut. État de partie, comme les permis.
+   *
+   * Elle débloque par paliers les effets de la divinité tutélaire, qui valent pour l'île
+   * entière et ne coûtent ni sol ni permis. À zéro, comportement historique inchangé.
+   */
+  devotion?: number;
   /**
    * LISTE DE VŒUX DE PRODUCTION — ce que l'utilisateur veut voir sur l'île.
    *
@@ -316,6 +323,13 @@ export function planIslandImport(
   // déficit connu ; ici on retient les institutions non religieuses, communes à tous les
   // essais, plus l'autel finalement élu.
   let patron: string | undefined;
+  // LA DIVINITÉ D'ABORD, L'AUTEL ENSUITE — et jamais l'inverse.
+  //
+  // Choisie ici, une fois, sur données seules : elle ne dépend que de la dévotion, pas du plan.
+  // L'ordre inverse était le défaut mesuré — un autel gagnait la présélection sur son rayon, la
+  // divinité se trouvait verrouillée sur ce dieu sans effet d'île, puis le raffinage retirait
+  // l'autel. Ni autel ni dieu, et aucun réglage de dévotion ne produisait le moindre effet.
+  const deityAttrs = bestDeityAttrs(req.devotion ?? 0);
   const institutions = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE).map((i) => i.defId);
   const kontorDef = pickKontorDef(req.catalog, islandRegion);
   const kontor = kontorDef ? reserveKontor(req.grid, kontorDef) : null;
@@ -520,6 +534,7 @@ export function planIslandImport(
       planLattice(g, req.tierGuid, lookup, {
         coverageFloor: floor, serviceIds, water: true, heights: req.heights,
         institutions: patron ? [...institutions, patron] : institutions,
+        patronAttrs: deityAttrs,
         permits: req.permits, reserved: kontorRect, tolerance: req.tolerance,
       }),
       serviceIds ? new Set(serviceIds) : null,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef } from "../model/types";
 import { economy } from "./economy";
-import { SHRINE_TYPE } from "./attributes";
+import { bestDeityAttrs, patronResidenceAttrs, SHRINE_TYPE } from "./attributes";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const byId = new Map(catalog.map((d) => [d.id, d]));
@@ -61,5 +61,27 @@ describe("divinites tutelaires extraites du jeu", () => {
     expect(economy.religion?.dominantThreshold).toBe(7000);
     expect(economy.religion?.wonderThreshold).toBe(4000);
     expect(economy.religion?.shrineThreshold).toBe(1000);
+  });
+});
+
+describe("choix de la divinite sur donnees seules", () => {
+  it("l'echelle de devotion est un MULTIPLICATEUR", () => {
+    // Ceres porte Population 1 avec une echelle 1 -> 7. Le gain final vaut attribut x echelle,
+    // et il ne depend que de la devotion : aucun plan n'est necessaire pour le calculer.
+    expect(bestDeityAttrs(0)).toEqual({});
+    expect(bestDeityAttrs(250)).toEqual({ Population: 1 });
+    expect(bestDeityAttrs(4500)).toEqual({ Population: 3 });
+    expect(bestDeityAttrs(250000)).toEqual({ Population: 7 });
+  });
+
+  it("les divinites qui ne visent PAS les residences sont ecartees", () => {
+    // Mercure porte Prestige 1 avec une echelle qui monte a 350 — mais il vise les comptoirs,
+    // depots et jetees. Le crediter aux maisons donnerait +350 de Prestige par maison.
+    const merc = (economy.patrons ?? []).find((p) => /mercur/i.test(p.name))!;
+    expect(merc.local.some((e) => e.targets.includes("37202"))).toBe(true);
+    expect(patronResidenceAttrs(merc, 250000)).toEqual({});
+    // Epona vise les batiments de PRODUCTION, pas les residences.
+    const epona = (economy.patrons ?? []).find((p) => /epona/i.test(p.name))!;
+    expect(patronResidenceAttrs(epona, 250000)).toEqual({});
   });
 });

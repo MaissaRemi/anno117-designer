@@ -38,6 +38,13 @@ export interface LatticeOpts {
   viabilityGate?: boolean;
   /** Déficit vital TOLÉRÉ par maison, 0 par défaut. Voir `viability.ts`. */
   tolerance?: number;
+  /**
+   * Ce que la DIVINITÉ TUTÉLAIRE rend à chaque résidence de l'île.
+   *
+   * Ni portée ni couverture : le dieu vaut pour l'île entière. Calculé une fois par
+   * `bestDeityAttrs`, hors de toute décision de pose. Vide à dévotion nulle.
+   */
+  patronAttrs?: Record<string, number>;
   /** Permis détenus en partie, par GUID de permis. Voir `economy/uniques`. */
   permits?: Record<string, number>;
   /** Emprise réservée à un bâtiment posé plus tard (le comptoir) : le réseau d'eau doit
@@ -820,12 +827,17 @@ export function planLattice(
       }
       const attrs: Record<string, number> = { ...evaluator.attrsOf(coveredMask) };
       for (const [k, v] of Object.entries(inst)) attrs[k] = (attrs[k] ?? 0) + v;
+      for (const [k, v] of Object.entries(opts.patronAttrs ?? {})) attrs[k] = (attrs[k] ?? 0) + v;
       const defId = reach.tier.residenceId ?? residenceId;
       for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) occ[(y + j) * W + (x + i)] = 1;
       const b: PlacedBuilding = { uid: uid("lat"), defId, x, y, rotation: 0, locked: false };
       buildings.push(b);
       markAdj(x, y, rw, rh);
-      placed.push({ b, key: o, cap: reach.cap, money: reach.money, guid: reach.tier.guid, attrs, mask: coveredMask, inst });
+      // POPULATION EST UNE CAPACITÉ, PAS SEULEMENT UN ATTRIBUT. Les habitants viennent de
+      // `reach.cap`, calculé par le modèle de besoins — la créditer dans `attrs` seul ne
+      // logeait personne. Cérès donne jusqu'à +7 par maison : c'est ici qu'il faut l'ajouter.
+      const capDieu = Math.max(0, opts.patronAttrs?.Population ?? 0);
+      placed.push({ b, key: o, cap: reach.cap + capDieu, money: reach.money, guid: reach.tier.guid, attrs, mask: coveredMask, inst });
     }
 
     // Garde-fou de viabilité (cf. `optimizer/viability`) : les écartées sont démolies.
