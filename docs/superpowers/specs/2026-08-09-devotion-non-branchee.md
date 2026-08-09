@@ -46,7 +46,41 @@ Quatre corrections successives, chacune réparant un défaut réel du modèle :
 13 835 habitants à dévotion 0, 4 500 et 25 000 — au habitant près. La continentale du DLC de
 même. Seule `roman_island_extralarge_02` frémit (44 651 → 44 634, soit −17).
 
-## Le point de blocage, à vérifier en premier
+## Le point de blocage, MESURÉ
+
+La question posée était : le bloc d'élection est-il seulement atteint ? Une trace y répond, et
+elle écarte l'hypothèse la plus commode.
+
+```
+### TRACE pick=true instCands=12 sanctuaires=6      (roman_island_small_06)
+```
+
+**Le bloc est atteint**, quatre fois, avec six sanctuaires candidats. L'élection tourne. Le
+défaut est ailleurs, et il est structurel :
+
+> Un autel **gagne** la présélection — c'est son effet de zone qui le fait gagner. La divinité
+> est donc verrouillée sur ce dieu-là, qui n'a aucun effet d'île. Puis la passe de RAFFINAGE
+> rejoue le plan et **retire l'autel**, jugé trop coûteux en sol. Résultat : ni autel, ni dieu.
+> Le plan affiche `dieu=aucun` alors que l'élection a bien eu lieu, et la branche « sans autel »
+> qui aurait crédité Cérès n'est jamais empruntée, puisque l'autel avait gagné.
+
+Les quatre correctifs listés plus haut réparaient tous un vrai défaut, mais aucun ne touchait
+celui-là : ils supposaient que `dieu=aucun` signifiait « autel rejeté », alors qu'il signifiait
+« autel retenu puis élagué plus tard ».
+
+## Par où reprendre
+
+Découpler complètement les deux décisions, dans cet ordre :
+
+1. **la DIVINITÉ** — choisie une fois, sur ce qu'elle rend aux résidences à la dévotion
+   courante, indépendamment de tout autel. Ses attributs s'appliquent à TOUTES les passes, y
+   compris le plan de base et le raffinage ;
+2. **l'AUTEL** — décidé après, comme n'importe quel bâtiment : il se pose s'il paie son sol.
+
+Aujourd'hui la seconde décision commande la première, et la dernière passe peut annuler les
+deux. Tant que cet ordre n'est pas inversé, aucun réglage de dévotion ne produira d'effet.
+
+## Ancien diagnostic, conservé pour mémoire
 
 Le bloc d'élection est gardé par :
 
