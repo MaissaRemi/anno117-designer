@@ -107,6 +107,33 @@ Quatre tests unitaires, sur les moteurs et non sur l'interface :
 Le filet d'invariants existant (`invariants.test.ts`) couvre le reste : une liste de vœux ne
 doit introduire aucune violation de gravité `faute`.
 
+## Implémenté le 2026-08-09
+
+Conforme au design, sans écart. Points d'entrée réels :
+
+- `LocalProdOptions.requested` — la file de `planLocalProduction` accueille des entrées
+  `{ good, perMin, defId?, copies?, wish? }`. Un vœu impose son `defId` et son nombre de
+  copies ; une entrée de manifeste les déduit du débit comme avant. Tout ce qui suit — devis,
+  budget, pose, recul — les traite pareil.
+- `SlotPlanOptions.slotPrefs` — consulté par `pickSlotBuilding` APRÈS ses filtres, jamais avant :
+  une préférence ne rouvre pas une porte que le monde, le gisement ou la main-d'œuvre ont
+  fermée.
+- `IslandPlanRequest.wanted` — assemble les deux et les passe aux moteurs.
+
+**La cause de l'arrêt est désormais propagée.** Elle existait à chaque point de sortie de la
+boucle de pose et se perdait : quota de bâtiments, plus de place, main-d'œuvre insuffisante,
+budget d'un attribut nommé. Un vœu partiellement servi rend
+`Boulangerie : 2 posé(s) sur 3 demandé(s) — main-d'œuvre insuffisante`.
+
+**Cinq tests** (`wanted.test.ts`) : demande réalisable posée à l'identique ET en tête de liste ;
+demande déraisonnable servie en partie avec sa cause ; préférence infaisable ignorée ;
+préférence réalisable retenue ; plan strictement identique sans liste de vœux.
+
+**Interface** : panneau conditionné à « Produire sur l'île ». Les ateliers proposés sont filtrés
+par monde ET par productibilité réelle d'après les fertilités déclarées — on ne propose pas ce
+que le moteur écarterait. Les lignes d'emplacement n'apparaissent que pour les types présents
+sur l'île, et seulement si « Exploiter les emplacements » est coché.
+
 ## Hors périmètre
 
 - Le choix emplacement par emplacement, qui demanderait un sélecteur cartographique.

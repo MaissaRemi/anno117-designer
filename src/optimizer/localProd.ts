@@ -45,6 +45,17 @@ export interface LocalProdOptions {
   /** Emplacements à essayer EN PRIORITÉ, dans l'ordre : du sol que l'appelant a réservé pour
    *  les ateliers en faisant bâtir le quartier autour. */
   preferred?: { x: number; y: number }[];
+  /**
+   * LISTE DE VŒUX : ateliers demandés explicitement, dans l'ORDRE DE PRIORITÉ.
+   *
+   * Elle amorce la file, en unités de BÂTIMENT plutôt que de bien. Chaque copie reste soumise
+   * aux mêmes garde-fous que les autres — devis de main-d'œuvre, budget d'attributs, terrain
+   * libre, recul sur pose — donc une demande qui ne tient pas est servie partiellement, et ce
+   * qui a sauté est signalé plutôt que silencieusement abandonné.
+   *
+   * La file épuisée, le moteur enchaîne sur son choix automatique avec le budget restant.
+   */
+  requested?: { defId: string; count: number }[];
 }
 
 export interface LocalWorkshop {
@@ -241,8 +252,32 @@ export function planLocalProduction(
       ?? spiral((x, y) => fits(def, x, y));
   };
 
-  // --- biens du manifeste, du plus lourd au plus léger ---------------------------------
-  const wanted = [...demand].sort((a, b) => b.perMin - a.perMin || a.good.localeCompare(b.good));
+  // --- file de production : les VŒUX d'abord, puis le manifeste ------------------------
+  // Un vœu porte un bâtiment et un nombre de copies ; une entrée de manifeste porte un bien et
+  // un débit, dont le moteur déduit le producteur et le nombre. Les deux transitent par la
+  // même file, et tout ce qui suit — devis, budget, pose, recul — les traite pareil.
+  interface Want { good: string; perMin: number; defId?: string; copies?: number; wish?: boolean }
+  const mainGoodOf = (defId: string): string | undefined =>
+    economy.buildingProd[defId]?.outputs?.[0]?.good;
+  const wishes: Want[] = [];
+  for (const w of opts.requested ?? []) {
+    const def = lookup(w.defId);
+    const good = mainGoodOf(w.defId);
+    if (!def || !good || w.count <= 0) {
+      out.gaps.push(`${lookup(w.defId)?.name ?? w.defId} : demandé mais non productible ici`);
+      continue;
+    }
+    if (def.slotType) {
+      out.gaps.push(`${def.name} : demandé mais c'est une exploitation d'emplacement`);
+      continue;
+    }
+    wishes.push({ good, perMin: 0, defId: w.defId, copies: w.count, wish: true });
+  }
+  const wanted: Want[] = [
+    ...wishes,
+    ...[...demand].sort((a, b) => b.perMin - a.perMin || a.good.localeCompare(b.good))
+      .map((d) => ({ good: d.good, perMin: d.perMin })),
+  ];
   // La file s'allonge au fil de la remontée de chaîne (cf. plus bas). `queued` évite de
   // traiter deux fois un bien réclamé par plusieurs ateliers, et coupe les cycles.
   const queued = new Set(wanted.map((d) => d.good));
@@ -252,27 +287,32 @@ export function planLocalProduction(
     // quand la région ne produit pas le bien. On posait ainsi 12 ateliers romains sur une
     // île celtique — non constructibles en jeu, et réclamant une main-d'œuvre plébéienne
     // qu'Albion ne peut pas fournir. Le bien reste simplement au manifeste d'import.
-    const defId = opts.region ? pickProducerInWorld(d.good, opts.region) : undefined;
+    const defId = d.defId ?? (opts.region ? pickProducerInWorld(d.good, opts.region) : undefined);
     if (!defId) continue;
     const def = lookup(defId);
     if (!def || def.slotType) continue; // les productions à emplacement passent par slotPlan
     const rate = ratePerMin(defId, d.good);
     if (rate <= 0) continue;
-    const copies = Math.min(4, Math.ceil(d.perMin / rate)); // borné : on ne bétonne pas l'île
+    // un vœu impose son nombre ; une entrée de manifeste le déduit du débit, borné pour ne
+    // pas bétonner l'île
+    const copies = d.copies ?? Math.min(4, Math.ceil(d.perMin / rate));
     const ws: LocalWorkshop = {
       defId, name: def.name, good: d.good, goodName: goodName(d.good),
       perMin: 0, copies: 0, attrs: {}, inputs: [], placed: [], razed: [],
     };
+    // Pourquoi la pose s'est arrêtée — l'information existe à chaque point de sortie, elle
+    // était simplement perdue. Un vœu non tenu doit dire ce qui a manqué, pas disparaître.
+    let stopped = "";
     for (let c = 0; c < copies; c++) {
-      if (out.buildings.length >= maxBuildings) break;
+      if (out.buildings.length >= maxBuildings) { stopped = "quota de bâtiments atteint"; break; }
       const pos = place(def);
-      if (!pos) break;
+      if (!pos) { stopped = "plus de place sur l'île"; break; }
       const impact = zoneImpact(def, pos.x, pos.y);
       // DEVIS DE MAIN-D'ŒUVRE : ce que coûterait, en attributs, la rétrogradation des maisons
       // nécessaires pour armer cet atelier. `null` = demande insatisfiable (palier absent de
       // l'île, ou plus aucune maison convertible) — on renonce à ce bien.
       const wf = opts.workforce?.quote([defId]);
-      if (opts.workforce && !wf) break;
+      if (opts.workforce && !wf) { stopped = "main-d'œuvre insuffisante"; break; }
       // Maisons qui disparaîtraient sous l'emprise — repérées AVANT de trancher : elles
       // emportent leurs propres bonus d'attributs, et les ignorer faisait dépenser un budget
       // déjà consommé. C'est ce qui rendait le plan non viable après coup.
@@ -289,8 +329,8 @@ export function planLocalProduction(
       const razed = opts.workforce?.razeCost(doomed) ?? {};
       const total = (k: string) => (impact[k] ?? 0) + (wf?.[k] ?? 0) - (razed[k] ?? 0);
       // le budget tiendrait-il ? sinon on renonce à CE bien et on passe au suivant
-      const wouldBreak = VITAL_ATTRS.some((k) => budget[k] + total(k) < 0);
-      if (wouldBreak) break;
+      const short = VITAL_ATTRS.find((k) => budget[k] + total(k) < 0);
+      if (short) { stopped = `budget ${short} épuisé`; break; }
       opts.workforce?.charge([defId]);
       // pose : les résidences sous l'emprise sont rasées
       for (const u of doomed) {
@@ -315,6 +355,15 @@ export function planLocalProduction(
       }
       ws.copies++;
       ws.perMin += rate;
+    }
+    // ÉTAT DU VŒU. Servi en entier, en partie, ou pas du tout — mais toujours dit.
+    if (d.wish) {
+      if (ws.copies < copies) {
+        out.gaps.push(
+          `${def.name} : ${ws.copies} posé(s) sur ${copies} demandé(s)`
+          + (stopped ? ` — ${stopped}` : ""),
+        );
+      }
     }
     if (!ws.copies) continue;
 
