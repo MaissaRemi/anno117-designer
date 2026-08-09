@@ -9,6 +9,7 @@ import { ResourceSelector } from "./ResourceSelector";
 import { RunPanel } from "./components/RunPanel";
 import { PlanPreview, PlanPreviewLegend } from "./components/PlanPreview";
 import { regionOfIsland } from "../data/islands";
+import { bestDeityAttrs } from "../economy/attributes";
 
 interface Props {
   onClose: () => void;
@@ -32,6 +33,11 @@ const tiersOfWorld = (world: string) =>
     .sort((a, b) => b.capacityDefault - a.capacityDefault);
 
 type NeedMode = "auto" | "all";
+
+/** Paliers de dévotion proposés — ceux de l'échelle du jeu (`economy.patrons`). */
+const DEVOTIONS = [0, 250, 1500, 4500, 25000, 250000];
+/** Population par maison que Cérès rend à cette dévotion, pour l'afficher sans deviner. */
+const DEVOTION_POP = (d: number) => bestDeityAttrs(d).Population ?? 0;
 
 export function IslandPlanner({ onClose }: Props) {
   const applyOptimization = useStore((s) => s.applyOptimization);
@@ -58,6 +64,9 @@ export function IslandPlanner({ onClose }: Props) {
   // `optimizer/viability.ts` : au-delà de 30 000 habitants le malus de rang de cité dépasse
   // ce qu'une maison peut encaisser, et sans cette soupape aucune grande île ne se peuple.
   const [tolerance, setTolerance] = useState(0);
+  // Dévotion de l'île : elle débloque par paliers les effets de la divinité tutélaire, qui
+  // valent pour l'île entière et ne coûtent ni sol ni permis. Voir `economy.patrons`.
+  const [devotion, setDevotion] = useState(0);
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
       .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
@@ -134,6 +143,7 @@ export function IslandPlanner({ onClose }: Props) {
         localProduction,
         autoTier,
         ...(tolerance > 0 ? { tolerance } : {}),
+        ...(devotion > 0 ? { devotion } : {}),
         ...(wishes.length || Object.keys(slotWish).length
           ? { wanted: { workshops: wishes, slots: slotWish } }
           : {}),
@@ -320,6 +330,22 @@ export function IslandPlanner({ onClose }: Props) {
                 onChange={(e) => setTolerance(parseInt(e.target.value) / 10)} />
               <span className="muted">{tolerance === 0 ? "aucun" : `−${tolerance.toFixed(1)}`}</span>
             </label>
+            <label className="slider">
+              <span style={{ color: "var(--muted)", fontSize: 12 }}>Dévotion</span>
+              <input type="range" min={0} max={5} step={1} value={DEVOTIONS.indexOf(devotion)}
+                onChange={(e) => setDevotion(DEVOTIONS[parseInt(e.target.value)] ?? 0)} />
+              <span className="muted">{devotion === 0 ? "aucune" : devotion.toLocaleString("fr")}</span>
+            </label>
+            <span className="muted" style={{ fontSize: 11 }}>
+              {devotion === 0
+                ? "Sans dévotion, la divinité tutélaire ne rend que l'effet de zone de son autel."
+                : `Cérès l'emporte : Population +${DEVOTION_POP(devotion)} sur CHAQUE maison de l'île, sans sol ni permis.`}
+              {" "}Attention, l'effet est à double tranchant : plus d'habitants par maison
+              alourdit le malus de rang de cité, donc le garde-fou rase davantage. Mesuré sur la
+              carte continentale — sans tolérance la dévotion FAIT PERDRE 20 %, avec une
+              tolérance de 3 elle fait gagner 34 % (70 057 → 93 622 habitants). Les deux
+              réglages se tiennent.
+            </span>
             <span className="muted" style={{ fontSize: 11 }}>
               {tolerance === 0
                 ? "Aucun attribut vital ne peut être négatif : une seule maison en déficit fait raser jusqu'au retour à zéro. C'est le comportement strict."
