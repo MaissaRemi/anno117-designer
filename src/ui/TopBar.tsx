@@ -7,6 +7,7 @@ import { findOrphanRefs } from "../model/serialize";
 import { migrateV7toV8 } from "../persist/local";
 import { renderFullCanvas } from "../render/exportImage";
 import { IslandPicker } from "./IslandPicker";
+import { BUILD_ID } from "../buildStamp";
 
 export function TopBar() {
   const catalog = useStore((s) => s.catalog);
@@ -51,6 +52,14 @@ export function TopBar() {
     <div className="topbar">
       <span className="tb-title">Anno 117 · Designer</span>
       {islandName && <span className="tb-island">— {islandName}</span>}
+      {/* Empreinte du bundle CHARGÉ : le seul moyen de voir d'un coup d'œil qu'un onglet
+          tourne encore sur un ancien code apres un rebuild. Cf. src/buildStamp.ts. */}
+      <span
+        className="tb-build"
+        title={`Bundle charge : ${BUILD_ID}\nComparer a « ls dist/assets » apres un build local.\nSi le nom differe, recharge avec Ctrl+Shift+R.`}
+      >
+        build {BUILD_ID}
+      </span>
 
       <span className="spacer" />
 

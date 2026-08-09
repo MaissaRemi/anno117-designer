@@ -108,6 +108,8 @@ label { font-size: 13px; }
 }
 .tb-title { font-size: 14px; font-weight: 500; }
 .tb-island { color: var(--muted); font-size: 12px; }
+/* Empreinte du bundle charge : discrete, mais toujours lisible sans ouvrir les outils dev. */
+.tb-build { color: var(--muted); font-size: 11px; opacity: .55; margin-left: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; cursor: help; }
 .menu { position: relative; }
 .menu-pop {
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 40;
