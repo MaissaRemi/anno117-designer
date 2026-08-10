@@ -365,6 +365,15 @@ export function planPacked(
     const inst: Record<string, number> = {};
     for (const e of instTypes) {
       if (!types[e.i].covered[i]) continue;
+      // UN EFFET NE SERT QUE SON PALIER ET CEUX AU-DESSUS, dans CE moteur aussi. Le filtre
+      // n'existait que dans `planLattice` : les deux moteurs se départagent par `better()`
+      // sur la population livrée, et l'un des deux crédite ce que le jeu n'accorde pas, le
+      // comparatif est faussé. Inerte sur les données actuelles — toutes les institutions
+      // réelles (Vigiles, Medicus, autel du patron) ont `minTier` nul, les bâtiments
+      // restreints étant des services de palier, exclus de `institutionDefs` — donc c'est
+      // une mise en cohérence, pas un changement de sortie.
+      const mt = e.fx!.minTier ?? 0;
+      if (mt && (reach.tier.rank ?? 0) < mt) continue;
       for (const [k, v] of Object.entries(e.fx!.attrs)) inst[k] = (inst[k] ?? 0) + v;
     }
     const attrs: Record<string, number> = { ...evaluator.attrsOf(coveredMask) };

@@ -210,6 +210,46 @@ export function planIsland(
  * Production et main-d'œuvre sont supposées sur une AUTRE île : l'île principale ne
  * contient que des maisons du tier-cible + leurs services d'influence.
  */
+/**
+ * ═══ PLANCHER DE BRUIT DU MODÈLE D'ATTRIBUTS ══════════════════════════════════════════
+ *
+ * Déficit vital par maison en deçà duquel un plan est tenu pour viable. Ce n'est PAS la
+ * tolérance du joueur — celle-là vaut zéro par défaut et s'ajoute à ce plancher : c'est la
+ * RÉSOLUTION du modèle, en dessous de laquelle un écart ne signifie plus rien.
+ *
+ * Les attributs sont des entiers par maison, et la couverture est discrète : deux maisons du
+ * même palier n'ont pas le même bilan selon les services qui les atteignent. Le total de l'île
+ * hérite donc d'un bruit d'arrondi proportionnel au nombre de maisons.
+ *
+ * MESURÉ, et c'est ce qui a rendu ce plancher nécessaire. Sur `roman_island_medium_05`, le
+ * palier Patriciens loge 20 904 habitants avec `FireSafety = −21` sur 625 maisons — soit
+ * −0,034 par maison, quand le Bonheur vaut +3 637 et l'Argent +46 414. Le drapeau `viable`
+ * étant binaire et `better()` le classant AVANT la population, `autoTier` écartait ce palier
+ * et se rabattait sur Plébéiens : 4 992 habitants. **Vingt et un points de déficit coûtaient
+ * seize mille habitants.** Même effondrement sur `roman_island_large_06` : 29 265 → 4 980.
+ *
+ * Raser jusqu'au retour à zéro n'y répond pas : le déficit est DIFFUS, la maison moyenne n'est
+ * négative que de 0,034, il faudrait en raser plus de six cents — un tiers de l'île. Le razage
+ * ne répare que les déficits concentrés.
+ *
+ * La valeur est volontairement basse. À 0,05, un déficit reste sous un vingtième de point par
+ * maison : une ville qui manquerait réellement de sécurité incendie est à des ordres de
+ * grandeur de là, et le garde-fou continue de la raser.
+ */
+export const BRUIT_VITAL = 0.05;
+
+/**
+ * Verdict du plan LIVRÉ : tolérance joueur + plancher de bruit, par maison. Séparé de
+ * `viableSubset` (le garde-fou de sélection, qui reste STRICT) : le plancher ne s'applique
+ * qu'au JUGEMENT du plan final, jamais au razage des maisons.
+ */
+export const verdictViable = (
+  attrs: Record<string, number>,
+  houses: number,
+  tolerance = 0,
+): boolean =>
+  VITAL_ATTRS.every((k) => (attrs[k] ?? 0) + (Math.max(0, tolerance) + BRUIT_VITAL) * houses >= 0);
+
 export function planIslandImport(
   req: IslandPlanRequest,
   onProgress?: (step: number, total: number) => void,
@@ -223,7 +263,7 @@ export function planIslandImport(
   // `viable`, aurait préféré un plan bridé à un plan conforme à l'option.
   const tol = Math.max(0, req.tolerance ?? 0);
   const viableAvecTolerance = (attrs: Record<string, number>, houses: number): boolean =>
-    VITAL_ATTRS.every((k) => (attrs[k] ?? 0) + tol * houses >= 0);
+    verdictViable(attrs, houses, tol);
   const lookup = makeLookup(req.catalog);
   const tier = economy.tiers.find((t) => t.guid === req.tierGuid);
   if (!tier || !tier.residenceId) {
@@ -581,12 +621,16 @@ export function planIslandImport(
     for (const k of VITAL_ATTRS) {
       deficit[k] = Math.max(0, -((pick.cand.attrsSum[k] ?? 0) + pick.cand.houses * (rank[k] ?? 0)));
     }
-    // ═══ LE DÉFICIT EST TOUJOURS NUL ICI, ET C'EST LE POINT ═══════════════════════════
+    // ═══ LE DÉFICIT EST PRESQUE TOUJOURS NUL ICI ══════════════════════════════════════
     //
-    // `pick` sort de `viableSubset`, qui a DÉJÀ rasé jusqu'au retour à zéro : aucun attribut
-    // vital n'y est négatif, donc la boucle ci-dessus rend systématiquement 0 partout. Le
-    // repli était censé viser « le plus serré », mais il passait par `worstAttr`, qui ne
-    // retourne que sur une valeur STRICTEMENT NÉGATIVE — donc `null`, donc un déficit nul.
+    // `pick` sort de `viableSubset`, qui a rasé jusqu'au retour à zéro AU MOMENT du
+    // placement : la boucle ci-dessus rend donc 0 dans le cas courant. Presque : le rang de
+    // cité est réévalué ici à la population de `pick`, et un plan qui a grandi depuis le
+    // razage peut porter un résidu (mesuré : FireSafety 21 sur `roman_island_medium_05`).
+    // Ce résidu est un signal utile — il pointe l'attribut qui borde — et il est du même
+    // ordre que le plancher de bruit du verdict (`BRUIT_VITAL`). Historiquement, le repli
+    // passait par `worstAttr`, qui ne retourne que sur une valeur STRICTEMENT NÉGATIVE —
+    // donc `null`, donc un déficit nul.
     //
     // `pickPatron` retombait alors sur son départage par défaut : somme des gains vitaux, puis
     // identifiant. Le dieu était élu par ordre alphabétique, ce que `GAME_MECHANICS.md §9`
@@ -1090,8 +1134,13 @@ export function planIslandImport(
       // contredisent : mesuré à tolérance 3 sur la carte continentale, ce test resté strict
       // retirait des ateliers jusqu'à faire tomber le plan de 86 052 à 6 664 habitants — il
       // défaisait ce que la tolérance venait d'autoriser.
-      const nMaisons = buildings.filter((b) => residenceIds.has(b.defId)).length;
-      while (kept.length && !viableAvecTolerance(trial.attrs, nMaisons)) {
+      //
+      // Et il se juge sur le MÊME nombre de maisons que le bilan qu'il regarde : celui du
+      // règlement (`trial.wf.houses`), qui exclut déjà les maisons rasées par les ateliers
+      // gardés. Compter les résidences de `buildings` — qui les contient encore à ce point —
+      // rendait le recul plus laxiste que le verdict final de `(tol + bruit) × rasées` points,
+      // et un plan pouvait sortir non viable alors qu'un retrait de plus l'aurait sauvé.
+      while (kept.length && !viableAvecTolerance(trial.attrs, trial.wf.houses)) {
         droppedCopies += kept.pop()!.copies;
         trial = settleWith(kept);
       }
@@ -1213,20 +1262,30 @@ export function planIslandImport(
       const a = tierByGuid(c.from)?.name ?? c.from, b = tierByGuid(c.to)?.name ?? c.to;
       gaps.push(`${c.houses} maison(s) ${a} → ${b} pour la main-d'œuvre (−${c.popLost} habitants)`);
     }
+    const planViable = viableAvecTolerance(attrsTotal, houses);
     {
       const w = worstAttr(attrsTotal);
       if (w) {
         const label: Record<string, string> = {
           Happiness: "Bonheur", Money: "Argent", Health: "Santé", FireSafety: "Sécurité incendie",
         };
-        gaps.push(`${label[w.attr] ?? w.attr} négatif sur l'île (${w.value.toFixed(0)}) — émeutes/incendies/maladies en jeu`);
+        // LE MESSAGE DOIT DIRE LA MÊME CHOSE QUE LE DRAPEAU. `worstAttr` retourne sur toute
+        // valeur strictement négative, plancher de bruit compris : le plan livré annonçait
+        // alors `viable` dans l'en-tête et « émeutes/incendies/maladies en jeu » deux lignes
+        // plus bas, pour −21 sur 625 maisons. Le chiffre reste affiché dans les deux cas —
+        // rien n'est tu — mais la CONSÉQUENCE annoncée suit le verdict, et le déficit est
+        // ramené à la maison, seule échelle où il se lit.
+        const parMaison = houses ? w.value / houses : w.value;
+        gaps.push(planViable
+          ? `${label[w.attr] ?? w.attr} légèrement négatif sur l'île (${w.value.toFixed(0)},`
+            + ` soit ${parMaison.toFixed(3)}/maison) — sous le plancher de bruit du modèle`
+          : `${label[w.attr] ?? w.attr} négatif sur l'île (${w.value.toFixed(0)}) — émeutes/incendies/maladies en jeu`);
       }
     }
     for (const s of analyzable) {
       if (s.pct < 100) gaps.push(`${s.name} : ${s.pct}% des maisons couvertes (distance-rue)`);
     }
 
-    const planViable = viableAvecTolerance(attrsTotal, houses);
     const hasWaterConsumers = water.consumers.length > 0;
     return {
       mode: "import",
