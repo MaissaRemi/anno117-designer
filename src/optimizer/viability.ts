@@ -1,6 +1,67 @@
 import { cityStatusLadder } from "../economy/economy";
 import { VITAL_ATTRS } from "../economy/attributes";
 
+/**
+ * ═══ CE MODULE EST LA SEULE SOURCE DE VÉRITÉ SUR « VIABLE » ═══════════════════════════
+ *
+ * Il y a DEUX questions distinctes, et les confondre a déjà coûté cher :
+ *
+ *  - « quelles maisons garder ? » — c'est `viableSubset`, le GARDE-FOU, et il est STRICT :
+ *    il rase jusqu'au retour à zéro, seule la tolérance demandée par le joueur l'assouplit ;
+ *  - « ce plan est-il livrable ? » — c'est `verdictViable`, le VERDICT, qui ajoute le
+ *    plancher de bruit du modèle.
+ *
+ * La règle vivait à trois endroits : ici, dans `islandPlan` et dans `invariants`, chacun avec
+ * sa propre version du test. L'invariant `viable-coherent` comparait ainsi le drapeau à un
+ * zéro strict et criait FAUTE sur les plans les plus sains du moteur, parce qu'il ignorait le
+ * plancher que le verdict appliquait. Une règle métier écrite en trois exemplaires finit
+ * toujours par diverger : les deux fonctions cohabitent donc ici, et nulle part ailleurs.
+ */
+
+/**
+ * ═══ PLANCHER DE BRUIT DU MODÈLE D'ATTRIBUTS ══════════════════════════════════════════
+ *
+ * Déficit vital par maison en deçà duquel un plan est tenu pour viable. Ce n'est PAS la
+ * tolérance du joueur — celle-là vaut zéro par défaut et s'ajoute à ce plancher : c'est la
+ * RÉSOLUTION du modèle, en dessous de laquelle un écart ne signifie plus rien.
+ *
+ * Les attributs sont des entiers par maison, et la couverture est discrète : deux maisons du
+ * même palier n'ont pas le même bilan selon les services qui les atteignent. Le total de l'île
+ * hérite donc d'un bruit d'arrondi proportionnel au nombre de maisons.
+ *
+ * MESURÉ, et c'est ce qui a rendu ce plancher nécessaire. Sur `roman_island_medium_05`, le
+ * palier Patriciens loge 20 904 habitants avec `FireSafety = −21` sur 625 maisons — soit
+ * −0,034 par maison, quand le Bonheur vaut +3 637 et l'Argent +46 414. Le drapeau `viable`
+ * étant binaire et `better()` le classant AVANT la population, `autoTier` écartait ce palier
+ * et se rabattait sur Plébéiens : 4 992 habitants. **Vingt et un points de déficit coûtaient
+ * seize mille habitants.** Même effondrement sur `roman_island_large_06` : 29 265 → 4 980.
+ *
+ * Raser jusqu'au retour à zéro n'y répond pas : le déficit est DIFFUS, la maison moyenne n'est
+ * négative que de 0,034, il faudrait en raser plus de six cents — un tiers de l'île. Le razage
+ * ne répare que les déficits concentrés.
+ *
+ * LA MARGE EST MINCE, ET C'EST MESURÉ. Sur les 55 îles, le déficit livré le plus profond est
+ * −0,0452 par maison (`roman_island_medium_04`, Bonheur) : le plancher n'a qu'un facteur 1,11
+ * d'avance. Pire, la distribution est TRONQUÉE par construction — une île dont le palier haut
+ * dépasserait 0,05 ne l'affiche pas, elle s'effondre au palier inférieur où le déficit est nul.
+ * Ce plancher est donc un pare-feu, pas une réponse : la réponse est un CLASSEMENT qui cesse
+ * de faire dépendre un facteur quatre de population d'un drapeau binaire.
+ */
+export const BRUIT_VITAL = 0.05;
+
+/**
+ * VERDICT du plan LIVRÉ : tolérance joueur + plancher de bruit, par maison.
+ *
+ * Ne jamais l'employer pour décider quelles maisons garder — c'est le rôle de `viableSubset`,
+ * et il doit rester strict. Le plancher ne juge que le plan fini.
+ */
+export const verdictViable = (
+  attrs: Record<string, number>,
+  houses: number,
+  tolerance = 0,
+): boolean =>
+  VITAL_ATTRS.every((k) => (attrs[k] ?? 0) + (Math.max(0, tolerance) + BRUIT_VITAL) * houses >= 0);
+
 /** Une maison candidate, réduite à ce dont la sélection sous contrainte a besoin. */
 export interface Weighed {
   cap: number;

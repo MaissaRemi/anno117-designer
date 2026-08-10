@@ -609,6 +609,62 @@ export function planLattice(
   // conduites ne partagent pas les cases route → maisons d'abord = poches pleines, aucun
   // passage. Routées ici, les maisons contournent les corridors (cases conduite occupées). ═══
   let water: WaterPlanResult | undefined;
+
+  /**
+   * ═══ RETIRER DES BÂTIMENTS DU PLAN, AVEC TOUTE LA COMPTABILITÉ QUE ÇA IMPLIQUE ═══════
+   *
+   * Défaire une pose n'est pas retirer une entrée d'un tableau : SIX registres décrivent le
+   * même bâtiment, et en oublier un laisse le moteur dans un état incohérent —
+   * `occ` (le sol reste bloqué), `placements` (le BFS de portée continue de partir de la
+   * copie disparue), `servicesPlaced`, le quota d'unicité, et les deux champs du réseau d'eau.
+   *
+   * Ce geste se répétait à trois endroits — services à eau secs, copies qui ne servent
+   * personne, exploitations sans débouché — chacun avec sa propre copie de la liste. J'ai
+   * moi-même oublié `water.dropped` en écrivant le deuxième : sans lui, les consommateurs
+   * retirés sortent du DÉNOMINATEUR de `waterPct`, une île vidée de ses manques affiche un
+   * réseau parfait, et comme `waterPct` est le premier critère de `better()`, le plan gagne sa
+   * comparaison en ayant cessé de compter. Une checklist qu'on recopie finit toujours par
+   * perdre une ligne : elle vit ici, en un seul exemplaire.
+   *
+   * Renvoie le nombre de bâtiments réellement retirés — l'appelant en a besoin pour le dire à
+   * l'utilisateur, et un compte est plus honnête que la taille de l'ensemble demandé.
+   */
+  const retirerDuPlan = (uids: Set<string>): number => {
+    if (!uids.size) return 0;
+    const restants: PlacedBuilding[] = [];
+    let n = 0;
+    for (const b of buildings) {
+      if (!uids.has(b.uid)) { restants.push(b); continue; }
+      const d = lookup(b.defId);
+      // Définition introuvable : on ne sait NI libérer son sol NI défaire sa comptabilité.
+      // Le retirer quand même laisserait `occ` bloqué sur son emprise et `placements` pointant
+      // sur une copie absente — un état pire que la pose qu'on voulait défaire. On le garde,
+      // comme le faisait le retrait des services secs dont ce bloc est issu.
+      if (!d) { restants.push(b); continue; }
+      n++;
+      const fp = footprintSize(d, b.rotation);
+      for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
+        const c = (b.y + j) * W + (b.x + i);
+        if (c >= 0 && c < N && grid.usable[c]) occ[c] = 0; // le sol redevient constructible
+      }
+      const arr = placements.get(b.defId);
+      const k = arr ? arr.findIndex((q) => q.x === b.x && q.y === b.y) : -1;
+      if (arr && k >= 0) arr.splice(k, 1);
+      servicesPlaced[b.defId] = Math.max(0, (servicesPlaced[b.defId] ?? 1) - 1);
+      if (!servicesPlaced[b.defId]) delete servicesPlaced[b.defId];
+      if (d.uniqueType) {
+        uniqueUsed.set(d.uniqueType, Math.max(0, (uniqueUsed.get(d.uniqueType) ?? 1) - 1));
+      }
+    }
+    buildings.length = 0;
+    buildings.push(...restants);
+    if (water) {
+      const avant = water.consumers.length;
+      water.consumers = water.consumers.filter((c) => !uids.has(c.uid));
+      water.dropped = (water.dropped ?? 0) + (avant - water.consumers.length);
+    }
+    return n;
+  };
   if (opts.water) {
     const roadsNow: RoadTile[] = [];
     for (let i = 0; i < N; i++) if (roadAt[i]) roadsNow.push({ x: i % W, y: (i / W) | 0 });
@@ -649,31 +705,10 @@ export function planLattice(
     // Un type dont TOUTES les copies sont sèches disparaît alors, et les maisons retombent au
     // palier qu'elles franchissent sans lui — ce qui est exactement ce que le jeu ferait.
     const dry = new Set(water.consumers.filter((c) => !c.connected).map((c) => c.uid));
-    if (dry.size) {
-      const kept: PlacedBuilding[] = [];
-      for (const b of buildings) {
-        const d = dry.has(b.uid) ? lookup(b.defId) : undefined;
-        if (!d) { kept.push(b); continue; }
-        const fp = footprintSize(d, b.rotation);
-        for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
-          const c = (b.y + j) * W + (b.x + i);
-          if (c >= 0 && c < N && grid.usable[c]) occ[c] = 0; // le sol redevient constructible
-        }
-        const arr = placements.get(b.defId);
-        const k = arr ? arr.findIndex((q) => q.x === b.x && q.y === b.y) : -1;
-        if (arr && k >= 0) arr.splice(k, 1);
-        servicesPlaced[b.defId] = Math.max(0, (servicesPlaced[b.defId] ?? 1) - 1);
-        if (!servicesPlaced[b.defId]) delete servicesPlaced[b.defId];
-        if (d.uniqueType) {
-          uniqueUsed.set(d.uniqueType, Math.max(0, (uniqueUsed.get(d.uniqueType) ?? 1) - 1));
-        }
-      }
-      buildings.length = 0;
-      buildings.push(...kept);
-      water.consumers = water.consumers.filter((c) => !dry.has(c.uid));
-      water.dropped = (water.dropped ?? 0) + dry.size;
+    const secs = retirerDuPlan(dry);
+    if (secs) {
       water.gaps.push(
-        `${dry.size} service(s) à eau non raccordable(s) retiré(s) du plan (inactifs en jeu)`,
+        `${secs} service(s) à eau non raccordable(s) retiré(s) du plan (inactifs en jeu)`,
       );
     }
   }

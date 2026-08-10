@@ -7,7 +7,8 @@ import { makeLookup } from "../engine/rules";
 import { solve } from "../economy/solve";
 import { buildIslandGrid } from "../data/islandGrid";
 import { downscaleGrid } from "./halfTileAdapter";
-import { planIslandImport, verdictViable } from "./islandPlan";
+import { planIslandImport } from "./islandPlan";
+import { verdictViable } from "./viability";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);

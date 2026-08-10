@@ -18,6 +18,9 @@ import { WorkforceLedger } from "./workforceLedger";
 import { workforceGrant } from "../economy/workforce";
 import { netOf, planLocalProduction, type LocalWorkshop } from "./localProd";
 import { regionOfIsland } from "../data/islands";
+// LA RÈGLE DE VIABILITÉ NE VIT QU'À UN ENDROIT (cf. `viability.ts`) : le verdict tolérant et
+// le garde-fou strict y cohabitent, et personne ne réécrit sa propre version du test.
+import { verdictViable } from "./viability";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -219,46 +222,6 @@ export function planIsland(
  * Production et main-d'œuvre sont supposées sur une AUTRE île : l'île principale ne
  * contient que des maisons du tier-cible + leurs services d'influence.
  */
-/**
- * ═══ PLANCHER DE BRUIT DU MODÈLE D'ATTRIBUTS ══════════════════════════════════════════
- *
- * Déficit vital par maison en deçà duquel un plan est tenu pour viable. Ce n'est PAS la
- * tolérance du joueur — celle-là vaut zéro par défaut et s'ajoute à ce plancher : c'est la
- * RÉSOLUTION du modèle, en dessous de laquelle un écart ne signifie plus rien.
- *
- * Les attributs sont des entiers par maison, et la couverture est discrète : deux maisons du
- * même palier n'ont pas le même bilan selon les services qui les atteignent. Le total de l'île
- * hérite donc d'un bruit d'arrondi proportionnel au nombre de maisons.
- *
- * MESURÉ, et c'est ce qui a rendu ce plancher nécessaire. Sur `roman_island_medium_05`, le
- * palier Patriciens loge 20 904 habitants avec `FireSafety = −21` sur 625 maisons — soit
- * −0,034 par maison, quand le Bonheur vaut +3 637 et l'Argent +46 414. Le drapeau `viable`
- * étant binaire et `better()` le classant AVANT la population, `autoTier` écartait ce palier
- * et se rabattait sur Plébéiens : 4 992 habitants. **Vingt et un points de déficit coûtaient
- * seize mille habitants.** Même effondrement sur `roman_island_large_06` : 29 265 → 4 980.
- *
- * Raser jusqu'au retour à zéro n'y répond pas : le déficit est DIFFUS, la maison moyenne n'est
- * négative que de 0,034, il faudrait en raser plus de six cents — un tiers de l'île. Le razage
- * ne répare que les déficits concentrés.
- *
- * La valeur est volontairement basse. À 0,05, un déficit reste sous un vingtième de point par
- * maison : une ville qui manquerait réellement de sécurité incendie est à des ordres de
- * grandeur de là, et le garde-fou continue de la raser.
- */
-export const BRUIT_VITAL = 0.05;
-
-/**
- * Verdict du plan LIVRÉ : tolérance joueur + plancher de bruit, par maison. Séparé de
- * `viableSubset` (le garde-fou de sélection, qui reste STRICT) : le plancher ne s'applique
- * qu'au JUGEMENT du plan final, jamais au razage des maisons.
- */
-export const verdictViable = (
-  attrs: Record<string, number>,
-  houses: number,
-  tolerance = 0,
-): boolean =>
-  VITAL_ATTRS.every((k) => (attrs[k] ?? 0) + (Math.max(0, tolerance) + BRUIT_VITAL) * houses >= 0);
-
 export function planIslandImport(
   req: IslandPlanRequest,
   onProgress?: (step: number, total: number) => void,

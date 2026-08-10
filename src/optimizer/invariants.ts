@@ -7,7 +7,7 @@ import { regionOfIsland } from "../data/islands";
 import { uniqueCap } from "../economy/uniques";
 import { SHRINE_TYPE, VITAL_ATTRS } from "../economy/attributes";
 import type { IslandPlanResult } from "./islandPlan";
-import { verdictViable } from "./islandPlan";
+import { verdictViable } from "./viability";
 
 /**
  * ═══ CE QU'UN PLAN D'ÎLE DOIT RESPECTER ═══════════════════════════════════════════════
