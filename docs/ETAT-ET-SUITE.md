@@ -1,6 +1,6 @@
 # État du projet et chantiers ouverts
 
-Dernière mise à jour : 2026-08-10. Branche `dev`, arbre propre, 281 tests verts.
+Dernière mise à jour : 2026-08-10 (seconde session). Branche `dev`, arbre propre, 294 tests verts.
 Docker sur `:8090`. Ce document est le point d'entrée d'une nouvelle session.
 
 ---
@@ -18,7 +18,8 @@ exploités, palier auto, tolérance et dévotion nulles) :
 | avant les correctifs de viabilité | 1 032 493 | — |
 | après (`89956cc`, la référence du protocole) | 1 154 688 | +11,8 % |
 | après `<Targets>` + élection du dieu | 1 129 131 | −2,2 % |
-| **après le plancher de bruit du verdict (§3.1)** | **1 248 802** | **+21,0 % / départ** |
+| après le plancher de bruit du verdict (§3.1) | 1 248 802 | +21,0 % / départ |
+| **après le retrait des exploitations stériles (§3.5)** | **1 262 830** | **+22,3 % / départ** |
 
 `viable` est vrai partout à chaque étape. La dernière ligne vient de lever une **falaise du
 verdict** qui bridait toutes les grandes îles romaines — jusqu'à ×6,6 sur `extralarge_03` — sans
@@ -105,9 +106,15 @@ livrée qui tranche.
 paliers de dévotion, effets dominants. `economy.religion` : dominance 7 000, merveille 4 000,
 autel 1 000. Verrouillé par `src/economy/patrons.test.ts`.
 
-Trois divinités seulement touchent les résidences (pool `31046 « All Residences »`) : **Cérès**
-(Population ×1→7), **Cernunnos** (Santé + Connaissance), **Minerve** (Connaissance). Epona vise
-les bâtiments de production, Mercure les comptoirs — les créditer aux maisons serait faux.
+Trois divinités seulement touchent les résidences PAR LEURS ATTRIBUTS (pool
+`31046 « All Residences »`) : **Cérès** (Population ×1→7), **Cernunnos** (Santé + Connaissance),
+**Minerve** (Connaissance). Epona vise les bâtiments de production, Mercure les comptoirs — les
+créditer aux maisons serait faux.
+
+⚠ **Cette phrase a été tenue pour vraie en général, et elle ne l'est pas.** Vulcain vise lui
+aussi le pool `31046`, par un modificateur de MAIN-D'ŒUVRE (+5 %) et non par un attribut : il ne
+loge personne, mais l'affirmation « seules trois divinités touchent les résidences » est fausse
+telle quelle. Voir §3.4.
 
 Point de conception à ne pas reperdre : **la divinité se choisit AVANT l'autel**. L'ordre
 inverse était le défaut — un autel gagnait la présélection sur son rayon, la divinité se
@@ -305,27 +312,91 @@ les fonderies autrement : par template, par chaîne de production, ou via un aut
 jeu. Noter que le pool vise les **fonderies**, pas « chaque bâtiment » : la portée est plus
 étroite qu'annoncé initialement.
 
-### 3.4 Productivité des divinités — extraction incomplète
+### 3.4 ~~Productivité des divinités~~ — TRAITÉ
 
-Le premier effet local des huit dieux (productivité par pool de biens) passe par
-`FactoryUpgrade`, que `fx_buffs` ne lit pas — il ne lit que
-`BuildingUpgrade/AdditionalAttributes`. Même chose pour sept dominants sur huit (navires,
-troupes, stockage, déblocages). Les entrées sont émises avec leurs GUID et leurs paliers, mais
-avec des attributs vides.
+`fx_buffs` ne lisait que `BuildingUpgrade/AdditionalAttributes` : huit effets de patron sur
+vingt-quatre sortaient avec `attrs` vide, ce qui se lit « cet effet ne fait rien ». Il lit
+désormais aussi `FactoryUpgrade` (productivité, sept divinités sur huit) et
+`BuildingUpgrade/WorkforceModifierInPercent`.
 
-### 3.5 Exploitations sur emplacements de marais éloignés
+**Correction à une affirmation de ce document** (§2, à lire avec ça) : « trois divinités
+seulement touchent les résidences » est vrai des ATTRIBUTS, faux en général. Vulcain vise lui
+aussi le pool `31046 « All Residences »`, par la main-d'œuvre (+5 %). Il ne loge toujours
+personne, mais la donnée ne le disait pas.
 
-Certaines restent sans entrepôt à portée de charrette. Signalé par les invariants, jamais
-traité.
+Restent muets dix effets dominants (navires, troupes, stockage, déblocages) et le commerce
+passif de Mercure, qui passe par un `AreaBuff` et non un `BuildingBuff`. Aucune sortie du moteur
+ne bouge : c'est un gain de vérité, pas de population.
 
-### 3.6 Le sur-provisionnement de services sur les très grandes îles
+### 3.5 ~~Exploitations sans débouché~~ — TRAITÉ (+14 028 habitants)
 
-Sur la continentale : 3 113 services pour 532 maisons à tolérance nulle. Les budgets du glouton
-sont dimensionnés sur `landCount`, la surface totale, et non sur le nombre d'emplacements de
-maison réellement disponibles. Une tentative de correction (compter les emplacements) a été
-**revertie** : le seuil `2r²·0,25` est une *aire* comparée à un *compte*, ce qui faisait perdre
-30 % sur les îles celtiques. Le correctif propre demande de remettre le seuil en unités
-homogènes. Détail dans `docs/superpowers/specs/2026-08-09-services-vs-maisons.md`.
+Une exploitation sans entrepôt à portée de charrette n'expédie RIEN en jeu et coûte pourtant son
+entretien, sa main-d'œuvre et ses malus de zone. Elle sort désormais du plan.
+
+Le chiffre de ce document — « 6 sur 31 sur cinq îles » — **datait du régime bridé**. Mesure sur
+les 55 îles après la levée de la falaise : **78 sur 452, soit 17 %, réparties sur 34 îles**,
+dont `celtic_island_small_07` où les DEUX étaient stériles.
+
+Résultat : +14 028 habitants, +39 037 d'argent, aucune dégradation. Dix îles gagnent quelques
+dizaines d'habitants ; `roman_island_large_05` passe de 14 650 à 28 439 (+94 %) — retirer
+quelques mines stériles suffit à faire basculer un palier haut en viable.
+
+`droppedSlots` remonte jusqu'au résultat, sans quoi le retrait serait INOBSERVABLE : `exploited`
+ne contenant plus que les desservies, un test sur « aucune stérile ne survit » passerait
+trivialement. Trois instruments étaient devenus aveugles d'un coup.
+
+### 3.6 Le sur-provisionnement de services — DEUX VOIES FERMÉES PAR LA MESURE
+
+Sur la continentale : **3 095 services pour 764 maisons** (ratio 4,05), quand les 54 autres îles
+tiennent 0,39. L'anomalie est réelle et reste entière.
+
+Mais les deux voies évidentes sont désormais fermées, chacune par un balayage :
+
+1. **Corriger le critère du glouton** (compter les emplacements dans `diamondGain`) : reverti,
+   −30 % sur celtic. Détail dans `2026-08-09-services-vs-maisons.md`.
+2. **Retirer après coup les copies qui ne servent aucune maison** : **−13 819 habitants**,
+   `roman_island_large_05` retombant de 28 439 à 14 650. Détail et post-mortem dans
+   `2026-08-10-services-inertes-refute.md`.
+
+**Le « défaut d'unité » que décrivait ce document n'existe pas dans le code actuel.** Vérifié
+par lecture : les quatre usages de `landCount` sont homogènes entre eux — `2r²·0,25` et
+`landCount·0,3` sont des cases, comparées à un `diamondGain` en cases ; `landCount/(2r²)` est un
+rapport aire/aire, donc un compte. La phrase « remettre le seuil en unités homogènes » visait la
+variante REVERTIE, pas l'état courant. Et `landCount` n'est pas la surface totale : montagnes,
+lobes secondaires et comptoir en sont déjà exclus.
+
+Ce qui reste vrai : `diamondGain` valorise de la TERRE, pas du POTENTIEL DE LOGEMENT. La
+troisième voie — dimensionner le glouton sur les emplacements en convertissant TOUS les termes
+du seuil par la densité d'origines (~0,22-0,26 par case) — n'a jamais été essayée proprement.
+
+### 3.7 Le plancher de bruit est un pare-feu, pas une réponse — et sa marge est mince
+
+`BRUIT_VITAL` vaut 0,05 par maison. Mesure sur les 55 îles du déficit livré le plus profond :
+
+| île | déficit/maison | marge |
+|---|---|---|
+| `roman_island_medium_04` | **−0,0452** (Bonheur) | **×1,11** |
+| `roman_island_medium_05` | −0,0336 | ×1,49 |
+
+Huit îles sur 55 portent un déficit non nul. **La distribution est TRONQUÉE par construction** :
+une île dont le palier haut dépasserait 0,05 ne l'affiche pas — elle s'effondre au palier
+inférieur, où le déficit est nul. Les îles visibles sont les survivantes, pas la population.
+
+Le CLASSEMENT continu (`populationEffective`) a été livré pour ça : il escompte la population du
+risque au lieu de trancher sur un drapeau, donc une île qui franchit le plancher perd désormais
+quelques pour cent au lieu de 75 %. Mesuré : **zéro changement sur les 55 îles** — toutes sont
+dans la bande — ce qui est le résultat attendu d'une assurance.
+
+**Reste à mesurer** : le déficit du palier le PLUS PEUPLÉ de chaque île, retenu ou non. C'est
+lui qui dirait combien de population la falaise bride encore. La sonde est écrite dans l'esprit
+de `__marge55` mais n'a jamais rendu son résultat.
+
+### 3.8 Découpage de `planIslandImport` — entamé
+
+`balayerPaliers` et `construireRecettes` en sont sortis (1 164 → 1 107 lignes). Reste
+`finalize`, 580 lignes fermant des closures sur une trentaine de variables — un chantier à part
+entière, qui demande son propre balayage de contrôle. C'est là que vivait le défaut `nMaisons`
+vs `houses`, donc là où le découpage vaudra le plus.
 
 ---
 
