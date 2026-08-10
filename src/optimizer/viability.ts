@@ -62,6 +62,66 @@ export const verdictViable = (
 ): boolean =>
   VITAL_ATTRS.every((k) => (attrs[k] ?? 0) + (Math.max(0, tolerance) + BRUIT_VITAL) * houses >= 0);
 
+/**
+ * ═══ DÉFICIT VITAL LE PLUS PROFOND, PAR MAISON ════════════════════════════════════════
+ *
+ * `0` quand le bilan est sain. C'est la seule échelle sur laquelle deux plans se comparent :
+ * un total brut ne dit rien sans le nombre de maisons qui le porte — −26 sur 575 maisons est
+ * un plan sain, −26 sur 10 est une ville en flammes.
+ */
+export const severiteVitale = (attrs: Record<string, number>, houses: number): number => {
+  if (houses <= 0) return VITAL_ATTRS.some((k) => (attrs[k] ?? 0) < 0) ? Infinity : 0;
+  let pire = 0;
+  for (const k of VITAL_ATTRS) {
+    const parMaison = (attrs[k] ?? 0) / houses;
+    if (parMaison < pire) pire = parMaison;
+  }
+  return pire < 0 ? -pire : 0; // `-pire` rendrait -0 sur un bilan sain, que `Object.is` distingue
+};
+
+/**
+ * SÉVÉRITÉ au-delà de laquelle une ville est tenue pour ingérable, en points vitaux par
+ * maison. Sert d'échelle à l'escompte de risque, pas de seuil : la fonction qui l'emploie est
+ * continue, et c'est tout l'intérêt.
+ *
+ * Un point de déficit PAR MAISON est déjà énorme — une résidence patricienne plafonne à +7 de
+ * sécurité incendie, et le malus de rang de cité atteint −7 vers 30 000 habitants. Une ville
+ * qui perdrait un point par maison sur un attribut vital est hors de tout rattrapage.
+ */
+export const SEVERITE_INGERABLE = 1;
+
+/**
+ * ═══ POPULATION EFFECTIVE : LA POPULATION, ESCOMPTÉE DU RISQUE QU'ELLE PORTE ══════════
+ *
+ * C'EST LA RÉPONSE À LA FALAISE, et le drapeau binaire n'en était que le pare-feu.
+ *
+ * Les comparateurs classaient par `viable` AVANT la population. Un plan à −0,034 par maison
+ * perdait donc contre un plan sain quatre fois moins peuplé : mesuré, 20 904 habitants écartés
+ * au profit de 4 992 sur `roman_island_medium_05`. Le plancher de bruit a déplacé la falaise
+ * sans la supprimer — il reste un SEUIL DUR, et sur `roman_island_medium_04` le plan livré
+ * n'en est qu'à 11 % (−0,0452 pour un plancher à 0,05). Un rien le fait rebasculer.
+ *
+ * Tout seuil dur produit une falaise. On escompte donc, continûment : un déficit dans la bande
+ * tolérée ne coûte RIEN — le comportement des plans sains est inchangé au habitant près — et
+ * au-delà, la population est réduite au prorata du risque, jusqu'à s'annuler à
+ * `SEVERITE_INGERABLE`. Un plan vraiment mauvais ne peut donc plus gagner en logeant plus,
+ * mais un plan meilleur ne se fait plus écarter pour trois centièmes de point.
+ *
+ * Le DRAPEAU `viable` ne change pas et reste juste : c'est le CLASSEMENT qui cesse d'être
+ * binaire, jamais l'avertissement rendu à l'utilisateur.
+ */
+export const populationEffective = (
+  residents: number,
+  attrs: Record<string, number>,
+  houses: number,
+  tolerance = 0,
+): number => {
+  const bande = Math.max(0, tolerance) + BRUIT_VITAL;
+  const nette = Math.max(0, severiteVitale(attrs, houses) - bande);
+  if (nette === 0) return residents;
+  return residents * Math.max(0, 1 - nette / SEVERITE_INGERABLE);
+};
+
 /** Une maison candidate, réduite à ce dont la sélection sous contrainte a besoin. */
 export interface Weighed {
   cap: number;

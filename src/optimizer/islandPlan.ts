@@ -1,4 +1,5 @@
 import { makeLookup, roadConnected, rootedRoadSet } from "../engine/rules";
+import type { DefLookup } from "../engine/rules";
 import type { AqueductTile, BuildingDef, FieldTile, GridShape, Layout, PlacedBuilding, RoadTile } from "../model/types";
 import { economy, residentialChainExtended, upkeepOf } from "../economy/economy";
 import { buildTierProfile, solve } from "../economy/solve";
@@ -20,7 +21,7 @@ import { netOf, planLocalProduction, type LocalWorkshop } from "./localProd";
 import { regionOfIsland } from "../data/islands";
 // LA RÈGLE DE VIABILITÉ NE VIT QU'À UN ENDROIT (cf. `viability.ts`) : le verdict tolérant et
 // le garde-fou strict y cohabitent, et personne ne réécrit sa propre version du test.
-import { verdictViable } from "./viability";
+import { populationEffective, verdictViable } from "./viability";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -222,6 +223,102 @@ export function planIsland(
  * Production et main-d'œuvre sont supposées sur une AUTRE île : l'île principale ne
  * contient que des maisons du tier-cible + leurs services d'influence.
  */
+/**
+ * ═══ RECETTES À ESSAYER ═══════════════════════════════════════════════════════════════
+ *
+ * `undefined` = tous les services du palier. Chaque entrée sera placée pour de vrai puis
+ * évaluée : c'est la population LIVRÉE qui tranche, jamais une estimation. Un modèle
+ * analytique ne suffit pas — confronté au moteur, son classement ne corrèle qu'à 0,45, et le
+ * routage d'eau l'inverse (chaque citerne coûte 10 u, une conduite, un corridor).
+ *
+ * Calcul PUR : aucune dépendance à l'état du plan en cours, d'où l'extraction. Ce qu'il produit
+ * détermine à lui seul le temps de calcul d'un plan.
+ */
+function construireRecettes(
+  req: IslandPlanRequest,
+  needMode: string,
+  chain: ReturnType<typeof residentialChainExtended>,
+  lookup: DefLookup,
+  landTiles: number,
+): (string[] | undefined)[] {
+  const trials: (string[] | undefined)[] = [];
+  if (needMode === "auto") {
+    // budget adaptatif : une évaluation coûte ~0,1 s sur une île moyenne mais plusieurs
+    // secondes sur une continentale de 400 000 tuiles
+    const land = landTiles;
+    // BUDGET D'ESSAIS, pas de recettes : c'est le nombre de passes du moteur qui coûte, et
+    // `keep` n'est qu'un plafond MOU — `candidateRecipes` y ajoute ses variantes. Le diviser
+    // ne divisait donc rien : mesuré, 11 passes étaient devenues 15, soit +36 % de temps de
+    // plan pour un commentaire qui promettait l'inverse. On réserve ici les places des
+    // variantes au lieu de les découvrir après coup.
+    const budget = req.recipeCount ?? (land > 200_000 ? 2 : land > 60_000 ? 5 : 7);
+    const keepFallback = budget >= 5 ? 2 : 1;
+    const keepOpened = budget >= 5 ? 2 : 1;
+    const keep = Math.max(1, budget - keepFallback - keepOpened);
+    for (const r of candidateRecipes(chain, lookup, { keep, keepFallback, keepOpened })) {
+      trials.push(r.serviceIds);
+    }
+    // La recette COMPLÈTE en dernier recours — mais seulement tant qu'elle est abordable.
+    // Elle pose 5 à 7 fois plus de copies, donc coûte 5 à 7 fois le temps d'un plan maigre
+    // (5,5 s à elle seule sur une île continentale). Au-delà de 200 000 tuiles elle est de
+    // toute façon battue par les recettes à filet de repli (437 287 contre 546 147 mesurés),
+    // parce que la portée du Colisée y plafonne la part de maisons au palier cible.
+    if (land <= 200_000) trials.push(undefined);
+  } else if (needMode === "thresholds") {
+    const profile = buildTierProfile(req.tierGuid, { needSelection: "thresholds" });
+    trials.push([...new Set(profile.services.map((s) => s.building).filter((b): b is string => !!b))]);
+  }
+  if (!trials.length) trials.push(undefined); // "all", ou repli si l'énumération n'a rien donné
+  return trials;
+}
+
+/**
+ * ═══ BALAYAGE DES PALIERS ═════════════════════════════════════════════════════════════
+ *
+ * Un plan complet par palier de la lignée, et on garde celui qui loge le plus. La récursion
+ * se fait drapeau BAISSÉ : chaque passe est un plan ordinaire. Le palier effectivement retenu
+ * ressort dans `tierGuid` / `tierName`, l'appelant n'a rien à deviner.
+ *
+ * `null` quand il n'y a rien à balayer — lignée d'un seul palier, ou aucun plan produit.
+ *
+ * ═══ C'EST ICI QUE LA FALAISE COÛTAIT LE PLUS ════════════════════════════════════════
+ *
+ * Ce classement décide du PALIER de toute l'île. Avec `viable` en tout-ou-rien devant la
+ * population, un déficit de 0,034 par maison sur le palier Patriciens faisait retomber
+ * `roman_island_medium_05` aux Plébéiens : 20 904 habitants écartés au profit de 4 992. D'où
+ * l'escompte continu de `populationEffective` — un plan sain n'y perd pas un habitant, un plan
+ * risqué est réduit au prorata.
+ */
+function balayerPaliers(
+  req: IslandPlanRequest,
+  tol: number,
+  onProgress?: (step: number, total: number) => void,
+): IslandPlanResult | null {
+  const ladder = residentialChainExtended(req.tierGuid).filter((t) => t.residenceId);
+  if (ladder.length <= 1) return null;
+  let best: IslandPlanResult | null = null;
+  for (let i = 0; i < ladder.length; i++) {
+    onProgress?.(i + 1, ladder.length);
+    const r = planIslandImport({ ...req, tierGuid: ladder[i].guid, autoTier: false });
+    const pr = populationEffective(r.residents, r.attrsTotal, r.houses, tol);
+    const pb = best ? populationEffective(best.residents, best.attrsTotal, best.houses, tol) : -1;
+    const wins = !best
+      || (r.feasible !== best.feasible ? r.feasible
+        : pr !== pb ? pr > pb
+          : r.money.net > best.money.net);
+    if (wins) best = r;
+  }
+  if (!best) return null;
+  if (best.tierGuid !== req.tierGuid) {
+    const asked = economy.tiers.find((t) => t.guid === req.tierGuid);
+    best.gaps.unshift(
+      `Palier ${best.tierName} retenu à la place de ${asked?.name ?? req.tierGuid}`
+      + " : il loge davantage sur cette île (balayage des paliers)",
+    );
+  }
+  return best;
+}
+
 export function planIslandImport(
   req: IslandPlanRequest,
   onProgress?: (step: number, total: number) => void,
@@ -241,81 +338,16 @@ export function planIslandImport(
   if (!tier || !tier.residenceId) {
     throw new Error("Tier-cible invalide ou sans résidence.");
   }
-  // ═══ BALAYAGE DES PALIERS (option) ═══════════════════════════════════════════════════
-  // Un plan complet par palier de la lignée, et on garde celui qui loge le plus. La
-  // récursion se fait drapeau BAISSÉ : chaque passe est un plan ordinaire. Le palier
-  // effectivement retenu ressort dans `tierGuid` / `tierName`, l'appelant n'a rien à
-  // deviner. Voir `IslandPlanRequest.autoTier` pour la mesure qui justifie l'option.
   if (req.autoTier) {
-    const ladder = residentialChainExtended(req.tierGuid).filter((t) => t.residenceId);
-    if (ladder.length > 1) {
-      let best: IslandPlanResult | null = null;
-      for (let i = 0; i < ladder.length; i++) {
-        onProgress?.(i + 1, ladder.length);
-        const r = planIslandImport({ ...req, tierGuid: ladder[i].guid, autoTier: false });
-        const wins = !best
-          || (r.feasible !== best.feasible ? r.feasible
-            : r.viable !== best.viable ? r.viable
-              : r.residents !== best.residents ? r.residents > best.residents
-                : r.money.net > best.money.net);
-        if (wins) best = r;
-      }
-      if (best) {
-        if (best.tierGuid !== req.tierGuid) {
-          const asked = economy.tiers.find((t) => t.guid === req.tierGuid);
-          best.gaps.unshift(
-            `Palier ${best.tierName} retenu à la place de ${asked?.name ?? req.tierGuid}`
-            + " : il loge davantage sur cette île (balayage des paliers)",
-          );
-        }
-        return best;
-      }
-    }
+    const balaye = balayerPaliers(req, tol, onProgress);
+    if (balaye) return balaye;
   }
   const chain = residentialChainExtended(req.tierGuid);
   const residenceIds = new Set(chain.map((t) => t.residenceId).filter((r): r is string => !!r));
 
-  // --- RECETTES À ESSAYER ------------------------------------------------------------
-  // `undefined` = tous les services du palier. Chaque entrée sera placée pour de vrai puis
-  // évaluée ; c'est la population LIVRÉE qui tranche, pas une estimation. Un modèle
-  // analytique ne suffit pas : confronté au moteur, son classement ne corrèle qu'à 0,45,
-  // et le routage d'eau l'inverse (chaque citerne coûte 10 u, une conduite, un corridor).
   let landTiles = 0;
   for (const u of req.grid.usable) if (u) landTiles++;
-  const trials: (string[] | undefined)[] = [];
-  if (needMode === "auto") {
-    // budget adaptatif : une évaluation coûte ~0,1 s sur une île moyenne mais plusieurs
-    // secondes sur une continentale de 400 000 tuiles
-    const land = landTiles;
-    // BUDGET D'ESSAIS, pas de recettes : c'est le nombre de passes du moteur qui coûte, et
-    // `keep` n'est qu'un plafond MOU — `candidateRecipes` y ajoute ses variantes. Le diviser
-    // ne divisait donc rien : mesuré, 11 passes étaient devenues 15, soit +36 % de temps de
-    // plan pour un commentaire qui promettait l'inverse. On réserve ici les places des
-    // variantes au lieu de les découvrir après coup.
-    const budget = req.recipeCount ?? (land > 200_000 ? 2 : land > 60_000 ? 5 : 7);
-    const keepFallback = budget >= 5 ? 2 : 1;
-    const keepOpened = budget >= 5 ? 2 : 1;
-    const keep = Math.max(1, budget - keepFallback - keepOpened);
-    // `candidateRecipes` produit lui-même ses variantes — filet de repli et ouverture des
-    // paliers inférieurs — avec son propre dédoublonnage et son propre filtre catalogue.
-    // Le budget porte sur les ESSAIS, c'est-à-dire sur le temps de calcul : `keep` n'est
-    // qu'un plafond MOU côté recettes, et le diviser ne divisait rien. Mesuré avant
-    // correction : 11 passes devenues 15, soit +36 % de temps de plan pour un commentaire
-    // qui promettait l'inverse.
-    for (const r of candidateRecipes(chain, lookup, { keep, keepFallback, keepOpened })) {
-      trials.push(r.serviceIds);
-    }
-    // La recette COMPLÈTE en dernier recours — mais seulement tant qu'elle est abordable.
-    // Elle pose 5 à 7 fois plus de copies, donc coûte 5 à 7 fois le temps d'un plan maigre
-    // (5,5 s à elle seule sur une île continentale). Au-delà de 200 000 tuiles elle est de
-    // toute façon battue par les recettes à filet de repli (437 287 contre 546 147 mesurés),
-    // parce que la portée du Colisée y plafonne la part de maisons au palier cible.
-    if (land <= 200_000) trials.push(undefined);
-  } else if (needMode === "thresholds") {
-    const profile = buildTierProfile(req.tierGuid, { needSelection: "thresholds" });
-    trials.push([...new Set(profile.services.map((s) => s.building).filter((b): b is string => !!b))]);
-  }
-  if (!trials.length) trials.push(undefined); // "all", ou repli si l'énumération n'a rien donné
+  const trials = construireRecettes(req, needMode, chain, lookup, landTiles);
 
   // --- COMPTOIR (racine du réseau + entrée des imports) : réservé AVANT les moteurs ---
   // Aucun moteur n'en posait : le plan était formellement valide (sans racine,
@@ -506,12 +538,17 @@ export function planIslandImport(
   const waterViable = (e: Evaluated): boolean => e.waterPct >= WATER_VIABLE;
   const better = (a: Evaluated, b: Evaluated): boolean => {
     if (waterViable(a) !== waterViable(b)) return waterViable(a);
-    // VIABILITÉ DE L'ÎLE avant la population : un bilan négatif en Bonheur, Argent, Santé
-    // ou Sécurité incendie déclenche émeutes, incendies et maladies. Maximiser la
-    // population sans cette contrainte revenait à optimiser une ville que le jeu punit.
-    if (a.viable !== b.viable) return a.viable;
-    const close = Math.abs(a.residents - b.residents) <= 0.02 * Math.max(a.residents, b.residents, 1);
-    if (!close) return a.residents > b.residents;
+    // VIABILITÉ DE L'ÎLE : un bilan négatif en Bonheur, Argent, Santé ou Sécurité incendie
+    // déclenche émeutes, incendies et maladies, et maximiser la population sans cette
+    // contrainte revient à optimiser une ville que le jeu punit. Mais elle ne se compare plus
+    // en TOUT-OU-RIEN : le drapeau, classé avant la population, faisait perdre un plan de
+    // 20 904 habitants contre un plan de 4 992 pour trois centièmes de point par maison.
+    // La population est donc ESCOMPTÉE du risque qu'elle porte (cf. `populationEffective`),
+    // ce qui laisse les plans sains strictement inchangés et rend la comparaison continue.
+    const pa = populationEffective(a.residents, a.attrsTotal, a.cand.houses, tol);
+    const pb = populationEffective(b.residents, b.attrsTotal, b.cand.houses, tol);
+    const close = Math.abs(pa - pb) <= 0.02 * Math.max(pa, pb, 1);
+    if (!close) return pa > pb;
     // Un départage par la richesse du VIVIER de main-d'œuvre a existé ici. Il ne sert plus à
     // rien depuis que `finalize` tranche sur le plan LIVRÉ : mesuré sur quatre îles avec
     // exploitations et production locale, le résultat est identique au bâtiment près avec ou
@@ -1325,8 +1362,11 @@ export function planIslandImport(
   // habitants. Pas de bande d'égalité ici — ce ne sont plus des estimations.
   const betterFinal = (a: IslandPlanResult, b: IslandPlanResult): boolean => {
     if (a.feasible !== b.feasible) return a.feasible;
-    if (a.viable !== b.viable) return a.viable;
-    if (a.residents !== b.residents) return a.residents > b.residents;
+    // Même escompte continu que le pré-tri : le drapeau reste juste et s'affiche, mais il ne
+    // décide plus seul d'un facteur quatre de population.
+    const pa = populationEffective(a.residents, a.attrsTotal, a.houses, tol);
+    const pb = populationEffective(b.residents, b.attrsTotal, b.houses, tol);
+    if (pa !== pb) return pa > pb;
     return a.money.net > b.money.net;
   };
   let out: IslandPlanResult | null = null;
