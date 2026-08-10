@@ -153,6 +153,15 @@ export interface IslandPlanResult {
   importGoods: ImportGood[];
   /** Emplacements de terrain exploités (option `exploitSlots`) — vide si l'option est off. */
   exploited: ExploitedSlot[];
+  /**
+   * Exploitations POSÉES PUIS RETIRÉES faute d'entrepôt à portée de charrette.
+   *
+   * Sans ce compte, le retrait serait INOBSERVABLE : `exploited` ne contient plus que les
+   * desservies, si bien qu'un test sur « aucune stérile ne survit » passerait trivialement et
+   * ne verrouillerait rien. C'est aussi ce qui empêche une île sans aucun débouché possible de
+   * sortir avec zéro exploitation et l'air parfaitement saine.
+   */
+  droppedSlots: number;
   /** Ateliers posés sur l'île (option `localProduction`) — leur production sort du manifeste. */
   workshops: LocalWorkshop[];
   /** BILAN DE L'ÎLE par attribut vital : somme sur toutes les maisons, malus de rang de
@@ -876,6 +885,7 @@ export function planIslandImport(
     ledger.charge(buildings.filter((b) => !residenceIds.has(b.defId)).map((b) => b.defId));
 
     let exploited: ExploitedSlot[] = [];
+    let droppedSlots = 0;
     if (req.exploitSlots) {
       const sp = planSlots(
         req.grid, req.catalog, lookup, buildings, roads, water.usedSlots,
@@ -890,6 +900,7 @@ export function planIslandImport(
       const seenR = new Set(roads.map((r) => `${r.x},${r.y}`));
       for (const r of sp.roads) if (!seenR.has(`${r.x},${r.y}`)) { seenR.add(`${r.x},${r.y}`); roads.push(r); }
       exploited = sp.exploited;
+      droppedSlots = sp.droppedSlots;
       kontorGaps.push(...sp.gaps);
       // PRÉFÉRENCE D'EMPLACEMENT IGNORÉE : le bâtiment demandé n'a été retenu sur aucun slot
       // de ce type — autre monde, gisement absent, ou main-d'œuvre hors de portée. On le dit,
@@ -1305,6 +1316,7 @@ export function planIslandImport(
         : null,
       importGoods,
       exploited,
+      droppedSlots,
       workshops,
       attrsTotal,
       workforce: {

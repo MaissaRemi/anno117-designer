@@ -83,6 +83,14 @@ export interface SlotPlanResult {
   removed: string[];
   exploited: ExploitedSlot[];
   warehouses: number;
+  /**
+   * Exploitations POSÉES PUIS RETIRÉES faute d'entrepôt à portée de charrette.
+   *
+   * Le compte est gardé pour la même raison que `WaterPlanResult.dropped` : sans lui, une île
+   * où aucun débouché n'est possible sortirait avec zéro exploitation et l'air parfaitement
+   * saine. Ce qui a été tenté doit rester lisible.
+   */
+  droppedSlots: number;
   gaps: string[];
 }
 
@@ -148,7 +156,7 @@ export function planSlots(
   const W = grid.w, H = grid.h, N = W * H;
   const gaps: string[] = [];
   const out: SlotPlanResult = {
-    buildings: [], roads: [], removed: [], exploited: [], warehouses: 0, gaps,
+    buildings: [], roads: [], removed: [], exploited: [], warehouses: 0, droppedSlots: 0, gaps,
   };
 
   const slots = (grid.slots ?? []).filter((s) => s.type === "mountain" || s.type === "river" || s.type === "marsh");
@@ -416,8 +424,46 @@ export function planSlots(
   }
 
   for (const ei of covered) out.exploited[ei].served = true;
+
+  // ═══ UNE EXPLOITATION SANS DÉBOUCHÉ SORT DU PLAN ═════════════════════════════════════
+  //
+  // Elle n'expédie RIEN en jeu — c'est la définition de `served` — et elle coûte pourtant son
+  // entretien, sa main-d'œuvre et ses malus de zone (les mines pèsent −2 à −3 en Santé). La
+  // poser est une perte sèche, exactement comme un service à eau non raccordé, retiré du plan
+  // pour la même raison et avec le même gain.
+  //
+  // Le glouton d'entrepôts ci-dessus a déjà tenté de les desservir, quarante tours durant :
+  // celles qui restent découvertes n'ont aucune position d'entrepôt valide à portée. On ne
+  // renonce donc pas trop tôt, on constate un fait de terrain.
+  //
+  // Mesuré avant correctif sur les 55 îles : 78 exploitations sur 452 sans débouché, réparties
+  // sur 34 îles — dont `celtic_island_small_07`, où les DEUX étaient stériles.
+  //
+  // La production n'en souffre pas : `exploited` n'alimente ni le manifeste d'import ni la
+  // production locale (qui pose ses propres producteurs en remontant les chaînes). Seuls
+  // l'entretien, la main-d'œuvre et le sol s'en trouvent allégés.
   const unserved = out.exploited.length - covered.size;
-  if (unserved) gaps.push(`${unserved} exploitation(s) sans entrepôt à portée de charrette`);
+  if (unserved) {
+    const jetes = new Set<string>();
+    const parType = new Map<string, number>();
+    out.exploited.forEach((e, ei) => {
+      if (e.served) return;
+      jetes.add(all[placedIdx[ei]].uid);
+      parType.set(e.slotType, (parType.get(e.slotType) ?? 0) + 1);
+    });
+    out.buildings = out.buildings.filter((b) => !jetes.has(b.uid));
+    out.exploited = out.exploited.filter((e) => e.served);
+    out.droppedSlots = unserved;
+    const detail = [...parType.entries()].map(([t, n]) => `${t}×${n}`).join(", ");
+    gaps.push(
+      `${unserved} exploitation(s) retirée(s) : aucun entrepôt à portée de charrette, `
+      + `INACTIVES en jeu (${detail})`,
+    );
+  }
+  // La main-d'œuvre déjà réservée pour ces exploitations n'est pas rendue au grand-livre passé
+  // en option : il est cumulatif par construction. C'est sans effet sur le plan livré — le
+  // règlement final reconstruit un grand-livre neuf à partir des bâtiments RÉELLEMENT posés —
+  // et le seul biais résiduel rend la production locale un peu plus prudente. Conservateur.
   out.removed = [...removed];
   return out;
 }

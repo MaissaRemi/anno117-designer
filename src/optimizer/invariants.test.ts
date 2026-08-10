@@ -29,7 +29,7 @@ const topTier = (id: string) => [...economy.tiers]
  * routes, déjà signalé à l'utilisateur dans les trous du plan et exclu de la couverture
  * affichée. Aucune `faute`.
  */
-const CASES: { id: string; pourquoi: string }[] = [
+const CASES: { id: string; pourquoi: string; opts?: Record<string, unknown> }[] = [
   {
     id: "celtic_island_large_05",
     pourquoi: "le comptoir se déclarait raccordé par un COIN — diagonal, donc sans accès"
@@ -45,6 +45,16 @@ const CASES: { id: string; pourquoi: string }[] = [
     pourquoi: "les paliers d'Albion référençaient des bâtiments ROMAINS, et les deux variantes"
       + " du même service étaient posées : le besoin comptait deux fois",
   },
+  {
+    id: "roman_island_medium_05",
+    pourquoi: "l'île du plancher de bruit : son plan livré porte un déficit vital diffus"
+      + " (FireSafety −21 sur 625 maisons) et reste légitimement viable. L'invariant"
+      + " `viable-coherent` comparait le drapeau à un ZÉRO STRICT et criait faute sur le plan"
+      + " le plus sain du moteur — aucune des trois îles précédentes ne l'exposait."
+      + " LES OPTIONS COMPTENT : au seuil 1 sans palier auto, la même île sort à FireSafety"
+      + " +0,6 et le défaut disparaît. Ce sont celles du balayage qui l'exposent",
+    opts: { coverageFloor: 0.7, autoTier: true, exploitSlots: true },
+  },
 ];
 
 describe("invariants de plan d'île", () => {
@@ -52,12 +62,58 @@ describe("invariants de plan d'île", () => {
     it(`${c.id} : aucun défaut de gravité « faute »`, () => {
       const grid = downscaleGrid(buildIslandGrid(c.id)!);
       const tier = topTier(c.id);
-      const r = planIslandImport({ catalog, grid, tierGuid: tier.guid, coverageFloor: 1 });
+      const r = planIslandImport({
+        catalog, grid, tierGuid: tier.guid, coverageFloor: 1, ...(c.opts ?? {}),
+      });
       const v = checkPlan(r, { islandId: c.id, grid, lookup, askedTier: tier.guid });
       const fautes = v.filter((x) => x.severity === "faute");
       // message lisible : la règle et son détail, pas un simple compte
       expect(fautes.map((x) => `${x.rule} — ${x.detail}`)).toEqual([]);
       expect(r.residents).toBeGreaterThan(0);
+    }, 300_000);
+  }
+});
+
+// ═══ EXPLOITATIONS SANS DÉBOUCHÉ ═══════════════════════════════════════════════════════
+//
+// Une mine sans entrepôt à portée de charrette n'expédie RIEN en jeu, et coûte pourtant son
+// entretien, sa main-d'œuvre et ses malus de zone. Mesuré avant correctif sur les 55 îles :
+// 78 exploitations sur 452 dans ce cas, réparties sur 34 îles.
+//
+// Les CASES ci-dessus n'activent pas `exploitSlots`, donc aucune n'en pose : ce chemin
+// n'était couvert par aucun test.
+describe("exploitations : aucune stérile ne survit au plan", () => {
+  // UN TEST QUI NE PEUT PAS ÉCHOUER NE VERROUILLE RIEN. `planSlots` purgeant `exploited` sur
+  // `served`, la seule assertion « aucune non desservie ne subsiste » passe désormais par
+  // construction, sur n'importe quelle île, même si le retrait était supprimé. C'est
+  // `droppedSlots` qui rend le retrait observable — et donc testable.
+  const CAS: { id: string; attendu: number; pourquoi: string }[] = [
+    {
+      id: "celtic_island_small_07",
+      attendu: 2,
+      pourquoi: "le pire cas mesuré : ses DEUX exploitations étaient sans débouché. Le plan"
+        + " doit les retirer toutes plutôt que de livrer une île de façade",
+    },
+    {
+      id: "celtic_island_large_03",
+      attendu: 5,
+      pourquoi: "cinq stériles sur dix-sept — le cas d'un retrait PARTIEL, qui doit laisser"
+        + " debout les douze qui expédient",
+    },
+  ];
+  for (const c of CAS) {
+    it(`${c.id} : ${c.attendu} stérile(s) retirée(s), le reste expédie`, () => {
+      const grid = downscaleGrid(buildIslandGrid(c.id)!);
+      const tier = topTier(c.id);
+      const r = planIslandImport({
+        catalog, grid, tierGuid: tier.guid, coverageFloor: 0.7, exploitSlots: true,
+      });
+      // le retrait a EU LIEU — sans quoi les deux assertions suivantes sont vides de sens
+      expect(r.droppedSlots).toBe(c.attendu);
+      expect(r.exploited.filter((e) => !e.served)).toEqual([]);
+      const v = checkPlan(r, { islandId: c.id, grid, lookup, askedTier: tier.guid });
+      expect(v.filter((x) => x.severity === "faute").map((x) => `${x.rule} — ${x.detail}`))
+        .toEqual([]);
     }, 300_000);
   }
 });
