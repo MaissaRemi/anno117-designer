@@ -7,7 +7,7 @@ import { makeLookup } from "../engine/rules";
 import { solve } from "../economy/solve";
 import { buildIslandGrid } from "../data/islandGrid";
 import { downscaleGrid } from "./halfTileAdapter";
-import { planIslandImport } from "./islandPlan";
+import { planIslandImport, verdictViable } from "./islandPlan";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -171,4 +171,37 @@ describe("planIslandImport (mode import)", () => {
       }
     }
   }, 120_000);
+});
+
+// ═══ VERDICT DE VIABILITÉ : LE PLANCHER DE BRUIT ═══════════════════════════════════════
+//
+// Le drapeau `viable` est binaire et `better()` le classe AVANT la population : un déficit
+// de 0,034 par maison faisait donc écarter tout un palier par `autoTier`. Le plancher rend
+// le verdict insensible au bruit de discrétisation du modèle SANS toucher au garde-fou de
+// sélection, qui reste strict (cf. `viability.test.ts`).
+describe("verdict de viabilité — plancher de bruit du modèle (BRUIT_VITAL)", () => {
+  // Cas MESURÉ : roman_island_medium_05, palier Patriciens — FireSafety = −21 sur
+  // 625 maisons (−0,034/maison), quand le Bonheur vaut +3 637 et l'Argent +46 414.
+  // Avant le plancher, `autoTier` se rabattait sur Plébéiens : 20 904 → 4 992 habitants.
+  const attrs = (fire: number) => ({ Happiness: 3637, Money: 46414, Health: 2883, FireSafety: fire });
+
+  it("absorbe un déficit diffus sous 0,05/maison, à tolérance nulle (cas medium_05)", () => {
+    expect(verdictViable(attrs(-21), 625)).toBe(true);      // −0,034/maison : le cas réel
+    expect(verdictViable(attrs(-31.25), 625)).toBe(true);   // borne exacte 0,05 × 625, incluse
+  });
+
+  it("rejette un vrai déficit : ce n'est pas une tolérance déguisée", () => {
+    expect(verdictViable(attrs(-32), 625)).toBe(false);     // −0,051/maison, juste au-delà
+    expect(verdictViable(attrs(-625), 625)).toBe(false);    // −1/maison : ville en feu
+  });
+
+  it("la tolérance du joueur s'AJOUTE au plancher, elle ne le remplace pas", () => {
+    expect(verdictViable(attrs(-625), 625, 1)).toBe(true);  // (1 + 0,05) × 625 = 656,25
+    expect(verdictViable(attrs(-657), 625, 1)).toBe(false);
+  });
+
+  it("sans maison, aucune marge : seuls des attributs positifs passent", () => {
+    expect(verdictViable({ FireSafety: -1 }, 0)).toBe(false);
+    expect(verdictViable({}, 0)).toBe(true);
+  });
 });

@@ -1,6 +1,6 @@
 # État du projet et chantiers ouverts
 
-Dernière mise à jour : 2026-08-09. Branche `dev`, arbre propre, 274 tests verts.
+Dernière mise à jour : 2026-08-10. Branche `dev`, arbre propre, 281 tests verts.
 Docker sur `:8090`. Ce document est le point d'entrée d'une nouvelle session.
 
 ---
@@ -10,21 +10,19 @@ Docker sur `:8090`. Ce document est le point d'entrée d'une nouvelle session.
 L'optimiseur produit des plans **viables sur les 55 îles**, avec deux réglages exposés dans
 l'interface qui n'existaient pas avant : le **risque toléré** et la **dévotion**.
 
-Bilan du dernier balayage complet (55 îles, palier le plus dense, seuil 0,7, emplacements
-exploités, palier auto), comparé à l'état d'avant les correctifs de viabilité :
+Bilan des balayages complets successifs (55 îles, palier le plus dense, seuil 0,7, emplacements
+exploités, palier auto, tolérance et dévotion nulles) :
 
-| | avant | après |
+| | habitants, 55 îles | |
 |---|---|---|
-| habitants, 55 îles | 1 032 493 | **1 154 688** (+11,8 %) |
-| habitants, îles romaines | 579 238 | **701 433** (+21,1 %) |
-| médiane romaine | — | **+14,3 %** |
-| `viable` | vrai partout | **vrai partout** |
-| îles celtiques | — | **rigoureusement inchangées** |
+| avant les correctifs de viabilité | 1 032 493 | — |
+| après (`89956cc`, la référence du protocole) | 1 154 688 | +11,8 % |
+| après `<Targets>` + élection du dieu | 1 129 131 | −2,2 % |
+| **après le plancher de bruit du verdict (§3.1)** | **1 248 802** | **+21,0 % / départ** |
 
-Un balayage de contrôle a été lancé après les trois derniers correctifs mais **n'a pas rendu
-son résultat avant la fin de la session**. Cinq îles témoins ont été vérifiées à la main :
-écart nul sur quatre, −0,02 % sur la cinquième. À refaire en entier — c'est le premier point
-de la section 3.
+`viable` est vrai partout à chaque étape. La dernière ligne vient de lever une **falaise du
+verdict** qui bridait toutes les grandes îles romaines — jusqu'à ×6,6 sur `extralarge_03` — sans
+que rien ne le signale, le plan effondré étant livré `viable=true`. Détail et mesures en §3.1.
 
 ### Les deux réglages, et pourquoi ils se tiennent
 
@@ -120,7 +118,12 @@ autel, ni dieu.
 
 ## 3. Chantiers ouverts, par ordre de valeur
 
-### 3.1 RÉGRESSION CONFIRMÉE : deux îles s'effondrent — À TRAITER EN PREMIER
+### 3.1 ~~RÉGRESSION~~ FALAISE DU VERDICT — CORRIGÉE (+10,6 % sur les 55 îles)
+
+**Traité.** Cette section garde le déroulé complet parce que le premier diagnostic était faux :
+la régression n'était pas une régression de `<Targets>` mais une **falaise préexistante** du
+verdict binaire, révélée par un plan devenu MEILLEUR. Elle bridait en réalité **toutes les
+grandes îles romaines**, jusqu'à −85 % sur `extralarge_03`. Voir le correctif plus bas.
 
 Le balayage des 55 îles a rendu son verdict, sur `dev` à `6de3cdf` (src identique à `347f8d4`),
 55/55 îles, aucun plantage.
@@ -163,9 +166,33 @@ exact sur `roman_island_large_06` (Patriciens 29 265 habitants, non viable → P
 `large_06` : −26 sur 878 maisons, −0,030 par maison. Un déficit de vingt et un points coûte
 quinze mille neuf cents habitants.
 
-C'est cohérent avec `5ccb105` (`<Targets>`) : un petit bonus de zone qui atteignait ces paliers
-a légitimement disparu, et le drapeau `viable` BINAIRE, combiné à l'ordre lexicographique de
-`better()`, transforme 0,03 par maison en effondrement de 75 %.
+#### CE N'EST PAS `<Targets>`. L'attribution première était fausse
+
+Le premier diagnostic accusait `5ccb105` (`<Targets>`) : « un petit bonus de zone qui atteignait
+ces paliers a légitimement disparu ». **La bissection le réfute**, et deux mesures indépendantes
+convergent :
+
+| commit | `medium_05`, palier haut | sanctuaire posé |
+|---|---|---|
+| `89956cc` (référence) | 591 maisons / 19 986 hab / **viable** | aucun |
+| `db7f8d5` (élection du dieu) | 625 / 20 904 / **NON viable** | Autel de Vulcain |
+| `9385312` (`<Targets>`) | 625 / 20 904 / non viable | Autel de Vulcain |
+
+**L'effondrement est déjà entier à `db7f8d5`, avant `<Targets>`.** La cause est l'élection du
+dieu par la population livrée : elle fait poser l'Autel de Vulcain, ce qui **améliore** le plan
+(19 986 → 20 904 habitants) et le pousse juste sous zéro en incendie. Le plan tombé n'est pas
+un plan dégradé, c'est un **meilleur plan que le verdict binaire refuse**.
+
+Le filtre `minTier` de `<Targets>`, lui, ne mord sur **aucun** bâtiment : les institutions
+réellement passées à `planLattice` (Vigiles, Medicus, autel du patron — vérifié par trace à
+l'exécution) ont toutes `minTier` nul, les bâtiments restreints étant des services de palier,
+exclus de `institutionDefs`. Le message de `5ccb105` l'annonçait lui-même : « IMPACT MESURÉ :
+NUL ». Il fallait le croire.
+
+Sur `large_06`, mieux : le palier Patriciens était **déjà non viable à la référence**
+(878 maisons / 29 265 habitants / `viable=false`). La falaise y bridait donc le plan **avant
+les trois correctifs** — les 14 864 habitants de la référence étaient déjà une chute, jamais
+diagnostiquée parce qu'aucune comparaison ne la révélait.
 
 #### Ce qui NE marche pas comme correctif
 
@@ -173,22 +200,83 @@ Raser des maisons jusqu'au retour à zéro : inefficace ici. La maison moyenne n
 que de 0,034, donc en raser une ne rend que 0,034 — il en faudrait **plus de six cents**, soit
 un tiers de l'île. Le razage ne répare que les déficits concentrés, pas les déficits diffus.
 
-#### Les deux voies, à trancher
+#### CORRIGÉ : un plancher de bruit sur le VERDICT, pas sur le garde-fou
 
-1. **Corriger la falaise.** C'est le même défaut que partout ailleurs cette session : un veto
-   binaire produit un effet de seuil sans rapport avec l'enjeu. `better()` et le classement
-   d'`autoTier` devraient refuser qu'un écart de 0,03 par maison l'emporte sur un facteur
-   quatre de population. Attention : ne pas livrer silencieusement un plan non viable — le
-   drapeau doit rester juste, c'est le CLASSEMENT qui doit changer.
-2. **Réparer la viabilité au bon endroit.** Le plan sort VIABLE de `viableSubset` ; ce sont les
-   passes suivantes — production locale, cascade de main-d'œuvre, razage pour raccorder le
-   comptoir — qui le repoussent sous zéro. Rejouer la sélection de viabilité APRÈS ces passes
-   supprimerait le problème à la racine, mais demande de conserver les attributs par maison
-   jusque-là.
+`BRUIT_VITAL = 0,05` par maison s'ajoute à la tolérance du joueur dans `verdictViable`
+(`islandPlan.ts`), et **là seulement** : `viableSubset` continue de raser au strict, verrouillé
+par `src/optimizer/viability.test.ts`. Ce n'est pas la tolérance déguisée — c'est la RÉSOLUTION
+du modèle, en dessous de laquelle un écart ne signifie plus rien, les attributs étant des
+entiers par maison sur une couverture discrète.
 
-La seconde est la bonne, la première est la rapide. La tolérance utilisateur (~0,05/maison)
-masquerait le symptôme sans corriger la cause, et elle vaut 0 par défaut : ce n'est pas une
-réponse.
+Trois défauts adjacents, trouvés par la revue et corrigés avec :
+
+- le **recul d'ateliers** jugeait sur les maisons d'AVANT le rasage par les ateliers gardés,
+  quand le verdict final compte celles d'APRÈS : il s'arrêtait donc jusqu'à
+  `(tolérance + bruit) × rasées` points trop tôt. Il lit désormais `trial.wf.houses`, le même
+  effectif que le bilan qu'il regarde ;
+- le **message d'avertissement** annonçait « émeutes/incendies/maladies en jeu » sur un plan
+  déclaré viable — l'en-tête et le corps du rapport se contredisaient. Le chiffre reste affiché
+  dans les deux cas, ramené à la maison ; c'est la conséquence annoncée qui suit le verdict ;
+- **`packPlan` ne filtrait pas `minTier`** du tout, là où `planLattice` le fait. Inerte sur les
+  données actuelles, mais les deux moteurs se départagent par `better()` : l'un créditant ce que
+  l'autre refuse, le comparatif aurait été faussé dès la première institution restreinte.
+
+#### Balayage complet des 55 îles, après correctif
+
+Protocole habituel (palier le plus dense, `coverageFloor: 0.7`, `exploitSlots`, `autoTier`,
+tolérance et dévotion nulles). 55/55 îles, aucun plantage, **`viable` partout**.
+
+| | habitants | écart |
+|---|---|---|
+| référence `89956cc` | 1 154 688 | — |
+| `dev` avant correctif | 1 129 131 | −2,21 % |
+| **après correctif** | **1 248 802** | **+8,15 % / réf, +10,6 % / `dev`** |
+
+**Aucune île ne baisse par rapport à `dev`** — huit montent, quarante-sept sont au habitant près.
+La falaise ne bridait donc pas seulement les deux îles repérées :
+
+| île | référence | après | écart |
+|---|---|---|---|
+| `roman_island_extralarge_03` | 4 896 | **32 555** | **+564,9 %** |
+| `roman_dlc01_island_continental_01` | 7 186 | **19 486** | +171,2 % |
+| `roman_island_extralarge_01` | 14 732 | **34 448** | +133,8 % |
+| `roman_island_medium_03` | 9 955 | **21 965** | +120,6 % |
+| `roman_island_large_06` | 14 864 | **29 265** | +96,9 % |
+| `roman_island_medium_04` | 9 887 | 13 457 | +36,1 % |
+| `roman_island_large_03` | 14 847 | 19 012 | +28,1 % |
+| `roman_island_medium_05` | 19 986 | 20 904 | +4,6 % |
+
+Les grandes îles romaines étaient **toutes** bridées par le même veto, et personne ne l'avait vu
+parce qu'aucune comparaison ne le révélait : le plan effondré était livré `viable=true`, donc
+d'apparence saine. C'était le plafond de population décrit en §2 — l'analyse était juste sur le
+mécanisme (le malus de rang par maison ferme la boucle d'incendie), mais le dernier verrou
+n'était pas le razage, c'était le VERDICT.
+
+Trois îles restent sous la référence (`roman_island_small_02` −2,1 %,
+`celtic_island_medium_01` −1,3 %, `celtic_island_medium_04` −0,9 %). Elles sont **au habitant
+près identiques au balayage de `dev`** : ce sont les écarts de placement de `<Targets>` et de
+l'élection du dieu, antérieurs à ce correctif, pas une dégradation de celui-ci.
+
+**Les trois correctifs adjacents ne déplacent aucune sortie** : le balayage rend exactement les
+mêmes 55 lignes qu'avec le seul plancher. Ce sont bien des mises en cohérence — `trial.wf.houses`
+compris, dont la fenêtre d'erreur ne s'ouvre qu'à tolérance non nulle.
+
+#### Ce qui reste, et c'est la voie de fond
+
+**Rejouer la sélection de viabilité APRÈS** les passes tardives (production locale, cascade de
+main-d'œuvre, razage pour le comptoir) — celles qui repoussent sous zéro un plan sorti viable de
+`viableSubset`. Cela demande de conserver les attributs par maison jusque-là. Le plancher rend la
+falaise inoffensive ; il ne supprime pas la dérive qui y mène.
+
+Deux limites connues du plancher, à garder en tête :
+
+- il est **proportionnel au nombre de maisons** (0,05 × 17 989 ≈ 900 points sur la continentale)
+  et le bilan est un TOTAL : il ne voit pas la concentration locale. Un déficit groupé autour
+  d'un quartier reste invisible, mais c'est une cécité du modèle d'attributs entier, antérieure
+  au correctif ;
+- il **calibre le symptôme**, pas la cause. Si une île portait un déficit structurel supérieur à
+  0,05 par maison, la falaise se rouvrirait à l'identique. Aucune des 55 n'est dans ce cas
+  aujourd'hui.
 
 ### 3.2 Services isolés par l'élagage des routes — demande un réordonnancement
 
