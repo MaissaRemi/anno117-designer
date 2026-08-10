@@ -4,6 +4,7 @@ import { TopBar } from "../TopBar";
 import { EditorView } from "../EditorView";
 import { MultiIslandPanel } from "../MultiIslandPanel";
 import { IslandPlanner } from "../IslandPlanner";
+import { ProdLayoutView } from "../ProdLayoutView";
 
 /** Coquille de l'application : nav latérale + barre du haut + contenu du mode courant. */
 export function AppShell() {
@@ -18,6 +19,7 @@ export function AppShell() {
           {uiMode === "editor" && <EditorView />}
           {uiMode === "multi" && <MultiIslandPanel />}
           {uiMode === "island" && <IslandPlanner asView onClose={() => setUiMode("editor")} />}
+          {uiMode === "prod" && <ProdLayoutView />}
         </div>
       </div>
     </div>

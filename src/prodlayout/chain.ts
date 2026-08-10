@@ -84,14 +84,26 @@ export function pickProducer(good: string, region?: string): string | undefined 
 
 export const goodName = (good: string): string => eco.goodNames[good] ?? good;
 
+/**
+ * Le bâtiment produit-il réellement quelque chose ?
+ *
+ * `buildingProd` ne suffit pas : SEPT entrées y ont des intrants et AUCUNE sortie — les
+ * phases de construction de l'Amphithéâtre, qui consomment des biens sans rien rendre.
+ * Comme « Amphithéâtre : arène » ouvre la liste alphabétique romaine, c'était la cible par
+ * défaut de l'interface. Un seul prédicat sert au filtre de la vue et au garde-fou de
+ * `buildChain`, pour que les deux ne puissent pas diverger.
+ */
+export const isProducer = (defId: string): boolean =>
+  (eco.buildingProd[defId]?.outputs?.length ?? 0) > 0;
+
 export function buildChain(
   targetDefId: string,
   count: number,
   lookup: Lookup,
   imported: ReadonlySet<string> = new Set(),
 ): ChainResult {
+  if (!isProducer(targetDefId)) throw new Error(`${targetDefId} ne produit rien.`);
   const targetProd = eco.buildingProd[targetDefId];
-  if (!targetProd) throw new Error(`${targetDefId} ne produit rien.`);
   const targetGood = targetProd.outputs[0].good;
   const region = eco.buildingRegion[targetDefId];
 

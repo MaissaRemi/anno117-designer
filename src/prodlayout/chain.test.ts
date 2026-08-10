@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef } from "../model/types";
-import { buildChain, pickProducer } from "./chain";
+import { buildChain, eco, isProducer, pickProducer } from "./chain";
 import { frac } from "./frac";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
@@ -43,6 +43,21 @@ describe("buildChain — le pain romain", () => {
     const c = buildChain(mine!.id, 1, lookup);
     expect(c.blocked.map((b) => b.defId)).toContain(mine!.id);
     expect(c.gaps.join(" ")).toMatch(/emplacement/);
+  });
+});
+
+describe("isProducer — le piège des phases de monument", () => {
+  it("rejette une entrée de buildingProd qui n'a que des intrants", () => {
+    // « Amphithéâtre : arène » consomme cinq biens et ne rend rien. Il ouvre la liste
+    // alphabétique romaine, donc c'était la cible par défaut de l'interface.
+    expect(eco.buildingProd["g36912"].outputs).toEqual([]);
+    expect(isProducer("g36912")).toBe(false);
+    expect(() => buildChain("g36912", 1, lookup)).toThrow(/ne produit rien/);
+  });
+
+  it("accepte un vrai producteur et refuse un bâtiment absent du graphe", () => {
+    expect(isProducer("g3174")).toBe(true);
+    expect(isProducer("g3310")).toBe(false); // l'entrepôt ne produit pas
   });
 });
 

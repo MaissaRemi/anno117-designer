@@ -5,6 +5,7 @@ const ITEMS = [
   { id: "editor", label: "Éditeur", icon: "🗺" },
   { id: "island", label: "Plan d'île", icon: "🏛" },
   { id: "multi", label: "Multi-îles", icon: "🏝" },
+  { id: "prod", label: "Production", icon: "🏭" },
 ] as const;
 
 /** Barre de navigation latérale : modes de l'application + bascule de MONDE. */

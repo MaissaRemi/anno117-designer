@@ -79,9 +79,9 @@ interface State {
   setCoverageHighlight: (cells: string[] | null) => void;
 
   // --- navigation UI (session, non persistée) ---
-  uiMode: "editor" | "island" | "multi";
+  uiMode: "editor" | "island" | "multi" | "prod";
   diagnostic: "none" | "coverage" | "audit";
-  setUiMode: (m: "editor" | "island" | "multi") => void;
+  setUiMode: (m: "editor" | "island" | "multi" | "prod") => void;
   setDiagnostic: (d: "none" | "coverage" | "audit") => void;
 
   /** MONDE courant : Latium (romain) ou Albion (celtique). Les deux n'ont ni les mêmes
