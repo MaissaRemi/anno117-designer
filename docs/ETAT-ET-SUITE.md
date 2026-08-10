@@ -42,6 +42,43 @@ défaut : une requête par défaut rend une sortie identique à l'historique.
 
 ---
 
+## 1 bis. Le module de blueprints de production
+
+`src/prodlayout/` calcule un layout compact et recopiable pour une chaîne complète, à partir
+d'un bâtiment terminal : « une boulangerie » remonte jusqu'aux fermes, avec routes, entrepôt et
+champs, dans une boîte englobante minimale. Onglet **Production** dans la barre de navigation.
+
+**Indépendant du moteur d'île** : ni terrain, ni fertilité, ni population. `frontiere.test.ts`
+interdit par lecture des sources tout import vers `src/optimizer/` ou `src/economy/`, et tout
+appel à `Math.random`, `Date.now` ou `new Date` — le déterminisme est structurel, pas promis.
+Une troisième assertion garde contre la vacuité du glob, sans quoi les deux autres passeraient
+sur un ensemble vide.
+
+Ratios en rationnels exacts (le PPCM des dénominateurs donne le **lot parfait**, suggéré à
+l'utilisateur avec son coût en cases), placeur glouton à ordre total. Mesure de référence :
+pain romain, lot parfait `2 boulangeries : 1 moulin : 2 fermes` → **23×23, 92,1 % d'efficacité**,
+un entrepôt, les deux fermes à leurs 140 cases de champ.
+
+Le test « deux appels identiques rendent un plan identique » est celui qui rend le module
+mesurable : sans lui, comparer deux versions du placeur ne rendrait que du bruit.
+
+**Un piège de donnée à retenir** : sept entrées de `buildingProd` ont des intrants et **aucune
+sortie** — les phases de construction de l'Amphithéâtre. « Amphithéâtre : arène » ouvrant la
+liste alphabétique romaine, c'était la cible par défaut de l'interface, qui plantait à
+l'ouverture. Tous les tests partaient de la boulangerie et ne pouvaient pas le voir ; c'est le
+navigateur qui l'a trouvé. `isProducer()` sert désormais au filtre de la vue ET au garde-fou de
+`buildChain`, pour que les deux ne divergent pas.
+
+**Hors périmètre, assumé** : pose sur une île réelle, maisons ouvrières (la main-d'œuvre est
+chiffrée, jamais logée), coûts de construction — **absents de l'export du jeu**, donc la ligne
+n'est pas affichée plutôt que remplie d'un chiffre inventé —, et la passe d'amélioration locale
+du placeur, à ne construire que si une mesure montre le glouton visiblement lâche.
+
+Spec : `docs/superpowers/specs/2026-08-10-blueprints-de-production-design.md`.
+Plan : `docs/superpowers/plans/2026-08-10-blueprints-de-production.md`.
+
+---
+
 ## 2. Ce qui a été corrigé, et ce que ça a appris
 
 ### Le défaut visible : « tous les sanctuaires du jeu sur mon île »
