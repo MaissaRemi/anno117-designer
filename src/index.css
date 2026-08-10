@@ -332,3 +332,33 @@ label { font-size: 13px; }
    séparation ni la poussée en bas de la barre de navigation. */
 .panel-head .world-switch { margin-top: 0; flex-direction: row; border-top: none; padding: 0; gap: 4px; }
 .panel-head .world-switch button { height: 26px; padding: 0 12px; font-size: 12px; border-color: var(--line); }
+
+/* ---- onglet Production (blueprints de chaîne) ---- */
+.prod-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr) 300px; gap: var(--sp-3); padding: var(--sp-3); align-items: start; overflow: auto; min-height: 0; }
+.prod-command label { display: block; margin-bottom: var(--sp-2); font-size: 12px; color: var(--t2); }
+.prod-command select, .prod-command input { width: 100%; }
+.prod-command h4 { font-size: 12px; color: var(--muted); margin: var(--sp-3) 0 var(--sp-1); text-transform: uppercase; letter-spacing: .04em; }
+.prod-error { color: var(--danger); padding: var(--sp-3); }
+
+.chain-tree { list-style: none; padding: 0; margin: 0; }
+.chain-tree li { display: flex; gap: 6px; align-items: baseline; padding: 3px 0; font-size: 12px; }
+.chain-tree li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chain-tree b { color: var(--t); }
+/* le taux d'utilisation n'apparaît QUE sous 100 % : c'est un avertissement, pas une mesure */
+.chain-tree em { font-style: normal; color: var(--warn); }
+.chain-tree li.imported { color: var(--muted); }
+.chain-tree button { height: 22px; padding: 0 6px; font-size: 11px; }
+
+.bp-list { list-style: none; padding: 0; margin: var(--sp-2) 0 0; }
+.bp-list li { display: flex; gap: 4px; padding: 2px 0; }
+.bp-list li button:first-child { flex: 1; justify-content: flex-start; }
+
+.prod-plan { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); min-width: 0; }
+.prod-plan .banner { align-self: stretch; display: flex; gap: var(--sp-2); align-items: center; justify-content: space-between; background: var(--accent-soft); border-left: 3px solid var(--warn); border-radius: var(--r-sm); padding: var(--sp-2) var(--sp-3); font-size: 12px; }
+.prod-plan .gaps { align-self: stretch; list-style: none; padding: 0; margin: 0; color: var(--warn); font-size: 12px; }
+.prod-plan .gaps li { padding: 2px 0; }
+.blueprint-canvas { display: block; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--s2); }
+
+.prod-report table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.prod-report th { text-align: left; color: var(--muted); font-weight: 500; padding: 3px 8px 3px 0; vertical-align: top; white-space: nowrap; }
+.prod-report td { padding: 3px 0; color: var(--t); }

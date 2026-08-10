@@ -45,3 +45,12 @@ export function renderFullCanvas(layout: Layout, catalog: BuildingDef[], maxPx =
   });
   return canvas;
 }
+
+/** Télécharge le rendu plein cadre d'un layout en PNG. */
+export function downloadLayoutPng(layout: Layout, catalog: BuildingDef[], filename: string): void {
+  const canvas = renderFullCanvas(layout, catalog);
+  const a = document.createElement("a");
+  a.href = canvas.toDataURL("image/png");
+  a.download = filename;
+  a.click();
+}
