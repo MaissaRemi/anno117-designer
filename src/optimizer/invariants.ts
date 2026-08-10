@@ -7,6 +7,7 @@ import { regionOfIsland } from "../data/islands";
 import { uniqueCap } from "../economy/uniques";
 import { SHRINE_TYPE, VITAL_ATTRS } from "../economy/attributes";
 import type { IslandPlanResult } from "./islandPlan";
+import { verdictViable } from "./islandPlan";
 
 /**
  * ═══ CE QU'UN PLAN D'ÎLE DOIT RESPECTER ═══════════════════════════════════════════════
@@ -79,10 +80,21 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
       `${r.residents} habitants pour un maximum théorique de ${maxPop}`);
   }
 
-  const viableAttrs = VITAL_ATTRS.every((k) => (r.attrsTotal[k] ?? 0) >= 0);
-  if (viableAttrs !== r.viable) {
+  // ═══ LE DRAPEAU SE COMPARE AU PRÉDICAT DU MOTEUR, PAS À UN ZÉRO STRICT ════════════════
+  //
+  // Cet invariant testait `tous les attributs ≥ 0` et criait faute au moindre écart. Depuis le
+  // plancher de bruit (`BRUIT_VITAL`), un plan à −21 sur 625 maisons est légitimement livré
+  // viable : l'invariant hurlait donc sur les plans les plus sains du moteur — dont
+  // `roman_island_medium_05`, l'île qui a motivé le plancher.
+  //
+  // Le contrôle qui RESTE valable est l'implication dans un seul sens : un plan que le prédicat
+  // accepte À TOLÉRANCE NULLE ne peut pas être déclaré non viable. L'autre sens ne se vérifie
+  // pas ici — la tolérance du joueur est une option de la requête, elle n'apparaît pas dans le
+  // résultat, et elle desserre légitimement le verdict autant qu'on le lui demande.
+  if (verdictViable(r.attrsTotal, r.houses, 0) && !r.viable) {
     const worst = VITAL_ATTRS.map((k) => `${k}=${(r.attrsTotal[k] ?? 0).toFixed(0)}`).join(" ");
-    add("viable-coherent", "faute", `viable=${r.viable} mais attributs ${worst}`);
+    add("viable-coherent", "faute",
+      `viable=false alors que le prédicat l'accepte à tolérance nulle — attributs ${worst}`);
   }
 
   if (!near(r.money.net, r.money.gross - r.money.upkeep)) {
@@ -263,12 +275,16 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
   // Mesuré sur cinq îles : 6 exploitations sur 31 sans débouché, dont 5 en MARAIS et une en
   // montagne. Ce n'est pas un défaut d'accès routier — `planSlots` sait creuser jusqu'à son
   // propre slot — mais de PLACEMENT D'ENTREPÔT : aucun n'est assez près le long des routes.
+  // Elles sont désormais RETIRÉES du plan par `planSlots` — poser ce qui n'expédie pas est une
+  // perte sèche en entretien, en main-d'œuvre et en sol. L'invariant change donc de sens : il
+  // ne signale plus le symptôme, il interdit qu'une exploitation stérile survive au plan livré.
   const unserved = r.exploited.filter((e) => !e.served);
   if (unserved.length) {
     const byType = new Map<string, number>();
     for (const e of unserved) byType.set(e.slotType, (byType.get(e.slotType) ?? 0) + 1);
-    add("exploitation-sans-entrepot", "suspect",
+    add("exploitation-sans-entrepot", "faute",
       `${unserved.length}/${r.exploited.length} exploitation(s) sans entrepôt à portée `
+      + `dans le plan LIVRÉ — elles auraient dû en sortir `
       + `(${[...byType.entries()].map(([t, n]) => `${t}×${n}`).join(", ")})`);
   }
 
