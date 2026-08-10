@@ -1,6 +1,127 @@
 import { cityStatusLadder } from "../economy/economy";
 import { VITAL_ATTRS } from "../economy/attributes";
 
+/**
+ * ═══ CE MODULE EST LA SEULE SOURCE DE VÉRITÉ SUR « VIABLE » ═══════════════════════════
+ *
+ * Il y a DEUX questions distinctes, et les confondre a déjà coûté cher :
+ *
+ *  - « quelles maisons garder ? » — c'est `viableSubset`, le GARDE-FOU, et il est STRICT :
+ *    il rase jusqu'au retour à zéro, seule la tolérance demandée par le joueur l'assouplit ;
+ *  - « ce plan est-il livrable ? » — c'est `verdictViable`, le VERDICT, qui ajoute le
+ *    plancher de bruit du modèle.
+ *
+ * La règle vivait à trois endroits : ici, dans `islandPlan` et dans `invariants`, chacun avec
+ * sa propre version du test. L'invariant `viable-coherent` comparait ainsi le drapeau à un
+ * zéro strict et criait FAUTE sur les plans les plus sains du moteur, parce qu'il ignorait le
+ * plancher que le verdict appliquait. Une règle métier écrite en trois exemplaires finit
+ * toujours par diverger : les deux fonctions cohabitent donc ici, et nulle part ailleurs.
+ */
+
+/**
+ * ═══ PLANCHER DE BRUIT DU MODÈLE D'ATTRIBUTS ══════════════════════════════════════════
+ *
+ * Déficit vital par maison en deçà duquel un plan est tenu pour viable. Ce n'est PAS la
+ * tolérance du joueur — celle-là vaut zéro par défaut et s'ajoute à ce plancher : c'est la
+ * RÉSOLUTION du modèle, en dessous de laquelle un écart ne signifie plus rien.
+ *
+ * Les attributs sont des entiers par maison, et la couverture est discrète : deux maisons du
+ * même palier n'ont pas le même bilan selon les services qui les atteignent. Le total de l'île
+ * hérite donc d'un bruit d'arrondi proportionnel au nombre de maisons.
+ *
+ * MESURÉ, et c'est ce qui a rendu ce plancher nécessaire. Sur `roman_island_medium_05`, le
+ * palier Patriciens loge 20 904 habitants avec `FireSafety = −21` sur 625 maisons — soit
+ * −0,034 par maison, quand le Bonheur vaut +3 637 et l'Argent +46 414. Le drapeau `viable`
+ * étant binaire et `better()` le classant AVANT la population, `autoTier` écartait ce palier
+ * et se rabattait sur Plébéiens : 4 992 habitants. **Vingt et un points de déficit coûtaient
+ * seize mille habitants.** Même effondrement sur `roman_island_large_06` : 29 265 → 4 980.
+ *
+ * Raser jusqu'au retour à zéro n'y répond pas : le déficit est DIFFUS, la maison moyenne n'est
+ * négative que de 0,034, il faudrait en raser plus de six cents — un tiers de l'île. Le razage
+ * ne répare que les déficits concentrés.
+ *
+ * LA MARGE EST MINCE, ET C'EST MESURÉ. Sur les 55 îles, le déficit livré le plus profond est
+ * −0,0452 par maison (`roman_island_medium_04`, Bonheur) : le plancher n'a qu'un facteur 1,11
+ * d'avance. Pire, la distribution est TRONQUÉE par construction — une île dont le palier haut
+ * dépasserait 0,05 ne l'affiche pas, elle s'effondre au palier inférieur où le déficit est nul.
+ * Ce plancher est donc un pare-feu, pas une réponse : la réponse est un CLASSEMENT qui cesse
+ * de faire dépendre un facteur quatre de population d'un drapeau binaire.
+ */
+export const BRUIT_VITAL = 0.05;
+
+/**
+ * VERDICT du plan LIVRÉ : tolérance joueur + plancher de bruit, par maison.
+ *
+ * Ne jamais l'employer pour décider quelles maisons garder — c'est le rôle de `viableSubset`,
+ * et il doit rester strict. Le plancher ne juge que le plan fini.
+ */
+export const verdictViable = (
+  attrs: Record<string, number>,
+  houses: number,
+  tolerance = 0,
+): boolean =>
+  VITAL_ATTRS.every((k) => (attrs[k] ?? 0) + (Math.max(0, tolerance) + BRUIT_VITAL) * houses >= 0);
+
+/**
+ * ═══ DÉFICIT VITAL LE PLUS PROFOND, PAR MAISON ════════════════════════════════════════
+ *
+ * `0` quand le bilan est sain. C'est la seule échelle sur laquelle deux plans se comparent :
+ * un total brut ne dit rien sans le nombre de maisons qui le porte — −26 sur 575 maisons est
+ * un plan sain, −26 sur 10 est une ville en flammes.
+ */
+export const severiteVitale = (attrs: Record<string, number>, houses: number): number => {
+  if (houses <= 0) return VITAL_ATTRS.some((k) => (attrs[k] ?? 0) < 0) ? Infinity : 0;
+  let pire = 0;
+  for (const k of VITAL_ATTRS) {
+    const parMaison = (attrs[k] ?? 0) / houses;
+    if (parMaison < pire) pire = parMaison;
+  }
+  return pire < 0 ? -pire : 0; // `-pire` rendrait -0 sur un bilan sain, que `Object.is` distingue
+};
+
+/**
+ * SÉVÉRITÉ au-delà de laquelle une ville est tenue pour ingérable, en points vitaux par
+ * maison. Sert d'échelle à l'escompte de risque, pas de seuil : la fonction qui l'emploie est
+ * continue, et c'est tout l'intérêt.
+ *
+ * Un point de déficit PAR MAISON est déjà énorme — une résidence patricienne plafonne à +7 de
+ * sécurité incendie, et le malus de rang de cité atteint −7 vers 30 000 habitants. Une ville
+ * qui perdrait un point par maison sur un attribut vital est hors de tout rattrapage.
+ */
+export const SEVERITE_INGERABLE = 1;
+
+/**
+ * ═══ POPULATION EFFECTIVE : LA POPULATION, ESCOMPTÉE DU RISQUE QU'ELLE PORTE ══════════
+ *
+ * C'EST LA RÉPONSE À LA FALAISE, et le drapeau binaire n'en était que le pare-feu.
+ *
+ * Les comparateurs classaient par `viable` AVANT la population. Un plan à −0,034 par maison
+ * perdait donc contre un plan sain quatre fois moins peuplé : mesuré, 20 904 habitants écartés
+ * au profit de 4 992 sur `roman_island_medium_05`. Le plancher de bruit a déplacé la falaise
+ * sans la supprimer — il reste un SEUIL DUR, et sur `roman_island_medium_04` le plan livré
+ * n'en est qu'à 11 % (−0,0452 pour un plancher à 0,05). Un rien le fait rebasculer.
+ *
+ * Tout seuil dur produit une falaise. On escompte donc, continûment : un déficit dans la bande
+ * tolérée ne coûte RIEN — le comportement des plans sains est inchangé au habitant près — et
+ * au-delà, la population est réduite au prorata du risque, jusqu'à s'annuler à
+ * `SEVERITE_INGERABLE`. Un plan vraiment mauvais ne peut donc plus gagner en logeant plus,
+ * mais un plan meilleur ne se fait plus écarter pour trois centièmes de point.
+ *
+ * Le DRAPEAU `viable` ne change pas et reste juste : c'est le CLASSEMENT qui cesse d'être
+ * binaire, jamais l'avertissement rendu à l'utilisateur.
+ */
+export const populationEffective = (
+  residents: number,
+  attrs: Record<string, number>,
+  houses: number,
+  tolerance = 0,
+): number => {
+  const bande = Math.max(0, tolerance) + BRUIT_VITAL;
+  const nette = Math.max(0, severiteVitale(attrs, houses) - bande);
+  if (nette === 0) return residents;
+  return residents * Math.max(0, 1 - nette / SEVERITE_INGERABLE);
+};
+
 /** Une maison candidate, réduite à ce dont la sélection sous contrainte a besoin. */
 export interface Weighed {
   cap: number;
