@@ -357,7 +357,32 @@ def main():
             # passe l'effet dominant de Vulcain — il greffe sur chaque fonderie un rayon
             # Incendie +2 / Population +1 / Connaissance +1 / Prestige +1, sans consommer de
             # permis d'autel. Sans ce second saut, l'effet ressortait avec des attributs VIDES.
+            #
+            # UN BUFF NE DONNE PAS QUE DES ATTRIBUTS. Deux autres sections portent de l'effet
+            # reel, et les ignorer faisait ressortir `attrs: {}` — ce qui se lit « cet effet ne
+            # fait rien », un mensonge. Mesure au parseur sur les huit patrons : le premier
+            # effet local de Ceres, Mars, Epona et Cernunnos est une PRODUCTIVITE
+            # (`FactoryUpgrade/ProductivityUpgrade`), et l'effet local de Vulcain sur le pool
+            # « All Residences » est un modificateur de MAIN-D'OEUVRE
+            # (`BuildingUpgrade/WorkforceModifierInPercent`, +5 %).
+            #
+            # Ni l'un ni l'autre n'est un attribut vital : ils ne logent personne et ne
+            # changent aucun bilan d'ile. Ils sont emis pour que la donnee cesse de mentir,
+            # et parce que la productivite conditionnera le dimensionnement des ateliers.
+            factory = {}
+            fu = vals.find("./FactoryUpgrade")
+            if fu is not None:
+                for c in fu:
+                    v = c.findtext("./Value") or (c.text or "").strip()
+                    if v:
+                        try:
+                            factory[c.tag] = float(v)
+                        except ValueError:
+                            pass
+            wf = t(el, "./Values/BuildingUpgrade/WorkforceModifierInPercent")
             fx_buffs[guid] = {"attrs": attrs,
+                              "factory": factory,
+                              "workforcePct": float(wf) if wf else 0.0,
                               "grants": t(el, "./Values/BuildingUpgrade/AdditionalFunctionalEffect"),
                               "stackable": t(el, "./Values/Buff/IsStackable") == "1"}
             el.clear(); continue
@@ -700,11 +725,15 @@ def main():
     # Un effet de patron passe par la meme chaine que les autres : Effect -> BuildingBuff ->
     # AdditionalAttributes. On reutilise donc les tables deja remplies.
     #
-    # AVERTISSEMENT HONNETE sur ce qui reste hors de portee : `fx_buffs` ne lit que la section
-    # `BuildingUpgrade/AdditionalAttributes`. Un effet de patron qui passerait par
-    # `ResidenceUpgrade`, `FactoryUpgrade` ou un buff non-BuildingBuff (TroopBuff, ShipBuff)
-    # rendra des attributs VIDES. On emet quand meme l'entree, avec ses GUID et ses paliers de
-    # devotion : mieux vaut une donnee incomplete et tracable qu'une absence silencieuse.
+    # CE QUI RESTE HORS DE PORTEE, ET CE QUI VIENT D'Y ENTRER. `fx_buffs` lisait la seule
+    # section `BuildingUpgrade/AdditionalAttributes` ; il lit desormais aussi la productivite
+    # (`FactoryUpgrade`) et le modificateur de main-d'oeuvre
+    # (`BuildingUpgrade/WorkforceModifierInPercent`), qui couvrent tous les premiers effets
+    # locaux des huit patrons. Restent hors de portee : `ResidenceUpgrade` et les buffs
+    # non-BuildingBuff (TroopBuff, ShipBuff, AreaBuff — dont le commerce passif de Mercure).
+    # Une entree dont les trois sections sont vides est emise quand meme, avec ses GUID et ses
+    # paliers de devotion : mieux vaut une donnee incomplete et tracable qu'une absence
+    # silencieuse.
     def _resolve_fx(eg, _vus=None):
         eff = fx_effects.get(eg)
         if not eff:
@@ -714,6 +743,7 @@ def main():
             return None
         _vus = _vus | {eg}
         at, stk, greffes = {}, False, []
+        fac, wfp = {}, 0.0
         for bg in eff["buffs"]:
             bf = fx_buffs.get(bg)
             if not bf:
@@ -721,12 +751,20 @@ def main():
             stk = stk or bf["stackable"]
             for k, v in bf["attrs"].items():
                 at[k] = at.get(k, 0) + v
+            for k, v in (bf.get("factory") or {}).items():
+                fac[k] = fac.get(k, 0) + v
+            wfp += bf.get("workforcePct") or 0.0
             if bf.get("grants"):
                 g = _resolve_fx(bf["grants"], _vus)
                 if g:
                     greffes.append(g)
         out = {"effect": eg, "scope": eff["scope"], "attrs": at, "stackable": stk,
                "targets": eff.get("targets") or []}
+        # emis seulement s'ils mordent — sans quoi chaque effet trainerait deux champs nuls
+        if fac:
+            out["factory"] = fac
+        if wfp:
+            out["workforcePct"] = wfp
         if greffes:
             # L'effet ne s'applique pas lui-meme : il POSE `grants` sur ses cibles.
             out["grants"] = greffes

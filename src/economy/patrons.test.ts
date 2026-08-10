@@ -57,6 +57,26 @@ describe("divinites tutelaires extraites du jeu", () => {
     expect(v!.dominant[0]!.scope).toBe("ObjectsInMeta");
   });
 
+  it("un effet sans attribut n'est pas un effet VIDE : productivite et main-d'oeuvre", () => {
+    // `fx_buffs` ne lisait que `BuildingUpgrade/AdditionalAttributes`, si bien que le premier
+    // effet local de sept divinites sur huit ressortait avec `attrs: {}` — ce qui se lit
+    // « cet effet ne fait rien ». Il passe en realite par `FactoryUpgrade`.
+    const p = economy.patrons ?? [];
+    const prod = p.flatMap((d) => d.local).filter((e) => e.factory?.ProductivityUpgrade);
+    expect(prod).toHaveLength(7); // sept BuildingBuff ; Mercure passe par un AreaBuff
+
+    // VULCAIN TOUCHE AUSSI LES RESIDENCES, par la main-d'oeuvre et non par un attribut vital.
+    // L'affirmation « seules Ceres, Cernunnos et Minerve visent le pool 31046 » etait donc
+    // incomplete : elle ne valait que pour les attributs.
+    const v = p.find((d) => /vulcan/i.test(d.name))!;
+    const wf = v.local.find((e) => e.workforcePct);
+    expect(wf).toBeDefined();
+    expect(wf!.workforcePct).toBe(5);
+    expect(wf!.targets).toContain("31046"); // « All Residences »
+    // ...et il ne loge personne pour autant : aucun attribut de residence n'en sort.
+    expect(patronResidenceAttrs(v, 250000)).toEqual({});
+  });
+
   it("les seuils de devotion sont extraits", () => {
     expect(economy.religion?.dominantThreshold).toBe(7000);
     expect(economy.religion?.wonderThreshold).toBe(4000);

@@ -83,6 +83,28 @@ export interface ResolvedEffect {
    * Connaissance +1 / Prestige +1, sans consommer de permis d'autel.
    */
   grants?: ResolvedEffect[];
+  /**
+   * PRODUCTIVITÉ, pour les effets qui n'accordent aucun attribut.
+   *
+   * Le premier effet local de sept divinités sur huit passe par `FactoryUpgrade`, pas par
+   * `AdditionalAttributes` : sans cette lecture, l'entrée ressortait avec `attrs` vide, ce qui
+   * se lit « cet effet ne fait rien ». `ProductivityUpgrade` est le seul terme rencontré à ce
+   * jour ; l'échelle de dévotion le multiplie comme les autres.
+   *
+   * Aucun consommateur dans le moteur pour l'instant : la productivité ne loge personne et ne
+   * change aucun bilan d'île. Elle est extraite pour que la donnée cesse de mentir.
+   */
+  factory?: Record<string, number>;
+  /**
+   * MODIFICATEUR DE MAIN-D'ŒUVRE, en pourcentage
+   * (`BuildingUpgrade/WorkforceModifierInPercent`).
+   *
+   * Un seul cas dans les données : l'effet local de Vulcain sur le pool `31046`
+   * « All Residences », +5 % avant échelle de dévotion. Il **contredit une affirmation tenue
+   * un temps** — que seules Cérès, Cernunnos et Minerve touchent les résidences : Vulcain les
+   * touche aussi, mais par la main-d'œuvre, pas par un attribut vital.
+   */
+  workforcePct?: number;
 }
 
 /**
