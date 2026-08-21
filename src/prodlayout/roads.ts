@@ -13,11 +13,21 @@ export type SpineAxis = "h" | "v";
 /**
  * Épine dorsale à `spinePos` et branches perpendiculaires tous les `pitch`.
  *
- * Les branches sont INTÉRIEURES : jamais la première ni la dernière ligne de l'axe
- * transverse. Une route de bord ne dessert que d'un côté, et la mesure était sévère — sur
- * le pain ×2 en 23×23, les deux colonnes de bord faisaient 46 des 83 cases de route du
- * plan. Le prix à payer est que le squelette n'atteint plus le bord tout seul : c'est
- * désormais `exit.ts` qui garantit le débouché, par contrat plutôt que par accident.
+ * Les branches partent de 0 et suivent le pas, sans plus JAMAIS forcer la dernière ligne
+ * de l'axe transverse. C'est cette ligne forcée qui gaspillait, et elle seule.
+ *
+ * TENTATIVE RÉFUTÉE, gardée avec ses chiffres. La première version interdisait AUSSI la
+ * première ligne, au motif qu'une route de bord ne dessert que d'un côté. Mesure sur le
+ * pain ×2, à objectif identique : branches intérieures → 551 cases et 77 routes ; branches
+ * depuis 0 → 529 cases et 73 routes. La branche de bord n'est pas du gaspillage, elle donne
+ * la façade-route des bâtiments collés au bord, sans laquelle il faut une plus grande
+ * boîte — et donc plus de routes au total. Seule la dernière colonne forcée coûtait pour
+ * rien : 83 → 73 cases de route à surface égale.
+ *
+ * La ligne forcée existait pour garantir l'accès de la bande de droite. Ce n'est plus
+ * nécessaire : le verdict `served` est strict, donc une bande inaccessible fait échouer la
+ * boîte et la recherche en essaie une autre. La garantie est passée du squelette au
+ * verdict.
  *
  * Ne peint que les cases LIBRES. L'entrepôt est déjà posé quand cette fonction s'exécute,
  * et une branche qui le rencontre s'arrête contre lui — l'accès route dont il a besoin.
@@ -27,12 +37,12 @@ export function paintSkeleton(o: Occ, spinePos: number, pitch: number, axis: Spi
   const step = Math.max(2, pitch);
   if (axis === "h") {
     for (let x = 0; x < o.w; x++) if (at(o, x, spinePos) === FREE) setAt(o, x, spinePos, ROAD);
-    for (let x = 1; x <= o.w - 2; x += step) {
+    for (let x = 0; x < o.w; x += step) {
       for (let y = 0; y < o.h; y++) if (at(o, x, y) === FREE) setAt(o, x, y, ROAD);
     }
   } else {
     for (let y = 0; y < o.h; y++) if (at(o, spinePos, y) === FREE) setAt(o, spinePos, y, ROAD);
-    for (let y = 1; y <= o.h - 2; y += step) {
+    for (let y = 0; y < o.h; y += step) {
       for (let x = 0; x < o.w; x++) if (at(o, x, y) === FREE) setAt(o, x, y, ROAD);
     }
   }
