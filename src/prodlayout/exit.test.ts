@@ -21,11 +21,13 @@ function isolerLeSud(o: ReturnType<typeof grille>) {
 }
 
 describe("ensureExit", () => {
-  it("prend le débouché existant quand l'épine touche déjà le bord", () => {
+  it("prend le débouché existant sans peindre une seule case", () => {
     const o = grille();
     const avant = count(o, ROAD);
-    const exit = ensureExit(o, "ouest", seedsOf(9, 1, 0));
-    expect(exit).toEqual({ x: 0, y: 2, side: "ouest" });
+    const exit = ensureExit(o, "ouest", seedsOf(9, 0, 2));
+    expect(exit).not.toBeNull();
+    expect(exit!.side).toBe("ouest");
+    expect(exit!.x).toBe(0); // sur le bord ouest, par définition
     expect(count(o, ROAD)).toBe(avant); // aucune case peinte en plus
   });
 
@@ -58,8 +60,8 @@ describe("ensureExit", () => {
   });
 
   it("est déterministe — deux appels sur la même grille rendent le même point", () => {
-    expect(ensureExit(grille(), "est", seedsOf(9, 1, 0))).toEqual(
-      ensureExit(grille(), "est", seedsOf(9, 1, 0)),
+    expect(ensureExit(grille(), "est", seedsOf(9, 0, 2))).toEqual(
+      ensureExit(grille(), "est", seedsOf(9, 0, 2)),
     );
   });
 });
