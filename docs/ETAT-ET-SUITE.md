@@ -1,6 +1,7 @@
 # État du projet et chantiers ouverts
 
-Dernière mise à jour : 2026-08-10 (seconde session). Branche `dev`, arbre propre, 294 tests verts.
+Dernière mise à jour : 2026-08-22 (troisième session). Branche `dev`, arbre propre, 407 tests verts
+(`pnpm test:fast` en écarte les 11 balayages lourds et tourne en 21 s).
 Docker sur `:8090`. Ce document est le point d'entrée d'une nouvelle session.
 
 ---
@@ -76,6 +77,96 @@ du placeur, à ne construire que si une mesure montre le glouton visiblement lâ
 
 Spec : `docs/superpowers/specs/2026-08-10-blueprints-de-production-design.md`.
 Plan : `docs/superpowers/plans/2026-08-10-blueprints-de-production.md`.
+
+---
+
+## 1 ter. Le panier libre — commande arbitraire, sortie de route, boîte imposable
+
+`planFromBasket(catalog, basket, { exitSide, box })` pose une commande **libre** de
+bâtiments plutôt qu'une chaîne dépliée depuis une cible. `planProductionLayout` garde sa
+signature et devient un appel de cette porte : un seul chemin de pose, donc aucune
+divergence possible entre les deux vues.
+
+Trois choses n'existaient pas et existent maintenant.
+
+**La sortie de route.** C'est la seule règle qui ne vienne pas du catalogue : un blueprint
+recopié sur une île se branche au comptoir général par UNE case de route qui sort du plan.
+`exit.ts` la garantit sur le bord demandé — nord, sud, est ou ouest — en creusant le
+couloir libre le plus court si aucun débouché n'existe, et rend `null` si le bord est
+inatteignable, ce qui refuse le plan au lieu de le livrer décoratif.
+
+**Le verdict `served`, strict.** Tous les champs complets, toute aire libre satisfaite,
+tout `needsRoad` sur route, tout producteur sous sa `transporterRange` en distance-rue,
+sortie existante. Rien de partiel n'est livré comme un succès : un panier trop serré rend
+un `PlanRefus` qui **chiffre** chaque manque, parce qu'en boîte imposée il n'y a plus de
+rattrapage par agrandissement et que le refus doit dire quoi ajouter.
+
+**Trois modes de boîte.** `auto` cherche la plus petite boîte servie ; `taille` impose les
+dimensions ; `forme` impose un masque. L'état `BLOCKED` d'`occupancy.ts` suffit à faire
+respecter le masque par tout le module, parce que `fits`, `fillFields`, `paintSkeleton` et
+`freeAround` testaient déjà `=== FREE` avant de poser quoi que ce soit.
+
+### Le critère a changé : servi d'abord, petit ensuite
+
+`better()` classait sur l'**efficacité** — `(bâtiments + champs + routes) / surface` —
+avant la surface. Ce critère compte les routes au NUMÉRATEUR, donc il récompense le
+gaspillage : retirer une case de route inutile faisait BAISSER le score. Il classe
+désormais sur `served`, puis sur la surface, puis sur la forme carrée. L'efficacité reste
+affichée, avec un dénominateur corrigé — la surface **utilisable**, sans quoi une forme
+trouée afficherait un chiffre faux.
+
+| | avant | après |
+|---|---|---|
+| pain ×1 | 18×18 = 324 cases, **69** routes | 18×18 = 324 cases, **52** routes |
+| pain ×2 (lot parfait) | 23×23 = 529 cases, **83** routes | 23×23 = 529 cases, **73** routes |
+
+Surface identique, un huitième à un quart de voirie en moins, et trois garanties de plus.
+
+### Un défaut préexistant, révélé par l'invariant de connexité
+
+Une branche verticale du squelette que l'entrepôt interrompt laisse un tronçon **orphelin**
+de l'autre côté. Ce tronçon touche l'entrepôt, donc `outOfRange` le voyait à un pas et le
+déclarait desservi — mais il n'était relié à rien d'autre, et le comptoir, qui arrive par
+la sortie, ne l'atteignait jamais. Sur le pain ×2 en 34×34, une ferme sur deux était dans
+ce cas. Le défaut est **antérieur** à ce travail et passait inaperçu faute de contrôle de
+connexité. Corrigé par `connectRoads()`, qui étiquette les composantes et raccorde les
+îlots à la principale par le couloir libre le plus court, appelé quand seul l'entrepôt est
+posé — c'est là que le couloir a le plus de latitude.
+
+### Une tentative réfutée, gardée avec ses chiffres
+
+Le premier jet interdisait les branches sur les **deux** lignes de bord, au motif qu'une
+route de bord ne dessert que d'un côté — 46 des 83 cases de route du pain ×2 étaient dans
+ce cas. **Faux.** À objectif identique : branches intérieures → 551 cases et 77 routes ;
+branches depuis 0 → 529 cases et 73 routes. La branche de bord donne la façade-route des
+bâtiments collés au bord ; sans elle il faut une plus grande boîte, donc plus de routes au
+total. Ce qui gaspillait vraiment, c'était la **dernière ligne forcée hors du pas**.
+
+Cette ligne forcée existait pour garantir l'accès de la bande de droite. Le verdict étant
+désormais strict, une bande inaccessible fait échouer la boîte et la recherche en essaie
+une autre : la garantie est passée du squelette au verdict, où elle est vérifiée au lieu
+d'être espérée.
+
+### Un point de donnée qui a changé le contrat
+
+Le premier jet **refusait** les bâtiments à `slotType` — mines, forêts, marais, côtiers —
+faute de pouvoir vérifier l'emplacement hors terrain. La donnée a tranché contre : les
+**12 bâtiments porteurs de `freeArea` ont tous un `slotType`**. Les refuser rendait la
+contrainte d'aire libre inatteignable, donc son code mort et son invariant vide, et
+interdisait tout blueprint de bûcheron ou de carrière. Ils sont donc **posés, avec un
+avis** ; c'est la disponibilité de l'emplacement qui se vérifie sur l'île, pas la
+géométrie.
+
+### Reste à faire
+
+L'interface. L'onglet Production appelle toujours `planProductionLayout` et ne montre ni
+panier, ni bouton « compléter » (`completeBasket`, écrit et testé, n'a aucun appelant dans
+l'UI), ni choix du bord de sortie, ni champs de dimensions. C'est la phase 2. Le pinceau de
+forme est la phase 3 — l'éditeur sait déjà peindre une zone constructible, donc c'est du
+raccordement, pas de l'invention.
+
+Spec : `docs/superpowers/specs/2026-08-22-panier-de-blueprints-design.md`.
+Plan : `docs/superpowers/plans/2026-08-22-panier-de-blueprints.md`.
 
 ---
 
