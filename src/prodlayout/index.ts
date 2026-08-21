@@ -140,6 +140,12 @@ export function planFromBasket(
  *
  * `exitSide: "sud"` n'est pas arbitraire — l'épine du squelette longe l'entrepôt par en
  * dessous, donc c'est le bord que la voirie atteint au meilleur prix.
+ *
+ * Cette porte reste TOLÉRANTE : elle rend toujours un plan, et liste ses manques dans
+ * `gaps`. Le verdict strict appartient à `planFromBasket`, où l'appelant a demandé un
+ * refus chiffré. Les avoir confondus a fait afficher une erreur à la place du plan dans
+ * l'onglet Production — trouvé dans le navigateur, comme le défaut de l'Amphithéâtre
+ * avant lui, et pour la même raison : les tests partaient tous de la boulangerie.
  */
 export function planProductionLayout(
   catalog: BuildingDef[],
@@ -154,20 +160,28 @@ export function planProductionLayout(
   const order = buildOrder(chain);
   const basket = normalizeBasket(order.items.map((i) => ({ defId: i.defId, count: i.placed })));
 
-  const planned = planFromBasket(catalog, basket, { exitSide: "sud" });
-  if ("refuse" in planned) throw new Error(planned.raison);
-
   const warehouse = pickWarehouse(catalog, eco.buildingRegion[targetDefId]);
-  const extras = planned.layout.buildings.filter((b) => b.defId === warehouse.id);
+  const packed = searchBox(
+    {
+      items: basket.lines.map((l) => ({ defId: l.defId, count: l.count })),
+      warehouseDefId: warehouse.id,
+      lookup,
+    },
+    { mode: "auto" },
+    "sud",
+  );
+
+  const nom = (id: string) => lookup(id)?.name ?? id;
+  const extras = packed.placements.filter((p) => p.defId === warehouse.id);
 
   return {
-    layout: planned.layout,
+    layout: toLayout(packed),
     chain,
     order,
     report: buildReport(chain, order, lookup, [{ defId: warehouse.id, count: extras.length }]),
-    box: planned.box,
-    tiles: planned.tiles,
-    efficiency: planned.efficiency,
-    gaps: chain.gaps,
+    box: { w: packed.w, h: packed.h },
+    tiles: packed.tiles,
+    efficiency: packed.efficiency,
+    gaps: [...chain.gaps, ...packed.unmet.map((u) => direUnmet(u, nom))],
   };
 }
