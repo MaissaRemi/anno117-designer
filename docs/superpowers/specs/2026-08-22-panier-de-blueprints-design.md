@@ -68,7 +68,7 @@ ce garde-fou, donc le laisser dériver.
 
 | fichier | rôle |
 |---|---|
-| `basket.ts` | Le panier normalisé — doublons fusionnés, ordre total, comptes ≤ 0 écartés — et le **bilan des biens** : production moins consommation, en rationnels exacts (`frac.ts`). Rend surplus, déficits, et les lignes impossibles hors terrain (`slotType`). |
+| `basket.ts` | Le panier normalisé — doublons fusionnés, ordre total, comptes ≤ 0 écartés — et le **bilan des biens** : production moins consommation, en rationnels exacts (`frac.ts`). Rend surplus, déficits, et les avis de `slotType`. |
 | `complete.ts` | « Compléter » : point fixe qui ajoute les producteurs manquants jusqu'à déficit nul. Ajouter un moulin crée un besoin de céréales, d'où le point fixe, avec la garde anti-cycle que `chain.ts` porte déjà. Rend un **nouveau panier**, éditable ensuite. |
 | `exit.ts` | La sortie de route : couloir garanti jusqu'au bord demandé, point exposé dans le résultat, connexité à l'entrepôt vérifiée. |
 | `search.ts` | La recherche de boîte : croissance jusqu'à la première boîte **servie**, puis rétrécissement vers la plus petite. Sort de `pack.ts`. |
@@ -97,12 +97,17 @@ export type BoxSpec =
 export interface BasketPlanOptions {
   exitSide: ExitSide;
   box?: BoxSpec;                       // défaut { mode: "auto" }
-  imported?: ReadonlySet<string>;      // biens fournis de l'extérieur
 }
+
+// « Importé » ne concerne QUE la complétion : le panier littéral ne déduit rien, donc il
+// n'a pas à savoir d'où vient la farine. C'est `completeBasket(basket, lookup, imported)`
+// qui s'abstient d'appeler un producteur pour un bien que l'utilisateur fournit lui-même.
+completeBasket(basket, lookup, imported?): Basket
 
 export type BasketPlan = LayoutPlan & {
   served: true;                                       // toujours vrai : sinon c'est un refus
   exit: { x: number; y: number; side: ExitSide };
+  advisories: Advisory[];                             // slotType à vérifier sur l'île
 };
 
 export interface PlanRefus {
@@ -117,8 +122,13 @@ export type Unmet =
   | { kind: "route"; defId: string; uid: string }
   | { kind: "portee"; defId: string; uid: string; distance: number; portee: number }
   | { kind: "non-pose"; defId: string; manque: number }
-  | { kind: "emplacement"; defId: string; slotType: string }
   | { kind: "sortie"; side: ExitSide };
+
+/** Ce que le module ne peut pas vérifier hors terrain — signalé, jamais bloquant. */
+export interface Advisory {
+  defId: string;
+  slotType: string;
+}
 
 planFromBasket(catalog, basket, opts): BasketPlan | PlanRefus
 ```
@@ -196,9 +206,18 @@ modification.
 - **Maisons ouvrières.** La main-d'œuvre est chiffrée dans le récapitulatif, jamais logée.
 - **Coûts de construction.** Absents de l'export du jeu. La ligne n'est pas affichée plutôt
   que remplie d'un chiffre inventé.
-- **Bâtiments à `slotType`** — mines, marais, côtiers, prairies. Hors terrain, ils n'ont
-  aucun emplacement. Ils sont **refusés avec leur raison** (`Unmet` de type
-  `emplacement`), jamais posés au hasard.
+- **La vérification des `slotType`** — mines, forêts, marais, côtiers, prairies. Hors
+  terrain, le module ne peut pas savoir si l'emplacement existe. Ces bâtiments sont donc
+  **posés, avec un avis** (`Advisory`) : la géométrie du plan reste juste et utile, c'est la
+  disponibilité de l'emplacement qui se vérifie sur l'île.
+
+  Le premier jet de cette spec les refusait. **La donnée a tranché contre** : les
+  12 bâtiments porteurs de `freeArea` ont **tous** un `slotType`. Les refuser aurait rendu
+  la contrainte d'aire libre inatteignable — donc son code mort et son invariant vide — et
+  aurait interdit tout blueprint de bûcheron ou de carrière, qui sont des demandes
+  légitimes. Le refus reste réservé à ce qui casse réellement le plan : champs incomplets,
+  aire libre insuffisante, accès route absent, portée de charrette dépassée, sortie
+  impossible.
 - **Passe d'amélioration locale du placeur.** À ne construire que si une mesure montre le
   glouton visiblement lâche. Le recuit simulé reste écarté : la géométrie plafonne à +3 %
   sur ce projet quand le choix de la recette vaut ×1,48, et payer l'indéterminisme pour ce
