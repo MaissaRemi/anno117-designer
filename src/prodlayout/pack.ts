@@ -140,6 +140,12 @@ function outOfRange(
   for (const p of placements) {
     const d = lookup(p.defId);
     if (!d?.production) continue;
+    // Un producteur qui n'exige PAS de route n'expédie pas par la voirie. Les dix du
+    // catalogue dans ce cas sont tous `slotType: coastal` — ils sont sur le rivage et
+    // partent par la mer. Les juger sur une distance-rue refusait un plan parfaitement
+    // posable : c'est ce qui faisait échouer l'Armurerie, seule cible romaine sur 71 à
+    // tomber, et par malchance la cible par DÉFAUT de l'onglet Production.
+    if (!d.needsRoad) continue;
     const { w, h } = sizeOf(d, p.rot);
     const reach = adjacentRoads(occ, p.x, p.y, w, h).map((c) => dist[c]).filter((v) => v >= 0);
     const best = reach.length ? Math.min(...reach) : Infinity;

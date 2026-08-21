@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import ecoJson from "../data/economy.generated.json";
 import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef } from "../model/types";
 import { normalizeBasket } from "./basket";
-import { planFromBasket } from "./index";
+import { planFromBasket, planProductionLayout } from "./index";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const pain = normalizeBasket([
@@ -108,5 +109,51 @@ describe("planFromBasket", () => {
   it("un panier vide est refusé plutôt que rendu vide", () => {
     const p = planFromBasket(catalog, normalizeBasket([]), { exitSide: "sud" });
     expect("refuse" in p).toBe(true);
+  });
+
+  it("un producteur CÔTIER n'est pas jugé sur une distance-rue qu'il n'emprunte pas", () => {
+    // « Marais salants » g2957 : needsRoad = false, slotType coastal. Les dix producteurs
+    // du catalogue qui n'exigent pas de route sont TOUS côtiers — ils sont sur le rivage
+    // et partent par la mer. Les juger sur la voirie refusait la chaîne de l'Armurerie,
+    // qui tire du sel : seule cible romaine sur 71 à tomber, et la cible par défaut de
+    // l'onglet. Le panier reproduit ici sa configuration serrée.
+    const p = planFromBasket(
+      catalog,
+      normalizeBasket([{ defId: "g2957", count: 2 }, { defId: "g3174", count: 2 }]),
+      { exitSide: "sud" },
+    );
+    if ("refuse" in p) throw new Error(p.raison);
+    expect(p.advisories).toContainEqual({ defId: "g2957", slotType: "coastal" });
+  });
+});
+
+describe("planProductionLayout — la porte historique reste tolérante", () => {
+  // Ce balayage est l'instrument qui manquait. Les tests partaient TOUS de la boulangerie,
+  // donc aucun ne voyait que la cible par DÉFAUT de l'onglet Production échouait — comme
+  // pour l'Amphithéâtre avant lui, c'est le navigateur qui l'a trouvé. 177 ms pour couvrir
+  // les deux mondes : il n'y a aucune raison de s'en priver.
+  const eco = ecoJson as { buildingProd: Record<string, { outputs?: unknown[] }> };
+  const isProd = (id: string) => (eco.buildingProd[id]?.outputs?.length ?? 0) > 0;
+
+  for (const monde of ["Roman", "Celtic"] as const) {
+    it(`aucune cible ${monde} ne lance — un plan et ses manques, jamais une exception`, () => {
+      const cibles = catalog.filter((d) => isProd(d.id) && (!d.region || d.region === monde));
+      expect(cibles.length).toBeGreaterThan(20); // sans quoi le test passerait à vide
+      const ko: string[] = [];
+      for (const t of cibles) {
+        try {
+          const p = planProductionLayout(catalog, t.id, 1);
+          if (!p.layout.buildings.length) ko.push(`${t.id} ${t.name} :: plan vide`);
+        } catch (e) {
+          ko.push(`${t.id} ${t.name} :: ${(e as Error).message}`);
+        }
+      }
+      expect(ko).toEqual([]);
+    });
+  }
+
+  it("remonte les manques dans gaps plutôt que de les taire", () => {
+    const p = planProductionLayout(catalog, "g3174", 1);
+    expect(Array.isArray(p.gaps)).toBe(true);
   });
 });
