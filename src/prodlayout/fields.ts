@@ -85,3 +85,22 @@ export function freeAround(
   }
   return n;
 }
+
+/**
+ * Cases DÉJÀ réservées à `radius` du rectangle. Elles comptent dans l'aire libre : une
+ * case réservée est libre par construction, c'est la réservation qui la garde telle.
+ * Sans cette sonde, un bâtiment à `freeArea` échouerait son propre contrôle dès que sa
+ * réservation aurait été posée.
+ */
+export function reservedAround(
+  o: Occ, x: number, y: number, w: number, h: number, radius: number,
+): number {
+  let n = 0;
+  for (let cy = y - radius; cy <= y + h - 1 + radius; cy++) {
+    for (let cx = x - radius; cx <= x + w - 1 + radius; cx++) {
+      if (distToRect(cx, cy, x, y, w, h) > radius) continue;
+      if (at(o, cx, cy) === RESERVED) n++;
+    }
+  }
+  return n;
+}

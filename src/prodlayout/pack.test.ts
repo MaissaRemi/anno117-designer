@@ -3,7 +3,7 @@ import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef } from "../model/types";
 import { adjacentRoads, roadDistances } from "./roads";
 import { at, BUILDING, fill, makeOcc } from "./occupancy";
-import { packBlueprint } from "./pack";
+import { tryBox, type PackInput } from "./pack";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const byId = new Map(catalog.map((d) => [d.id, d]));
@@ -15,9 +15,13 @@ const BREAD = [
   { defId: "g3075", count: 1 },
   { defId: "g2693", count: 2 },
 ];
+const input: PackInput = { items: BREAD, warehouseDefId: "g3310", lookup };
 
-describe("packBlueprint — invariants", () => {
-  const r = packBlueprint({ items: BREAD, warehouseDefId: "g3310", lookup });
+/** Une boîte confortable : ce fichier teste la POSE, pas le choix des dimensions. */
+const LARGE = 34;
+
+describe("tryBox — invariants de pose", () => {
+  const r = tryBox(input, LARGE, LARGE, "sud");
 
   it("pose tout ce qui a été demandé, plus l'entrepôt", () => {
     expect(r.placements.filter((p) => p.defId === "g3174").length).toBe(2);
@@ -81,9 +85,9 @@ describe("packBlueprint — invariants", () => {
   });
 
   it("deux appels identiques rendent un plan identique", () => {
-    const a = packBlueprint({ items: BREAD, warehouseDefId: "g3310", lookup });
-    const b = packBlueprint({ items: BREAD, warehouseDefId: "g3310", lookup });
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    expect(JSON.stringify(tryBox(input, LARGE, LARGE, "sud"))).toBe(
+      JSON.stringify(tryBox(input, LARGE, LARGE, "sud")),
+    );
   });
 
   it("les fermes atteignent leur quota de champ", () => {
@@ -92,12 +96,49 @@ describe("packBlueprint — invariants", () => {
     const quota = lookup("g2693")!.field!.tiles;
     expect([...perFarm.values()].every((n) => n === quota)).toBe(true);
     expect(perFarm.size).toBe(2);
-    expect(r.gaps).toEqual([]);
+    expect(r.unmet).toEqual([]);
+  });
+});
+
+describe("l'objectif : servi d'abord, petit ensuite", () => {
+  it("une boîte assez grande sert tout et sort par le bord demandé", () => {
+    const r = tryBox(input, LARGE, LARGE, "sud");
+    expect(r.unmet).toEqual([]);
+    expect(r.served).toBe(true);
+    expect(r.exit).not.toBeNull();
+    expect(r.exit!.side).toBe("sud");
+    expect(r.exit!.y).toBe(r.h - 1);
   });
 
-  it("l'efficacité est une fraction crédible de la boîte", () => {
-    expect(r.efficiency).toBeGreaterThan(0.5);
+  it("une boîte trop petite REFUSE en chiffrant, au lieu de livrer un plan dégradé", () => {
+    const r = tryBox(input, 12, 12, "sud");
+    expect(r.served).toBe(false);
+    expect(r.unmet.length).toBeGreaterThan(0);
+    for (const u of r.unmet) {
+      if ("defId" in u) expect(lookup(u.defId)).toBeDefined();
+    }
+  });
+
+  it("l'efficacité se mesure sur la surface UTILISABLE, pas sur w×h", () => {
+    const usable = new Array(LARGE * LARGE).fill(true);
+    for (let x = 0; x < LARGE; x++) usable[x] = false; // toute la ligne nord hors forme
+    const r = tryBox(input, LARGE, LARGE, "sud", usable);
+    expect(r.efficiency).toBeGreaterThan(0);
     expect(r.efficiency).toBeLessThanOrEqual(1);
-    expect(r.tiles.buildings + r.tiles.fields + r.tiles.roads).toBeLessThanOrEqual(r.w * r.h);
+  });
+
+  it("tout bâtiment sur route est dans la MÊME composante que la sortie", () => {
+    const r = tryBox(input, LARGE, LARGE, "sud");
+    expect(r.served).toBe(true);
+    expect(r.unmet.filter((u) => u.kind === "route")).toEqual([]);
+  });
+
+  it("une case hors forme n'accueille jamais rien", () => {
+    const usable = new Array(LARGE * LARGE).fill(true);
+    for (let y = 0; y < 6; y++) for (let x = 0; x < 6; x++) usable[y * LARGE + x] = false;
+    const r = tryBox(input, LARGE, LARGE, "sud", usable);
+    for (const p of r.placements) expect(r.usable[p.y * r.w + p.x]).toBe(true);
+    for (const f of r.fields) expect(r.usable[f.y * r.w + f.x]).toBe(true);
+    for (const rd of r.roads) expect(r.usable[rd.y * r.w + rd.x]).toBe(true);
   });
 });

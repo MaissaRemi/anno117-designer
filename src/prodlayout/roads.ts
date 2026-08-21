@@ -38,6 +38,104 @@ export function paintSkeleton(o: Occ, spinePos: number, pitch: number, axis: Spi
   }
 }
 
+/**
+ * Étiquette les composantes de la voirie. -1 pour ce qui n'est pas une route.
+ *
+ * Deux tronçons de route qui se touchent tous deux à un ENTREPÔT ne sont pas reliés pour
+ * autant : en jeu, la voirie passe par des routes, pas à travers un bâtiment.
+ */
+export function roadComponents(o: Occ): Int32Array {
+  const comp = new Int32Array(o.w * o.h).fill(-1);
+  let next = 0;
+  for (let s = 0; s < comp.length; s++) {
+    if (o.cell[s] !== ROAD || comp[s] !== -1) continue;
+    const id = next++;
+    const pile = [s];
+    comp[s] = id;
+    while (pile.length) {
+      const c = pile.pop()!;
+      const x = c % o.w;
+      const y = (c / o.w) | 0;
+      const nbs = [
+        x > 0 ? c - 1 : -1,
+        x < o.w - 1 ? c + 1 : -1,
+        y > 0 ? c - o.w : -1,
+        y < o.h - 1 ? c + o.w : -1,
+      ];
+      for (const nb of nbs) {
+        if (nb < 0 || o.cell[nb] !== ROAD || comp[nb] !== -1) continue;
+        comp[nb] = id;
+        pile.push(nb);
+      }
+    }
+  }
+  return comp;
+}
+
+const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+/**
+ * Raccorde les îlots de voirie à la composante principale, par le couloir LIBRE le plus
+ * court, en ligne droite.
+ *
+ * Une branche verticale que l'entrepôt interrompt laisse un tronçon au-delà de lui. Ce
+ * tronçon touche l'entrepôt, donc il paraît desservi — `outOfRange` le voit à un pas — mais
+ * il n'est relié à RIEN d'autre : le comptoir, qui arrive par la sortie, ne l'atteint
+ * jamais. Le défaut est antérieur à ce module et passait inaperçu faute de contrôle de
+ * connexité ; c'est l'invariant de composante unique qui l'a fait apparaître.
+ *
+ * Appelée juste après le squelette, quand seul l'entrepôt est posé : le couloir a alors le
+ * maximum de latitude. Un îlot non raccordable est laissé tel quel — c'est `pack.ts` qui le
+ * signalera, plutôt que de le taire.
+ */
+export function connectRoads(o: Occ): void {
+  for (let garde = 0; garde < 64; garde++) {
+    const comp = roadComponents(o);
+    const tailles = new Map<number, number>();
+    for (let i = 0; i < comp.length; i++) {
+      if (comp[i] >= 0) tailles.set(comp[i], (tailles.get(comp[i]) ?? 0) + 1);
+    }
+    if (tailles.size <= 1) return;
+
+    // principale : la plus grande, à égalité la plus petite étiquette (ordre total)
+    let principale = -1;
+    let meilleure = -1;
+    for (const [id, n] of [...tailles.entries()].sort((a, b) => a[0] - b[0])) {
+      if (n > meilleure) {
+        meilleure = n;
+        principale = id;
+      }
+    }
+
+    let couloir: { run: number[] } | null = null;
+    for (let i = 0; i < comp.length; i++) {
+      if (comp[i] < 0 || comp[i] === principale) continue;
+      const x0 = i % o.w;
+      const y0 = (i / o.w) | 0;
+      for (const [dx, dy] of DIRS) {
+        const run: number[] = [];
+        let x = x0 + dx;
+        let y = y0 + dy;
+        while (x >= 0 && y >= 0 && x < o.w && y < o.h) {
+          const c = y * o.w + x;
+          if (o.cell[c] === ROAD) {
+            if (comp[c] === principale && run.length) {
+              if (!couloir || run.length < couloir.run.length) couloir = { run: [...run] };
+            }
+            break;
+          }
+          if (o.cell[c] !== FREE) break;
+          run.push(c);
+          x += dx;
+          y += dy;
+        }
+      }
+    }
+    if (!couloir) return; // plus rien de raccordable en ligne droite
+    for (const c of couloir.run) o.cell[c] = ROAD;
+  }
+}
+
 /** Indices des cases ROUTE contiguës aux quatre côtés d'un rectangle. */
 export function adjacentRoads(o: Occ, x: number, y: number, w: number, h: number): number[] {
   const out = new Set<number>();
