@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { at, BUILDING, fill, makeOcc, ROAD } from "./occupancy";
+import { at, BLOCKED, BUILDING, fill, FREE, makeOcc, ROAD } from "./occupancy";
 import { adjacentRoads, paintSkeleton, roadDistances, touchesRoad } from "./roads";
 
 describe("paintSkeleton", () => {
-  it("trace une épine continue et des branches au pas donné", () => {
+  it("trace une épine continue et des branches INTÉRIEURES au pas donné", () => {
     const o = makeOcc(11, 9);
     paintSkeleton(o, 4, 5);
     for (let x = 0; x < 11; x++) expect(at(o, x, 4)).toBe(ROAD);
+    // branches à x = 1 puis 1+5 = 6, jamais les colonnes de bord 0 et 10
     for (let y = 0; y < 9; y++) {
-      expect(at(o, 0, y)).toBe(ROAD);
-      expect(at(o, 5, y)).toBe(ROAD);
-      expect(at(o, 10, y)).toBe(ROAD);
+      expect(at(o, 1, y)).toBe(ROAD);
+      expect(at(o, 6, y)).toBe(ROAD);
     }
-    expect(at(o, 3, 0)).toBe(0);
+    expect(at(o, 3, 0)).toBe(FREE);
   });
 
   it("n'écrase jamais une case déjà occupée", () => {
@@ -57,5 +57,42 @@ describe("adjacence et distance-rue", () => {
     fill(o, 4, 4, 1, 1, ROAD);
     const d = roadDistances(o, [0]);
     expect(d[4 * 5 + 4]).toBe(-1);
+  });
+});
+
+describe("le squelette ne gaspille plus les colonnes de bord", () => {
+  it("axe horizontal : aucune colonne de bord peinte hors l'épine", () => {
+    const o = makeOcc(9, 5);
+    paintSkeleton(o, 2, 3, "h");
+    for (let y = 0; y < 5; y++) {
+      if (y === 2) continue; // l'épine traverse toute la largeur, bords compris
+      expect(at(o, 0, y)).toBe(FREE);
+      expect(at(o, 8, y)).toBe(FREE);
+    }
+  });
+
+  it("axe horizontal : au moins une branche intérieure existe", () => {
+    const o = makeOcc(9, 5);
+    paintSkeleton(o, 2, 3, "h");
+    expect(at(o, 1, 0)).toBe(ROAD);
+  });
+
+  it("axe vertical : le rôle des lignes et des colonnes s'échange", () => {
+    const o = makeOcc(5, 9);
+    paintSkeleton(o, 2, 3, "v");
+    for (let x = 0; x < 5; x++) {
+      if (x === 2) continue;
+      expect(at(o, x, 0)).toBe(FREE);
+      expect(at(o, x, 8)).toBe(FREE);
+    }
+    expect(at(o, 0, 1)).toBe(ROAD);
+  });
+
+  it("une case bloquée n'est jamais peinte", () => {
+    const usable = new Array(9 * 5).fill(true);
+    usable[2 * 9 + 4] = false;
+    const o = makeOcc(9, 5, usable);
+    paintSkeleton(o, 2, 3, "h");
+    expect(at(o, 4, 2)).toBe(BLOCKED);
   });
 });

@@ -8,23 +8,33 @@ import { at, FREE, ROAD, setAt, type Occ } from "./occupancy";
  * distinction produit un joli tas de bâtiments qui ne rapporte rien.
  */
 
+export type SpineAxis = "h" | "v";
+
 /**
- * Épine dorsale horizontale à `spineY` + branches verticales tous les `pitch`, en
- * commençant à `x0`. Ne peint que les cases LIBRES : l'entrepôt est déjà posé quand cette
- * fonction s'exécute, et une branche qui le rencontre s'arrête contre lui — ce qui est
- * exactement l'accès route dont il a besoin.
+ * Épine dorsale à `spinePos` et branches perpendiculaires tous les `pitch`.
+ *
+ * Les branches sont INTÉRIEURES : jamais la première ni la dernière ligne de l'axe
+ * transverse. Une route de bord ne dessert que d'un côté, et la mesure était sévère — sur
+ * le pain ×2 en 23×23, les deux colonnes de bord faisaient 46 des 83 cases de route du
+ * plan. Le prix à payer est que le squelette n'atteint plus le bord tout seul : c'est
+ * désormais `exit.ts` qui garantit le débouché, par contrat plutôt que par accident.
+ *
+ * Ne peint que les cases LIBRES. L'entrepôt est déjà posé quand cette fonction s'exécute,
+ * et une branche qui le rencontre s'arrête contre lui — l'accès route dont il a besoin.
+ * Les cases hors forme (BLOCKED) sont épargnées par la même garde.
  */
-export function paintSkeleton(o: Occ, spineY: number, pitch: number, x0 = 0): void {
+export function paintSkeleton(o: Occ, spinePos: number, pitch: number, axis: SpineAxis = "h"): void {
   const step = Math.max(2, pitch);
-  for (let x = 0; x < o.w; x++) if (at(o, x, spineY) === FREE) setAt(o, x, spineY, ROAD);
-  for (let x = x0; x < o.w; x += step) {
-    for (let y = 0; y < o.h; y++) if (at(o, x, y) === FREE) setAt(o, x, y, ROAD);
-  }
-  // la dernière colonne, si le pas ne tombe pas dessus : sans elle, la bande de droite
-  // n'a de route que d'un côté et les bâtiments profonds n'y accèdent plus.
-  const last = o.w - 1;
-  if ((last - x0) % step !== 0) {
-    for (let y = 0; y < o.h; y++) if (at(o, last, y) === FREE) setAt(o, last, y, ROAD);
+  if (axis === "h") {
+    for (let x = 0; x < o.w; x++) if (at(o, x, spinePos) === FREE) setAt(o, x, spinePos, ROAD);
+    for (let x = 1; x <= o.w - 2; x += step) {
+      for (let y = 0; y < o.h; y++) if (at(o, x, y) === FREE) setAt(o, x, y, ROAD);
+    }
+  } else {
+    for (let y = 0; y < o.h; y++) if (at(o, spinePos, y) === FREE) setAt(o, spinePos, y, ROAD);
+    for (let y = 1; y <= o.h - 2; y += step) {
+      for (let x = 0; x < o.w; x++) if (at(o, x, y) === FREE) setAt(o, x, y, ROAD);
+    }
   }
 }
 
