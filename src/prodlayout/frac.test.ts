@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addF, commonMultiplier, divF, frac, mulF, toNumber } from "./frac";
+import { addF, commonMultiplier, divF, frac, mulF, subF, toNumber } from "./frac";
 
 describe("frac — rationnels réduits", () => {
   it("réduit à la création", () => {
@@ -32,4 +32,10 @@ describe("frac — rationnels réduits", () => {
     expect(commonMultiplier([frac(1, 3), frac(1, 4)])).toBe(12);
     expect(commonMultiplier([])).toBe(1);
   });
+});
+
+it("soustrait sans passer par le flottant", () => {
+  expect(subF(frac(1, 3), frac(1, 6))).toEqual({ n: 1, d: 6 });
+  expect(subF(frac(2), frac(2))).toEqual({ n: 0, d: 1 });
+  expect(subF(frac(1), frac(3))).toEqual({ n: -2, d: 1 });
 });
