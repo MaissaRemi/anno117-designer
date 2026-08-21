@@ -10,6 +10,15 @@ export const ROAD = 2;
 export const FIELD = 3;
 /** Aire libre réservée autour d'un bâtiment à `freeArea` : traversable, jamais bâtie. */
 export const RESERVED = 4;
+/**
+ * Case hors de la FORME demandée : ni bâtie, ni traversée, ni comptée.
+ *
+ * Rien d'autre ne change dans ce fichier, et c'est le point : `fits`, `fillFields`,
+ * `paintSkeleton` et `freeAround` testent tous `=== FREE` avant de poser quoi que ce
+ * soit. Marquer les cases hors forme à l'initialisation suffit donc à faire respecter le
+ * masque par tout le module, sans toucher une seule de ces fonctions.
+ */
+export const BLOCKED = 5;
 
 export interface Occ {
   w: number;
@@ -17,7 +26,11 @@ export interface Occ {
   cell: Uint8Array;
 }
 
-export const makeOcc = (w: number, h: number): Occ => ({ w, h, cell: new Uint8Array(w * h) });
+export const makeOcc = (w: number, h: number, usable?: readonly boolean[]): Occ => {
+  const cell = new Uint8Array(w * h);
+  if (usable) for (let i = 0; i < cell.length; i++) if (!usable[i]) cell[i] = BLOCKED;
+  return { w, h, cell };
+};
 
 export const inBox = (o: Occ, x: number, y: number): boolean =>
   x >= 0 && y >= 0 && x < o.w && y < o.h;
@@ -49,3 +62,6 @@ export function count(o: Occ, v: number): number {
   for (let i = 0; i < o.cell.length; i++) if (o.cell[i] === v) n++;
   return n;
 }
+
+/** Surface réellement disponible — le dénominateur honnête de l'efficacité. */
+export const usableArea = (o: Occ): number => o.w * o.h - count(o, BLOCKED);
