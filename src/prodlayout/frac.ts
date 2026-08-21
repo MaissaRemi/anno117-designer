@@ -24,6 +24,7 @@ export function frac(n: number, d = 1): Frac {
 
 export const addF = (a: Frac, b: Frac): Frac => frac(a.n * b.d + b.n * a.d, a.d * b.d);
 export const mulF = (a: Frac, b: Frac): Frac => frac(a.n * b.n, a.d * b.d);
+export const subF = (a: Frac, b: Frac): Frac => frac(a.n * b.d - b.n * a.d, a.d * b.d);
 
 export const divF = (a: Frac, b: Frac): Frac => {
   if (b.n === 0) throw new Error("Frac : division par zéro");
