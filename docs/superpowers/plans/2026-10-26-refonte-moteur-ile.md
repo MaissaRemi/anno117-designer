@@ -169,7 +169,7 @@ pire déficit par maison réduit d'au moins moitié sur l'échantillon.
 **Ce qui reste du problème des routes** (~25 % du sol) est TOPOLOGIQUE : le peigne posé sur
 toute l'île. C'est l'objet de l'étape 5.
 
-### Étape 4 — La commande et sa nomenclature ⏳
+### Étape 4 — La commande et sa nomenclature ✅
 
 - Type `IslandOrder` : maisons par palier (nombre ou population cible), services (`auto` ou
   liste), panier de production (`Basket` de `prodlayout`).
@@ -179,6 +179,27 @@ toute l'île. C'est l'objet de l'étape 5.
 
 **Fini quand** : nomenclature testée sur des commandes types (pain ×2, 300 maisons de
 Patriciens, mélange), sans aucun placement.
+
+**Livré** : `src/commande/nomenclature.ts`, fonction pure, quelques millisecondes par commande.
+
+- `Commande` : maisons par palier, services (`minimal` — la recette de `candidateRecipes` —,
+  `complet`, ou liste), institutions, panier de production et sa complétion explicite,
+  biens des maisons (`importer` / `produire`), main-d'œuvre (`loger` / `signaler`), terre de
+  l'île.
+- `Nomenclature` : chaque ligne porte son rôle et sa RAISON (« demandé », « complète une
+  chaîne demandée », « biens des maisons », « main-d'œuvre Liberti des ateliers… »), plus le
+  palier réellement atteint, les biens et leur source, la main-d'œuvre, la surface estimée.
+- La main-d'œuvre se règle par point fixe : les maisons ouvrières agrandissent le quartier,
+  donc ses services, qui en réclament à leur tour.
+- Les copies de services sont une estimation géométrique (pavage L1, même détour que
+  `planLattice`) ; la surface par maison, 22 cases, est mesurée (19,8 à 23,1 sur sept plans).
+- **Défaut trouvé en chemin** : `solve` retombait sur les producteurs de l'AUTRE monde —
+  Brasserie, Laiterie, mines celtiques sur une île romaine, et des milliers d'ouvriers d'Albion
+  réclamés au Latium. Nouvelle option `strictWorld` (défaut inchangé) : un bien qu'aucun
+  bâtiment du monde ne produit part à l'import. Verrouillé dans `solve.test.ts`.
+
+Exemple, 100 maisons de Patriciens, biens produits sur l'île : 131 maisons ouvrières (13
+Plébéiens, 45 Equites, 73 Liberti), 77 lignes de production, Bière importée, ~11 900 cases.
 
 ### Étape 5 — Quartiers bornés ⏳
 

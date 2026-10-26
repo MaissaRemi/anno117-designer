@@ -144,3 +144,23 @@ describe("pickProducer (préférence région)", () => {
     expect(foundPaid).toBe(true);
   });
 });
+
+describe("strictWorld : ne poser que ce qui se construit dans le monde de l'île", () => {
+  it("aucun producteur de l'autre monde ; ce qui manque part à l'import", () => {
+    const patriciens = economy.tiers.find((t) => t.name === "Patriciens")!;
+    const opts = {
+      includeProduction: true, includeServices: false, includeWorkforce: false,
+      capacities: {}, region: "Roman",
+    };
+    const repli = solve([{ tier: patriciens.guid, pop: 3000 }], opts);
+    const strict = solve([{ tier: patriciens.guid, pop: 3000 }], { ...opts, strictWorld: true });
+    const autreMonde = (ids: string[]) => ids.filter((id) => {
+      const r = regionOf(id);
+      return !!r && r !== "Roman";
+    });
+    // le repli historique tire bien des chaînes celtiques — sinon le test ne prouverait rien
+    expect(autreMonde(Object.keys(repli.productionCounts)).length).toBeGreaterThan(0);
+    expect(autreMonde(Object.keys(strict.productionCounts))).toEqual([]);
+    expect(Object.keys(strict.imports).length).toBeGreaterThan(Object.keys(repli.imports).length);
+  });
+});
