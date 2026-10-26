@@ -77,6 +77,9 @@ const waterAmountOf = (def: BuildingDef): number => {
   return CONSUMPTION_BY_ID[def.id] ?? 0;
 };
 
+/** Unités d'eau qu'un bâtiment prélève sur sa source (0 s'il n'en consomme pas). */
+export const waterDemandOf = (def: BuildingDef): number => waterAmountOf(def);
+
 /** Le bâtiment a-t-il besoin du réseau d'eau ? (citerne ou consommateur connu) */
 export const needsWater = (def: BuildingDef): boolean => waterAmountOf(def) > 0;
 
@@ -127,6 +130,14 @@ export function planWater(
    * en jeu, detecté par l'invariant `pas-de-chevauchement`.
    */
   reserved?: { x: number; y: number; w: number; h: number },
+  /**
+   * Ordre de raccordement. `volume` (défaut) : les gros consommateurs d'abord, pour le budget
+   * des sources. `petits` : les citernes d'abord — dans un tissu dense où chaque consommateur
+   * n'a qu'une prise, la conduite d'un gros consommateur raccordé en premier occupe l'allée
+   * dont une citerne avait besoin, et la règle « deux réseaux ne se croisent jamais » la
+   * condamne. Les gros, eux, ont de grandes emprises et plusieurs prises.
+   */
+  ordre: "volume" | "petits" = "volume",
 ): WaterPlanResult {
   const W = grid.w, H = grid.h, N = W * H;
   const gaps: string[] = [];
@@ -401,7 +412,7 @@ export function planWater(
   };
 
   // gros consommateurs d'abord (budget), puis citernes (raccordement seul)
-  const ordered = [...consumers].sort((a, b) => b.amount - a.amount);
+  const ordered = [...consumers].sort((a, b) => (ordre === "petits" ? a.amount - b.amount : b.amount - a.amount));
   const report: WaterConsumerReport[] = [];
   for (const c of ordered) {
     let ok = connect(c);
