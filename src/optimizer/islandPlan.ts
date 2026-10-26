@@ -77,8 +77,28 @@ export interface IslandPlanRequest {
    * inatteignables. Le modèle contredit sa propre table.
    *
    * La tolérance laisse le joueur arbitrer ce risque plutôt que de le décider pour lui.
+   * Elle ne joue qu'en `viability: "strict"`.
    */
   tolerance?: number;
+  /**
+   * LE BILAN D'ATTRIBUTS EST-IL UNE CONTRAINTE OU UN INDICATEUR ?
+   *
+   *  - `"indicatif"` (défaut) : aucune maison n'est démolie pour le tenir. Le plan est classé
+   *    sur la population qu'il loge, et le bilan est rendu tel quel — `viable`, et dans les
+   *    trous le déficit PAR MAISON de chaque attribut négatif. C'est au joueur de décider.
+   *  - `"strict"` : le comportement historique. `viableSubset` rase jusqu'au retour à zéro
+   *    (moins la `tolerance`), les comparateurs escomptent la population du risque, et les
+   *    ateliers ne sont posés que tant que le bilan les porte.
+   *
+   * POURQUOI L'INDICATIF PAR DÉFAUT. Mesuré le 2026-10-26 aux réglages par défaut : le garde-fou
+   * strict démolit 91 % des maisons posées sur `celtic_island_large_07` (2 059 → 183) et 92 %
+   * sur `roman_island_large_03` (3 126 → 240), en gardant services et routes — 45 % de la terre
+   * finit vide. La population livrée tombe juste sous un seuil de rang de cité (4 999, 9 996) :
+   * c'est la règle qui fixe le résultat. Or elle n'a jamais été confrontée au jeu, dont la
+   * donnée décrit l'incendie comme un TAUX DE RISQUE (`GAME_MECHANICS.md` §10), pas comme une
+   * interdiction. Voir `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`, étape 2.
+   */
+  viability?: "indicatif" | "strict";
   /**
    * DÉVOTION de l'île, 0 par défaut. État de partie, comme les permis.
    *
@@ -273,6 +293,42 @@ function construireRecettes(
 }
 
 /**
+ * ═══ LA RÈGLE DE BILAN D'UNE REQUÊTE ══════════════════════════════════════════════════
+ *
+ * Tout ce qui, dans le plan d'île, dépend du bilan d'attributs passe par ici — sans quoi le
+ * mode `indicatif` désarmerait une passe et en laisserait une autre démolir dans son dos.
+ * Quatre décisions en dépendaient : le garde-fou de `planLattice`, les trois comparateurs
+ * (`balayerPaliers`, `better`, `betterFinal`), le budget des ateliers et le recul sur pose.
+ */
+interface RegleDeBilan {
+  strict: boolean;
+  /** Le drapeau `viable` rendu au joueur : tolérance nulle en indicatif, la sienne en strict. */
+  verdict: (attrs: Record<string, number>, houses: number) => boolean;
+  /** Ce que les comparateurs classent : population brute, ou escomptée du risque en strict. */
+  classer: (residents: number, attrs: Record<string, number>, houses: number) => number;
+}
+
+function regleDeBilan(req: IslandPlanRequest): RegleDeBilan {
+  const strict = req.viability === "strict";
+  // LA TOLÉRANCE DOIT VALOIR POUR LE VERDICT AUSSI, PAS SEULEMENT POUR LA SÉLECTION.
+  //
+  // `viableSubset` garde les maisons tant que le déficit par maison reste sous la tolérance.
+  // Juger ensuite le plan avec un `isViable` strict le déclarait non viable alors qu'il
+  // respectait exactement la contrainte demandée — et `better()`, qui départage d'abord sur
+  // `viable`, aurait préféré un plan bridé à un plan conforme à l'option.
+  const tol = strict ? Math.max(0, req.tolerance ?? 0) : 0;
+  return {
+    strict,
+    verdict: (attrs, houses) => verdictViable(attrs, houses, tol),
+    classer: (residents, attrs, houses) =>
+      (strict ? populationEffective(residents, attrs, houses, tol) : residents),
+  };
+}
+
+/** Budget d'attributs sans borne : en indicatif, le bilan ne refuse aucun atelier. */
+const BUDGET_ILLIMITE: Record<string, number> = Object.fromEntries(VITAL_ATTRS.map((k) => [k, Infinity]));
+
+/**
  * ═══ BALAYAGE DES PALIERS ═════════════════════════════════════════════════════════════
  *
  * Un plan complet par palier de la lignée, et on garde celui qui loge le plus. La récursion
@@ -291,7 +347,7 @@ function construireRecettes(
  */
 function balayerPaliers(
   req: IslandPlanRequest,
-  tol: number,
+  regle: RegleDeBilan,
   onProgress?: (step: number, total: number) => void,
 ): IslandPlanResult | null {
   const ladder = residentialChainExtended(req.tierGuid).filter((t) => t.residenceId);
@@ -300,8 +356,8 @@ function balayerPaliers(
   for (let i = 0; i < ladder.length; i++) {
     onProgress?.(i + 1, ladder.length);
     const r = planIslandImport({ ...req, tierGuid: ladder[i].guid, autoTier: false });
-    const pr = populationEffective(r.residents, r.attrsTotal, r.houses, tol);
-    const pb = best ? populationEffective(best.residents, best.attrsTotal, best.houses, tol) : -1;
+    const pr = regle.classer(r.residents, r.attrsTotal, r.houses);
+    const pb = best ? regle.classer(best.residents, best.attrsTotal, best.houses) : -1;
     const wins = !best
       || (r.feasible !== best.feasible ? r.feasible
         : pr !== pb ? pr > pb
@@ -324,22 +380,14 @@ export function planIslandImport(
   onProgress?: (step: number, total: number) => void,
 ): IslandPlanResult {
   const needMode = req.needMode ?? "auto";
-  // LA TOLÉRANCE DOIT VALOIR POUR LE VERDICT AUSSI, PAS SEULEMENT POUR LA SÉLECTION.
-  //
-  // `viableSubset` garde les maisons tant que le déficit par maison reste sous la tolérance.
-  // Juger ensuite le plan avec un `isViable` strict le déclarait non viable alors qu'il
-  // respectait exactement la contrainte demandée — et `better()`, qui départage d'abord sur
-  // `viable`, aurait préféré un plan bridé à un plan conforme à l'option.
-  const tol = Math.max(0, req.tolerance ?? 0);
-  const viableAvecTolerance = (attrs: Record<string, number>, houses: number): boolean =>
-    verdictViable(attrs, houses, tol);
+  const regle = regleDeBilan(req);
   const lookup = makeLookup(req.catalog);
   const tier = economy.tiers.find((t) => t.guid === req.tierGuid);
   if (!tier || !tier.residenceId) {
     throw new Error("Tier-cible invalide ou sans résidence.");
   }
   if (req.autoTier) {
-    const balaye = balayerPaliers(req, tol, onProgress);
+    const balaye = balayerPaliers(req, regle, onProgress);
     if (balaye) return balaye;
   }
   const chain = residentialChainExtended(req.tierGuid);
@@ -513,7 +561,7 @@ export function planIslandImport(
       residents,
       waterPct: nCons ? nOk / nCons : 1,
       attrsTotal,
-      viable: viableAvecTolerance(attrsTotal, cand.houses),
+      viable: regle.verdict(attrsTotal, cand.houses),
       sig: `${buildings.length}:${sig}`,
     };
   };
@@ -545,8 +593,8 @@ export function planIslandImport(
     // 20 904 habitants contre un plan de 4 992 pour trois centièmes de point par maison.
     // La population est donc ESCOMPTÉE du risque qu'elle porte (cf. `populationEffective`),
     // ce qui laisse les plans sains strictement inchangés et rend la comparaison continue.
-    const pa = populationEffective(a.residents, a.attrsTotal, a.cand.houses, tol);
-    const pb = populationEffective(b.residents, b.attrsTotal, b.cand.houses, tol);
+    const pa = regle.classer(a.residents, a.attrsTotal, a.cand.houses);
+    const pb = regle.classer(b.residents, b.attrsTotal, b.cand.houses);
     const close = Math.abs(pa - pb) <= 0.02 * Math.max(pa, pb, 1);
     if (!close) return pa > pb;
     // Un départage par la richesse du VIVIER de main-d'œuvre a existé ici. Il ne sert plus à
@@ -585,6 +633,7 @@ export function planIslandImport(
         institutions: patron ? [...institutions, patron] : institutions,
         patronAttrs: deityAttrs,
         permits: req.permits, reserved: kontorRect, tolerance: req.tolerance,
+        viabilityGate: regle.strict,
       }),
       serviceIds ? new Set(serviceIds) : null,
     );
@@ -1126,7 +1175,9 @@ export function planIslandImport(
       const lp = planLocalProduction(
         req.grid, lookup, buildings, roads, residenceIds,
         importGoods.map((g) => ({ good: g.good, perMin: g.perMin })),
-        attrsTotal,
+        // En indicatif, les ateliers restent bornés par la demande, la main-d'œuvre, la place
+        // et le quota du module — pas par un bilan que l'on a choisi de ne pas imposer.
+        regle.strict ? attrsTotal : BUDGET_ILLIMITE,
         { region: islandRegion, workforce: ledger, preferred, requested: req.wanted?.workshops },
       );
       // ═══ RECUL SUR POSE ═══════════════════════════════════════════════════════════════
@@ -1151,7 +1202,8 @@ export function planIslandImport(
       // gardés. Compter les résidences de `buildings` — qui les contient encore à ce point —
       // rendait le recul plus laxiste que le verdict final de `(tol + bruit) × rasées` points,
       // et un plan pouvait sortir non viable alors qu'un retrait de plus l'aurait sauvé.
-      while (kept.length && !viableAvecTolerance(trial.attrs, trial.wf.houses)) {
+      // En indicatif, rien ne recule : le bilan se rend, il ne retire rien.
+      while (regle.strict && kept.length && !regle.verdict(trial.attrs, trial.wf.houses)) {
         droppedCopies += kept.pop()!.copies;
         trial = settleWith(kept);
       }
@@ -1273,7 +1325,7 @@ export function planIslandImport(
       const a = tierByGuid(c.from)?.name ?? c.from, b = tierByGuid(c.to)?.name ?? c.to;
       gaps.push(`${c.houses} maison(s) ${a} → ${b} pour la main-d'œuvre (−${c.popLost} habitants)`);
     }
-    const planViable = viableAvecTolerance(attrsTotal, houses);
+    const planViable = regle.verdict(attrsTotal, houses);
     {
       const w = worstAttr(attrsTotal);
       if (w) {
@@ -1287,10 +1339,20 @@ export function planIslandImport(
         // rien n'est tu — mais la CONSÉQUENCE annoncée suit le verdict, et le déficit est
         // ramené à la maison, seule échelle où il se lit.
         const parMaison = houses ? w.value / houses : w.value;
-        gaps.push(planViable
-          ? `${label[w.attr] ?? w.attr} légèrement négatif sur l'île (${w.value.toFixed(0)},`
-            + ` soit ${parMaison.toFixed(3)}/maison) — sous le plancher de bruit du modèle`
-          : `${label[w.attr] ?? w.attr} négatif sur l'île (${w.value.toFixed(0)}) — émeutes/incendies/maladies en jeu`);
+        if (planViable) {
+          gaps.push(`${label[w.attr] ?? w.attr} légèrement négatif sur l'île (${w.value.toFixed(0)},`
+            + ` soit ${parMaison.toFixed(3)}/maison) — sous le plancher de bruit du modèle`);
+        } else if (regle.strict) {
+          gaps.push(`${label[w.attr] ?? w.attr} négatif sur l'île (${w.value.toFixed(0)}) — émeutes/incendies/maladies en jeu`);
+        } else {
+          // INDICATIF : rien n'a été démoli pour tenir le bilan, il est donc rendu EN ENTIER —
+          // chaque attribut négatif, ramené à la maison, seule échelle où il se lit.
+          const negatifs = VITAL_ATTRS
+            .filter((k) => (attrsTotal[k] ?? 0) < 0)
+            .map((k) => `${label[k] ?? k} ${((attrsTotal[k] ?? 0) / Math.max(1, houses)).toFixed(1)}/maison`);
+          gaps.push(`Bilan négatif sur l'île (${negatifs.join(", ")}) — risque d'émeutes, d'incendies`
+            + " et de maladies en jeu. Bilan indicatif : aucune maison n'a été démolie pour le compenser");
+        }
       }
     }
     for (const s of analyzable) {
@@ -1364,8 +1426,8 @@ export function planIslandImport(
     if (a.feasible !== b.feasible) return a.feasible;
     // Même escompte continu que le pré-tri : le drapeau reste juste et s'affiche, mais il ne
     // décide plus seul d'un facteur quatre de population.
-    const pa = populationEffective(a.residents, a.attrsTotal, a.houses, tol);
-    const pb = populationEffective(b.residents, b.attrsTotal, b.houses, tol);
+    const pa = regle.classer(a.residents, a.attrsTotal, a.houses);
+    const pb = regle.classer(b.residents, b.attrsTotal, b.houses);
     if (pa !== pb) return pa > pb;
     return a.money.net > b.money.net;
   };

@@ -6,6 +6,7 @@ import { downscaleGrid } from "./halfTileAdapter";
 import { makeLookup } from "../engine/rules";
 import { footprintSize } from "../engine/geometry";
 import { economy, worldOf } from "../economy/economy";
+import { worstAttr } from "../economy/attributes";
 import { regionOfIsland } from "../data/islands";
 import { hasHeights, heightsOf } from "../data/terrain";
 import { planIslandImport, type IslandPlanRequest } from "./islandPlan";
@@ -65,7 +66,8 @@ describe.skipIf(!ON)("balayage de qualité des plans", () => {
     fs?.mkdirSync(out!, { recursive: true });
 
     console.log(`options : ${JSON.stringify(extra)}`);
-    console.log("île | ms | maisons | habitants | viable | svc/maison | maisons% svc% routes% vide% | suspects");
+    console.log("île | ms | maisons | habitants | au palier % | viable | pire déficit/maison"
+      + " | svc/maison | maisons% svc% routes% vide% | suspects");
     for (const id of ids) {
       const raw = buildIslandGrid(id);
       if (!raw) { console.log(`${id} | grille introuvable`); continue; }
@@ -82,8 +84,11 @@ describe.skipIf(!ON)("balayage de qualité des plans", () => {
       const v = checkPlan(r, { islandId: id, grid, lookup, askedTier: tier.guid });
       const fautes = v.filter((x) => x.severity === "faute").map((x) => x.rule);
       const suspects = v.filter((x) => x.severity === "suspect").map((x) => x.rule);
+      const pire = worstAttr(r.attrsTotal);
       console.log([
-        id, ms, r.houses, r.residents, r.viable ? "oui" : "non", q.servicesPerHouse,
+        id, ms, r.houses, r.residents, r.fullyCoveredPct, r.viable ? "oui" : "non",
+        pire ? `${pire.attr} ${(pire.value / Math.max(1, r.houses)).toFixed(2)}` : "—",
+        q.servicesPerHouse,
         `${q.pct.residence} ${q.pct.service} ${q.pct.roads} ${q.pct.free}`,
         [...fautes.map((f) => `FAUTE:${f}`), ...suspects].join(",") || "—",
       ].join(" | "));

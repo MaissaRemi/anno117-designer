@@ -11,8 +11,10 @@ import { VITAL_ATTRS } from "../economy/attributes";
 const catalog = rawCatalog as unknown as BuildingDef[];
 const t4 = [...economy.tiers].filter((t) => t.residenceId).sort((a, b) => b.capacityDefault - a.capacityDefault)[0]!;
 const grid = downscaleGrid(buildIslandGrid("roman_island_medium_01")!);
+// LA RÈGLE D'ARRÊT est celle du mode STRICT : le bilan y borne les ateliers. En indicatif
+// (défaut), il n'est que rendu — voir `bilanIndicatif.test.ts`.
 const plan = (localProduction: boolean) =>
-  planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, localProduction });
+  planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, localProduction, viability: "strict" });
 
 describe("production finale sur l'île", () => {
   const off = plan(false);
