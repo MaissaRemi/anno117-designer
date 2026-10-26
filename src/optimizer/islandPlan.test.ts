@@ -90,7 +90,9 @@ describe("planIslandImport (mode import)", () => {
     const grid = downscaleGrid(buildIslandGrid("celtic_island_large_07")!);
     const t4 = [...economy.tiers].filter((t) => t.residenceId)
       .sort((a, b) => b.capacityDefault - a.capacityDefault)[0]!;
-    const r = planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8 });
+    // Le bilan positif est le contrat du mode STRICT ; l'indicatif est verrouillé par
+    // `bilanIndicatif.test.ts`.
+    const r = planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, viability: "strict" });
     expect(r.residents).toBeGreaterThan(24_000);
     expect(r.viable).toBe(true);
     for (const k of ["Happiness", "Money", "Health", "FireSafety"]) {
@@ -144,7 +146,7 @@ describe("planIslandImport (mode import)", () => {
       .sort((a, b) => b.capacityDefault - a.capacityDefault)[0]!;
     const r = planIslandImport({
       catalog, grid, tierGuid: nobles.guid, coverageFloor: 1,
-      exploitSlots: true, localProduction: true,
+      exploitSlots: true, localProduction: true, viability: "strict",
     });
     expect(r.residents).toBeGreaterThan(4_000);
     expect(r.viable).toBe(true);
@@ -161,7 +163,10 @@ describe("planIslandImport (mode import)", () => {
     // `all` sur une île pauvre en eau peut ne rien atteindre : c'est la recherche de recette
     // (mode par défaut) qui doit trouver une configuration tenable.
     for (const needMode of ["auto", "all"] as const) {
-      const r = planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, needMode });
+      // `viable` est le contrat du mode STRICT : en indicatif, le bilan est rendu, pas tenu
+      const r = planIslandImport({
+        catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, needMode, viability: "strict",
+      });
       expect(r.houses).toBeGreaterThan(100);
       // la population dépasse largement ce que donnerait un plan tout-au-palier-de-base
       const capBase = Math.min(...economy.tiers.filter((t) => t.residenceId).map((t) => t.capacityDefault));

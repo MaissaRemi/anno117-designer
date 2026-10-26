@@ -111,6 +111,8 @@ describe("cascade dans le plan d'île", () => {
       const r = planIslandImport({
         catalog, grid, tierGuid: tier.guid, coverageFloor: 0.8,
         exploitSlots: true, localProduction: true,
+        // le point 4 (bilan positif) est le contrat du mode STRICT
+        viability: "strict",
       });
 
       // 1. Tout bâtiment posé trouve ses ouvriers. Un déficit signifierait, en jeu, des

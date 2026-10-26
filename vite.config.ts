@@ -21,6 +21,7 @@ const LOURDS = [
   "src/optimizer/waterFeasible.test.ts",
   "src/optimizer/multiIslandPlan.test.ts",
   "src/optimizer/planLattice.test.ts",
+  "src/optimizer/bilanIndicatif.test.ts",
 ];
 
 export default defineConfig(({ mode }) => ({

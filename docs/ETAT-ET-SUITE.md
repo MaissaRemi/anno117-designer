@@ -1,5 +1,11 @@
 # État du projet et chantiers ouverts
 
+> **2026-10-26 — refonte du moteur d'île en cours.** Le moteur démolissait ~91 % des maisons
+> qu'il posait pour tenir un bilan d'attributs jamais vérifié en jeu. Le découpage, la vision et
+> l'avancement sont dans `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md` : c'est le
+> point d'entrée tant que la refonte n'est pas finie. Étapes 1 (mesure) et 2 (bilan indicatif
+> par défaut) livrées. Le reste de ce document décrit l'état au 2026-08-22.
+
 Dernière mise à jour : 2026-08-22 (troisième session). Branche `dev`, arbre propre, 407 tests verts
 (`pnpm test:fast` en écarte les 11 balayages lourds et tourne en 21 s).
 Docker sur `:8090`. Ce document est le point d'entrée d'une nouvelle session.
