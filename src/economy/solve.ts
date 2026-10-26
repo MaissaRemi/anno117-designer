@@ -1,4 +1,4 @@
-import { economy, pickProducer, priceOf, tierByGuid, upkeepOf, worldOf, type BProd } from "./economy";
+import { economy, pickProducer, pickProducerInWorld, priceOf, tierByGuid, upkeepOf, worldOf, type BProd } from "./economy";
 
 /** Maisons couvertes par défaut par un bâtiment de service (rayon d'influence). */
 const DEFAULT_HOUSES_PER_SERVICE = 30;
@@ -27,6 +27,13 @@ export interface SolveOptions {
    *  (défaut, hypothèse [WEB]) ou par HABITANT ? Si "resident", la demande de biens
    *  est multipliée par la capacité/maison. Prêt à flipper une fois validé en jeu. */
   consumptionUnit?: "house" | "resident";
+  /**
+   * Ne retenir que des producteurs CONSTRUCTIBLES dans le monde de `region` : un bien qu'aucun
+   * bâtiment de ce monde ne produit part à l'IMPORT au lieu de tirer une chaîne de l'autre
+   * monde. Défaut false — le repli historique de `pickProducer`, acceptable pour estimer un
+   * entretien, pas pour dresser la liste de ce qu'on va poser (cf. `pickProducerInWorld`).
+   */
+  strictWorld?: boolean;
 }
 
 export interface TierProfile {
@@ -217,7 +224,9 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
       const stack = new Set<string>();
       const requireGood = (good: string, ratePerMin: number, region?: string) => {
         if (ratePerMin <= 0 || stack.has(good)) return;
-        const defId = pickProducer(good, region);
+        const defId = opts.strictWorld && opts.region
+          ? pickProducerInWorld(good, worldOf(opts.region))
+          : pickProducer(good, region);
         if (!defId) { imports[good] = (imports[good] || 0) + ratePerMin; return; } // matière brute → import
         const p = economy.buildingProd[defId];
         if (!p) return;
