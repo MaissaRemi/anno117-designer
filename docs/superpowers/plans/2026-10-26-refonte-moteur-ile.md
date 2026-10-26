@@ -82,7 +82,7 @@ Sans lui, aucune étape suivante n'est jugeable.
 
 **Fini quand** : la référence chiffrée ci-dessous est relevée sur l'échantillon.
 
-### Étape 2 — Le bilan d'attributs devient un indicateur ⏳
+### Étape 2 — Le bilan d'attributs devient un indicateur ✅
 
 - Nouvelle option `viability: "indicatif" | "strict"`, **`"indicatif"` par défaut**.
 - En indicatif : aucune démolition par `viableSubset`, classement des candidats sur la
@@ -97,14 +97,45 @@ Sans lui, aucune étape suivante n'est jugeable.
 **Fini quand** : sur l'échantillon, services par maison < 1 et terre vide < 25 % en indicatif ;
 le mode strict rend exactement la référence ; un test bloquant verrouille les deux.
 
+**Livré.** Toutes les décisions qui dépendaient du bilan passent par `regleDeBilan()`
+(`islandPlan.ts`) : garde-fou de `planLattice`, trois comparateurs, budget des ateliers, recul
+sur pose. Mesuré sur l'échantillon, réglages par défaut :
+
+| île | maisons strict → indicatif | habitants | au palier % | pire déficit/maison | svc/maison | vide % |
+|---|---|---|---|---|---|---|
+| `roman_island_small_01` | 375 → 498 | 7 406 → 9 103 | 44 → 40 | Incendie −2,2 | 0,27 → 0,21 | 23,5 → 16,3 |
+| `roman_island_medium_01` | 903 → 1 106 | 23 492 → 24 399 | 71 → 72 | Incendie −5,3 | 0,24 → 0,23 | 16,1 → 12,9 |
+| `roman_island_medium_05` | 344 → 1 309 | 11 542 → 32 286 | 98 → 83 | Incendie −5,8 | 0,78 → 0,24 | 29,2 → 13,4 |
+| `roman_island_large_03` | 320 → 3 008 | 9 966 → 64 854 | 96 → 52 | Incendie −3,4 | 1,95 → 0,21 | 46,5 → 12,9 |
+| `celtic_island_small_01` | 176 → 418 | 3 570 → 6 428 | 99 → 78 | Bonheur −5,5 | 0,81 → 0,29 | 33,2 → 30,7 |
+| `celtic_island_medium_04` | 243 → 876 | 4 982 → 13 807 | 100 → 81 | Bonheur −8,7 | 0,78 → 0,23 | 39,1 → 21,1 |
+| `celtic_island_large_07` | 245 → 1 932 | 4 992 → 28 658 | 100 → 75 | Bonheur −10,6 | 1,24 → 0,20 | 46,1 → 18,3 |
+
+- Le mode strict rend des plans **identiques au bâtiment et à la route près** à la référence,
+  sur les sept îles.
+- `celtic_island_small_01` reste à 30,7 % de vide : c'est un lobe séparé par l'eau, sans route
+  possible vers le comptoir, écarté à dessein par `keepMainLandmass`. Pas un défaut de l'étape.
+- La part au palier baisse : le strict ne gardait que les maisons les mieux desservies. En
+  nombre, les maisons au palier sont 3 à 6 fois plus nombreuses en indicatif.
+- **Le revers, chiffré** : selon le modèle d'attributs, ces villes sont en déficit — jusqu'à
+  −10,6 de Bonheur par maison. Le modèle n'est pas vérifié en jeu (test transverse n° 1), et le
+  remède n'est plus la démolition mais la compensation, à l'étape 3.
+- Verrouillé par `bilanIndicatif.test.ts` (lourd) ; les cinq tests qui portaient le contrat
+  strict le demandent désormais explicitement.
+
 ### Étape 3 — Nettoyage final cohérent ⏳
 
-Une fois les maisons fixées (et seulement alors) : retirer les services qui ne servent aucune
-maison et les routes qui ne desservent rien, puis réévaluer une seule fois. Cette voie a été
-réfutée en août (−13 819 habitants), mais sous le régime de démolition, où retirer un service
-déclenchait d'autres rasages. À remesurer sans démolition.
+Une fois les maisons fixées (et seulement alors) :
 
-**Fini quand** : part des routes en baisse mesurable sans perte de population au palier.
+- **retirer** les services qui ne servent aucune maison et les routes qui ne desservent rien,
+  puis réévaluer une seule fois. Cette voie a été réfutée en août (−13 819 habitants), mais
+  sous le régime de démolition, où retirer un service déclenchait d'autres rasages. À remesurer ;
+- **compenser** le déficit d'attributs au lieu de démolir : densifier les institutions
+  (Vigiles, Medici, Custodia…) là où les maisons sont en déficit, tant que le gain par case
+  dépasse celui d'une maison. C'est le pendant constructif du garde-fou strict.
+
+**Fini quand** : part des routes en baisse mesurable sans perte de population au palier, et
+pire déficit par maison réduit d'au moins moitié sur l'échantillon.
 
 ### Étape 4 — La commande et sa nomenclature ⏳
 
