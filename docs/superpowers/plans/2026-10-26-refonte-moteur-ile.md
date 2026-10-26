@@ -123,7 +123,7 @@ sur pose. Mesuré sur l'échantillon, réglages par défaut :
 - Verrouillé par `bilanIndicatif.test.ts` (lourd) ; les cinq tests qui portaient le contrat
   strict le demandent désormais explicitement.
 
-### Étape 3 — Nettoyage final cohérent ⏳
+### Étape 3 — Nettoyage final cohérent ✅ (objectifs revus par la mesure)
 
 Une fois les maisons fixées (et seulement alors) :
 
@@ -136,6 +136,38 @@ Une fois les maisons fixées (et seulement alors) :
 
 **Fini quand** : part des routes en baisse mesurable sans perte de population au palier, et
 pire déficit par maison réduit d'au moins moitié sur l'échantillon.
+
+**Mesuré avant de coder** (plans indicatifs, trois îles) — et deux des trois objectifs tombent :
+
+| | `roman_island_medium_05` | `celtic_island_large_07` | `roman_island_large_03` |
+|---|---|---|---|
+| services qui ne servent aucune maison | 0 / 316 | 0 / 378 | 0 / 626 |
+| routes ne touchant aucun bâtiment | 811 / 8 391 | 1 637 / 11 982 | 2 361 / 18 938 |
+| couverture des institutions | 86 à 100 % | 83 à 90 % | 81 à 96 % |
+
+- **Retirer des services : rien à gagner.** Le sur-provisionnement (§3.6 de `ETAT-ET-SUITE`)
+  venait entièrement de la démolition ; sans elle, chaque copie sert des maisons.
+- **Compenser par les institutions : presque rien à gagner dans le modèle.** Leurs effets ne
+  se cumulent pas par type, et elles couvrent déjà 81 à 100 % des maisons : passer à 100 %
+  rapporte moins de 0,2 point par maison face à des déficits de 1,5 à 10,6. Le déficit est
+  STRUCTUREL dans le modèle — rang de cité contre plafond d'attributs par maison. Seul le jeu
+  peut dire s'il est réel (test transverse n° 1).
+- **Routes** : les cases qui ne touchent aucun bâtiment sont surtout des liaisons. Les
+  culs-de-sac proprement dits ne pèsent que ~0,5 % de la voirie.
+
+**Livré** :
+
+- `roadCleanup.ts` : `pruneDeadEnds`, élagage itératif des culs-de-sac, appliqué en toute fin
+  de `finalize` — sans effet possible sur couverture ni connexité. 48 à 60 cases par île.
+- Départage par bilan en indicatif : à 2 % de population près, le plan le plus sain gagne, au
+  pré-tri comme entre finalistes. `roman_island_medium_01` : Incendie −5,26 → −1,99 par maison
+  pour −0,7 % d'habitants (24 399 → 24 236) ; sans effet notable ailleurs.
+- Repère pour le joueur : la recette « tous les services » réduit le déficit au prix de la
+  population — `roman_island_medium_05` −5,7 → −2,3 par maison (32 163 → 24 670 habitants),
+  `celtic_island_large_07` −10,6 → −7,7 (28 658 → 27 350).
+
+**Ce qui reste du problème des routes** (~25 % du sol) est TOPOLOGIQUE : le peigne posé sur
+toute l'île. C'est l'objet de l'étape 5.
 
 ### Étape 4 — La commande et sa nomenclature ⏳
 

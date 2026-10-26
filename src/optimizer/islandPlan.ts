@@ -21,7 +21,8 @@ import { netOf, planLocalProduction, type LocalWorkshop } from "./localProd";
 import { regionOfIsland } from "../data/islands";
 // LA RÈGLE DE VIABILITÉ NE VIT QU'À UN ENDROIT (cf. `viability.ts`) : le verdict tolérant et
 // le garde-fou strict y cohabitent, et personne ne réécrit sa propre version du test.
-import { populationEffective, verdictViable } from "./viability";
+import { populationEffective, severiteVitale, verdictViable } from "./viability";
+import { pruneDeadEnds } from "./roadCleanup";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -597,6 +598,15 @@ export function planIslandImport(
     const pb = regle.classer(b.residents, b.attrsTotal, b.cand.houses);
     const close = Math.abs(pa - pb) <= 0.02 * Math.max(pa, pb, 1);
     if (!close) return pa > pb;
+    // INDICATIF : à population quasi égale, le bilan le plus sain l'emporte. C'est le seul
+    // levier de bilan qui ne coûte pas d'habitants — mesuré, densifier les institutions n'en
+    // a presque pas : elles couvrent déjà 81 à 100 % des maisons et leurs effets ne se
+    // cumulent pas (cf. étape 3 du plan de refonte).
+    if (!regle.strict) {
+      const sa = severiteVitale(a.attrsTotal, a.cand.houses);
+      const sb = severiteVitale(b.attrsTotal, b.cand.houses);
+      if (sa !== sb) return sa < sb;
+    }
     // Un départage par la richesse du VIVIER de main-d'œuvre a existé ici. Il ne sert plus à
     // rien depuis que `finalize` tranche sur le plan LIVRÉ : mesuré sur quatre îles avec
     // exploitations et production locale, le résultat est identique au bâtiment près avec ou
@@ -1359,6 +1369,11 @@ export function planIslandImport(
       if (s.pct < 100) gaps.push(`${s.name} : ${s.pct}% des maisons couvertes (distance-rue)`);
     }
 
+    // CULS-DE-SAC. Tout est posé, ateliers compris : c'est le seul moment où l'élagage est sûr
+    // — plus tôt, un atelier posé ensuite aurait pu s'adosser à une case retirée. Il ne change
+    // ni la couverture ni la connexité (cf. `roadCleanup.ts`), donc rien de ce qui précède.
+    layout.roads = pruneDeadEnds(req.grid, layout.buildings, layout.roads, lookup).roads;
+
     const hasWaterConsumers = water.consumers.length > 0;
     return {
       mode: "import",
@@ -1428,6 +1443,14 @@ export function planIslandImport(
     // décide plus seul d'un facteur quatre de population.
     const pa = regle.classer(a.residents, a.attrsTotal, a.houses);
     const pb = regle.classer(b.residents, b.attrsTotal, b.houses);
+    // Même départage qu'au pré-tri en indicatif : à 2 % près, le plan au bilan le plus sain.
+    // La bande rend la comparaison non transitive, sans conséquence ici — elle ne sert qu'à
+    // un balayage linéaire de trois ou quatre finalistes.
+    if (!regle.strict && Math.abs(pa - pb) <= 0.02 * Math.max(pa, pb, 1)) {
+      const sa = severiteVitale(a.attrsTotal, a.houses);
+      const sb = severiteVitale(b.attrsTotal, b.houses);
+      if (sa !== sb) return sa < sb;
+    }
     if (pa !== pb) return pa > pb;
     return a.money.net > b.money.net;
   };
