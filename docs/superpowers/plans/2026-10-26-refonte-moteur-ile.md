@@ -201,7 +201,7 @@ Patriciens, mélange), sans aucun placement.
 Exemple, 100 maisons de Patriciens, biens produits sur l'île : 131 maisons ouvrières (13
 Plébéiens, 45 Equites, 73 Liberti), 77 lignes de production, Bière importée, ~11 900 cases.
 
-### Étape 5 — Quartiers bornés ⏳
+### Étape 5 — Quartiers bornés ✅ (avec limites connues)
 
 Poser N maisons et leurs services dans une **zone compacte** (croissance depuis le comptoir,
 aire estimée depuis la nomenclature) au lieu de remplir l'île. Réutilise `planLattice` sur une
@@ -209,6 +209,63 @@ sous-grille masquée ; la voirie suit la zone, pas la boîte englobante de l'îl
 
 **Fini quand** : une commande de 300 maisons occupe une zone d'un seul tenant, routes < 20 %
 de la zone, toutes les maisons au palier demandé ou l'écart chiffré.
+
+**Premier essai, abandonné** : `planLattice` sur une zone bornée grandissant depuis le comptoir.
+300 Patriciens sur `roman_island_medium_01` → zone de 21 800 cases, 12 % de maisons, 27 % de
+routes, 7 Temples et 6 Forums, l'eau qui n'arrivait pas. Ce moteur remplit une île ; il ne sait
+pas dimensionner un quartier.
+
+**Livré : `src/commande/ilots.ts`, `disposerQuartiers`** — une ville en TRAME D'ÎLOTS.
+
+- Un îlot = 12 × 6 cases = 8 maisons dos à dos, une route au-dessus et une en dessous. Entre
+  deux îlots d'une rangée, une colonne sur deux est une route, l'autre une ALLÉE libre : c'est
+  par là que passent les aqueducs, qui croisent les routes à angle droit.
+- Les petits services se rangent à plusieurs dans un îlot ; les gros fusionnent des îlots
+  (Temple tourné : 1 × 3, Amphithéâtre : 3 × 4). Les maisons reprennent les restes.
+- Chaque copie se pose là où elle couvre le plus de maisons non couvertes (distance-rue, la
+  sémantique de `rules.ts`), moins son coût : son emprise en équivalent maisons, la place gâchée,
+  et l'eau qu'elle prélève (0,5 maison par unité). Une copie de plus doit rapporter.
+- La ville est dimensionnée d'avance, services compris, centrée sur la partie la plus pleine de
+  l'île **à portée d'aqueduc d'une montagne**, et ne s'agrandit que d'îlots dont les routes
+  rejoignent le réseau. Une route par la terre libre la relie au comptoir et aux sources.
+- L'eau est routée dans la boucle : un consommateur sec est retiré, sa position et les allées déjà
+  prises par une conduite lui sont interdites. `planWater` gagne un ordre « petits d'abord » ; les
+  deux ordres sont essayés et c'est le nombre de maisons gardant leur palier qui tranche.
+
+Défauts trouvés en chemin, chacun mesuré : sur-pose des gros services en bordure (coût fondé
+sur les maisons délogées), étalement en boucle (ville non dimensionnée), îlots de part et d'autre
+d'un bras de mer (102 maisons sans accès), raccord du comptoir plafonné à 60 cases (carte
+continentale isolée), sources sans route, routage d'eau non monotone.
+
+| commande | île | au palier | zone (cases) | maisons % | routes % |
+|---|---|---|---|---|---|
+| 300 Patriciens | `roman_island_medium_01` | **300/300** | 7 307 | 37,0 | 15,6 |
+| 300 Patriciens | `roman_island_large_03` | **300/300** | 7 583 | 35,6 | 15,3 |
+| 300 Patriciens | `roman_island_extralarge_01` | **300/300** | 7 374 | 36,6 | 14,7 |
+| 300 Patriciens | `roman_island_medium_05` | 287/300 | 8 369 | 30,9 | 16,3 |
+| 300 Patriciens | `roman_island_small_01` | 126/300 | 9 517 | 11,9 | 14,2 |
+| 300 Nobles | `celtic_island_medium_04` | **300/300** | 6 594 | 40,9 | 17,5 |
+| 300 Nobles | `celtic_island_large_07` | **300/300** | 7 764 | 34,8 | 17,4 |
+| 300 Nobles | `celtic_island_small_01` | 90/300 | 2 910 | 27,8 | 16,8 |
+| 500 Patriciens | `roman_dlc01_island_continental_01` | **500/500** | 11 281 | 39,9 | 16,4 |
+| 500 Patriciens | `roman_island_large_03`, `extralarge_01` | **500/500** | ~11 000 | ~40 | ~16 |
+| 500 Nobles | `celtic_island_large_07` | 483/500 | 16 949 | 25,6 | 17,6 |
+| 800 Patriciens | `roman_island_extralarge_01` | **800/800** | 20 596 | 35,0 | 15,5 |
+| 800 | `roman_island_large_03` / `celtic_island_large_07` | 743 / 739 | ~19-23 000 | ~29-35 | ~16-18 |
+| 800 Patriciens | `roman_dlc01_island_continental_01` | 502/800 | 18 389 | 24,6 | 15,7 |
+
+À comparer au moteur d'île historique : 23 à 25 % de routes et, aux défauts, 4 à 47 % de maisons.
+Une à huit secondes par commande.
+
+**Limites connues, à reprendre :**
+
+- **Petites îles et îles découpées** : l'îlot rigide de 12 × 6 trouve mal sa place (`celtic_island_small_01`,
+  90/300 ; `roman_island_small_01`, île étroite où 300 Patriciens dépassent la portée des
+  aqueducs). Piste : des demi-îlots d'une rangée.
+- **Grandes villes d'un seul tenant** : au-delà de ~500 maisons, plusieurs réseaux d'eau doivent
+  cohabiter sans jamais se croiser, et les allées saturent. Piste : découper en quartiers de
+  ~300 maisons séparés par une bande libre.
+- Une source d'aqueduc peut rester sans route si les conduites l'encerclent (un cas sur douze).
 
 ### Étape 6 — La production posée sur l'île ⏳
 
