@@ -60,7 +60,10 @@ export function IslandPlanner({ onClose }: Props) {
   const [slotWish, setSlotWish] = useState<Record<string, string>>({});
   const [wishSearch, setWishSearch] = useState("");
   const [floor, setFloor] = useState(80);
-  // Déficit vital toléré PAR MAISON. 0 = veto strict, le comportement historique. Voir
+  // Bilan d'attributs : indicateur (défaut, rien n'est démoli) ou contrainte stricte (le
+  // comportement historique). Voir `IslandPlanRequest.viability`.
+  const [strictBilan, setStrictBilan] = useState(false);
+  // Déficit vital toléré PAR MAISON, en mode strict seulement. 0 = veto strict. Voir
   // `optimizer/viability.ts` : au-delà de 30 000 habitants le malus de rang de cité dépasse
   // ce qu'une maison peut encaisser, et sans cette soupape aucune grande île ne se peuple.
   const [tolerance, setTolerance] = useState(0);
@@ -142,7 +145,8 @@ export function IslandPlanner({ onClose }: Props) {
         exploitSlots,
         localProduction,
         autoTier,
-        ...(tolerance > 0 ? { tolerance } : {}),
+        viability: strictBilan ? "strict" : "indicatif",
+        ...(strictBilan && tolerance > 0 ? { tolerance } : {}),
         ...(devotion > 0 ? { devotion } : {}),
         ...(wishes.length || Object.keys(slotWish).length
           ? { wanted: { workshops: wishes, slots: slotWish } }
@@ -231,8 +235,10 @@ export function IslandPlanner({ onClose }: Props) {
                 Produire sur l'île
                 <span className="muted" style={{ display: "block", fontSize: 11 }}>
                   Pose des ateliers pour fabriquer une partie des biens au lieu de tout importer.
-                  Ils remplacent des maisons et pèsent sur les attributs : on s'arrête dès que le
-                  bilan de l'île passerait sous zéro.
+                  Ils remplacent des maisons et pèsent sur les attributs
+                  {strictBilan
+                    ? " : on s'arrête dès que le bilan de l'île passerait sous zéro."
+                    : ", ce que le bilan affiché inclut. Ils restent bornés par la demande, la main-d'œuvre et la place."}
                 </span>
               </span>
             </label>
@@ -324,12 +330,29 @@ export function IslandPlanner({ onClose }: Props) {
               <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
               <span className="muted">{floor}%</span>
             </label>
-            <label className="slider">
-              <span style={{ color: "var(--muted)", fontSize: 12 }}>Risque toléré</span>
-              <input type="range" min={0} max={50} step={5} value={Math.round(tolerance * 10)}
-                onChange={(e) => setTolerance(parseInt(e.target.value) / 10)} />
-              <span className="muted">{tolerance === 0 ? "aucun" : `−${tolerance.toFixed(1)}`}</span>
+            <label className="checkbox">
+              <input type="checkbox" checked={strictBilan} onChange={(e) => setStrictBilan(e.target.checked)} />
+              <span>
+                Respecter strictement le bilan d'attributs
+                <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                  {strictBilan
+                    ? "Des maisons sont démolies jusqu'à ce que Bonheur, Argent, Santé et Sécurité"
+                      + " incendie de l'île repassent à zéro. Sur une grande île, cela en rase"
+                      + " jusqu'à neuf sur dix et laisse services et routes en place."
+                    : "Décoché : aucune maison n'est démolie pour tenir le bilan. Il est affiché"
+                      + " avec le résultat, par maison et par attribut — à toi de juger le risque."
+                      + " La règle n'a pas encore été vérifiée en jeu."}
+                </span>
+              </span>
             </label>
+            {strictBilan && (
+              <label className="slider">
+                <span style={{ color: "var(--muted)", fontSize: 12 }}>Risque toléré</span>
+                <input type="range" min={0} max={50} step={5} value={Math.round(tolerance * 10)}
+                  onChange={(e) => setTolerance(parseInt(e.target.value) / 10)} />
+                <span className="muted">{tolerance === 0 ? "aucun" : `−${tolerance.toFixed(1)}`}</span>
+              </label>
+            )}
             <label className="slider">
               <span style={{ color: "var(--muted)", fontSize: 12 }}>Dévotion</span>
               <input type="range" min={0} max={5} step={1} value={DEVOTIONS.indexOf(devotion)}
@@ -340,23 +363,29 @@ export function IslandPlanner({ onClose }: Props) {
               {devotion === 0
                 ? "Sans dévotion, la divinité tutélaire ne rend que l'effet de zone de son autel."
                 : `Cérès l'emporte : Population +${DEVOTION_POP(devotion)} sur CHAQUE maison de l'île, sans sol ni permis.`}
-              {" "}Attention, l'effet est à double tranchant : plus d'habitants par maison
-              alourdit le malus de rang de cité, donc le garde-fou rase davantage. Mesuré sur la
-              carte continentale — sans tolérance la dévotion FAIT PERDRE 20 %, avec une
-              tolérance de 3 elle fait gagner 34 % (70 057 → 93 622 habitants). Les deux
-              réglages se tiennent.
+              {strictBilan && (
+                <>
+                  {" "}Attention, l'effet est à double tranchant : plus d'habitants par maison
+                  alourdit le malus de rang de cité, donc le garde-fou rase davantage. Mesuré sur la
+                  carte continentale — sans tolérance la dévotion FAIT PERDRE 20 %, avec une
+                  tolérance de 3 elle fait gagner 34 % (70 057 → 93 622 habitants). Les deux
+                  réglages se tiennent.
+                </>
+              )}
             </span>
-            <span className="muted" style={{ fontSize: 11 }}>
-              {tolerance === 0
-                ? "Aucun attribut vital ne peut être négatif : une seule maison en déficit fait raser jusqu'au retour à zéro. C'est le comportement strict."
-                : `Chaque maison peut être en déficit de ${tolerance.toFixed(1)} sur un attribut vital. `
-                  + "En jeu la sécurité incendie est un TAUX DE RISQUE, pas une interdiction : "
-                  + "plus d'incendies et d'émeutes, mais une ville bien plus grande."}
-              {" "}Le malus de rang de cité s'applique par maison et atteint −7 dès 30 000 habitants,
-              alors qu'une maison plafonne à +7 : sans tolérance, aucune ville romaine ne dépasse
-              ce seuil, quelle que soit la surface. Mesuré sur la carte continentale du DLC :
-              7 186 habitants sans risque, 34 257 à −1,0, 70 057 à −3,0.
-            </span>
+            {strictBilan && (
+              <span className="muted" style={{ fontSize: 11 }}>
+                {tolerance === 0
+                  ? "Aucun attribut vital ne peut être négatif : une seule maison en déficit fait raser jusqu'au retour à zéro."
+                  : `Chaque maison peut être en déficit de ${tolerance.toFixed(1)} sur un attribut vital. `
+                    + "En jeu la sécurité incendie est un TAUX DE RISQUE, pas une interdiction : "
+                    + "plus d'incendies et d'émeutes, mais une ville bien plus grande."}
+                {" "}Le malus de rang de cité s'applique par maison et atteint −7 dès 30 000 habitants,
+                alors qu'une maison plafonne à +7 : sans tolérance, aucune ville romaine ne dépasse
+                ce seuil, quelle que soit la surface. Mesuré sur la carte continentale du DLC :
+                7 186 habitants sans risque, 34 257 à −1,0, 70 057 à −3,0.
+              </span>
+            )}
           </>
         )}
 
@@ -431,14 +460,19 @@ export function IslandPlanner({ onClose }: Props) {
               {["Happiness", "Money", "Health", "FireSafety"].map((k) => {
                 const v = result.attrsTotal[k] ?? 0;
                 const lbl: Record<string, string> = { Happiness: "🙂", Money: "💰", Health: "❤", FireSafety: "🔥" };
+                // un total brut ne dit rien sans le nombre de maisons qui le porte : le déficit
+                // se lit PAR MAISON, à côté du total
+                const parMaison = result.houses ? v / result.houses : 0;
                 return (
                   <span key={k} style={{ color: v >= 0 ? "#8bc34a" : "#ff8a85", marginRight: 8 }}>
                     {lbl[k]} {v >= 0 ? "+" : ""}{Math.round(v).toLocaleString("fr")}
+                    {v < 0 && <span style={{ fontSize: "0.85em" }}> ({parMaison.toFixed(1)}/maison)</span>}
                   </span>
                 );
               })}
               <div className="muted" style={{ fontSize: "0.85em" }}>
                 total sur toutes les maisons, malus de rang de cité compris
+                {!strictBilan && !result.viable && " — bilan indicatif : aucune maison n'a été démolie pour le compenser"}
               </div>
             </div>
             {/* MAIN-D'ŒUVRE. Un atelier réclame la main-d'œuvre d'un palier précis, sans
