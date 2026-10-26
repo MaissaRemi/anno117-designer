@@ -67,7 +67,7 @@ Principes qui tranchent les choix de chaque étape :
 
 Légende : ✅ fait · 🔧 en cours · ⏳ à faire.
 
-### Étape 1 — L'instrument de mesure 🔧
+### Étape 1 — L'instrument de mesure ✅
 
 Sans lui, aucune étape suivante n'est jugeable.
 
@@ -167,4 +167,23 @@ ordre de levier :
 Relevée sur `dev` à `200e559`, réglages par défaut de l'interface (palier sommet du monde,
 recette `auto`, seuil 80 %, tolérance nulle, sans options), hauteurs de terrain chargées.
 
-_(rempli par l'étape 1)_
+| île | ms | maisons | habitants | svc/maison | maisons % | services % | routes % | vide % |
+|---|---|---|---|---|---|---|---|---|
+| `roman_island_small_01` | 2 276 | 375 | 7 406 | 0,27 | 24,7 | 26,5 | 24,2 | 23,5 |
+| `roman_island_medium_01` | 3 760 | 903 | 23 492 | 0,24 | 29,6 | 27,2 | 24,0 | 16,1 |
+| `roman_island_medium_05` | 4 792 | 344 | 11 542 | 0,78 | 9,5 | 35,4 | 23,7 | 29,2 |
+| `roman_island_large_03` | 7 438 | 320 | 9 966 | **1,95** | 3,9 | 23,1 | 24,9 | **46,5** |
+| `celtic_island_small_01` | 2 442 | 176 | 3 570 | 0,81 | 11,2 | 30,6 | 22,9 | **33,2** |
+| `celtic_island_medium_04` | 2 613 | 243 | 4 982 | 0,78 | 9,3 | 25,9 | 23,4 | **39,1** |
+| `celtic_island_large_07` | 7 100 | 245 | 4 992 | **1,24** | 4,7 | 23,7 | 23,3 | **46,1** |
+
+Tous livrés `viable`. Quatre îles sur sept déclenchent `terre-vide`, deux `services-par-maison`.
+Les services occupent plus de sol que les maisons sur six îles sur sept ; les routes prennent
+23 à 25 % partout, quelle que soit la population logée.
+
+Commande :
+
+```
+QUALITY=1 QUALITY_OUT=<dossier> QUALITY_TAG=ref pnpm vitest run src/optimizer/planQuality.sweep.test.ts
+python tools/render_plan.py <dossier>/ref-celtic_island_large_07.json
+```

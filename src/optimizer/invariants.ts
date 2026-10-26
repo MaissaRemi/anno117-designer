@@ -8,6 +8,13 @@ import { uniqueCap } from "../economy/uniques";
 import { SHRINE_TYPE, VITAL_ATTRS } from "../economy/attributes";
 import type { IslandPlanResult } from "./islandPlan";
 import { verdictViable } from "./viability";
+import { planQuality } from "./planQuality";
+
+/**
+ * Part de terre constructible laissée vide au-delà de laquelle un plan est suspect. Une île
+ * réelle garde des bordures déchiquetées et des lobes inaccessibles — 30 % laisse cette marge.
+ */
+export const TERRE_VIDE_MAX = 30;
 
 /**
  * ═══ CE QU'UN PLAN D'ÎLE DOIT RESPECTER ═══════════════════════════════════════════════
@@ -286,6 +293,21 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
       `${unserved.length}/${r.exploited.length} exploitation(s) sans entrepôt à portée `
       + `dans le plan LIVRÉ — elles auraient dû en sortir `
       + `(${[...byType.entries()].map(([t, n]) => `${t}×${n}`).join(", ")})`);
+  }
+
+  // ═══ USAGE DU SOL ═══════════════════════════════════════════════════════════════════
+  // Les règles qui précèdent vérifient qu'un plan est cohérent, pas qu'il a du sens. Mesuré le
+  // 2026-10-26 sur `celtic_island_large_07` : 313 services pour 245 maisons, 45 % de la terre
+  // vide, et aucune violation. Gravité `suspect` : le seuil est un repère, pas une loi du jeu.
+  const q = planQuality(r, grid, lookup);
+  if (q.counts.service > q.counts.residence) {
+    add("services-par-maison", "suspect",
+      `${q.counts.service} services pour ${q.counts.residence} maisons (${q.servicesPerHouse} par maison)`);
+  }
+  if (q.pct.free > TERRE_VIDE_MAX) {
+    add("terre-vide", "suspect",
+      `${q.pct.free} % de la terre constructible laissée vide (maisons ${q.pct.residence} %,`
+      + ` services ${q.pct.service} %, routes ${q.pct.roads} %)`);
   }
 
   // Bâtiment dont la TAILLE n'a pas pu être lue des archives : l'extraction replie sur 3×3
