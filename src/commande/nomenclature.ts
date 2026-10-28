@@ -136,15 +136,28 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
   const chaine: Tier[] = sommet ? residentialChainExtended(sommet.guid) : [];
 
   // ─── SERVICES : LA RECETTE ──────────────────────────────────────────────────────────
+  // Chaque palier se juge dans SA lignée : en Albion, les ouvriers natifs (Forgerons,
+  // Aldermen) ne sont pas dans la lignée romanisée des Nobles. Un évaluateur par palier logé.
   const choix = commande.services ?? "minimal";
+  const evals = new Map<string, { chaine: Tier[]; ev: ReturnType<typeof compileTierEvaluator> }>();
+  const evalDe = (g: string) => {
+    let e = evals.get(g);
+    if (!e) {
+      const ch = residentialChainExtended(g);
+      e = { chaine: ch, ev: compileTierEvaluator(ch, { goodsMet: true }) };
+      evals.set(g, e);
+    }
+    return e;
+  };
+  const recetteMinimale = (g: string): string[] =>
+    [...(candidateRecipes(residentialChainExtended(g), lookup, { keep: 1, keepFallback: 0, keepOpened: 0 })[0]?.serviceIds ?? [])];
   let servicesIds: string[] = [];
   if (sommet) {
     if (choix === "complet") {
       servicesIds = [...new Set(chaine.flatMap((t) => t.services.map((s) => s.building)))]
         .filter((id): id is string => !!id && !!lookup(id) && rangeOf(lookup(id)!) > 0);
     } else if (choix === "minimal") {
-      const r = candidateRecipes(chaine, lookup, { keep: 1, keepFallback: 0, keepOpened: 0 })[0];
-      servicesIds = r ? [...r.serviceIds] : [];
+      servicesIds = recetteMinimale(sommet.guid);
     } else {
       servicesIds = choix.ids.filter((id) => {
         const ok = !!lookup(id);
@@ -153,36 +166,27 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
       });
     }
   }
-  const evaluateur = chaine.length ? compileTierEvaluator(chaine, { goodsMet: true }) : null;
-  let masque = 0;
-  for (const id of servicesIds) {
-    const b = evaluateur?.bitOf.get(id);
-    if (b !== undefined) masque |= 1 << b;
-  }
-
-  // ─── PALIER ATTEINT ET CAPACITÉ, LIGNE PAR LIGNE ────────────────────────────────────
-  const capacite = new Map<string, number>();
-  const paliers: Nomenclature["paliers"] = [];
-  const capaciteDe = (t: Tier): number => {
-    if (!evaluateur) return t.capacityDefault;
-    const k = chaine.findIndex((c) => c.guid === t.guid);
-    if (k < 0) return t.capacityDefault;
-    return evaluateur.evaluateAt(k, masque)?.cap ?? evaluateur.evaluate(masque).cap;
-  };
-  for (const [guid] of maisons) {
-    const t = tierByGuid(guid)!;
-    const k = chaine.findIndex((c) => c.guid === guid);
-    // le palier demandé s'il est atteignable avec cette recette, sinon le meilleur qu'elle permet
-    const atteignable = !evaluateur || (k >= 0 && evaluateur.evaluateAt(k, masque) !== null);
-    const atteint = atteignable ? t : evaluateur.evaluate(masque).tier;
-    const cap = capaciteDe(atteint);
-    capacite.set(guid, cap);
-    paliers.push({ demande: t.name, atteint: atteint.name, capacite: cap });
-    if (atteint.guid !== guid) {
-      avertissements.push(`${t.name} : les services retenus ne franchissent pas ses seuils —`
-        + ` les maisons resteront ${atteint.name}`);
+  const masqueDe = (ev: ReturnType<typeof compileTierEvaluator>) => {
+    let m = 0;
+    for (const id of servicesIds) {
+      const b = ev.bitOf.get(id);
+      if (b !== undefined) m |= 1 << b;
     }
-  }
+    return m;
+  };
+  /** Le palier franchit-il ses seuils avec les services retenus ? */
+  const ouvre = (t: Tier): boolean => {
+    const { chaine: ch, ev } = evalDe(t.guid);
+    return ev.evaluateAt(ch.length - 1, masqueDe(ev)) !== null;
+  };
+  /** Palier réellement atteint par une maison de `t` : lui-même, sinon le meilleur de sa lignée. */
+  const atteintDe = (t: Tier): Tier => (ouvre(t) ? t : evalDe(t.guid).ev.evaluate(masqueDe(evalDe(t.guid).ev)).tier);
+  const capaciteDe = (t: Tier): number => {
+    const { chaine: ch, ev } = evalDe(t.guid);
+    const m = masqueDe(ev);
+    return ev.evaluateAt(ch.length - 1, m)?.cap ?? ev.evaluate(m).cap;
+  };
+  const capacite = new Map<string, number>();
 
   // ─── PRODUCTION : PANIER, COMPLÉTION, BIENS DES MAISONS ─────────────────────────────
   const production = new Map<string, { nombre: number; raison: string }>();
@@ -224,6 +228,11 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
   // ─── MAIN-D'ŒUVRE : POINT FIXE ──────────────────────────────────────────────────────
   // Les maisons ouvrières agrandissent le quartier, donc ses services, qui réclament à leur
   // tour de la main-d'œuvre. Quelques tours suffisent : chaque tour n'ajoute que le reliquat.
+  //
+  // Et un palier ouvrier a ses PROPRES seuils : la recette minimale des Patriciens ne loge pas
+  // un Plébéien. Mesuré : 16 maisons de Plébéiens « commandées » par la main-d'œuvre, et aucune
+  // à son palier. Si un palier ouvrier n'est pas ouvert, sa recette minimale rejoint les
+  // services, et l'on recommence — sauf liste explicite du joueur, qui est respectée et signalée.
   const kontor = pickKontorDef(catalog, commande.region);
   const offreComptoir = workforceGrant(kontor?.id);
   const ouvriers = new Map<string, number>();
@@ -232,62 +241,88 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
   let prodBesoins: Record<string, number> = {};
   let sol = solve([], { includeProduction: false, includeServices: false, includeWorkforce: false, capacities: {} });
   let demande: Record<string, number> = {}, offre: Record<string, number> = {}, manque: Record<string, number> = {};
-  for (let tour = 0; tour < 8; tour++) {
-    const toutes = new Map(maisons);
-    for (const [g, n] of ouvriers) toutes.set(g, (toutes.get(g) ?? 0) + n);
-    const nMaisons = [...toutes.values()].reduce((a, b) => a + b, 0);
-    const surfaceQuartiers = nMaisons * SURFACE_PAR_MAISON;
+  for (let passe = 0; passe < 3; passe++) {
+    ouvriers.clear();
+    capacite.clear();
+    for (const [g] of maisons) capacite.set(g, capaciteDe(atteintDe(tierByGuid(g)!)));
+    for (let tour = 0; tour < 8; tour++) {
+      const toutes = new Map(maisons);
+      for (const [g, n] of ouvriers) toutes.set(g, (toutes.get(g) ?? 0) + n);
+      const nMaisons = [...toutes.values()].reduce((a, b) => a + b, 0);
+      const surfaceQuartiers = nMaisons * SURFACE_PAR_MAISON;
 
-    lignesServices = servicesIds.map((id) => {
-      const d = lookup(id)!;
-      return {
-        defId: id, nom: d.name, nombre: copiesPourCouvrir(d, surfaceQuartiers), role: "service" as const,
-        raison: `besoin du palier, portée ${rangeOf(d)}`, emprise: empriseDe(d),
-      };
-    });
-    lignesInstitutions = commande.institutions === false ? [] : institutionDefs(commande.region)
-      .filter((i) => { const d = lookup(i.defId); return !!d && d.uniqueType !== SHRINE_TYPE; })
-      .map((i) => {
-        const d = lookup(i.defId)!;
-        const effets = Object.entries(i.attrs).map(([k, v]) => `${k} ${v > 0 ? "+" : ""}${v}`).join(", ");
+      lignesServices = servicesIds.map((id) => {
+        const d = lookup(id)!;
         return {
-          defId: i.defId, nom: d.name, nombre: copiesPourCouvrir(d, surfaceQuartiers), role: "institution" as const,
-          raison: `compense le rang de cité (${effets})`, emprise: empriseDe(d),
+          defId: id, nom: d.name, nombre: copiesPourCouvrir(d, surfaceQuartiers), role: "service" as const,
+          raison: `besoin du palier, portée ${rangeOf(d)}`, emprise: empriseDe(d),
         };
       });
-    sol = biensDe(toutes);
-    prodBesoins = produire ? sol.productionCounts : {};
+      lignesInstitutions = commande.institutions === false ? [] : institutionDefs(commande.region)
+        .filter((i) => { const d = lookup(i.defId); return !!d && d.uniqueType !== SHRINE_TYPE; })
+        .map((i) => {
+          const d = lookup(i.defId)!;
+          const effets = Object.entries(i.attrs).map(([k, v]) => `${k} ${v > 0 ? "+" : ""}${v}`).join(", ");
+          return {
+            defId: i.defId, nom: d.name, nombre: copiesPourCouvrir(d, surfaceQuartiers), role: "institution" as const,
+            raison: `compense le rang de cité (${effets})`, emprise: empriseDe(d),
+          };
+        });
+      sol = biensDe(toutes);
+      prodBesoins = produire ? sol.productionCounts : {};
 
-    const charge: Record<string, number> = {};
-    const facturer = (defId: string, n: number) => { if (n > 0) charge[defId] = (charge[defId] ?? 0) + n; };
-    for (const [id, p] of production) facturer(id, p.nombre);
-    for (const [id, n] of Object.entries(prodBesoins)) facturer(id, n);
-    for (const l of [...lignesServices, ...lignesInstitutions]) facturer(l.defId, l.nombre);
-    demande = {};
-    for (const [id, n] of Object.entries(charge)) {
-      for (const w of economy.buildingWorkforce[id] ?? []) demande[w.tier] = (demande[w.tier] ?? 0) + n * w.amount;
+      const charge: Record<string, number> = {};
+      const facturer = (defId: string, n: number) => { if (n > 0) charge[defId] = (charge[defId] ?? 0) + n; };
+      for (const [id, p] of production) facturer(id, p.nombre);
+      for (const [id, n] of Object.entries(prodBesoins)) facturer(id, n);
+      for (const l of [...lignesServices, ...lignesInstitutions]) facturer(l.defId, l.nombre);
+      demande = {};
+      for (const [id, n] of Object.entries(charge)) {
+        for (const w of economy.buildingWorkforce[id] ?? []) demande[w.tier] = (demande[w.tier] ?? 0) + n * w.amount;
+      }
+      offre = { ...offreComptoir };
+      for (const [g, pop] of Object.entries(residentsDe(toutes))) {
+        const t = tierByGuid(g)!;
+        offre[g] = (offre[g] ?? 0) + pop * t.factor;
+      }
+      manque = {};
+      for (const [g, d] of Object.entries(demande)) {
+        const m = d - (offre[g] ?? 0);
+        if (m > 1e-6) manque[g] = m;
+      }
+      if (commande.mainOeuvre === "signaler" || !Object.keys(manque).length) break;
+      let ajout = false;
+      for (const [g, m] of Object.entries(manque)) {
+        const t = tierByGuid(g);
+        if (!t?.residenceId || worldOf(t.region) !== monde) continue; // signalé plus bas
+        if (!capacite.has(g)) capacite.set(g, capaciteDe(t));
+        const parMaison = (capacite.get(g) ?? t.capacityDefault) * t.factor;
+        const n = Math.ceil(m / Math.max(1e-6, parMaison));
+        if (n > 0) { ouvriers.set(g, (ouvriers.get(g) ?? 0) + n); ajout = true; }
+      }
+      if (!ajout) break;
     }
-    offre = { ...offreComptoir };
-    for (const [g, pop] of Object.entries(residentsDe(toutes))) {
-      const t = tierByGuid(g)!;
-      offre[g] = (offre[g] ?? 0) + pop * t.factor;
+    const fermes = [...ouvriers.keys()].map((g) => tierByGuid(g)!).filter((t) => !ouvre(t));
+    if (!fermes.length) break;
+    if (typeof choix === "object") {
+      for (const t of fermes) avertissements.push(`${t.name} (main-d'œuvre) : les services choisis ne franchissent pas ses seuils`);
+      break;
     }
-    manque = {};
-    for (const [g, d] of Object.entries(demande)) {
-      const m = d - (offre[g] ?? 0);
-      if (m > 1e-6) manque[g] = m;
+    const avant = servicesIds.length;
+    servicesIds = [...new Set([...servicesIds, ...fermes.flatMap((t) => recetteMinimale(t.guid))])];
+    if (servicesIds.length === avant) break;
+  }
+
+  // ─── PALIER ATTEINT ET CAPACITÉ, LIGNE PAR LIGNE ────────────────────────────────────
+  const paliers: Nomenclature["paliers"] = [];
+  for (const [guid] of maisons) {
+    const t = tierByGuid(guid)!;
+    const atteint = atteintDe(t);
+    paliers.push({ demande: t.name, atteint: atteint.name, capacite: capacite.get(guid)! });
+    if (atteint.guid !== guid) {
+      avertissements.push(`${t.name} : les services retenus ne franchissent pas ses seuils —`
+        + ` les maisons resteront ${atteint.name}`);
     }
-    if (commande.mainOeuvre === "signaler" || !Object.keys(manque).length) break;
-    let ajout = false;
-    for (const [g, m] of Object.entries(manque)) {
-      const t = tierByGuid(g);
-      if (!t?.residenceId || worldOf(t.region) !== monde) continue; // signalé plus bas
-      if (!capacite.has(g)) capacite.set(g, capaciteDe(t));
-      const parMaison = (capacite.get(g) ?? t.capacityDefault) * t.factor;
-      const n = Math.ceil(m / Math.max(1e-6, parMaison));
-      if (n > 0) { ouvriers.set(g, (ouvriers.get(g) ?? 0) + n); ajout = true; }
-    }
-    if (!ajout) break;
   }
 
   // ─── LIGNES ─────────────────────────────────────────────────────────────────────────

@@ -49,6 +49,12 @@ export interface PlanQuartiers {
   /** Consommateurs d'eau retirés faute de raccordement : où ils auraient dû être. */
   inactifs?: PlacedBuilding[];
   avertissements: string[];
+  /**
+   * L'île telle que la pose l'a vue : masque constructible des moteurs (comptoir réservé,
+   * montagnes bloquées, masse principale), centre de la ville, emprise du comptoir. La
+   * production (`production.ts`) se pose sur ce même masque, autour de ce même centre.
+   */
+  ile: { base: GridShape; centre: { x: number; y: number }; comptoir?: { x: number; y: number; w: number; h: number } };
 }
 
 /** Petit tas binaire : (distance, indice) — l'indice départage, donc l'ordre est total. */
