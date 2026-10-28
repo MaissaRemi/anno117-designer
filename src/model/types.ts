@@ -1,5 +1,7 @@
 // Modèle de données central de l'éditeur Anno 117.
 
+import type { RoadType } from "../engine/roads";
+
 export type Rotation = 0 | 45 | 90 | 135 | 180 | 225 | 270 | 315;
 
 export type RadiusKind = "service" | "boost";
@@ -118,6 +120,8 @@ export interface Layout {
   fields: FieldTile[];
   roads: RoadTile[];
   aqueducts?: AqueductTile[]; // optionnel (compat persistance) : conduites d'eau
+  /** Type des routes du plan : il allonge la portée des services (cf. engine/roads). Absent = terre. */
+  roadType?: RoadType;
 }
 
 /** Catalogue persistant des définitions de bâtiments. */

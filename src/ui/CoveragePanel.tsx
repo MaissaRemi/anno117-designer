@@ -3,6 +3,8 @@ import { useStore } from "../state/store";
 import { makeLookup } from "../engine/rules";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { Modal } from "./Modal";
+import { RoadTypeSelect } from "./components/RoadTypeSelect";
+import { DEFAULT_ROAD_TYPE } from "../engine/roads";
 
 interface Props {
   onClose: () => void;
@@ -18,6 +20,7 @@ export function CoveragePanel({ onClose, asPanel }: Props) {
   const layout = useStore((s) => s.layout);
   const catalog = useStore((s) => s.catalog);
   const setHighlight = useStore((s) => s.setCoverageHighlight);
+  const setRoadType = useStore((s) => s.setRoadType);
   const lookup = useMemo(() => makeLookup(catalog), [catalog]);
 
   const [report, setReport] = useState<CoverageReport>(() => analyzeCoverage(layout, lookup));
@@ -43,6 +46,7 @@ export function CoveragePanel({ onClose, asPanel }: Props) {
           TOUS leurs services à rayon connu (<b style={{ color: color(report.fullyCoveredPct) }}>{report.fullyCoveredPct}%</b>).
           Clique « 👁 » pour surligner en rouge les maisons hors rayon d'un service.
         </p>
+        <RoadTypeSelect value={layout.roadType ?? DEFAULT_ROAD_TYPE} onChange={setRoadType} />
 
         {report.services.length === 0 && (
           <p className="muted">Aucune résidence (ou aucun service requis). Pose des résidences d'abord.</p>

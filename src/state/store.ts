@@ -15,6 +15,7 @@ import type { ResourceProfile } from "../economy/resources";
 import type { OptimizeResult } from "../optimizer/types";
 import { buildIslandGrid } from "../data/islandGrid";
 import { regionOfIsland, type WorldRegion } from "../data/islands";
+import type { RoadType } from "../engine/roads";
 
 export type Tool =
   | "select"
@@ -76,6 +77,8 @@ interface State {
   loadAll: (catalog: Catalog, layout: Layout) => void;
   loadIsland: (id: string) => void;
   applyOptimization: (result: OptimizeResult) => void;
+  /** Type des routes du plan : change la portée affichée des services (annulable). */
+  setRoadType: (t: RoadType) => void;
   setCoverageHighlight: (cells: string[] | null) => void;
 
   // --- navigation UI (session, non persistée) ---
@@ -309,6 +312,10 @@ export const useStore = create<State>((set, get) => {
       persist();
     },
 
+    setRoadType: (t) =>
+      commit((l) => {
+        l.roadType = t;
+      }),
     applyOptimization: (result) =>
       commit((l) => {
         const lockedUids = new Set(l.buildings.filter((b) => b.locked).map((b) => b.uid));
@@ -322,6 +329,7 @@ export const useStore = create<State>((set, get) => {
         l.buildings = [...lockedBuildings, ...result.buildings];
         l.fields = [...lockedFields, ...result.fields];
         l.roads = Array.from(roadSet.values());
+        if (result.roadType) l.roadType = result.roadType;
         // aqueducs : même politique que les routes (les dessinés à la main restent)
         const kept = (l.aqueducts ?? []).filter((a) => !a.gen);
         l.aqueducts = [...kept, ...(result.aqueducts ?? []).map((a) => ({ ...a, gen: true }))];

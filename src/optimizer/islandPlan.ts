@@ -23,6 +23,7 @@ import { regionOfIsland } from "../data/islands";
 // le garde-fou strict y cohabitent, et personne ne réécrit sa propre version du test.
 import { populationEffective, severiteVitale, verdictViable } from "./viability";
 import { pruneDeadEnds } from "./roadCleanup";
+import type { RoadType } from "../engine/roads";
 
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
@@ -100,6 +101,8 @@ export interface IslandPlanRequest {
    * interdiction. Voir `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`, étape 2.
    */
   viability?: "indicatif" | "strict";
+  /** Type des routes du plan : allonge les portées-rue (cf. engine/roads). Défaut terre. */
+  roadType?: RoadType;
   /**
    * DÉVOTION de l'île, 0 par défaut. État de partie, comme les permis.
    *
@@ -169,6 +172,8 @@ export interface IslandPlanResult {
   roads: RoadTile[];
   fields: FieldTile[];
   aqueducts: AqueductTile[]; // conduites d'eau (réseau source → consommateurs)
+  /** type de route pour lequel les portées ont été calculées */
+  roadType?: RoadType;
   water: {
     sources: number;
     capacity: number;
@@ -276,7 +281,7 @@ function construireRecettes(
     const keepFallback = budget >= 5 ? 2 : 1;
     const keepOpened = budget >= 5 ? 2 : 1;
     const keep = Math.max(1, budget - keepFallback - keepOpened);
-    for (const r of candidateRecipes(chain, lookup, { keep, keepFallback, keepOpened })) {
+    for (const r of candidateRecipes(chain, lookup, { keep, keepFallback, keepOpened, roadType: req.roadType })) {
       trials.push(r.serviceIds);
     }
     // La recette COMPLÈTE en dernier recours — mais seulement tant qu'elle est abordable.
@@ -612,7 +617,7 @@ export function planIslandImport(
         institutions: patron ? [...institutions, patron] : institutions,
         patronAttrs: deityAttrs,
         permits: req.permits, reserved: kontorRect, tolerance: req.tolerance,
-        viabilityGate: regle.strict,
+        viabilityGate: regle.strict, roadType: req.roadType,
       }),
       serviceIds ? new Set(serviceIds) : null,
     );
@@ -1345,6 +1350,7 @@ export function planIslandImport(
     const hasWaterConsumers = water.consumers.length > 0;
     return {
       mode: "import",
+      roadType: req.roadType,
       tierGuid: req.tierGuid,
       tierName: tier.name,
       cap,

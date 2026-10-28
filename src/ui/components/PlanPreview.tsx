@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { footprintCells, footprintSize } from "../../engine/geometry";
 import type { DefLookup } from "../../engine/rules";
 import { economy } from "../../economy/economy";
-import type { BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../../model/types";
+import type { GridShape, PlacedBuilding, RoadTile } from "../../model/types";
+import { planningRange, type RoadType } from "../../engine/roads";
 
 /**
  * Carte de prévisualisation d'un plan — colorée par PALIER ATTEINT, navigable, et capable
@@ -27,6 +28,8 @@ export interface PlanPreviewProps {
   roads: RoadTile[];
   aqueducts?: { x: number; y: number }[];
   lookup: DefLookup;
+  /** Type des routes du plan : la portée affichée au survol en dépend (cf. engine/roads). */
+  roadType?: RoadType;
   /** Côté MAXIMAL du rendu, en pixels CSS. La carte s'adapte sinon à la place disponible. */
   size?: number;
 }
@@ -47,7 +50,6 @@ const hexToRgb = (h: string): RGB => [
   parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16),
 ];
 
-const rangeOf = (d: BuildingDef): number => d.streetRange || d.radius?.range || 0;
 
 /**
  * Côté du tampon de dessin, en pixels. Volontairement DÉCORRÉLÉ de la taille affichée :
@@ -59,7 +61,7 @@ const rangeOf = (d: BuildingDef): number => d.streetRange || d.radius?.range || 
  */
 const BUFFER = 1024;
 
-export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 720 }: PlanPreviewProps) {
+export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, roadType, size = 720 }: PlanPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLCanvasElement | null>(null);
   const hlRef = useRef<HTMLCanvasElement | null>(null);
@@ -138,8 +140,9 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
   // ---- couche de SURLIGNAGE : portée-rue du service survolé ----
   const hovered = hover >= 0 ? buildings[hover] : null;
   const hoveredDef = hovered ? lookup(hovered.defId) : null;
+  const hoveredRange = hoveredDef ? planningRange(hoveredDef, roadType) : 0;
   useEffect(() => {
-    if (!hovered || !hoveredDef || rangeOf(hoveredDef) <= 0) { hlRef.current = null; return; }
+    if (!hovered || !hoveredDef || hoveredRange <= 0) { hlRef.current = null; return; }
     const img = new ImageData(W, H);
     const px = img.data;
     const put = (c: number, col: RGB) => {
@@ -148,7 +151,7 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
     };
     // BFS le long des routes, même sémantique que `streetCoverage` de l'analyseur :
     // graines = routes adjacentes à l'emprise (distance 1), limite = portée × cellules/tuile
-    const limit = rangeOf(hoveredDef) * cpt;
+    const limit = hoveredRange * cpt;
     const cells = footprintCells(hoveredDef, hovered.x, hovered.y, hovered.rotation, cpt);
     const own = new Set(cells.map((c) => c.y * W + c.x));
     const dist = new Map<number, number>();
@@ -181,7 +184,7 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
     off.width = W; off.height = H;
     off.getContext("2d")!.putImageData(img, 0, 0);
     hlRef.current = off;
-  }, [hovered, hoveredDef, roadSet, W, H, cpt]);
+  }, [hovered, hoveredDef, hoveredRange, roadSet, W, H, cpt]);
 
   // ---- composition (tout en pixels de TAMPON) ----
   const paint = useCallback(() => {
@@ -260,7 +263,7 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, size = 
     setHover((h) => (h === idx ? h : idx));
   };
 
-  const legendRange = hoveredDef && rangeOf(hoveredDef) > 0 ? rangeOf(hoveredDef) : null;
+  const legendRange = hoveredRange > 0 ? hoveredRange : null;
   return (
     <div className="plan-preview-box">
       <canvas

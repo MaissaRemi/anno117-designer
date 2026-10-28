@@ -9,10 +9,8 @@ import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
 import { MAX_RUN, MOUNTAIN_BLOCK_RADIUS, needsWater, planWater, type WaterPlanResult } from "./waterPlan";
 import { makeStreetGrid } from "./streetGrid";
+import { planningRange, type RoadType } from "../engine/roads";
 
-// Portée de PLANIFICATION = streetRange (distance le long des rues, cf.
-// GAME_MECHANICS.md §1). radius.range en repli.
-const rangeOf = (d: BuildingDef): number => d.streetRange || d.radius?.range || 0;
 
 export interface LatticeOpts {
   coverageFloor?: number; // 0..1, défaut 1
@@ -47,6 +45,8 @@ export interface LatticeOpts {
   patronAttrs?: Record<string, number>;
   /** Permis détenus en partie, par GUID de permis. Voir `economy/uniques`. */
   permits?: Record<string, number>;
+  /** Type des routes du plan : allonge les portées-rue (cf. engine/roads). Défaut terre. */
+  roadType?: RoadType;
   /** Emprise réservée à un bâtiment posé plus tard (le comptoir) : le réseau d'eau doit
    *  l'éviter, le masque de terre ne suffit pas à l'en protéger. */
   reserved?: { x: number; y: number; w: number; h: number };
@@ -166,6 +166,9 @@ export function planLattice(
   const rw = resDef.size.w, rh = resDef.size.h;
   const W = grid.w, H = grid.h, N = W * H;
 
+  // Portée de PLANIFICATION = streetRange (distance le long des rues, cf.
+  // GAME_MECHANICS.md §1) au type de route du plan ; radius.range en repli.
+  const rangeOf = (d: BuildingDef): number => planningRange(d, opts.roadType);
   const wanted = opts.serviceIds ? new Set(opts.serviceIds) : null;
   const tierSvcIds = new Set(tier.services.map((s) => s.building).filter((b): b is string => !!b));
   // Les institutions sont traitées comme des types de service SUPPLÉMENTAIRES : même
