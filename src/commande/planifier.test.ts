@@ -7,7 +7,7 @@ import { makeLookup, roadConnected, rootedRoadSet } from "../engine/rules";
 import { footprintSize } from "../engine/geometry";
 import { economy } from "../economy/economy";
 import { lotsDeProduction } from "./production";
-import { planifierCommande } from "./planifier";
+import { planifierCommande, resumer } from "./planifier";
 import type { Commande } from "./nomenclature";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
@@ -91,5 +91,16 @@ describe("planifier une commande : quartiers et production sur la même île", (
     const poses = p.lignes.filter((l) => l.role === "production").reduce((s, l) => s + l.pose, 0);
     expect(poses).toBe(15);
     expect(verifier(p).chevauchements).toBe(0);
+  });
+});
+
+describe("ce qui traverse la frontière du worker", () => {
+  it("le résumé se clone, et ne porte ni la zone ni le masque de l'île", () => {
+    const c: Commande = { region: "Roman", maisons: [{ tierGuid: PLEBEIENS, maisons: 40 }] };
+    const p = planifierCommande(grille("roman_island_medium_01"), c, catalog, lookup);
+    const r = structuredClone(resumer(p));
+    expect(r.buildings.length).toBe(p.layout.buildings.length);
+    expect(r.servi).toBe(p.servi);
+    expect(JSON.stringify(r).length).toBeLessThan(JSON.stringify(p).length / 4);
   });
 });

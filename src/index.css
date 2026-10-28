@@ -171,6 +171,11 @@ label { font-size: 13px; }
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--sp-3); }
 .field > span:first-child { font-size: 12px; color: var(--muted); }
 .field select, .field input { width: 100%; }
+/* une ligne de commande : palier + nombre + retrait, ou bâtiment + nombre + retrait */
+.ligne-commande { display: flex; align-items: center; gap: 6px; margin-bottom: var(--sp-2); }
+.ligne-commande select { flex: 1; min-width: 0; }
+.ligne-commande .nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ligne-commande input[type="number"] { width: 72px; }
 .section-title { font-size: 12px; color: var(--muted); text-transform: none; margin: var(--sp-4) 0 var(--sp-2); }
 
 /* ---- cartes / métriques / résultats ---- */
