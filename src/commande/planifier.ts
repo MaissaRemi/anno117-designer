@@ -100,3 +100,47 @@ export function planifierCommande(
     avertissements: [...q.avertissements, ...p.avertissements],
   };
 }
+
+/**
+ * Ce qui traverse la frontière du worker : le plan à poser et le rapport, sans les masques
+ * de grille (zone, île) qui pèsent plusieurs centaines de milliers de cases pour rien.
+ */
+export interface ResultatCommande {
+  buildings: Layout["buildings"];
+  roads: Layout["roads"];
+  fields: Layout["fields"];
+  aqueducts: NonNullable<Layout["aqueducts"]>;
+  lignes: LignePosee[];
+  manques: string[];
+  avertissements: string[];
+  servi: boolean;
+  habitants: number;
+  maisonsParPalier: Record<string, number>;
+  bilan: Record<string, number>;
+  viable: boolean;
+  nomenclature: PlanQuartiers["nomenclature"];
+  production: { blueprints: number; entrepots: number };
+  qualite: PlanQuality;
+  zone: number;
+}
+
+export function resumer(p: PlanCommande): ResultatCommande {
+  return {
+    buildings: p.layout.buildings,
+    roads: p.layout.roads,
+    fields: p.layout.fields,
+    aqueducts: p.layout.aqueducts ?? [],
+    lignes: p.lignes,
+    manques: p.manques,
+    avertissements: p.avertissements,
+    servi: p.servi,
+    habitants: p.quartiers.habitants,
+    maisonsParPalier: p.quartiers.maisonsParPalier,
+    bilan: p.quartiers.bilan,
+    viable: p.quartiers.viable,
+    nomenclature: p.quartiers.nomenclature,
+    production: { blueprints: p.production.blueprints, entrepots: p.production.entrepots },
+    qualite: p.qualite,
+    zone: p.quartiers.zone.cases,
+  };
+}

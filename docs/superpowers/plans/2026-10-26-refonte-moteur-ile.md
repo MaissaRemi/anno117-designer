@@ -319,11 +319,29 @@ données — une mine d'or peut être posée sur une montagne de fer ; à vérif
 forêts et prairies ne sont pas cartographiées : bûcherons et ruchers se posent avec leur aire
 libre, sans garantie qu'il y ait des arbres.
 
-### Étape 7 — Interface « Commande » ⏳
+### Étape 7 — Interface « Commande » ✅
 
 Panier de maisons, services et production ; bouton « compléter » (`completeBasket`) ; rapport
 servi / refus chiffré ; bilan d'attributs présenté comme un risque. L'onglet « Plan d'île »
 actuel devient le mode « remplir le reste ».
+
+**Livré** : onglet **📋 Commande** (`src/ui/CommandePlanner.tsx`), juste sous l'Éditeur.
+
+- À gauche, la commande : lignes de maisons par palier, recette (minimale / complète),
+  institutions, bâtiments de production cherchés par nom, « compléter les chaînes », biens des
+  maisons importés ou produits, main-d'œuvre logée ou signalée.
+- Le **devis** se recalcule à chaque frappe (`nomenclature`, quelques millisecondes) : nombre de
+  bâtiments par rôle, habitants, surface estimée face à la terre de l'île, avertissements.
+- « Disposer sur l'île » lance `planifierCommande` dans un worker (`planifierWorker.ts`,
+  `runPlanifier.ts`) ; le résumé qui traverse la frontière (`resumer`) laisse les masques de
+  grille de côté. À droite : la carte, servi ou non, les manques chiffrés, le tableau demandé /
+  posé, le bilan d'attributs par maison (indicatif), les biens à importer, l'usage du sol.
+- « Placer sur l'île » transfère le plan dans l'éditeur (`applyOptimization`, routes et aqueducs
+  marqués générés, bâtiments verrouillés préservés).
+
+Vérifié dans le navigateur sur `roman_island_medium_01` : 100 Patriciens + une boulangerie →
+« entièrement servie », 3 224 habitants, 1 chaîne, 2 maisons ouvrières ajoutées par le devis ; le
+plan placé arrive dans l'éditeur (176 bâtiments, champs et aqueducs compris), console vide.
 
 ### Étape 8 — Retrait de l'ancien pipeline ⏳
 
