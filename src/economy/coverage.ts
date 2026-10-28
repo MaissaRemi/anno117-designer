@@ -1,4 +1,5 @@
 import { computeRadiusCoverage, type DefLookup } from "../engine/rules";
+import { planningRange } from "../engine/roads";
 import { footprintCells, gridScale } from "../engine/geometry";
 import type { Layout } from "../model/types";
 import { economy } from "./economy";
@@ -70,7 +71,7 @@ export function analyzeCoverage(
     let s = svc.get(id);
     if (!s) {
       const def = lookup(id);
-      const range = def?.streetRange || def?.radius?.range || 0;
+      const range = def ? planningRange(def, layout.roadType) : 0;
       svc.set(id, (s = {
         serviceId: id, name: def?.name ?? id, range, hasRadius: range > 0,
         present: presentCount.get(id) ?? 0, housesRequiring: 0, housesCovered: 0, pct: 0, uncovered: [],

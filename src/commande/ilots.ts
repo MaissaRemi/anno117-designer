@@ -13,6 +13,7 @@ import { planQuality } from "../optimizer/planQuality";
 import { verdictViable } from "../optimizer/viability";
 import { nomenclature, type Commande } from "./nomenclature";
 import { distancesDeCroissance, type DispositionOpts, type LignePosee, type PlanQuartiers } from "./disposition";
+import { planningRange } from "../engine/roads";
 
 /**
  * ═══ LES ÎLOTS : UNE VILLE QUI SE LIT ═════════════════════════════════════════════════
@@ -237,7 +238,7 @@ export function disposerQuartiers(
     }
     return e;
   };
-  const rangeOf = (d: BuildingDef) => d.streetRange || d.radius?.range || 0;
+  const rangeOf = (d: BuildingDef) => planningRange(d, commande.routes);
   const types = nom.lignes
     .filter((l) => l.role === "service" || l.role === "institution")
     .map((l) => ({ def: lookup(l.defId)!, institution: l.role === "institution" }))

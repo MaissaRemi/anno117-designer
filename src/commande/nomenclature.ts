@@ -9,6 +9,7 @@ import { candidateRecipes } from "../optimizer/recipes";
 import { pickKontorDef } from "../optimizer/kontor";
 import { completeBasket } from "../prodlayout/complete";
 import { normalizeBasket, type BasketLine } from "../prodlayout/basket";
+import { planningRange, type RoadType } from "../engine/roads";
 
 /**
  * ═══ LA COMMANDE, ET CE QU'ELLE COÛTE EN BÂTIMENTS ════════════════════════════════════
@@ -66,6 +67,8 @@ export interface Commande {
    * (`economy/workforce.ts`) : des Patriciens ne font pas tourner un atelier de Plébéiens.
    */
   mainOeuvre?: "loger" | "signaler";
+  /** Type des routes des quartiers : allonge les portées, donc réduit les copies. Défaut terre. */
+  routes?: RoadType;
   /** Terre constructible de l'île, pour avertir si la commande ne tient pas. */
   terre?: number;
 }
@@ -97,15 +100,13 @@ export interface Nomenclature {
   avertissements: string[];
 }
 
-const rangeOf = (d: BuildingDef) => d.streetRange || d.radius?.range || 0;
-
 /**
  * Copies d'un service à portée-rue pour couvrir une zone : pavage en diamants L1 de rayon
  * effectif `portée − pas du peigne`, comme le pose `planLattice`. Un bâtiment unique : une.
  */
-export function copiesPourCouvrir(def: BuildingDef, surface: number): number {
+export function copiesPourCouvrir(def: BuildingDef, surface: number, routes?: RoadType): number {
   if (def.unique) return 1;
-  const r = Math.max(8, rangeOf(def) - PAS_PEIGNE);
+  const r = Math.max(8, planningRange(def, routes) - PAS_PEIGNE);
   return Math.max(1, Math.ceil(surface / (2 * r * r)));
 }
 
@@ -116,6 +117,7 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
   const avertissements: string[] = [];
   const monde = worldOf(commande.region);
   const nom = (id: string) => lookup(id)?.name ?? id;
+  const rangeOf = (d: BuildingDef) => planningRange(d, commande.routes);
 
   // ─── MAISONS COMMANDÉES ─────────────────────────────────────────────────────────────
   const maisons = new Map<string, number>(); // tierGuid → maisons
@@ -150,7 +152,7 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
     return e;
   };
   const recetteMinimale = (g: string): string[] =>
-    [...(candidateRecipes(residentialChainExtended(g), lookup, { keep: 1, keepFallback: 0, keepOpened: 0 })[0]?.serviceIds ?? [])];
+    [...(candidateRecipes(residentialChainExtended(g), lookup, { keep: 1, keepFallback: 0, keepOpened: 0, roadType: commande.routes })[0]?.serviceIds ?? [])];
   let servicesIds: string[] = [];
   if (sommet) {
     if (choix === "complet") {
@@ -254,7 +256,7 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
       lignesServices = servicesIds.map((id) => {
         const d = lookup(id)!;
         return {
-          defId: id, nom: d.name, nombre: copiesPourCouvrir(d, surfaceQuartiers), role: "service" as const,
+          defId: id, nom: d.name, nombre: copiesPourCouvrir(d, surfaceQuartiers, commande.routes), role: "service" as const,
           raison: `besoin du palier, portée ${rangeOf(d)}`, emprise: empriseDe(d),
         };
       });
@@ -264,7 +266,7 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
           const d = lookup(i.defId)!;
           const effets = Object.entries(i.attrs).map(([k, v]) => `${k} ${v > 0 ? "+" : ""}${v}`).join(", ");
           return {
-            defId: i.defId, nom: d.name, nombre: copiesPourCouvrir(d, surfaceQuartiers), role: "institution" as const,
+            defId: i.defId, nom: d.name, nombre: copiesPourCouvrir(d, surfaceQuartiers, commande.routes), role: "institution" as const,
             raison: `compense le rang de cité (${effets})`, emprise: empriseDe(d),
           };
         });

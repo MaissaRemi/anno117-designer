@@ -15,6 +15,7 @@ import {
   neighbors8,
   orthoNeighbors,
 } from "./geometry";
+import { planningRange } from "./roads";
 
 export type DefLookup = (defId: string) => BuildingDef | undefined;
 
@@ -233,8 +234,9 @@ function euclideanCoverage(layout: Layout, def: BuildingDef, b: PlacedBuilding, 
 /**
  * Couverture par distance le long des rues (mécanique réelle Anno pour les
  * services) : BFS sur le réseau de routes depuis les routes adjacentes au
- * bâtiment, jusqu'à `streetRange` cases. Les cases servies = celles adjacentes
- * à une route atteinte (là où une maison peut se brancher).
+ * bâtiment, jusqu'à `streetRange` cases, allongé par le type de route (cf. engine/roads).
+ * Les cases servies = celles adjacentes à une route atteinte (là où une maison peut se
+ * brancher).
  */
 function streetCoverage(
   layout: Layout,
@@ -243,7 +245,8 @@ function streetCoverage(
   roads: Set<string>,
   scale: number,
 ): Set<string> {
-  const limit = def.streetRange! * scale; // portée en TUILES → cellules (½-tuile : ×2)
+  // portée en TUILES de la route du plan → cellules (½-tuile : ×2)
+  const limit = planningRange(def, layout.roadType) * scale;
   const adj = roadAdj(scale); // 8-adjacence sur la grille ½-tuile (routes diagonales)
   const footprint = new Set(
     footprintCells(def, b.x, b.y, b.rotation, scale).map((c) => cellKey(c.x, c.y)),

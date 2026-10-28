@@ -8,6 +8,8 @@ import { producibleGoods as producibleGoodsSet } from "../economy/resources";
 import { ResourceSelector } from "./ResourceSelector";
 import { RunPanel } from "./components/RunPanel";
 import { PlanPreview, PlanPreviewLegend } from "./components/PlanPreview";
+import { RoadTypeSelect } from "./components/RoadTypeSelect";
+import type { RoadType } from "../engine/roads";
 import { regionOfIsland } from "../data/islands";
 import { bestDeityAttrs } from "../economy/attributes";
 
@@ -52,6 +54,7 @@ export function IslandPlanner({ onClose }: Props) {
   const [mode, setMode] = useState<"population" | "production">("population");
   const [needMode, setNeedMode] = useState<NeedMode>("auto");
   const [exploitSlots, setExploitSlots] = useState(false);
+  const [roadType, setRoadType] = useState<RoadType>("pavee");
   const [localProduction, setLocalProduction] = useState(false);
   const [autoTier, setAutoTier] = useState(false);
   /** Liste de vœux : ateliers demandés, DANS L'ORDRE — c'est la priorité. */
@@ -143,6 +146,7 @@ export function IslandPlanner({ onClose }: Props) {
       {
         catalog: s.catalog, grid, mode, tierGuid, coverageFloor: floor / 100, needMode,
         exploitSlots,
+        roadType,
         localProduction,
         autoTier,
         viability: strictBilan ? "strict" : "indicatif",
@@ -170,6 +174,7 @@ export function IslandPlanner({ onClose }: Props) {
     applyOptimization({
       buildings: result.buildings, roads: result.roads, fields: result.fields,
       aqueducts: result.mode === "import" ? result.aqueducts : undefined,
+      roadType: result.mode === "import" ? result.roadType : undefined,
       placed: result.buildings.length, requested: result.buildings.length,
       placedByDef: {}, score: 0,
       breakdown: { count: result.buildings.length, roadLen: result.roads.length, bboxArea: 0, coverage },
@@ -219,6 +224,7 @@ export function IslandPlanner({ onClose }: Props) {
                   : "Pose les 12 types de service du palier. Bonus maximal par maison, mais ils mangent ~⅓ de l'île."}
               </span>
             </div>
+            <RoadTypeSelect value={roadType} onChange={setRoadType} />
             <label className="checkbox">
               <input type="checkbox" checked={exploitSlots} onChange={(e) => setExploitSlots(e.target.checked)} />
               <span>
@@ -432,6 +438,7 @@ export function IslandPlanner({ onClose }: Props) {
               roads={result.roads}
               aqueducts={result.mode === "import" ? result.aqueducts : undefined}
               lookup={lookup}
+              roadType={result.mode === "import" ? result.roadType : undefined}
             />
             {result.mode === "import" && <PlanPreviewLegend tierCounts={result.tierCounts} />}
           </div>

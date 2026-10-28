@@ -10,6 +10,8 @@ import { runPlanifier } from "../commande/runPlanifier";
 import type { ResultatCommande } from "../commande/planifier";
 import { RunPanel } from "./components/RunPanel";
 import { PlanPreview } from "./components/PlanPreview";
+import { RoadTypeSelect } from "./components/RoadTypeSelect";
+import type { RoadType } from "../engine/roads";
 
 /**
  * ONGLET COMMANDE — le joueur commande, le moteur dispose.
@@ -61,6 +63,7 @@ export function CommandePlanner() {
   const [completer, setCompleter] = useState(true);
   const [biens, setBiens] = useState<"importer" | "produire">("importer");
   const [mainOeuvre, setMainOeuvre] = useState<"loger" | "signaler">("loger");
+  const [routes, setRoutes] = useState<RoadType>("pavee");
   const [recherche, setRecherche] = useState("");
 
   const terre = useMemo(() => {
@@ -76,8 +79,9 @@ export function CommandePlanner() {
     completerProduction: completer,
     biensDesMaisons: biens,
     mainOeuvre,
+    routes,
     terre: islandId ? terre : undefined,
-  }), [region, maisons, services, institutions, production, completer, biens, mainOeuvre, islandId, terre]);
+  }), [region, maisons, services, institutions, production, completer, biens, mainOeuvre, routes, islandId, terre]);
   const devis = useMemo(() => nomenclature(commande, catalog, lookup), [commande, catalog, lookup]);
 
   const [running, setRunning] = useState(false);
@@ -104,6 +108,7 @@ export function CommandePlanner() {
     if (!result) return;
     applyOptimization({
       buildings: result.buildings, roads: result.roads, fields: result.fields, aqueducts: result.aqueducts,
+      roadType: result.roadType,
       placed: result.buildings.length, requested: result.buildings.length, placedByDef: {}, score: 0,
       breakdown: { count: result.buildings.length, roadLen: result.roads.length, bboxArea: 0, coverage: 1 },
     });
@@ -147,6 +152,7 @@ export function CommandePlanner() {
             <option value="complet">Tous les services (plus d'habitants par maison)</option>
           </select>
         </div>
+        <RoadTypeSelect value={routes} onChange={setRoutes} />
         <label className="checkbox">
           <input type="checkbox" checked={institutions} onChange={(e) => setInstitutions(e.target.checked)} />
           <span>Institutions (vigiles, médecins, puits…)</span>
@@ -215,7 +221,7 @@ export function CommandePlanner() {
         {result && !running && (
           <div className="result-split">
             <div className="result-map">
-              <PlanPreview grid={grid} buildings={result.buildings} roads={result.roads} aqueducts={result.aqueducts} lookup={lookup} />
+              <PlanPreview grid={grid} buildings={result.buildings} roads={result.roads} aqueducts={result.aqueducts} lookup={lookup} roadType={result.roadType} />
             </div>
             <div className="result-stats">
               <div className="opt-result">

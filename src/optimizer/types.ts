@@ -1,3 +1,4 @@
+import type { RoadType } from "../engine/roads";
 import type { AqueductTile, BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 
 /** Objectif pondéré (sliders UI, 0..1 chacun). */
@@ -31,6 +32,8 @@ export interface OptimizeResult {
   roads: RoadTile[]; // routes générées (hors existantes)
   fields: FieldTile[]; // champs générés
   aqueducts?: AqueductTile[]; // conduites d'eau générées (plan d'île)
+  /** type de route pour lequel le plan a été calculé : le layout le reprend */
+  roadType?: RoadType;
   placed: number; // nb de bâtiments placés
   requested: number; // nb total demandé
   placedByDef: Record<string, number>;

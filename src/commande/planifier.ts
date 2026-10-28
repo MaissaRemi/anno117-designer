@@ -71,6 +71,7 @@ export function planifierCommande(
   const layout: Layout = {
     grid, buildings, roads: pruneDeadEnds(grid, buildings, roads, lookup).roads,
     fields: [...q.layout.fields, ...p.fields], aqueducts: q.layout.aqueducts ?? [],
+    roadType: commande.routes,
   };
 
   const manques = [...q.manques, ...p.manques];
@@ -110,6 +111,7 @@ export interface ResultatCommande {
   roads: Layout["roads"];
   fields: Layout["fields"];
   aqueducts: NonNullable<Layout["aqueducts"]>;
+  roadType: Layout["roadType"];
   lignes: LignePosee[];
   manques: string[];
   avertissements: string[];
@@ -130,6 +132,7 @@ export function resumer(p: PlanCommande): ResultatCommande {
     roads: p.layout.roads,
     fields: p.layout.fields,
     aqueducts: p.layout.aqueducts ?? [],
+    roadType: p.layout.roadType,
     lignes: p.lignes,
     manques: p.manques,
     avertissements: p.avertissements,

@@ -2,6 +2,7 @@ import type { Tier } from "../economy/economy";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { BuildingDef } from "../model/types";
 import type { DefLookup } from "../engine/rules";
+import { planningRange, type RoadType } from "../engine/roads";
 
 /**
  * CHOIX DE LA RECETTE DE SERVICES.
@@ -56,8 +57,8 @@ export interface Recipe {
  * Un pavage en diamants L1 de rayon r couvre 2r² par copie, d'où `copies ≈ terre / 2r²`
  * et `sol occupé ≈ copies × emprise` — le facteur `terre` s'annule.
  */
-export function landTax(def: BuildingDef, combStep = COMB_STEP): number {
-  const range = def.streetRange || def.radius?.range || 0;
+export function landTax(def: BuildingDef, combStep = COMB_STEP, roadType?: RoadType): number {
+  const range = planningRange(def, roadType);
   const r = Math.max(8, range - combStep);
   const area = def.size.w * def.size.h;
   // `unique` (Colisée) : un seul exemplaire, pas un lattice — coût rapporté à une île type.
@@ -101,6 +102,8 @@ export interface RecipeOptions {
    * `minimalRecipesFor`, même dédoublonnage. Défaut 2 ; 0 pour s'en passer.
    */
   keepOpened?: number;
+  /** Type des routes du plan : allonge les portées, donc allège la taxe foncière. */
+  roadType?: RoadType;
 }
 
 /** Sous-ensembles minimaux d'UN palier, sans tri ni scoring. */
@@ -159,7 +162,7 @@ export function candidateRecipes(
   const combos = minimalRecipesFor(target, lookup);
   const ev = compileTierEvaluator(chain, { goodsMet: true });
   const score = (ids: string[]): Recipe => {
-    const tax = ids.reduce((s, id) => s + (defOf.has(id) ? landTax(defOf.get(id)!) : 0), 0);
+    const tax = ids.reduce((s, id) => s + (defOf.has(id) ? landTax(defOf.get(id)!, COMB_STEP, opts.roadType) : 0), 0);
     let mask = 0;
     for (const id of ids) {
       const b = ev.bitOf.get(id);
