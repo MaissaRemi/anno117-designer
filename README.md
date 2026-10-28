@@ -28,7 +28,7 @@ That constraint turned a layout tool into three problems worth solving.
 
 **Modelling an economy that feeds itself.** Population consumes goods; producing those goods costs workforce; workforce comes from population. It is a circular dependency, so it cannot be computed in one pass. The population planner resolves it as a **fixed-point iteration** — population → needs → production → workforce → more population → … — with a convergence guarantee that hinges on one detail: `NeedConsumptionRate` is defined *per house*, not per inhabitant. Get that wrong and the cascade diverges. There is a fallback and a warning if it ever does.
 
-**Packing shapes under constraints.** Placement is 2D bin packing with side conditions — roads have to exist and connect, radii have to overlap the right things, fields need contiguous free space. The optimiser combines a **greedy macro-tile decoder** with **simulated annealing** over placement order and road-band offsets, running in a **Web Worker** so the interface never freezes.
+**Laying out a city that works.** You say what you want — so many houses of a tier, these production chains — and the planner turns it into the exact list of buildings, then lays them out: houses in a regular **grid of blocks**, services placed where they cover the most houses along the streets, alleys left free for the aqueducts, production chains packed into compact blueprints around the city, mines on the island's real mountain slots, everything wired to the trading post. Every copy of a service has to pay for the ground it takes; every plan reports, line by line, what was asked and what was built. It runs in a **Web Worker** so the interface never freezes.
 
 ## What it does
 
@@ -38,8 +38,9 @@ That constraint turned a layout tool into three problems worth solving.
 - **Placement with live validation** — valid/invalid preview, rotation, moving, locking. Broken rules are outlined in red and explained in the side panel.
 - **Roads and fields** painted by hand, checked against the real rules: road adjacency, field size, connectivity and contact with its building.
 - **Influence radii** drawn as overlays.
-- **Population planner** — set a target population per tier and get the full building plan back.
-- **Automatic optimiser** — hand it a shopping list and weighted goals, get a layout.
+- **Order planner (📋 Commande)** — order houses per tier, a service recipe and production buildings; get a live bill of materials, then a full island layout that says what was served and what was not.
+- **Fill an island (🏛 Remplir l'île)** — the original engine: pack the most inhabitants of a tier onto the island.
+- **Production blueprints (🏭 Production)** — the smallest working layout for a production chain, ready to copy.
 - **Persistence** — browser autosave, JSON import/export, PNG export.
 
 ---
@@ -138,14 +139,18 @@ python tools/extract_icons.py     # -> public/icons/*.png   (not committed)
 
 ---
 
-## Population planner
+## Order planner
 
-Press **👥 Population**, set a target population per tier, and the model works out the plan.
+Load an island, open **📋 Commande**, and say what you want.
 
-- **Needs** — each residence carries a `NeedsList`: goods consumed at a given rate, plus services.
-- **Workforce cascade** — workforce is treated as a per-tier good (`ConnectedWorkforce`, `PopulationToWorkforceFactor`) consumed by buildings, resolved by the fixed-point solver described above.
-- **Output** — population and residences per tier, production buildings with their full chains, and service buildings. **Place on island** hands the result to the optimiser.
-- Data: `tools/build_economy.py` → `src/data/economy.generated.json`. Solver: `src/economy/`.
+- **The order** — houses per tier, a service recipe (minimal ground, or every service for more inhabitants per house), anti-incident institutions, production buildings picked by name, whether to complete their chains, whether the houses' goods are imported or produced on the island, and whether missing workforce gets worker houses or is only reported.
+- **The bill of materials** — recomputed on every keystroke (`src/commande/nomenclature.ts`): every building with the reason it is there, the tier each line actually reaches, the goods and their source, the workforce balance, the ground it will take. Worker tiers get the services *their* thresholds require; a good no building of this world produces is imported instead of pulling a chain from the other world.
+- **The layout** — `src/commande/ilots.ts` builds the city as a grid of 12 × 6 blocks of eight houses, roads above and below, every other column left as a free alley for the aqueducts. Services replace blocks where they cover the most houses not yet covered, at a price that counts their footprint, the ground they waste and the water they draw. The city is centred on the fullest part of the island within aqueduct reach of a mountain, and grows only through blocks whose roads join it. `src/commande/production.ts` then places the production around it: chains grouped by the goods they exchange, split in two whenever one warehouse cannot serve them all, each blueprint dropped in the nearest free box and wired to the network; mines and clay pits on the real slots; fishers on the coast.
+- **The report** — served or not, what is missing and by how much, the attribute balance per house (as a risk, not a reason to demolish), the ground used. **Place on island** hands the plan to the editor.
+
+Measured on the game's islands: 300 Patricians fully served on five islands out of eight in about 7 300 tiles, 37 % of them houses and 15 % roads; 500 on three large islands out of four. Small, cut-up islands and single cities above ~500 houses are the known limits — the report says so, in numbers.
+
+Data: `tools/build_economy.py` → `src/data/economy.generated.json`. Solver: `src/economy/`. The full design and every measurement: [`docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`](docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md).
 
 ## Real island shapes
 
@@ -155,16 +160,13 @@ Press **🏝 Island** to load one of the game's 55 islands as your grid.
 - Shape derived from the land/sea mask of the rendered `mapimage.png`, resampled to the real grid size and stored RLE-encoded.
 - Thumbnails in the picker; loading an island replaces the current grid.
 
-## Automatic optimiser
+## Fill an island
 
-Press **⚙ Optimise**, list the buildings you want with quantities, weight the goals (building count / radius coverage / compactness / minimal roads), set a time budget, run.
+The original engine, still available as **🏛 Remplir l'île**: pick a tier and it packs as many inhabitants as it can, choosing the services itself. Roads come from a fixed comb, services are laid as a lattice over the whole island, houses fill the rest; water is routed during placement.
 
-- **Road generation** — horizontal bands plus a vertical spine, so road access holds by construction.
-- **Fields** — farms get their free area as a connected block under the building, with the exact tile count.
-- **Locked buildings** are preserved and the algorithm fills around them. Hand-drawn roads are kept; generated ones are replaced on each run (`gen` flag).
-- **Algorithm** — greedy macro-tile packing decoder, then simulated annealing over order and band offset, in a Web Worker, scored through `engine/`.
+The island's attribute balance is **reported, not enforced** by default. An earlier "viability guard" demolished up to nine houses in ten to keep the island's total attributes above zero — a rule never checked against the game — and left the services and roads behind. It is still available as an option (*Respecter strictement le bilan d'attributs*).
 
-Code: `src/optimizer/` (`types`, `greedy`, `anneal`, `score`, `worker`, `runOptimizer`). Tests: `src/optimizer/optimizer.test.ts`.
+Code: `src/optimizer/` (`islandPlan`, `planLattice`, `waterPlan`, `slotPlan`, `kontor`). The *production* archetype of this tab still uses the greedy decoder and simulated annealing (`greedy`, `anneal`, `prodPlan`).
 
 ## Keyboard shortcuts
 
@@ -197,45 +199,57 @@ flowchart TD
     direction TB
     model["model/<br/>types, factories, serialisation<br/>3 files"]
     engine["engine/<br/>pure rules<br/>2 files"]
-    economy["economy/<br/>fixed-point solver<br/>4 files"]
-    optimizer["optimizer/<br/>greedy + annealing<br/>16 files"]
+    economy["economy/<br/>fixed-point solver<br/>8 files"]
+    commande["commande/<br/>order, bill of materials, layout<br/>7 files"]
+    prodlayout["prodlayout/<br/>production blueprints<br/>14 files"]
+    optimizer["optimizer/<br/>island fill engine, water, slots<br/>24 files"]
     data["data/<br/>generated game data<br/>4 files"]
     state["state/<br/>Zustand store<br/>1 file"]
     render["render/<br/>Canvas 2D<br/>2 files"]
-    persist["persist/<br/>save / import / export<br/>4 files"]
-    ui["ui/<br/>React components<br/>20 files"]
-    app["app/<br/>entry point<br/>2 files"]
+    persist["persist/<br/>save / import / export<br/>5 files"]
+    ui["ui/<br/>React components<br/>24 files"]
+    app["app/<br/>entry point<br/>3 files"]
   end
 
   RDA --> PY --> data
-  optimizer --> |"16"| model
-  optimizer --> |"15"| engine
-  ui --> |"14"| state
-  optimizer --> |"9"| economy
-  ui --> economy
-  ui --> model
-  ui --> engine
-  ui --> optimizer
+  optimizer --> |"33"| economy
+  optimizer --> |"30"| engine
+  optimizer --> |"24"| model
+  ui --> |"16"| state
+  commande --> |"12"| optimizer
+  ui --> |"10"| economy
+  commande --> |"9"| economy
+  commande --> |"9"| engine
+  ui --> |"9"| engine
+  commande --> |"8"| model
+  ui --> |"8"| model
+  optimizer --> data
   ui --> data
-  persist --> model
-  render --> engine
+  ui --> optimizer
+  commande --> prodlayout
+  ui --> render
   ui --> persist
+  persist --> model
+  prodlayout --> model
+  render --> engine
+  state --> data
+  ui --> commande
   data --> model
   economy --> engine
+  economy --> model
   engine --> model
+  persist --> data
   render --> model
-  state --> data
   state --> engine
   state --> model
   state --> persist
-  ui --> render
+  ui --> prodlayout
   app --> state
   app --> ui
+  commande --> data
   economy --> data
-  economy --> model
-  optimizer --> data
-  persist --> data
   persist --> economy
+  prodlayout --> data
   state --> economy
   state --> optimizer
 
@@ -245,25 +259,21 @@ flowchart TD
 
 <!-- ARCHITECTURE:END -->
 
-The rule engine is deliberately kept as **pure functions with no React dependency**. That is what makes it testable — **167 tests across 31 files** cover geometry, placement rules, road and field validation, the economy solver and the optimiser — and what lets the optimiser reuse the exact same scoring code as the live editor, rather than a reimplementation that drifts.
+The rule engine is deliberately kept as **pure functions with no React dependency**, and so are the order planner and the blueprints. That is what makes them testable — **over 440 tests** cover geometry, placement rules, the economy solver, the layout engines and the invariants every plan must keep (no overlap, nothing off the island, everything reachable from the trading post) — and what lets the planners reuse the exact same rules as the live editor.
 
 ---
 
 ## Where it stands
 
-What works: the extraction pipeline, the rule engine and its 167 tests, the editor, the population
-planner, the optimiser, and the Docker build.
+What works: the extraction pipeline, the rule engine, the editor, the order planner, the production blueprints, the island fill engine, and the Docker build — with the measurements in the redesign plan linked above.
 
 What is missing before this can be called finished:
 
-- **In-game validation** — no layout produced by the optimiser has been rebuilt in Anno 117 to
-  confirm the placement rules and radii match the game's actual behaviour.
-- **Exact footprints** — sizes come from `.ifo` bounding boxes and are accurate to ±1 tile. They are
-  editable in-app, but they are not yet correct by default for every building.
-- **Coverage across regions** — most testing was done on Latium content.
+- **In-game validation** — no layout has been rebuilt in Anno 117 yet. Four checks matter most: what a negative attribute balance really does to a city, what a tier's `UpgradeThreshold` means, whether goods are consumed per house or per inhabitant, and how far an aqueduct carries on flat ground (`.claude/GAME_MECHANICS.md`, §13).
+- **Exact footprints** — sizes come from `.ifo` bounding boxes and are accurate to ±1 tile. They are editable in-app, but they are not yet correct by default for every building.
+- **Deposits** — which ore a mountain holds is not in the extracted data: a gold mine may land on an iron mountain.
 
-The rule engine is tested against itself, not against the game. That distinction matters, and it is
-the main reason this is still marked as in progress.
+The planners are tested against themselves and against the game's data, not against the game. That distinction matters, and it is the main reason this is still marked as in progress.
 
 ## Legal notice
 

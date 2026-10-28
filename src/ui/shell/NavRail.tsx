@@ -4,7 +4,7 @@ import { WORLDS } from "../../data/islands";
 const ITEMS = [
   { id: "editor", label: "Éditeur", icon: "🗺" },
   { id: "commande", label: "Commande", icon: "📋" },
-  { id: "island", label: "Plan d'île", icon: "🏛" },
+  { id: "island", label: "Remplir l'île", icon: "🏛" },
   { id: "multi", label: "Multi-îles", icon: "🏝" },
   { id: "prod", label: "Production", icon: "🏭" },
 ] as const;

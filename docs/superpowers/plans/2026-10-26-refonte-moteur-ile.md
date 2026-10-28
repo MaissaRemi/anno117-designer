@@ -343,11 +343,51 @@ Vérifié dans le navigateur sur `roman_island_medium_01` : 100 Patriciens + une
 « entièrement servie », 3 224 habitants, 1 chaîne, 2 maisons ouvrières ajoutées par le devis ; le
 plan placé arrive dans l'éditeur (176 bâtiments, champs et aqueducs compris), console vide.
 
-### Étape 8 — Retrait de l'ancien pipeline ⏳
+### Étape 8 — Retrait de l'ancien pipeline ✅ (en partie, assumé)
 
 `planIslandImport` réduit au mode « remplir le reste » ; passes devenues mortes supprimées
 (démotion pensée pour `packPlan`, recul d'ateliers…) ; `finalize` découpé ; README mis à jour
 (il annonce encore l'optimiseur « liste de courses »).
+
+**Livré** :
+
+- `packPlan.ts` (455 lignes) et son test retirés : il ne servait plus qu'à son propre test depuis
+  sa sortie du portefeuille en août. Avec lui, la DÉMOTION par palier de `evaluate()`, écrite
+  pour lui seul. **Preuve** : les plans du balayage de qualité sont identiques au bâtiment et à la
+  route près, avant et après, sur les sept îles ; le mode strict garde ses maisons et habitants de
+  référence.
+- L'onglet « Plan d'île » devient **« Remplir l'île »**, et dit ce qu'il fait — le maximum
+  d'habitants d'un palier — en renvoyant à **Commande** pour poser ce que le joueur choisit.
+- README réécrit : le planificateur de commande, le mode « remplir », l'état réel (tests en jeu
+  à faire, gisements absents des données) ; plus rien n'y annonce l'optimiseur « liste de
+  courses » ni le planificateur de population retirés en juin. Schéma d'architecture régénéré
+  avec les couches `commande` et `prodlayout`.
+
+- L'onglet Commande est chargé à la demande (`React.lazy`). Le paquet principal fait 757 kB ; il
+  en faisait déjà 741 avant la refonte (mesuré en reconstruisant `200e559`), au-dessus de la
+  limite de 700 que `vite.config.ts` fixe — l'avertissement de build est antérieur à ce travail.
+
+**Non fait, volontairement** : découper `finalize` (≈ 580 lignes de fermetures). Le mode
+« remplir » n'est plus le chemin principal ; le découper coûterait un balayage de contrôle
+complet pour un code que le joueur n'utilise plus qu'en appoint. Le recul d'ateliers est
+conservé : il sert encore le mode strict.
+
+---
+
+## Bilan de la refonte (2026-10-29)
+
+Le moteur démolissait ~91 % des maisons qu'il posait et ne savait pas poser ce que le joueur
+choisissait. Il existe maintenant un chemin **commande → nomenclature → quartiers en îlots →
+production sur l'île → rapport ligne à ligne**, dans un onglet dédié, vérifié dans le navigateur.
+
+Ce qui reste ouvert, par ordre de valeur :
+
+1. **Les quatre tests en jeu** (section transverse ci-dessus) — rien de ce qui précède n'a été
+   reconstruit dans Anno 117. Le premier tranche le statut du bilan d'attributs.
+2. Grandes villes d'un seul tenant (> ~500 maisons) : découper en quartiers séparés par une bande
+   libre, pour que plusieurs réseaux d'eau cohabitent.
+3. Petites îles découpées : demi-îlots d'une rangée.
+4. Gisements des montagnes, forêts et prairies : absents des données extraites.
 
 ### Transverse — quatre tests en jeu (Rémi)
 

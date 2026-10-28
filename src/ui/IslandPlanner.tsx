@@ -183,10 +183,11 @@ export function IslandPlanner({ onClose }: Props) {
   return (
     <div className="mode-pane">
       <div className="pane-config">
-        <h3>🏛 Plan d'île</h3>
+        <h3>🏛 Remplir l'île</h3>
         <p className="muted" style={{ marginTop: 4 }}>
-          Cale le maximum d'habitants du tier-cible sur l'île chargée ({usable} cases de terre).
-          En mode import, la sortie liste le débit de biens à acheminer.
+          Remplit l'île chargée ({usable} cases de terre) du maximum d'habitants d'un palier : le
+          moteur choisit lui-même les services et le nombre de maisons. Pour poser les bâtiments
+          que <b>tu</b> choisis, utilise l'onglet <b>📋 Commande</b>.
         </p>
         {noIsland && <div className="warn">Charge une île d'abord (bouton « Charger une île » en haut).</div>}
 
