@@ -4,7 +4,7 @@ import type { DefLookup } from "../engine/rules";
 
 /**
  * Adaptateur ½-tuile ⇄ tuile pour l'optimiseur. La grille VIVANTE est en ½-tuiles
- * (cellsPerTile=2, cf. geometry.ts) mais les moteurs (planLattice/packPlan/prodPlan)
+ * (cellsPerTile=2, cf. geometry.ts) mais les moteurs (planLattice/prodPlan)
  * tournent en TUILES — inchangés, leurs golden-snapshots intacts, et leurs routes
  * font 1 tuile de large (constructibles en jeu). On RÉSOUT donc en tuiles puis on
  * REPROJETTE le résultat en ½-tuiles :

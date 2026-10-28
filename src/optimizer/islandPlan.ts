@@ -482,9 +482,6 @@ export function planIslandImport(
     sig: string;
   }
   const evaluate = (cand: Cand, relevant: Set<string> | null): Evaluated => {
-    // évaluateur scopé à CE jeu de services : un service hors recette ne compte ni pour
-    // les seuils ni pour la capacité (utilisé ici seulement par le repli de démotion)
-    const evaluator = compileTierEvaluator(chain, { goodsMet: true, relevant: relevant ?? undefined });
     const water = cand.water
       ?? planWater(req.grid, cand.buildings, cand.roads, lookup, req.heights, kontorRect);
     const buildings = cand.water ? cand.buildings : [...cand.buildings, ...water.sources];
@@ -501,40 +498,13 @@ export function planIslandImport(
         .filter((id): id is string => !!id && (!relevant || relevant.has(id)))
         .filter((id) => { const d = lookup(id); return !!d && needsWater(d) && !connectedByDef.get(id); }),
     );
-    // DÉMOTION : les maisons comptées à un tier « eau-bloqué » retombent au plus haut
-    // tier sûr (la chaîne est nichée → le blocage est monotone), au lieu d'annuler
-    // toute la population comme le faisait l'ancien gate tout-ou-rien.
-    const tierSafe = (t: (typeof chain)[number]): boolean => t.services.every((s) =>
-      !s.building || (relevant && !relevant.has(s.building)) ? true : !deadTypes.has(s.building));
+    // Pas de DÉMOTION ici. `planLattice` route l'eau pendant la pose, retire les services secs et
+    // les exclut du comptage par maison : ses paliers sont déjà ceux que le jeu accorderait. La
+    // démotion par palier n'existait que pour `packPlan`, qui posait toutes ses maisons sans rien
+    // router — moteur sorti du portefeuille en août, retiré du code le 2026-10-29.
     const tierCounts: Record<string, number> = { ...cand.tierCounts };
     const capByTier: Record<string, number> = { ...cand.capByTier };
-    let houseMoney = cand.houseMoney;
-    let cutoff = chain.length;
-    for (let k = 0; k < chain.length; k++) if (!tierSafe(chain[k])) { cutoff = k; break; }
-    if (cutoff < chain.length) {
-      const safeIdx = Math.max(0, cutoff - 1);
-      const safeGuid = chain[safeIdx]?.guid;
-      // capacité attribuée aux maisons démotées : la moyenne OBSERVÉE du palier sûr si
-      // des maisons y vivent déjà, sinon la référence tous-services-couverts. C'est une
-      // approximation, sur un chemin de repli : les moteurs eau-aware ont déjà exclu les
-      // services secs de leur comptage par maison, seul packPlan passe par ici.
-      const avg = safeGuid && tierCounts[safeGuid]
-        ? (capByTier[safeGuid] || 0) / tierCounts[safeGuid]
-        : evaluator.reference(safeIdx).cap;
-      const before = Object.values(capByTier).reduce((a, b) => a + b, 0);
-      let moved = 0;
-      for (let k = cutoff; k < chain.length; k++) {
-        moved += tierCounts[chain[k].guid] || 0;
-        delete tierCounts[chain[k].guid];
-        delete capByTier[chain[k].guid];
-      }
-      if (moved && safeGuid) {
-        tierCounts[safeGuid] = (tierCounts[safeGuid] || 0) + moved;
-        capByTier[safeGuid] = (capByTier[safeGuid] || 0) + moved * avg;
-      }
-      const after = Object.values(capByTier).reduce((a, b) => a + b, 0);
-      houseMoney = before > 0 ? houseMoney * (after / before) : 0;
-    }
+    const houseMoney = cand.houseMoney;
     // Ordre-indépendante et bon marché : somme de position et de type sur les emprises.
     let sig = 0;
     for (const b of buildings) {
@@ -617,9 +587,8 @@ export function planIslandImport(
   };
 
   // --- ÉVALUATION DE CHAQUE RECETTE PAR LE MOTEUR RÉEL --------------------------------
-  // C'est la population LIVRÉE qui décide. On garde aussi packPlan sur la première recette :
-  // il gagne parfois sur les paliers sans consommateur d'eau (où son houses-first paie).
-  // seuils de densification à balayer sur la recette GAGNANTE (cf. plus bas) : au-delà de
+  // C'est la population LIVRÉE qui décide.
+  // Seuils de densification à balayer sur la recette GAGNANTE (cf. plus bas) : au-delà de
   // 0,9 le moteur sur-densifie (services 10,8 % → 19,4 % du sol) et la population baisse.
   const REFINE_FLOOR = 0.9;
   /**
@@ -783,9 +752,10 @@ export function planIslandImport(
     if (!pick || better(ev, pick)) pick = ev;
   }
   onProgress?.(trials.length + 2, total);
-  // ═══ packPlan N'EST PLUS DU PORTEFEUILLE ═════════════════════════════════════════════
+  // ═══ packPlan, LE MOTEUR « HOUSES-FIRST », RETIRÉ ═══════════════════════════════════
   //
-  // Le moteur houses-first reste maintenu et testé (`packPlan.ts`), mais il ne concourt plus.
+  // Sorti du portefeuille en août, puis retiré du code le 2026-10-29 (étape 8 de la refonte) :
+  // il ne servait plus qu'à son propre test. Les raisons, gardées pour ne pas le refaire :
   //
   // Il partait avec deux handicaps qui rendaient toute comparaison absurde : il ne posait
   // aucune INSTITUTION, et il n'appliquait aucun GARDE-FOU DE VIABILITÉ. Il annonçait donc
@@ -800,8 +770,7 @@ export function planIslandImport(
   //
   // Il coûtait 703 ms sur roman_island_medium_01 et 1 321 ms sur celtic_island_large_07, soit
   // 7,4 % et 8,8 % du temps de CHAQUE plan, pour un candidat qui n'a jamais été retenu.
-  // Le remettre au portefeuille tient en une ligne, et le raisonnement ci-dessus dit à quoi
-  // il faudrait s'attendre.
+  // L'historique git le garde (`src/optimizer/packPlan.ts`, avant le 2026-10-29).
 
   /**
    * ═══ LE PLAN COMPLET D'UN CANDIDAT ═══════════════════════════════════════════════════
@@ -856,9 +825,8 @@ export function planIslandImport(
      * ailleurs — cf. `WorkforceLedger.settle()`, qui recalcule ces mêmes agrégats depuis les
      * parcelles survivantes et les écrase dès qu'il y a une conversion.
      *
-     * Rend `false` quand le candidat ne publie pas ses parcelles : `packPlan` déclare le
-     * champ mais ne le remplit jamais. L'appelant retombe alors sur la moyenne, faute de
-     * mieux — et c'est aussi pourquoi la cascade de main-d'œuvre ne fait rien sur ses plans.
+     * Rend `false` quand le candidat ne publie pas ses parcelles (c'était le cas de l'ancien
+     * `packPlan`). L'appelant retombe alors sur la moyenne, faute de mieux.
      */
     const recount = (): boolean => {
       if (!capOfPlot.size) return false;

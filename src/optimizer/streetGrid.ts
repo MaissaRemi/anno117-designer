@@ -1,8 +1,8 @@
 import type { BuildingDef } from "../model/types";
 
 /**
- * Primitives de grille/rue PARTAGÉES par les moteurs de placement (planLattice,
- * packPlan). Avant, ~190 lignes quasi-identiques étaient dupliquées dans les deux
+ * Primitives de grille/rue des moteurs de placement — partagées entre planLattice et packPlan
+ * jusqu'au retrait de ce dernier (2026-10-29). Avant, ~190 lignes quasi-identiques étaient dupliquées dans les deux
  * fichiers (connectRing octet-pour-octet, bfsType, orthoRoadCells…), avec déjà 2
  * divergences (anti-emmurement bldAdj, prises d'eau waterGate) → un fix de
  * distance-rue devait être recopié à la main ou se désynchronisait.
@@ -10,7 +10,7 @@ import type { BuildingDef } from "../model/types";
  * `makeStreetGrid` lie des closures à l'état mutable du moteur (occ/roadAt/bldAdj,
  * en place) ; les 2 divergences sont des OPTIONS (`blockRingInFits`, `reserved`),
  * pas des forks. Les corps sont COPIÉS À L'IDENTIQUE des moteurs → comportement
- * inchangé (garanti par les golden snapshots planLattice/packPlan).
+ * inchangé (garanti par le golden snapshot de planLattice).
  */
 export interface StreetGridParams {
   W: number;
@@ -32,7 +32,7 @@ export interface StreetGridParams {
   reserved?: Uint8Array;
 }
 
-/** TypeCov minimal commun (packPlan ajoute `covered`, ignoré ici). */
+/** TypeCov minimal commun (le défunt packPlan y ajoutait `covered`). */
 export interface ReachState {
   def: BuildingDef;
   range: number;
