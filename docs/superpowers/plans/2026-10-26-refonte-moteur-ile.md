@@ -267,7 +267,7 @@ Une à huit secondes par commande.
   ~300 maisons séparés par une bande libre.
 - Une source d'aqueduc peut rester sans route si les conduites l'encerclent (un cas sur douze).
 
-### Étape 6 — La production posée sur l'île ⏳
+### Étape 6 — La production posée sur l'île ✅
 
 - `prodlayout` multi-entrepôts : un panier qui dépasse la portée d'un entrepôt se découpe au
   lieu d'être refusé (aujourd'hui, 15 bâtiments → « aucun entrepôt sous 30 »).
@@ -275,6 +275,49 @@ Une à huit secondes par commande.
   réseau du comptoir ; emplacements de terrain (mines, forêts, côtiers) pris sur l'île.
 
 **Fini quand** : une commande « quartier + deux chaînes » sort servie sur trois îles types.
+
+**Livré** : `src/commande/production.ts` (`disposerProduction`) et `src/commande/planifier.ts`
+(`planifierCommande`, la porte d'entrée : nomenclature → quartiers → production, un seul `Layout`).
+
+- Le panier est découpé en LOTS qui échangent des biens (une chaîne reste ensemble) ; un lot
+  refusé par `prodlayout` faute de portée d'entrepôt est coupé en deux, récursivement. Le panier
+  de quinze bâtiments sans lien, refusé avant, est posé en entier.
+- Chaque blueprint est essayé dans ses quatre sorties et posé dans la boîte libre la plus proche
+  de la ville (image intégrale : un test de boîte coûte O(1)), sortie reliée au réseau par une
+  route. Toute la boîte est réservée : ses cases libres sont l'aire des bûcherons et des ruchers.
+- Mines, carrières, argile, marais : sur les VRAIS emplacements de l'île, via `planSlots` en
+  commande explicite (`demandes`, `pres`, `raccordMax`, `bloquees`). Les productions de marais à
+  court d'emplacement se posent hors marais (`CanBePlacedOnNonMarsh`, §12), avec un avis.
+- Côtiers : sur la côte la plus proche, entrepôt ajouté si ni le comptoir ni un entrepôt n'est à
+  portée de charrette.
+- **Nomenclature** : un palier ouvrier a ses propres seuils — la recette minimale des Patriciens
+  ne logeait aucun Plébéien (16 maisons ouvrières, aucune à son palier). Chaque palier logé est
+  désormais ouvert par la recette, jugé dans SA lignée (les ouvriers natifs d'Albion ne sont pas
+  dans celle des Nobles).
+
+Défauts trouvés en chemin, dont deux dans le moteur historique :
+
+- `planSlots` cherchait le raccord routier depuis un périmètre COINS COMPRIS — le défaut déjà
+  corrigé dans `connectKontor` : la route finissait en diagonale, le bâtiment restait sans accès ;
+- `planSlots` ignorait champs et aires réservées (ce ne sont pas des bâtiments) ;
+- l'emplacement « le plus proche à vol d'oiseau » était de l'autre côté d'un bras de mer : en
+  commande, un emplacement sans route possible est sauté ;
+- la route d'un côtier traversait sa propre emprise.
+
+| commande | île | production posée | servi |
+|---|---|---|---|
+| 100 Plébéiens + chaîne du pain | `roman_island_medium_01` | 5/5 | oui |
+| production seule : 2 mines, pain, 2 pêcheurs | `roman_island_large_03` | 9/9 | oui |
+| 150 Patriciens, biens produits sur l'île | `roman_island_large_03` | 150/155 | non : 5 mines d'or sans emplacement de montagne libre |
+| 150 Nobles, biens produits sur l'île | `celtic_island_large_07` | 69/70 | non : une mine d'argent sans entrepôt possible |
+
+Aucun chevauchement, tous les bâtiments reliés au comptoir, sur les quatre. Une à quatre
+secondes.
+
+**Limites connues** : le gisement de chaque montagne (fer, or, cuivre…) n'est pas dans les
+données — une mine d'or peut être posée sur une montagne de fer ; à vérifier par le joueur. Les
+forêts et prairies ne sont pas cartographiées : bûcherons et ruchers se posent avec leur aire
+libre, sans garantie qu'il y ait des arbres.
 
 ### Étape 7 — Interface « Commande » ⏳
 

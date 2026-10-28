@@ -226,8 +226,17 @@ export function disposerQuartiers(
     .map((l) => ({ tierGuid: tierDeResidence.get(l.defId)!.guid, defId: l.defId, nombre: l.nombre, role: l.role, nom: l.nom }));
   const totalMaisons = besoins.reduce((s, b) => s + b.nombre, 0);
   const sommet = besoins.map((b) => tierByGuid(b.tierGuid)!).sort((a, b) => b.capacityDefault - a.capacityDefault)[0];
-  const chaine = sommet ? residentialChainExtended(sommet.guid) : [];
-  const evaluateur = chaine.length ? compileTierEvaluator(chaine, { goodsMet: true }) : null;
+  const paliersDemandes = [...new Set(besoins.map((b) => b.tierGuid))].map((g) => tierByGuid(g)!);
+  const evals = new Map<string, { chaine: ReturnType<typeof residentialChainExtended>; ev: ReturnType<typeof compileTierEvaluator> }>();
+  const evalDe = (g: string) => {
+    let e = evals.get(g);
+    if (!e) {
+      const ch = residentialChainExtended(g);
+      e = { chaine: ch, ev: compileTierEvaluator(ch, { goodsMet: true }) };
+      evals.set(g, e);
+    }
+    return e;
+  };
   const rangeOf = (d: BuildingDef) => d.streetRange || d.radius?.range || 0;
   const types = nom.lignes
     .filter((l) => l.role === "service" || l.role === "institution")
@@ -285,6 +294,9 @@ export function disposerQuartiers(
   const centre = vivier
     .filter((c) => plein.get(c)! >= 0.95 * maxPlein)
     .sort((a, b) => distIlot.get(a)! - distIlot.get(b)! || a - b)[0];
+  const centreVille = centre !== undefined
+    ? (() => { const q = trame.coin(trame.ij(centre).i, trame.ij(centre).j); return { x: q.x + 6, y: q.y + 3 }; })()
+    : kontorRect ? { x: kontorRect.x + kontorRect.w / 2, y: kontorRect.y + kontorRect.h / 2 } : { x: W / 2, y: H / 2 };
   if (centre !== undefined) {
     const { i, j } = trame.ij(centre);
     const { x, y } = trame.coin(i, j);
@@ -819,15 +831,19 @@ export function disposerQuartiers(
       for (let c = 0; c < N; c++) if (vu[c]) tout[c] = 1;
     }
     return quelles.map(({ m, b }) => {
-      let masque = 0;
-      for (const [id, cov] of couvParType) {
-        const bit = evaluateur?.bitOf.get(id);
-        if (bit !== undefined && couverte(m, cov)) masque |= 1 << bit;
-      }
-      const options = chaine.map((t, k): Option | null => {
-        const r = evaluateur?.evaluateAt(k, masque);
+      const couvrants = [...couvParType].filter(([, cov]) => couverte(m, cov)).map(([id]) => id);
+      // Une option par palier DEMANDÉ, jugée dans sa propre lignée : en Albion, les ouvriers
+      // natifs ne sont pas dans la lignée romanisée des Nobles.
+      const options = paliersDemandes.map((t): Option | null => {
+        const { chaine: ch, ev } = evalDe(t.guid);
+        let masque = 0;
+        for (const id of couvrants) {
+          const bit = ev.bitOf.get(id);
+          if (bit !== undefined) masque |= 1 << bit;
+        }
+        const r = ev.evaluateAt(ch.length - 1, masque);
         if (!r || !t.residenceId) return null;
-        const attrs: Record<string, number> = { ...evaluateur!.attrsAt(k, masque) };
+        const attrs: Record<string, number> = { ...ev.attrsAt(ch.length - 1, masque) };
         for (const e of insts) {
           const cov = couvParType.get(e.id);
           if (!e.fx || !cov || !couverte(m, cov)) continue;
@@ -1001,6 +1017,7 @@ export function disposerQuartiers(
     bilan,
     viable: verdictViable(bilan, nMaisons, 0),
     zone: { usable: zone, cases: zoneCases, passes: tours + 1 },
+    ile: { base, centre: centreVille, comptoir: kontorRect },
     qualite,
     servi: manques.length === 0,
     manques,

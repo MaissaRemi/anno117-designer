@@ -59,6 +59,26 @@ export interface SlotPlanOptions {
     quote(defIds: string[]): Record<string, number> | null;
     charge(defIds: string[]): void;
   };
+  /**
+   * COMMANDE EXPLICITE : poser exactement ces exploitations, chacune sur un emplacement de son
+   * type, les plus proches de `pres` d'abord — au lieu de remplir tous les emplacements libres
+   * avec le bâtiment le plus rentable. C'est le mode de la commande (`src/commande`), où le
+   * joueur a choisi ce qu'il veut. Les entrepôts et le retrait des stériles sont inchangés.
+   */
+  demandes?: { defId: string; count: number }[];
+  /** Point de référence des demandes : le centre de la ville. */
+  pres?: { x: number; y: number };
+  /**
+   * Longueur maximale d'une route de raccordement (défaut 80). Le moteur d'île bâtit partout,
+   * une route n'est jamais loin ; une commande pose une ville compacte, et la montagne peut en
+   * être éloignée — une mine sans route n'a pas d'entrepôt, donc sort du plan.
+   */
+  raccordMax?: number;
+  /**
+   * Cases interdites, en plus des bâtiments : champs, aires libres réservées des blueprints,
+   * conduites. Sans elles, un entrepôt ou une route de raccord se posait sur un champ.
+   */
+  bloquees?: Uint8Array;
 }
 
 export interface ExploitedSlot {
@@ -197,7 +217,7 @@ export function planSlots(
     if (x < 0 || y < 0 || x + w > W || y + h > H) return false;
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const c = (y + j) * W + (x + i);
-      if (owner[c] >= 0 || roadAt[c]) return false;
+      if (owner[c] >= 0 || roadAt[c] || opts.bloquees?.[c]) return false;
       if (!grid.usable[c] && !nearSlot(x + i, y + j, s)) return false;
     }
     return true;
@@ -211,9 +231,13 @@ export function planSlots(
    * cette tolérance, un puits d'argile ou une mine ne pouvait même pas amorcer son BFS
    * depuis son propre périmètre — il restait sans route, donc sans entrepôt à portée.
    */
-  const linkToRoads = (x: number, y: number, w: number, h: number, anchor?: { x: number; y: number }, maxLen = 80): boolean => {
+  const linkToRoads = (x: number, y: number, w: number, h: number, anchor?: { x: number; y: number }, maxLen = opts.raccordMax ?? 80): boolean => {
+    // PÉRIMÈTRE ORTHO, sans les coins — le même défaut que `connectKontor` avait déjà : un coin
+    // est DIAGONAL à l'emprise, l'accès routier du jeu est orthogonal. Une route touchant un coin
+    // faisait répondre « déjà au bord d'une route », ou terminait le raccord en diagonale ; le
+    // bâtiment restait sans accès, et l'élagage des culs-de-sac effaçait le tronçon inutile.
     const perim: number[] = [];
-    for (let i = -1; i <= w; i++) {
+    for (let i = 0; i < w; i++) {
       for (const yy of [y - 1, y + h]) {
         if (yy >= 0 && yy < H && x + i >= 0 && x + i < W) perim.push(yy * W + x + i);
       }
@@ -227,6 +251,7 @@ export function planSlots(
     const passable = (c: number): boolean => {
       const cx = c % W, cy = (c / W) | 0;
       if (!grid.usable[c] && !(anchor && nearSlot(cx, cy, anchor))) return false;
+      if (opts.bloquees?.[c]) return false;
       const o = owner[c];
       return o < 0 || demolishable(all[o].defId);
     };
@@ -265,26 +290,16 @@ export function planSlots(
   const free = slots.filter((s) => !taken(s));
 
   // --- 2. pose d'une exploitation par slot libre ---------------------------------------
-  const byType = new Map<string, BuildingDef | undefined>();
   const placedIdx: number[] = []; // index dans `all` des exploitations posées
-  for (const s of free) {
-    if (!byType.has(s.type)) byType.set(s.type, pickSlotBuilding(catalog, s.type, opts));
-    const def = byType.get(s.type);
-    if (!def) continue;
-    // Devis AVANT de poser : le vivier peut s'épuiser en cours de route, chaque exemplaire
-    // consommant sa part. C'est ce que le filtre qualitatif ne voyait pas.
-    if (opts.workforce && !opts.workforce.quote([def.id])) {
-      out.gaps.push(`${def.name} : main-d'œuvre insuffisante pour un exemplaire de plus`);
-      break;
-    }
+  /** Pose `def` au plus près du slot `s` ; rend false si rien ne tient. */
+  const poserSur = (def: BuildingDef, s: { x: number; y: number; type: string }): boolean => {
     const sx = Math.round(s.x), sy = Math.round(s.y);
     const dims: [number, number, 0 | 90][] = [
       [def.size.w, def.size.h, 0],
       [def.size.h, def.size.w, 90],
     ];
-    let done = false;
-    for (let r = 0; r <= PLACE_RADIUS && !done; r++) {
-      for (let dy = -r; dy <= r && !done; dy++) for (let dx = -r; dx <= r && !done; dx++) {
+    for (let r = 0; r <= PLACE_RADIUS; r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         for (const [w, h, rot] of dims) {
           const x = sx + dx - (w >> 1), y = sy + dy - (h >> 1);
@@ -293,10 +308,19 @@ export function planSlots(
           const idx = all.length;
           all.push(b);
           stampOcc(b, idx);
+          const relie = linkToRoads(x, y, w, h, { x: sx, y: sy });
+          // EN COMMANDE, un emplacement sans route possible n'est pas un emplacement : de l'autre
+          // côté d'un bras de mer, la mine serait posée puis retirée faute d'entrepôt. On défait
+          // la pose et l'appelant essaie l'emplacement suivant. Le mode historique, qui remplit
+          // tous les emplacements, garde son comportement.
+          if (!relie && opts.demandes) {
+            all.pop();
+            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) owner[(y + j) * W + x + i] = -1;
+            return false;
+          }
           out.buildings.push(b);
           opts.workforce?.charge([def.id]);
           placedIdx.push(idx);
-          linkToRoads(x, y, w, h, { x: sx, y: sy });
           const r0 = ratePerMin(def.id);
           out.exploited.push({
             defId: def.id, name: def.name, slotType: s.type,
@@ -304,12 +328,48 @@ export function planSlots(
             perMin: Math.round((r0?.perMin ?? 0) * 100) / 100,
             x, y, served: false,
           });
-          done = true;
-          break;
+          return true;
         }
       }
     }
-    if (!done) gaps.push(`${def.name} : emplacement ${s.type} inexploitable (encombrement)`);
+    return false;
+  };
+
+  if (opts.demandes) {
+    // Commande explicite : chaque demande prend les emplacements de son type les plus proches
+    // de la ville, dans l'ordre donné ; un emplacement ne sert qu'une fois.
+    const pris = new Set<(typeof free)[number]>();
+    const pres = opts.pres ?? { x: W / 2, y: H / 2 };
+    for (const dem of opts.demandes) {
+      const def = lookup(dem.defId);
+      if (!def?.slotType) continue;
+      const cands = free
+        .filter((sl) => sl.type === def.slotType && !pris.has(sl))
+        .sort((a, b) => Math.hypot(a.x - pres.x, a.y - pres.y) - Math.hypot(b.x - pres.x, b.y - pres.y));
+      let poses = 0;
+      for (const sl of cands) {
+        if (poses >= dem.count) break;
+        pris.add(sl);
+        if (poserSur(def, sl)) poses++;
+      }
+      if (poses < dem.count) {
+        gaps.push(`${def.name} : ${dem.count - poses} sur ${dem.count} sans emplacement ${def.slotType} libre`);
+      }
+    }
+  } else {
+    const byType = new Map<string, BuildingDef | undefined>();
+    for (const s of free) {
+      if (!byType.has(s.type)) byType.set(s.type, pickSlotBuilding(catalog, s.type, opts));
+      const def = byType.get(s.type);
+      if (!def) continue;
+      // Devis AVANT de poser : le vivier peut s'épuiser en cours de route, chaque exemplaire
+      // consommant sa part. C'est ce que le filtre qualitatif ne voyait pas.
+      if (opts.workforce && !opts.workforce.quote([def.id])) {
+        out.gaps.push(`${def.name} : main-d'œuvre insuffisante pour un exemplaire de plus`);
+        break;
+      }
+      if (!poserSur(def, s)) gaps.push(`${def.name} : emplacement ${s.type} inexploitable (encombrement)`);
+    }
   }
   if (!out.exploited.length) {
     if (free.length) gaps.push("Emplacements libres non exploitables : aucun bâtiment compatible (région ou gisement absent)");
@@ -367,7 +427,7 @@ export function planSlots(
     if (x < 0 || y < 0 || x + ww > W || y + wh > H) return false;
     for (let j = 0; j < wh; j++) for (let i = 0; i < ww; i++) {
       const c = (y + j) * W + (x + i);
-      if (!grid.usable[c] || roadAt[c]) return false;
+      if (!grid.usable[c] || roadAt[c] || opts.bloquees?.[c]) return false;
       const o = owner[c];
       if (o >= 0 && !demolishable(all[o].defId)) return false;
     }
