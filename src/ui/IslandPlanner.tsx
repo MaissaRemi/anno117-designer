@@ -15,7 +15,6 @@ import { bestDeityAttrs } from "../economy/attributes";
 
 interface Props {
   onClose: () => void;
-  asView?: boolean; // conservé pour compat ; le Plan d'île est désormais toujours un MODE
 }
 
 const ATTR_FR: Record<string, string> = {
@@ -87,7 +86,6 @@ export function IslandPlanner({ onClose }: Props) {
   const [placeMsg, setPlaceMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const usable = useStore((s) => s.layout.grid.usable.filter(Boolean).length);
   const grid = useStore((s) => s.layout.grid);
   const catalog = useStore((s) => s.catalog);
   const lookup = useMemo(() => makeLookup(catalog), [catalog]);
@@ -188,15 +186,42 @@ export function IslandPlanner({ onClose }: Props) {
   const color = (pct: number) => (pct >= 100 ? "#8bc34a" : pct >= 75 ? "#ffcc66" : "#ff8a85");
   const noIsland = !islandId;
 
+
+  // textes d'aide complets : affichés en infobulle, une phrase courte reste visible
+  const servicesHelp = needMode === "auto"
+    ? "Essaie plusieurs jeux de services et garde celui qui loge le plus de monde."
+    : needMode === "maisons"
+      ? "Couvre l'île de maisons reliées à la route. Celles qu'aucun service n'atteint restent à un palier plus bas, mais logent encore du monde."
+      : "Pose tous les services du palier : bonus maximal par maison, mais ils prennent beaucoup de place.";
+  const servicesShort = needMode === "auto"
+    ? "Garde le jeu de services qui loge le plus de monde."
+    : needMode === "maisons"
+      ? "Couvre l'île de maisons ; certaines restent à un palier plus bas."
+      : "Tous les services du palier : bonus maximal, mais beaucoup de place.";
+  const localProductionHelp = "Pose des ateliers pour fabriquer une partie des biens au lieu de tout importer. "
+    + "Ils remplacent des maisons et pèsent sur les attributs"
+    + (strictBilan
+      ? " : on s'arrête dès que le bilan de l'île passerait sous zéro."
+      : ", ce que le bilan affiché inclut. Ils restent bornés par la demande, la main-d'œuvre et la place.");
+  const strictHelp = strictBilan
+    ? "Des maisons sont démolies jusqu'à ce que Bonheur, Argent, Santé et Sécurité incendie de l'île repassent à zéro. Sur une grande île, cela en rase jusqu'à neuf sur dix et laisse services et routes en place."
+    : "Décoché : aucune maison n'est démolie pour tenir le bilan. Il est affiché avec le résultat, par maison et par attribut — à toi de juger le risque. La règle n'a pas encore été vérifiée en jeu.";
+  const devotionHelp = (devotion === 0
+    ? "Sans dévotion, la divinité tutélaire ne rend que l'effet de zone de son autel."
+    : `Cérès l'emporte : Population +${DEVOTION_POP(devotion)} sur CHAQUE maison de l'île, sans sol ni permis.`)
+    + (strictBilan
+      ? " Attention, l'effet est à double tranchant : plus d'habitants par maison alourdit le malus de rang de cité, donc le garde-fou rase davantage. Mesuré sur la carte continentale — sans tolérance la dévotion FAIT PERDRE 20 %, avec une tolérance de 3 elle fait gagner 34 % (70 057 → 93 622 habitants). Les deux réglages se tiennent."
+      : "");
+  const toleranceHelp = (tolerance === 0
+    ? "Aucun attribut vital ne peut être négatif : une seule maison en déficit fait raser jusqu'au retour à zéro."
+    : `Chaque maison peut être en déficit de ${tolerance.toFixed(1)} sur un attribut vital. `
+      + "En jeu la sécurité incendie est un TAUX DE RISQUE, pas une interdiction : "
+      + "plus d'incendies et d'émeutes, mais une ville bien plus grande.")
+    + " Le malus de rang de cité s'applique par maison et atteint −7 dès 30 000 habitants, alors qu'une maison plafonne à +7 : sans tolérance, aucune ville romaine ne dépasse ce seuil, quelle que soit la surface. Mesuré sur la carte continentale du DLC : 7 186 habitants sans risque, 34 257 à −1,0, 70 057 à −3,0.";
+
   return (
     <div className="mode-pane">
       <div className="pane-config">
-        <h3>🏛 Remplir l'île</h3>
-        <p className="muted" style={{ marginTop: 4 }}>
-          Remplit l'île chargée ({usable} cases de terre) du maximum d'habitants d'un palier : le
-          moteur choisit lui-même les services et le nombre de maisons. Pour poser les bâtiments
-          que <b>tu</b> choisis, utilise l'onglet <b>📋 Commande</b>.
-        </p>
         {noIsland && <div className="warn">Charge une île d'abord (bouton « Charger une île » en haut).</div>}
 
         <div className="field">
@@ -215,190 +240,155 @@ export function IslandPlanner({ onClose }: Props) {
                 {targetTiers.map((t) => <option key={t.guid} value={t.guid}>{t.name} · cap {t.capacityDefault}</option>)}
               </select>
             </div>
-            <div className="field">
+            <div className="field" title={servicesHelp}>
               <span>Services</span>
               <select value={needMode} onChange={(e) => setNeedMode(e.target.value as NeedMode)}>
                 <option value="auto">Recette optimisée (max d'habitants)</option>
                 <option value="maisons">Maximum de maisons (services au mieux)</option>
                 <option value="all">Tous les services (max de bonus par maison)</option>
               </select>
-              <span className="muted" style={{ fontSize: 11 }}>
-                {needMode === "auto"
-                  ? "Essaie plusieurs jeux de services et garde celui qui loge le plus de monde."
-                  : needMode === "maisons"
-                    ? "Couvre l'île de maisons reliées à la route. Celles qu'aucun service n'atteint restent à un palier plus bas, mais logent encore du monde."
-                    : "Pose tous les services du palier : bonus maximal par maison, mais ils prennent beaucoup de place."}
-              </span>
+              <span className="muted" style={{ fontSize: 11 }}>{servicesShort}</span>
             </div>
             <RoadTypeSelect value={roadType} onChange={setRoadType} />
-            <label className="checkbox">
-              <input type="checkbox" checked={exploitSlots} onChange={(e) => setExploitSlots(e.target.checked)} />
-              <span>
-                Exploiter les emplacements libres
-                <span className="muted" style={{ display: "block", fontSize: 11 }}>
-                  Mines, carrières, argile… sur les emplacements de montagne, rivière et marais que
-                  les aqueducs n'utilisent pas — l'eau reste prioritaire. Pose aussi les entrepôts
-                  nécessaires pour que la production sorte.
-                </span>
-              </span>
-            </label>
-            <label className="checkbox">
-              <input type="checkbox" checked={localProduction} onChange={(e) => setLocalProduction(e.target.checked)} />
-              <span>
-                Produire sur l'île
-                <span className="muted" style={{ display: "block", fontSize: 11 }}>
-                  Pose des ateliers pour fabriquer une partie des biens au lieu de tout importer.
-                  Ils remplacent des maisons et pèsent sur les attributs
-                  {strictBilan
-                    ? " : on s'arrête dès que le bilan de l'île passerait sous zéro."
-                    : ", ce que le bilan affiché inclut. Ils restent bornés par la demande, la main-d'œuvre et la place."}
-                </span>
-              </span>
-            </label>
-            {localProduction && (
-              <div className="field" style={{ display: "block" }}>
+            <details className="avance">
+              <summary>Options avancées</summary>
+              <label className="checkbox" title="Mines, carrières, argile… sur les emplacements de montagne, rivière et marais que les aqueducs n'utilisent pas — l'eau reste prioritaire. Pose aussi les entrepôts nécessaires pour que la production sorte.">
+                <input type="checkbox" checked={exploitSlots} onChange={(e) => setExploitSlots(e.target.checked)} />
                 <span>
-                  Bâtiments voulus{" "}
-                  <span className="muted" style={{ fontWeight: 400 }}>— servis en premier, dans l'ordre</span>
+                  Exploiter les emplacements libres
+                  <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                    Mines, carrières, argile… sur les emplacements non utilisés par l'eau.
+                  </span>
                 </span>
-                <input
-                  type="search" placeholder="Rechercher un atelier…" value={wishSearch}
-                  onChange={(e) => setWishSearch(e.target.value)}
-                  style={{ width: "100%", marginTop: 4 }}
-                />
-                {wishSearch.trim().length >= 2 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                    {wishCandidates.slice(0, 8).map((d) => (
-                      <button
-                        key={d.id} type="button" style={{ fontSize: 11, padding: "2px 6px" }}
-                        onClick={() => {
-                          setWishes((w) => (w.some((x) => x.defId === d.id) ? w : [...w, { defId: d.id, count: 1 }]));
-                          setWishSearch("");
-                        }}
-                      >+ {d.name}</button>
-                    ))}
-                    {!wishCandidates.length && <span className="muted" style={{ fontSize: 11 }}>aucun atelier productible ici</span>}
-                  </div>
-                )}
-                {wishes.map((w, i) => (
-                  <div key={w.defId} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                    <span style={{ flex: 1, fontSize: 12 }}>{lookup(w.defId)?.name ?? w.defId}</span>
-                    <input
-                      type="number" min={1} max={20} value={w.count} style={{ width: 52 }}
-                      onChange={(e) => {
-                        const n = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
-                        setWishes((prev) => prev.map((x, j) => (j === i ? { ...x, count: n } : x)));
-                      }}
-                    />
-                    <button
-                      type="button" title="Monter (priorité)" disabled={i === 0}
-                      onClick={() => setWishes((prev) => {
-                        const n = [...prev];
-                        [n[i - 1], n[i]] = [n[i], n[i - 1]];
-                        return n;
-                      })}
-                    >↑</button>
-                    <button type="button" title="Retirer" onClick={() => setWishes((prev) => prev.filter((_, j) => j !== i))}>✕</button>
-                  </div>
-                ))}
-                {exploitSlots && slotTypes.map((t) => (
-                  <div key={t} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                    <span style={{ fontSize: 12, minWidth: 92 }}>Emplacements {t}</span>
-                    <select
-                      value={slotWish[t] ?? ""} style={{ flex: 1 }}
-                      onChange={(e) => setSlotWish((prev) => {
-                        const n = { ...prev };
-                        if (e.target.value) n[t] = e.target.value; else delete n[t];
-                        return n;
-                      })}
-                    >
-                      <option value="">au choix du moteur</option>
-                      {slotChoices(t).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                  </div>
-                ))}
-                <span className="muted" style={{ display: "block", fontSize: 11, marginTop: 6 }}>
-                  Une liste de vœux est servie AVANT le choix automatique du moteur : le plan
-                  peut donc loger MOINS de monde qu'avec « Produire sur l'île » seule. Ce qui ne
-                  tient pas dans le budget ou la main-d'œuvre est annoncé dans les trous, avec
-                  sa cause. Une préférence d'emplacement ne peut que restreindre — jamais poser
-                  un bâtiment d'un autre monde ou sans son gisement.
-                </span>
-              </div>
-            )}
-            <label className="checkbox">
-              <input type="checkbox" checked={autoTier} onChange={(e) => setAutoTier(e.target.checked)} />
-              <span>
-                Chercher le meilleur palier
-                <span className="muted" style={{ display: "block", fontSize: 11 }}>
-                  Un palier plus haut ne loge pas forcément plus de monde : ses services mangent
-                  plus de sol et son malus de rang de cité est plus lourd. Mesuré en Albion, viser
-                  les Aldermen loge 2,25 fois plus que viser les Nobles. Coûte un plan complet par
-                  palier de la lignée.
-                </span>
-              </span>
-            </label>
-            <label className="slider">
-              <span style={{ color: "var(--muted)", fontSize: 12 }}>% maisons au tier</span>
-              <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
-              <span className="muted">{floor}%</span>
-            </label>
-            <label className="checkbox">
-              <input type="checkbox" checked={strictBilan} onChange={(e) => setStrictBilan(e.target.checked)} />
-              <span>
-                Respecter strictement le bilan d'attributs
-                <span className="muted" style={{ display: "block", fontSize: 11 }}>
-                  {strictBilan
-                    ? "Des maisons sont démolies jusqu'à ce que Bonheur, Argent, Santé et Sécurité"
-                      + " incendie de l'île repassent à zéro. Sur une grande île, cela en rase"
-                      + " jusqu'à neuf sur dix et laisse services et routes en place."
-                    : "Décoché : aucune maison n'est démolie pour tenir le bilan. Il est affiché"
-                      + " avec le résultat, par maison et par attribut — à toi de juger le risque."
-                      + " La règle n'a pas encore été vérifiée en jeu."}
-                </span>
-              </span>
-            </label>
-            {strictBilan && (
-              <label className="slider">
-                <span style={{ color: "var(--muted)", fontSize: 12 }}>Risque toléré</span>
-                <input type="range" min={0} max={50} step={5} value={Math.round(tolerance * 10)}
-                  onChange={(e) => setTolerance(parseInt(e.target.value) / 10)} />
-                <span className="muted">{tolerance === 0 ? "aucun" : `−${tolerance.toFixed(1)}`}</span>
               </label>
-            )}
-            <label className="slider">
-              <span style={{ color: "var(--muted)", fontSize: 12 }}>Dévotion</span>
-              <input type="range" min={0} max={5} step={1} value={DEVOTIONS.indexOf(devotion)}
-                onChange={(e) => setDevotion(DEVOTIONS[parseInt(e.target.value)] ?? 0)} />
-              <span className="muted">{devotion === 0 ? "aucune" : devotion.toLocaleString("fr")}</span>
-            </label>
-            <span className="muted" style={{ fontSize: 11 }}>
-              {devotion === 0
-                ? "Sans dévotion, la divinité tutélaire ne rend que l'effet de zone de son autel."
-                : `Cérès l'emporte : Population +${DEVOTION_POP(devotion)} sur CHAQUE maison de l'île, sans sol ni permis.`}
-              {strictBilan && (
-                <>
-                  {" "}Attention, l'effet est à double tranchant : plus d'habitants par maison
-                  alourdit le malus de rang de cité, donc le garde-fou rase davantage. Mesuré sur la
-                  carte continentale — sans tolérance la dévotion FAIT PERDRE 20 %, avec une
-                  tolérance de 3 elle fait gagner 34 % (70 057 → 93 622 habitants). Les deux
-                  réglages se tiennent.
-                </>
+              <label className="checkbox" title={localProductionHelp}>
+                <input type="checkbox" checked={localProduction} onChange={(e) => setLocalProduction(e.target.checked)} />
+                <span>
+                  Produire sur l'île
+                  <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                    Des ateliers fabriquent une partie des biens au lieu de les importer.
+                  </span>
+                </span>
+              </label>
+              {localProduction && (
+                <div className="field" style={{ display: "block" }} title="Une liste de vœux est servie AVANT le choix automatique du moteur : le plan peut donc loger MOINS de monde qu'avec « Produire sur l'île » seule. Ce qui ne tient pas dans le budget ou la main-d'œuvre est annoncé dans les trous, avec sa cause. Une préférence d'emplacement ne peut que restreindre — jamais poser un bâtiment d'un autre monde ou sans son gisement.">
+                  <span>
+                    Bâtiments voulus{" "}
+                    <span className="muted" style={{ fontWeight: 400 }}>— servis en premier, dans l'ordre</span>
+                  </span>
+                  <input
+                    type="search" placeholder="Rechercher un atelier…" value={wishSearch}
+                    onChange={(e) => setWishSearch(e.target.value)}
+                    style={{ width: "100%", marginTop: 4 }}
+                  />
+                  {wishSearch.trim().length >= 2 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                      {wishCandidates.slice(0, 8).map((d) => (
+                        <button
+                          key={d.id} type="button" style={{ fontSize: 11, padding: "2px 6px" }}
+                          onClick={() => {
+                            setWishes((w) => (w.some((x) => x.defId === d.id) ? w : [...w, { defId: d.id, count: 1 }]));
+                            setWishSearch("");
+                          }}
+                        >+ {d.name}</button>
+                      ))}
+                      {!wishCandidates.length && <span className="muted" style={{ fontSize: 11 }}>aucun atelier productible ici</span>}
+                    </div>
+                  )}
+                  {wishes.map((w, i) => (
+                    <div key={w.defId} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                      <span style={{ flex: 1, fontSize: 12 }}>{lookup(w.defId)?.name ?? w.defId}</span>
+                      <input
+                        type="number" min={1} max={20} value={w.count} style={{ width: 52 }}
+                        onChange={(e) => {
+                          const n = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
+                          setWishes((prev) => prev.map((x, j) => (j === i ? { ...x, count: n } : x)));
+                        }}
+                      />
+                      <button
+                        type="button" title="Monter (priorité)" disabled={i === 0}
+                        onClick={() => setWishes((prev) => {
+                          const n = [...prev];
+                          [n[i - 1], n[i]] = [n[i], n[i - 1]];
+                          return n;
+                        })}
+                      >↑</button>
+                      <button type="button" title="Retirer" onClick={() => setWishes((prev) => prev.filter((_, j) => j !== i))}>✕</button>
+                    </div>
+                  ))}
+                  {exploitSlots && slotTypes.map((t) => (
+                    <div key={t} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                      <span style={{ fontSize: 12, minWidth: 92 }}>Emplacements {t}</span>
+                      <select
+                        value={slotWish[t] ?? ""} style={{ flex: 1 }}
+                        onChange={(e) => setSlotWish((prev) => {
+                          const n = { ...prev };
+                          if (e.target.value) n[t] = e.target.value; else delete n[t];
+                          return n;
+                        })}
+                      >
+                        <option value="">au choix du moteur</option>
+                        {slotChoices(t).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                  <span className="muted" style={{ display: "block", fontSize: 11, marginTop: 6 }}>
+                    Les vœux sont servis avant le choix automatique du moteur.
+                  </span>
+                </div>
               )}
-            </span>
-            {strictBilan && (
-              <span className="muted" style={{ fontSize: 11 }}>
-                {tolerance === 0
-                  ? "Aucun attribut vital ne peut être négatif : une seule maison en déficit fait raser jusqu'au retour à zéro."
-                  : `Chaque maison peut être en déficit de ${tolerance.toFixed(1)} sur un attribut vital. `
-                    + "En jeu la sécurité incendie est un TAUX DE RISQUE, pas une interdiction : "
-                    + "plus d'incendies et d'émeutes, mais une ville bien plus grande."}
-                {" "}Le malus de rang de cité s'applique par maison et atteint −7 dès 30 000 habitants,
-                alors qu'une maison plafonne à +7 : sans tolérance, aucune ville romaine ne dépasse
-                ce seuil, quelle que soit la surface. Mesuré sur la carte continentale du DLC :
-                7 186 habitants sans risque, 34 257 à −1,0, 70 057 à −3,0.
+              <label className="checkbox" title="Un palier plus haut ne loge pas forcément plus de monde : ses services mangent plus de sol et son malus de rang de cité est plus lourd. Mesuré en Albion, viser les Aldermen loge 2,25 fois plus que viser les Nobles. Coûte un plan complet par palier de la lignée.">
+                <input type="checkbox" checked={autoTier} onChange={(e) => setAutoTier(e.target.checked)} />
+                <span>
+                  Chercher le meilleur palier
+                  <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                    Un palier plus haut ne loge pas toujours plus de monde.
+                  </span>
+                </span>
+              </label>
+              <label className="slider">
+                <span style={{ color: "var(--muted)", fontSize: 12 }}>% maisons au tier</span>
+                <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
+                <span className="muted">{floor}%</span>
+              </label>
+              <label className="checkbox" title={strictHelp}>
+                <input type="checkbox" checked={strictBilan} onChange={(e) => setStrictBilan(e.target.checked)} />
+                <span>
+                  Respecter strictement le bilan d'attributs
+                  <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                    {strictBilan
+                      ? "Des maisons sont démolies jusqu'à ce que le bilan repasse à zéro."
+                      : "Aucune maison n'est démolie ; le bilan est seulement affiché."}
+                  </span>
+                </span>
+              </label>
+              {strictBilan && (
+                <label className="slider" title={toleranceHelp}>
+                  <span style={{ color: "var(--muted)", fontSize: 12 }}>Risque toléré</span>
+                  <input type="range" min={0} max={50} step={5} value={Math.round(tolerance * 10)}
+                    onChange={(e) => setTolerance(parseInt(e.target.value) / 10)} />
+                  <span className="muted">{tolerance === 0 ? "aucun" : `−${tolerance.toFixed(1)}`}</span>
+                </label>
+              )}
+              <label className="slider" title={devotionHelp}>
+                <span style={{ color: "var(--muted)", fontSize: 12 }}>Dévotion</span>
+                <input type="range" min={0} max={5} step={1} value={DEVOTIONS.indexOf(devotion)}
+                  onChange={(e) => setDevotion(DEVOTIONS[parseInt(e.target.value)] ?? 0)} />
+                <span className="muted">{devotion === 0 ? "aucune" : devotion.toLocaleString("fr")}</span>
+              </label>
+              <span className="muted" style={{ fontSize: 11 }} title={devotionHelp}>
+                {devotion === 0
+                  ? "Sans dévotion, seul l'effet de zone de l'autel s'applique."
+                  : `Cérès : Population +${DEVOTION_POP(devotion)} sur chaque maison.`}
               </span>
-            )}
+              {strictBilan && (
+                <span className="muted" style={{ fontSize: 11 }} title={toleranceHelp}>
+                  {tolerance === 0
+                    ? "Aucun déficit toléré : une maison en déficit fait raser."
+                    : `Déficit de ${tolerance.toFixed(1)} toléré par maison sur un attribut vital.`}
+                </span>
+              )}
+            </details>
           </>
         )}
 
