@@ -17,6 +17,8 @@ import type { Nomenclature } from "./nomenclature";
 export interface DispositionOpts {
   /** Hauteurs quantifiées de l'île (pente des aqueducs). */
   heights?: Int8Array;
+  /** Rangées d'îlots entre deux corridors d'eau ; 0 ou absent = aucun (cf. `ilots.ts`). */
+  corridors?: number;
 }
 
 export interface LignePosee {

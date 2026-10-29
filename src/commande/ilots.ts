@@ -46,6 +46,17 @@ export const ILOT = { largeur: 12, hauteur: 6, pasX: 13, pasY: 7, maisons: 8 } a
 const ROUTE_TOUTES = 2;
 /** Prix d'une unité d'eau, en maisons : une Citerne (10 u) doit en couvrir cinq de plus. */
 const COUT_EAU = 0.5;
+/**
+ * CORRIDORS D'EAU : toutes les `CORRIDOR_TOUS` rangées d'îlots, la route qui les sépare devient
+ * route | voie d'eau | route (+2 rangées). Sans eux l'eau ne circule dans la ville que de haut
+ * en bas, par les allées : aucune voie horizontale, si bien qu'un Forum au milieu d'une grande
+ * ville restait sec à 46 cases d'une source. Des ponts de route enjambent la voie à chaque
+ * colonne de route, pour que le réseau routier ne soit pas coupé en bandes.
+ *
+ * Ils coûtent ~9 % de sol : on ne les pose qu'en secours, quand le plan sans corridor laisse
+ * des consommateurs secs (cf. `disposerQuartiers`).
+ */
+const CORRIDOR_TOUS = 4;
 /** Tours de relocalisation des consommateurs restés secs. Mesuré : au-delà de quatre, les
  *  interdictions s'accumulent et chassent les citernes de toute position utile. */
 const TOURS_EAU = 4;
@@ -78,14 +89,20 @@ export function besoinEnIlots(d: BuildingDef): { k: number; m: number; rot: 0 | 
 /** La trame : origine et validité de chaque îlot sur le masque constructible. */
 class Trame {
   readonly nI: number; readonly nJ: number;
-  constructor(readonly grid: GridShape, readonly ox: number, readonly oy: number) {
+  /** `corridors` : rangées d'îlots entre deux corridors d'eau, 0 = aucun. */
+  constructor(readonly grid: GridShape, readonly ox: number, readonly oy: number, readonly corridors = 0) {
     this.nI = Math.ceil((grid.w - ox) / ILOT.pasX);
     this.nJ = Math.ceil((grid.h - oy) / ILOT.pasY);
   }
   cle(i: number, j: number) { return j * this.nI + i; }
   ij(cle: number) { return { i: cle % this.nI, j: Math.floor(cle / this.nI) }; }
-  /** Coin haut-gauche de l'intérieur de l'îlot. */
-  coin(i: number, j: number) { return { x: this.ox + i * ILOT.pasX + 1, y: this.oy + j * ILOT.pasY + 1 }; }
+  /** Un corridor d'eau passe-t-il sous la rangée `j` ? */
+  corridorSous(j: number) { return this.corridors > 0 && (j + 1) % this.corridors === 0; }
+  /** Coin haut-gauche de l'intérieur de l'îlot. Chaque corridor franchi décale de 2 rangées. */
+  coin(i: number, j: number) {
+    const decalage = this.corridors > 0 ? 2 * Math.floor(j / this.corridors) : 0;
+    return { x: this.ox + i * ILOT.pasX + 1, y: this.oy + j * ILOT.pasY + decalage + 1 };
+  }
   routeColonne(i: number) { return ((i % ROUTE_TOUTES) + ROUTE_TOUTES) % ROUTE_TOUTES === 0; }
   terre(x: number, y: number) {
     return x >= 0 && y >= 0 && x < this.grid.w && y < this.grid.h && this.grid.usable[y * this.grid.w + x];
@@ -102,11 +119,13 @@ class Trame {
 }
 
 /** Trame dont les îlots valides les plus proches du comptoir sont les plus nombreux. */
-function choisirTrame(base: GridShape, dist: Int32Array, besoin: number): Trame {
+function choisirTrame(base: GridShape, dist: Int32Array, besoin: number, corridors: number): Trame {
   let meilleure: Trame | null = null, score = -1, cout = Infinity;
-  for (let oy = -ILOT.pasY + 1; oy <= 0; oy++) {
+  // la période verticale inclut le corridor : sa phase se choisit comme celle des îlots
+  const periodeY = corridors > 0 ? corridors * ILOT.pasY + 2 : ILOT.pasY;
+  for (let oy = -periodeY + 1; oy <= 0; oy++) {
     for (let ox = -ILOT.pasX + 1; ox <= 0; ox++) {
-      const t = new Trame(base, ox, oy);
+      const t = new Trame(base, ox, oy, corridors);
       const d: number[] = [];
       for (let j = 0; j < t.nJ; j++) for (let i = 0; i < t.nI; i++) {
         if (!t.valide(i, j)) continue;
@@ -193,6 +212,24 @@ export function disposerQuartiers(
   lookup: DefLookup,
   opts: DispositionOpts = {},
 ): PlanQuartiers {
+  const simple = disposer(grid, commande, catalog, lookup, opts);
+  if (opts.corridors !== undefined || !simple.manques.some((m) => m.startsWith(SANS_EAU))) return simple;
+  // Des consommateurs secs : on retente avec des corridors d'eau, et l'on garde le plan qui
+  // loge le plus. Les corridors coûtent du sol ; ils ne gagnent que si l'eau bloquait vraiment.
+  const avecCorridors = disposer(grid, commande, catalog, lookup, { ...opts, corridors: CORRIDOR_TOUS });
+  return avecCorridors.habitants > simple.habitants ? avecCorridors : simple;
+}
+
+/** Préfixe du manque qui signale des consommateurs d'eau restés secs. */
+const SANS_EAU = "Sans eau";
+
+function disposer(
+  grid: GridShape,
+  commande: Commande,
+  catalog: BuildingDef[],
+  lookup: DefLookup,
+  opts: DispositionOpts,
+): PlanQuartiers {
   const W = grid.w, H = grid.h, N = W * H;
   let terre = 0;
   for (const u of grid.usable) if (u) terre++;
@@ -246,7 +283,7 @@ export function disposerQuartiers(
     .filter((t) => !!t.def && rangeOf(t.def) > 0);
 
   const besoinIlots = Math.ceil(totalMaisons / ILOT.maisons);
-  const trame = choisirTrame(base, dist, besoinIlots * 2);
+  const trame = choisirTrame(base, dist, besoinIlots * 2, opts.corridors ?? 0);
   const valides: number[] = [];
   const distIlot = new Map<number, number>();
   for (let j = 0; j < trame.nJ; j++) for (let i = 0; i < trame.nI; i++) {
@@ -358,7 +395,9 @@ export function disposerQuartiers(
       const { i, j } = trame.ij(c);
       const { x, y } = trame.coin(i, j);
       for (let dx = -1; dx <= ILOT.largeur; dx++) { poser(x + dx, y - 1); poser(x + dx, y + ILOT.hauteur); }
-      for (let dy = 0; dy < ILOT.hauteur; dy++) {
+      // sous un corridor, la colonne de route le franchit : c'est le pont
+      const fin = trame.corridorSous(j) ? ILOT.hauteur + 1 : ILOT.hauteur - 1;
+      for (let dy = 0; dy <= fin; dy++) {
         if (trame.routeColonne(i)) poser(x - 1, y + dy);
         if (trame.routeColonne(i + 1)) poser(x + ILOT.largeur, y + dy);
       }
@@ -976,7 +1015,7 @@ export function disposerQuartiers(
   if (secs.size) {
     const noms = new Map<string, number>();
     for (const s of services) if (secs.has(s.b.uid)) noms.set(s.def.name, (noms.get(s.def.name) ?? 0) + 1);
-    manques.push(`Sans eau, donc inactifs : ${[...noms].map(([n, k]) => `${n} ×${k}`).join(", ")}`);
+    manques.push(`${SANS_EAU}, donc inactifs : ${[...noms].map(([n, k]) => `${n} ×${k}`).join(", ")}`);
     ({ attribution, courts } = attribuerLignes(evaluer(services.filter((s) => !secs.has(s.b.uid)), gardees)));
   }
   manques.push(...courts);
