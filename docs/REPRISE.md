@@ -58,7 +58,14 @@ Détail et mesures : `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`, 
 - Route diagonale = losanges de côté √2 centrés sur les coins de la grille : √2 de large en
   travers, 2 cases sur une ligne horizontale.
 - Maison 3 × 3 droite = 2 × 2 cases de route diagonale une fois posée en biais.
-- Une case de route diagonale compte pour un pas de portée, comme une case droite.
+- **La portée est une longueur de trajet** : une case de route diagonale, longue de √2,
+  coûte environ 1,4 pas (captures de Rémi : depuis un même embranchement, la zone servie
+  s'arrête à la même distance réelle sur la branche droite et sur la branche diagonale). La
+  règle notée d'abord, « une case diagonale = un pas », était FAUSSE ; le gain de la trame
+  diagonale (+12 à +24 %) a été mesuré avec elle et est à recalculer.
+- **Jonction droite / diagonale par recouvrement** : la route droite entre dans la route en
+  biais, sa dernière case est la case entière de la bande diagonale sur sa ligne ; la case
+  d'avant est à moitié recouverte par le pavage diagonal. Pas de contact par une simple pointe.
 - Raccordement par un coin : valable (maison droite / route diagonale, service diagonal /
   route droite). La portée part de chaque point de contact.
 - Les demi-cases au bord d'une route diagonale sont constructibles par un bâtiment diagonal.
@@ -77,7 +84,8 @@ réseau d'eau, un bilan) : seule la géométrie est locale. Étapes restantes :
    analyseur à l'échelle 1, `streetGrid`, `planLattice`, comptoir, réparation, élagage,
    `waterPlan`. Une route de plan peut être un losange (`RoadTile.losange`). Restent : les
    liaisons diagonales (étape 6, option), l'occupation des losanges, `commande/ilots.ts` ;
-   trois règles à vérifier en jeu (Q1 à Q3) — détail dans « Ce qui reste » de la conception ;
+   Q1 tranchée (jonction par recouvrement, portée en longueur) : le graphe et `cadreDiagonal`
+  sont à corriger ; Q2 et Q3 restent à vérifier — détail dans la conception ;
 3. carte d'orientation de l'île selon ses côtes ;
 4. squelette de rues mêlé, recousu aux jonctions ;
 5. placement global unique des services, de l'eau et des maisons sur ce graphe ;

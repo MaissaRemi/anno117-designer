@@ -85,7 +85,11 @@ Correctif au passage (vaut aussi en droit) : `keepMainLandmass` gardait la terre
 PROCHE du comptoir, pas la plus grande — dans le repère diagonal, une case isolée collée au
 comptoir faisait perdre l'île entière.
 
-**Vérifié en jeu (30/10/2026)** : une case de route diagonale compte pour UN pas de portée,
+**⚠ INFIRMÉ ENSUITE (captures de Rémi, conception du réseau en graphe, Q1)** : la portée est une
+longueur de trajet, une case diagonale coûte environ √2 pas. Le paragraphe suivant, et les gains
+du tableau ci-dessus, reposent sur la règle fausse et sont à recalculer.
+
+~~Vérifié en jeu (30/10/2026)~~ : une case de route diagonale compte pour UN pas de portée,
 comme une case droite — elle avance pourtant de √2. C'est l'essentiel du gain de large_03
 (1 949 maisons au palier contre 1 496).
 
@@ -112,7 +116,8 @@ exactement, sans approximation.
    perte — premier test.
 2. *Réseau routier en graphe* : une case de route (droite ou losange) = un nœud ; arêtes par côté
    partagé ; un bâtiment se raccorde par côté ou par coin (vérifié en jeu). Portée = distance en
-   nœuds (une case diagonale compte pour un pas, vérifié). Couverture, accès au comptoir et
+   longueur (une case diagonale coûte √2, cf. réseau en graphe, Q1 — l'hypothèse d'un pas par
+   case était fausse). Couverture, accès au comptoir et
    traversées d'aqueduc se calculent sur ce graphe.
 3. *Carte d'orientation* : pour chaque partie de l'île, droite ou diagonale selon l'orientation
    de ses côtes (direction dominante du bord), avec un seuil de taille pour ne pas émietter.

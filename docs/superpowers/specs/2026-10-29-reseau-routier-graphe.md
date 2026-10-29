@@ -190,6 +190,23 @@ biais ? Si oui, sur combien de cases doit-elle aller tout droit ?
 Seule Q1 bloque l'étape 6 et la portée à travers une jonction ; les étapes 0 à 5 peuvent
 avancer avec la règle géométrique ci-dessus et un test qui la fige, à corriger après réponse.
 
+### Réponse à Q1 (captures en jeu de Rémi, lecture confirmée par lui)
+
+- **Jonction par recouvrement.** Une route droite qui rejoint une route en biais y ENTRE : sa
+  dernière case est la case entière que la bande diagonale contient sur cette ligne (couverte
+  par deux losanges consécutifs) ; la case d'avant est à moitié sous le pavage diagonal (les
+  pièces en coin de `WedgeConfig`). Le contact par une simple pointe, modélisé aux étapes 1 à 5,
+  est FAUX pour deux routes ; il reste vrai pour un bâtiment contre une route (vérifié avant).
+- **La portée est une longueur de trajet.** Depuis un même embranchement, la zone servie
+  s'arrête à la même distance réelle sur la branche droite (7 à 8 cases) et sur la branche
+  diagonale (environ 5 losanges). Une case diagonale coûte donc environ √2 pas, et non un.
+  La règle notée le 30/10 (« un pas par case diagonale ») était fausse ; elle est encore dans
+  `cadreDiagonal` (portées-rue non réduites) et dans `parcourir` (un pas par nœud).
+
+Corrections qui en découlent : jonction par recouvrement dans le graphe ; portée pondérée
+(1 par case droite, √2 par losange) ; portées-rue du catalogue diagonal divisées par √2 ; gains
+de la trame diagonale recalculés.
+
 ## 6. Écart relevé en passant
 
 L'éditeur (grille ½-tuile, `neighbors8`) relie deux objets droits qui ne se touchent que par un
