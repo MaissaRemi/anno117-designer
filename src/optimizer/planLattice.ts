@@ -9,6 +9,7 @@ import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
 import { MAX_RUN, MOUNTAIN_BLOCK_RADIUS, needsWater, planWater, type WaterPlanResult } from "./waterPlan";
 import { makeStreetGrid } from "./streetGrid";
+import { copiesEnTrop } from "./doublons";
 import { planningRange, type RoadType } from "../engine/roads";
 
 
@@ -787,6 +788,39 @@ export function planLattice(
         if (!roadAt[cur]) { roadAt[cur] = 1; occ[cur] = 0; }
       }
     }
+  }
+
+  // ═══ COPIES EN TROP : leur place revient aux maisons ═══════════════════════════════════
+  //
+  // Le lattice pose chaque type à l'espacement de sa portée, puis la densification ajoute des
+  // copies de secours là où un type manque : une copie de secours peut rendre une copie du
+  // lattice inutile. Mesuré sur roman_island_small_06 (terre) : 20 copies dont toutes les
+  // maisons étaient vues par une autre copie du même type, 416 cases.
+  //
+  // Jugé sur les ORIGINES où une maison tient, pas sur des maisons posées : c'est plus large,
+  // donc prudent — toute maison posée ensuite sur une origine reste couverte. Les
+  // consommateurs d'eau restent : leur conduite est tracée, la retirer laisserait un
+  // cul-de-sac d'aqueduc au milieu des maisons.
+  rebuildDemand();
+  {
+    const origines: number[] = [];
+    for (let i = 0; i < N; i++) if (demand[i]) origines.push(i);
+    const enTrop = new Set<string>();
+    for (const tc of typeCov.values()) {
+      if (needsWater(tc.def)) continue;
+      const copies = buildings.filter((b) => b.defId === tc.def.id);
+      if (copies.length <= 1) continue;
+      const vues = copies.map((b) => {
+        const seule: TypeCov = { ...tc, reach: new Uint8Array(N), reachList: [], parent: new Int32Array(N) };
+        sg.bfsType(seule, new Map([[tc.def.id, [{ x: b.x, y: b.y, ...footprintSize(tc.def, b.rotation) }]]]));
+        const cov = coveredOrigins(seule);
+        const out: number[] = [];
+        origines.forEach((o, k) => { if (cov[o]) out.push(k); });
+        return out;
+      });
+      for (const k of copiesEnTrop(vues, origines.length)) enTrop.add(copies[k].uid);
+    }
+    retirerDuPlan(enTrop);
   }
 
   // refresh FINAL de tous les types : les stamps tardifs ont pu invalider les BFS

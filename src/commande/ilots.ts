@@ -12,6 +12,7 @@ import { pruneDeadEnds } from "../optimizer/roadCleanup";
 import { planQuality } from "../optimizer/planQuality";
 import { verdictViable } from "../optimizer/viability";
 import { nomenclature, type Commande } from "./nomenclature";
+import { copiesEnTrop } from "../optimizer/doublons";
 import { distancesDeCroissance, type DispositionOpts, type LignePosee, type PlanQuartiers } from "./disposition";
 import { planningRange } from "../engine/roads";
 
@@ -475,6 +476,14 @@ export function disposerQuartiers(
   }
   /** Où loger ce bâtiment dans l'îlot `c` (îlot de services existant, ou îlot à convertir). */
   /** Positions où un consommateur est resté SEC : on n'y repose pas le même bâtiment. */
+  /** Indices, dans `lesMaisons`, des maisons qu'une copie de `d` couvrirait posée là. */
+  const maisonsVues = (d: BuildingDef, x: number, y: number, rot: 0 | 90, lesMaisons: Maison[]): number[] => {
+    const { w, h } = taille(d, rot);
+    const vu = atteintes(x, y, w, h, rangeOf(d));
+    const out: number[] = [];
+    lesMaisons.forEach((m, i) => { if (couverte(m, vu)) out.push(i); });
+    return out;
+  };
   const interdits = new Map<string, Set<number>>();
   const interdit = (d: BuildingDef, x: number, y: number) => interdits.get(d.id)?.has(y * W + x) ?? false;
   /**
@@ -750,8 +759,8 @@ export function disposerQuartiers(
     const eau = routerEau([...bats, ...maisonsB.map((x) => x.b)], rt, maisonsB.map((x) => x.m));
     return { bats, origine, maisonsB, rt, eau };
   };
-  /** Retire une pose (consommateur resté sec) et interdit sa position. */
-  const retirer = (o: { groupe?: Groupe; cle?: number; petit?: PetitService }) => {
+  /** Retire une pose et, sauf avis contraire, interdit sa position au type. */
+  const retirer = (o: { groupe?: Groupe; cle?: number; petit?: PetitService }, interdire = true) => {
     if (o.groupe) {
       const g = o.groupe;
       groupes.splice(groupes.indexOf(g), 1);
@@ -759,8 +768,10 @@ export function disposerQuartiers(
         const k = trame.cle(g.i + di, g.j + dj);
         etat.set(k, "maisons");
       }
-      const set = interdits.get(g.def.id) ?? new Set<number>();
-      set.add(g.y * W + g.x); interdits.set(g.def.id, set);
+      if (interdire) {
+        const set = interdits.get(g.def.id) ?? new Set<number>();
+        set.add(g.y * W + g.x); interdits.set(g.def.id, set);
+      }
     } else if (o.petit && o.cle !== undefined) {
       const l = petits.get(o.cle)!;
       l.splice(l.indexOf(o.petit), 1);
@@ -768,10 +779,41 @@ export function disposerQuartiers(
       const coin = trame.coin(trame.ij(o.cle).i, trame.ij(o.cle).j);
       const t = taille(o.petit.def, o.petit.rot);
       for (let dy = 0; dy < t.h; dy++) for (let dx = 0; dx < t.w; dx++) occ[(o.petit.y - coin.y + dy) * ILOT.largeur + o.petit.x - coin.x + dx] = 0;
-      const set = interdits.get(o.petit.def.id) ?? new Set<number>();
-      set.add(o.petit.y * W + o.petit.x); interdits.set(o.petit.def.id, set);
+      if (interdire) {
+        const set = interdits.get(o.petit.def.id) ?? new Set<number>();
+        set.add(o.petit.y * W + o.petit.x); interdits.set(o.petit.def.id, set);
+      }
     }
     route = routes();
+  };
+
+  /**
+   * ═══ LES COPIES DEVENUES INUTILES SORTENT ═══════════════════════════════════════════
+   *
+   * `couvrir` pose une copie quand elle rapporte AU MOMENT de la pose. Mais la ville bouge
+   * ensuite : des maisons délogées se réinstallent en bordure, d'autres copies arrivent, et la
+   * première finit par ne plus couvrir que des maisons déjà vues par ses voisines. Mesuré sur
+   * roman_island_small_06 (300 Patriciens, routes pavées) : chaque maison couverte 2,1 à 2,8
+   * fois par le même petit service, 24 copies retirables sans qu'aucune maison ne perde rien.
+   *
+   * Retrait glouton, la copie la moins utile d'abord, tant que TOUTES ses maisons restent
+   * couvertes par une autre copie du type ; chaque type garde au moins une copie. Pas
+   * d'interdiction de position : la copie n'était pas fautive, seulement de trop. Sa place
+   * revient aux maisons — un îlot de services recalcule les siennes depuis son occupation.
+   */
+  const elaguerDoublons = (): number => {
+    let retires = 0;
+    for (const t of ordreTypes) {
+      const lesMaisons = maisons();
+      const copies: { o: { groupe?: Groupe; cle?: number; petit?: PetitService }; x: number; y: number; rot: 0 | 90 }[] = [];
+      for (const g of groupes) if (g.def.id === t.def.id) copies.push({ o: { groupe: g }, x: g.x, y: g.y, rot: g.rot });
+      for (const [cle, l] of petits) {
+        for (const p of l) if (p.def.id === t.def.id) copies.push({ o: { cle, petit: p }, x: p.x, y: p.y, rot: p.rot });
+      }
+      const vues = copies.map((c) => maisonsVues(t.def, c.x, c.y, c.rot, lesMaisons));
+      for (const k of copiesEnTrop(vues, lesMaisons.length)) { retirer(copies[k].o, false); retires++; }
+    }
+    return retires;
   };
 
   let tours = 0, toursEau = 0;
@@ -801,6 +843,9 @@ export function disposerQuartiers(
       if (manque <= 0) break;
       if (!ajouterIlotsDeMaisons(Math.ceil(manque / ILOT.maisons))) break; // plus aucun îlot valide
     }
+    // Une seule passe, puis une couverture de rattrapage pour les maisons rendues par
+    // l'élagage : elles naissent contre des copies restantes, rarement hors de portée.
+    if (elaguerDoublons()) for (const t of ordreTypes) couvrir(t.def);
   }
 
   // ─── BÂTIMENTS ──────────────────────────────────────────────────────────────────────
@@ -879,6 +924,25 @@ export function disposerQuartiers(
     return { attribution, courts };
   };
   let { attribution, courts } = attribuerLignes(evaluer(services, maisonB));
+
+  // ÉLAGAGE FINAL, sur les seules maisons gardées. L'excédent d'îlots part juste au-dessus, et
+  // avec lui la raison d'être de certaines copies. Aucune maison gardée ne perd un type qui la
+  // couvrait : son palier, donc l'attribution, ne bouge pas.
+  {
+    const gardeesM = maisonB.filter((x) => attribution.has(x.b.uid)).map((x) => x.m);
+    const enTrop = new Set<string>();
+    for (const t of ordreTypes) {
+      const copies = services.filter((s) => s.def.id === t.def.id);
+      const vues = copies.map((s) => maisonsVues(s.def, s.b.x, s.b.y, s.b.rotation as 0 | 90, gardeesM));
+      for (const k of copiesEnTrop(vues, gardeesM.length)) enTrop.add(copies[k].b.uid);
+    }
+    if (enTrop.size) {
+      const garder = services.filter((s) => !enTrop.has(s.b.uid));
+      services.length = 0; services.push(...garder);
+      const restants = buildings.filter((b) => !enTrop.has(b.uid));
+      buildings.length = 0; buildings.push(...restants);
+    }
+  }
 
   // ─── EAU, SUR LES SEULES MAISONS GARDÉES ────────────────────────────────────────────
   // Router l'eau AVANT de retirer l'excédent la faisait passer au travers de maisons qui

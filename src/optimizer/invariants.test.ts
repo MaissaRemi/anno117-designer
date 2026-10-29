@@ -87,29 +87,34 @@ describe("exploitations : aucune stérile ne survit au plan", () => {
   // `served`, la seule assertion « aucune non desservie ne subsiste » passe désormais par
   // construction, sur n'importe quelle île, même si le retrait était supprimé. C'est
   // `droppedSlots` qui rend le retrait observable — et donc testable.
-  const CAS: { id: string; attendu: number; pourquoi: string }[] = [
+  //
+  // Le NOMBRE retiré dépend du dessin du plan (il bouge dès qu'un service change de place) : on
+  // verrouille la nature du retrait — total ou partiel —, pas son compte.
+  const CAS: { id: string; retrait: "total" | "partiel"; pourquoi: string }[] = [
     {
       id: "celtic_island_small_07",
-      attendu: 2,
+      retrait: "total",
       pourquoi: "le pire cas mesuré : ses DEUX exploitations étaient sans débouché. Le plan"
         + " doit les retirer toutes plutôt que de livrer une île de façade",
     },
     {
       id: "celtic_island_large_03",
-      attendu: 5,
-      pourquoi: "cinq stériles sur dix-sept — le cas d'un retrait PARTIEL, qui doit laisser"
-        + " debout les douze qui expédient",
+      retrait: "partiel",
+      pourquoi: "cinq stériles sur dix-sept à la mesure — le cas d'un retrait PARTIEL, qui doit"
+        + " laisser debout celles qui expédient",
     },
   ];
   for (const c of CAS) {
-    it(`${c.id} : ${c.attendu} stérile(s) retirée(s), le reste expédie`, () => {
+    it(`${c.id} : retrait ${c.retrait} des stériles, le reste expédie`, () => {
       const grid = downscaleGrid(buildIslandGrid(c.id)!);
       const tier = topTier(c.id);
       const r = planIslandImport({
         catalog, grid, tierGuid: tier.guid, coverageFloor: 0.7, exploitSlots: true,
       });
       // le retrait a EU LIEU — sans quoi les deux assertions suivantes sont vides de sens
-      expect(r.droppedSlots).toBe(c.attendu);
+      expect(r.droppedSlots).toBeGreaterThan(0);
+      if (c.retrait === "total") expect(r.exploited).toEqual([]);
+      else expect(r.exploited.length).toBeGreaterThan(0);
       expect(r.exploited.filter((e) => !e.served)).toEqual([]);
       const v = checkPlan(r, { islandId: c.id, grid, lookup, askedTier: tier.guid });
       expect(v.filter((x) => x.severity === "faute").map((x) => `${x.rule} — ${x.detail}`))
