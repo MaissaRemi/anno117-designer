@@ -3,7 +3,7 @@ import rawCatalog from "../data/catalog.generated.json";
 import { makeGrid } from "../model/factories";
 import type { BuildingDef, GridShape, PlacedBuilding } from "../model/types";
 import { makeLookup } from "../engine/rules";
-import { blockMountains, planWater, WATER_CAPACITY } from "./waterPlan";
+import { blockMountains, DEBORD_AQUEDUC, planWater, WATER_CAPACITY } from "./waterPlan";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -219,5 +219,43 @@ describe("planWater", () => {
       const vert = aq.has(`${a.x},${a.y - 1}`) && aq.has(`${a.x},${a.y + 1}`);
       expect(horiz || vert).toBe(true);
     }
+  });
+
+  // Une falaise (relief, hors terre constructible) coupe l'île en deux bandes : la source au
+  // nord, la Citerne au sud. Le jeu laisse l'aqueduc déborder de la grille constructible
+  // (`AllowedCliffDistance` = 5) : une falaise étroite se franchit, une large non.
+  const falaise = (largeur: number): GridShape => {
+    const g = gridWithMountain(120, 120, [{ type: "mountain", x: 60, y: 15 }]);
+    const usable = g.usable.slice(), relief = new Array<boolean>(120 * 120).fill(false);
+    for (let y = 50; y < 50 + largeur; y++) for (let x = 0; x < 120; x++) {
+      usable[y * 120 + x] = false; relief[y * 120 + x] = true;
+    }
+    return { ...g, usable, relief };
+  };
+  it("l'aqueduc franchit une falaise étroite, pas une large", () => {
+    const etroite = planWater(falaise(2 * DEBORD_AQUEDUC), [pb(CITERNE, 58, 75)], [], lookup);
+    expect(etroite.consumers[0].connected).toBe(true);
+    const large = planWater(falaise(2 * DEBORD_AQUEDUC + 3), [pb(CITERNE, 58, 75)], [], lookup);
+    expect(large.consumers[0].connected).toBe(false);
+  });
+
+  it("un consommateur emmuré est DÉPLACÉ contre une route où il se raccorde, s'il est permis", () => {
+    // une Citerne entourée de bâtiments sur ses quatre côtés : aucune conduite n'y entre
+    const grid = gridWithMountain(120, 120, [{ type: "mountain", x: 20, y: 20 }]);
+    const c = pb(CITERNE, 60, 60);
+    const d = lookup(CITERNE)!;
+    const murs = [
+      pb(BAINS, 60 - 12, 50), pb(BAINS, 60 + d.size.w, 50),
+      pb(FORUM, 50, 60 - 12), pb(FORUM, 50, 60 + d.size.h),
+    ];
+    const route = Array.from({ length: 40 }, (_, i) => ({ x: 40 + i, y: 80 }));
+    const fige = planWater(grid, [c, ...murs], route, lookup);
+    const reste = fige.consumers.find((k) => k.uid === c.uid)!;
+    expect(reste.connected).toBe(false); // emmurée là où elle est
+    const r = planWater(grid, [c, ...murs], route, lookup, undefined, undefined, "volume", true);
+    expect(r.consumers.find((k) => k.uid === c.uid)!.connected).toBe(true);
+    const m = r.moved?.find((k) => k.uid === c.uid);
+    expect(m).toBeDefined();
+    expect(Math.abs(m!.x - 60) + Math.abs(m!.y - 60)).toBeLessThanOrEqual(48);
   });
 });

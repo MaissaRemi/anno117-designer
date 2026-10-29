@@ -523,6 +523,8 @@ export function planIslandImport(
   // relu par `runLattice` : il suit l'autel candidat pendant l'élection, pour que l'autel posé
   // et les effets crédités aux maisons soient ceux d'un même dieu
   let deityAttrs = attrsDuDieu(dieuSansAutel);
+  // lu par `runLattice`, comme `patron` (cf. ANCRAGE plus bas)
+  let ancrage: "centre" | "source" = "centre";
   if (dieuImpose) {
     const siens = new Set([...(dieuImpose.shrines ?? []), ...(dieuImpose.shrineDefId ? [dieuImpose.shrineDefId] : [])]);
     instCands = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE || siens.has(i.defId));
@@ -717,7 +719,7 @@ export function planIslandImport(
       planLattice(g, req.tierGuid, lookup, {
         coverageFloor: floor, serviceIds, water: true, heights: req.heights,
         institutions: patron ? [...institutions, patron] : institutions,
-        patronAttrs: deityAttrs,
+        patronAttrs: deityAttrs, ancrage,
         permits: req.permits, reserved: kontorRect, tolerance: req.tolerance,
         viabilityGate: regle.strict, roadType: req.roadType,
       }),
@@ -778,6 +780,28 @@ export function planIslandImport(
       if (better(ev, pick)) { pick = ev; bestTrial = variantes[i]; }
     }
   }
+  // ═══ ANCRAGE DE L'AMPHITHÉÂTRE ═══════════════════════════════════════════════════════
+  //
+  // Unique, énorme, indispensable au palier et consommateur d'eau : sa position décide de la
+  // ville entière. Au centroïde, il laissait roman_island_small_01 sans eau donc sans un seul
+  // Patricien ; près d'une source, roman_island_small_06 perdait 23 % d'habitants. La recette
+  // gagnante est donc rejouée avec l'autre ancrage, et la population livrée tranche.
+  const uniqueAEau = (e: Evaluated) => e.buildings.some((b) => {
+    const d = lookup(b.defId);
+    return !!d?.unique && needsWater(d);
+  });
+  if (pick && uniqueAEau(pick)) {
+    ancrage = "source";
+    nVariantes++;
+    total += 1;
+    onProgress?.(trials.length + nVariantes, total);
+    const ev = runLattice(bestTrial, coverageFloor);
+    cands.push(ev);
+    if (bestTrial) recetteDe.set(ev, bestTrial);
+    if (better(ev, pick)) pick = ev;
+    else ancrage = "centre";
+  }
+
   // ═══ DIVINITÉ TUTÉLAIRE ═══════════════════════════════════════════════════════════════
   // Le choix ne peut pas être fait à l'avance : il dépend de l'attribut qui MANQUE, et celui
   // qui manque dépend du plan. On mesure donc le déficit sur le meilleur plan sans autel,
@@ -1205,7 +1229,11 @@ export function planIslandImport(
       );
     }
 
-    const layout: Layout = { grid: req.grid, buildings, roads: repair.roads, fields: dist.fields, aqueducts: water.aqueducts };
+    // le type de route fixe les portées : sans lui, le rapport comptait tout en chemin de terre
+    const layout: Layout = {
+      grid: req.grid, buildings, roads: repair.roads, fields: dist.fields, aqueducts: water.aqueducts,
+      roadType: req.roadType,
+    };
     // couverture DISTANCE-RUE = la vraie mécanique du jeu. `requiredServices` scope le gate
     // "pleinement couverte" au sous-ensemble retenu (mode seuils), sinon tous les services.
     // `inactiveBuildings` = consommateurs d'eau NON raccordés (inactifs en jeu) → une maison

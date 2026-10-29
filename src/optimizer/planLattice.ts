@@ -44,6 +44,14 @@ export interface LatticeOpts {
    * `bestDeityAttrs`, hors de toute décision de pose. Vide à dévotion nulle.
    */
   patronAttrs?: Record<string, number>;
+  /**
+   * OÙ POSER UN CONSOMMATEUR D'EAU UNIQUE (l'Amphithéâtre). `centre` (défaut) : au centroïde
+   * quand il y tient. `source` : au plus près d'un emplacement de source. Sa position décide
+   * de toute la ville autour — mesuré jusqu'à 25 % d'habitants d'écart, dans un sens sur
+   * roman_island_small_06, dans l'autre sur medium_05 et large_07 — si bien que le plan
+   * d'île essaie les deux plutôt que de deviner.
+   */
+  ancrage?: "centre" | "source";
   /** Permis détenus en partie, par GUID de permis. Voir `economy/uniques`. */
   permits?: Record<string, number>;
   /** Type des routes du plan : allonge les portées-rue (cf. engine/roads). Défaut terre. */
@@ -234,9 +242,15 @@ export function planLattice(
   const buildings: PlacedBuilding[] = [];
   const servicesPlaced: Record<string, number> = {};
   const placements = new Map<string, { x: number; y: number; w: number; h: number }[]>();
-  // réserve 2 cases libres SANS route au milieu d'un côté (prise d'eau pour la
-  // conduite). Essaie bas → haut → droite → gauche ; renvoie true si réservé.
-  const reserveWaterGate = (x: number, y: number, w: number, h: number): boolean => {
+  // réserve 2 cases libres SANS route au milieu d'un côté (prise d'eau pour la conduite),
+  // dans l'ordre bas → haut → droite → gauche ; renvoie true si réservé.
+  //
+  // Un bâtiment UNIQUE en reçoit une sur CHAQUE côté. Une seule ne suffisait pas : sur
+  // roman_island_medium_05, l'Amphithéâtre — 116 cases de bord, dont 100 en route — n'avait que
+  // celle du bas, ouverte sur la côte. Indispensable au palier, il restait sec et AUCUNE maison
+  // n'atteignait les Patriciens. Aux services à plusieurs copies, quatre prises coûtaient 1 à
+  // 2 % d'habitants pour presque rien : une copie sèche se déplace ou se perd sans effondrer.
+  const reserveWaterGate = (x: number, y: number, w: number, h: number, partout = false): boolean => {
     const mx = x + (w >> 1), my = y + (h >> 1);
     const trySide = (cells: [number, number][]): boolean => {
       const ok = cells.filter(([px, py]) => px >= 0 && py >= 0 && px < W && py < H
@@ -245,8 +259,12 @@ export function planLattice(
       for (const [px, py] of ok) waterGate[py * W + px] = 1;
       return true;
     };
-    return trySide([[mx, y + h], [mx + 1, y + h]]) || trySide([[mx, y - 1], [mx + 1, y - 1]])
-      || trySide([[x + w, my], [x + w, my + 1]]) || trySide([[x - 1, my], [x - 1, my + 1]]);
+    const cotes: [number, number][][] = [
+      [[mx, y + h], [mx + 1, y + h]], [[mx, y - 1], [mx + 1, y - 1]],
+      [[x + w, my], [x + w, my + 1]], [[x - 1, my], [x - 1, my + 1]],
+    ];
+    if (!partout) return cotes.some(trySide);
+    return cotes.map(trySide).some(Boolean);
   };
   interface TypeCov {
     def: BuildingDef;
@@ -277,7 +295,7 @@ export function planLattice(
     placements.set(def.id, arr);
     markAdj(x, y, w, h);
     // consommateur d'eau : réserver la prise AVANT l'anneau (sinon il l'enferme)
-    if (needsWater(def)) reserveWaterGate(x, y, w, h);
+    if (needsWater(def)) reserveWaterGate(x, y, w, h, !!def.unique);
     const ring = layRing(x, y, w, h);
     if (ring.length) connectRing(ring);
   };
@@ -422,6 +440,14 @@ export function planLattice(
         const near = anchors.filter((a) => mountainSlots.some(
           (s) => Math.max(Math.abs(s.x - a.x), Math.abs(s.y - a.y)) <= lim));
         if (near.length) { anchors = near; break; }
+      }
+      // À couverture égale — sa portée couvre souvent l'île entière — le centroïde, mis en
+      // tête, gagne les ex æquo. `ancrage: "source"` les donne au plus près d'une source :
+      // aucun des deux ne gagne partout (cf. `LatticeOpts.ancrage`).
+      if (opts.ancrage === "source") {
+        const versSource = (a: { x: number; y: number }) => Math.min(...mountainSlots.map(
+          (s) => Math.max(Math.abs(s.x - a.x), Math.abs(s.y - a.y))));
+        anchors = [...anchors].sort((a, b) => versSource(a) - versSource(b));
       }
     }
     const distMap = new Int32Array(N).fill(N);
@@ -686,7 +712,24 @@ export function planLattice(
   if (opts.water) {
     const roadsNow: RoadTile[] = [];
     for (let i = 0; i < N; i++) if (roadAt[i]) roadsNow.push({ x: i % W, y: (i / W) | 0 });
-    water = planWater(grid, buildings, roadsNow, lookup, opts.heights, opts.reserved);
+    water = planWater(grid, buildings, roadsNow, lookup, opts.heights, opts.reserved, "volume", true);
+    // consommateurs DÉPLACÉS pour être raccordés : sol, registre de portée, adjacence
+    for (const m of water.moved ?? []) {
+      const b = buildings.find((x) => x.uid === m.uid);
+      const d = b && lookup(b.defId);
+      if (!b || !d) continue;
+      const fp = footprintSize(d, b.rotation);
+      for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
+        const c = (b.y + j) * W + (b.x + i);
+        if (grid.usable[c]) occ[c] = 0;
+      }
+      const arr = placements.get(b.defId);
+      const k = arr ? arr.findIndex((q) => q.x === b.x && q.y === b.y) : -1;
+      b.x = m.x; b.y = m.y;
+      if (arr && k >= 0) arr[k] = { x: m.x, y: m.y, w: fp.w, h: fp.h };
+      for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) occ[(m.y + j) * W + (m.x + i)] = 1;
+      markAdj(m.x, m.y, fp.w, fp.h);
+    }
     for (const s of water.sources) {
       const { w, h } = footprintSize(lookup(s.defId)!, s.rotation);
       for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
@@ -725,6 +768,8 @@ export function planLattice(
     const dry = new Set(water.consumers.filter((c) => !c.connected).map((c) => c.uid));
     const secs = retirerDuPlan(dry);
     if (secs) {
+      // « non raccordé (inactif) » décrivait un bâtiment qui n'est plus dans le plan
+      water.gaps = water.gaps.filter((g) => !g.endsWith("non raccordé au réseau d'eau (inactif)"));
       water.gaps.push(
         `${secs} service(s) à eau non raccordable(s) retiré(s) du plan (inactifs en jeu)`,
       );

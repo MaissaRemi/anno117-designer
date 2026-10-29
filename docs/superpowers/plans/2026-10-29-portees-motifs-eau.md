@@ -190,6 +190,48 @@ maison sans le dieu — le bonus de Cérès disparaissait du plan. roman_island_
 Vulcain autour des fonderies), effets sur navires et troupes, commerce passif de Mercure-Lug,
 montée de la dévotion dans le temps. L'onglet Production n'utilise pas encore les dieux.
 
+## L'eau des Bains et des Patriciens
+
+Mesures Patriciens, routes pavées, hauteurs chargées (comme l'application).
+
+**Ce qui était faux dans le rapport.** La couverture finale était comptée en chemin de terre
+quel que soit le type de route : « Citerne 48 % » sur large_03 valait en réalité 77 %.
+
+**Les Bains manquent par choix, pas par panne.** Au palier Patriciens, les Merveilles (seuil 12)
+se franchissent avec Amphithéâtre (8) plus Forum OU Bains (4). Le moteur garde celui qui loge
+le plus — souvent le Forum. Les variantes « + Bains » coûtent 2 % (large_07) à 30 % (petites
+îles) d'habitants, contre +3 Incendie et +2 Santé par maison couverte : sur medium_01,
+−4,5 % d'habitants pour un bilan incendie de −1 440 à +268. Arbitrage laissé à Rémi.
+
+**L'Amphithéâtre sec effondrait le palier.** Unique, il plafonne toutes les maisons quand il
+est sec : 0 maison au palier sur small_01 et medium_05. Trois causes, trois corrections :
+- une seule prise d'eau, ouverte sur la côte : un bâtiment unique en a une par côté ;
+- placé au centroïde (premier ex æquo, sa portée couvre l'île) : le plan rejoue la recette
+  gagnante avec l'ancrage « près d'une source » (`LatticeOpts.ancrage`) et garde le meilleur —
+  la position décide de toute la ville, ±25 % d'habitants, dans un sens ou dans l'autre ;
+- une poche fermée par une falaise : le jeu laisse l'aqueduc déborder de la grille
+  constructible (`AqueductOutsideBuildabilityGridRestrictions/AllowedCliffDistance` = 5),
+  lu comme 5 cases sur le relief (`DEBORD_AQUEDUC`).
+
+**Les copies sèches se déplacent** (`planWater(…, deplacer)`) au plus près, contre une route,
+là où elles se raccordent, au lieu d'être retirées : 32 phases d'eau sur 129 mesurées en
+profitent.
+
+| Patriciens | avant | après |
+|---|---|---|
+| small_01 | 0 au palier, 4 812 hab. | 133, 5 322 |
+| medium_05 | 0 au palier, 17 027 | 502, 23 750 |
+| small_06 | 8 840 | 10 228 |
+| medium_01 | 24 577 | 24 530 |
+| large_03 | 69 970 | 69 200 |
+| large_07 | 65 676 | 64 006 |
+
+**Non retenu.** La longueur maximale de conduite (140 cases) n'existe pas dans le jeu, qui
+borne le canal par la hauteur (piliers 2,8 à 6, pente ≤ 2,5 %, départ ≤ 4 au-dessus de la
+source). Sans elle, large_07 raccorde toutes ses Citernes mais loge 2 000 habitants de moins
+(conduites plus longues). L'unité des hauteurs du jeu n'étant pas connue, la vraie règle n'est
+pas appliquée ; à vérifier en jeu.
+
 ## Onglet Production : diagnostic (à retravailler plus tard)
 
 Il calcule une chaîne par ratios exacts puis un plan compact HORS de toute île : ni côte, ni

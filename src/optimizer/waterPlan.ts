@@ -28,6 +28,17 @@ export const CLIMB_MARGIN_Q = 2;
 
 const SOURCE_IDS = ["g19691", "g29524"]; // Source d'aqueduc (Roman / Celtic)
 
+/**
+ * DÉBORD HORS DE LA TERRE CONSTRUCTIBLE, en cases. Le jeu laisse l'aqueduc sortir de la grille
+ * constructible (`MeshGraphBuildModeFeature/AqueductOutsideBuildabilityGridRestrictions`,
+ * `AllowedCliffDistance` = 5 ; les murs ont la même règle, à 3,5), jamais sur l'eau
+ * (`BlockedByWater`). Lu ici comme : sur le relief, à 5 cases au plus de la terre
+ * constructible. Sans ce débord, une poche de terre fermée par une falaise restait sèche alors
+ * que le réseau passait de l'autre côté : sur roman_island_small_01, l'Amphithéâtre, donc tout
+ * le palier des Patriciens.
+ */
+export const DEBORD_AQUEDUC = 5;
+
 /** Rayon (Chebyshev) de la zone montagne autour d'un slot : bloquée pour les
  *  moteurs de placement, mais posable/traversable pour source+conduites (avec
  *  une marge de +2). Les rayons dérivés s'expriment en fonction de celui-ci. */
@@ -69,6 +80,8 @@ export interface WaterPlanResult {
   capacity: number; // somme des sources posées
   used: number; // conso raccordée
   consumers: WaterConsumerReport[];
+  /** Consommateurs DÉPLACÉS pour être raccordés (option `deplacer`) : nouvelle position. */
+  moved?: { uid: string; x: number; y: number }[];
   gaps: string[];
 }
 
@@ -149,6 +162,15 @@ export function planWater(
    * condamne. Les gros, eux, ont de grandes emprises et plusieurs prises.
    */
   ordre: "volume" | "petits" = "volume",
+  /**
+   * DÉPLACER plutôt que perdre. Un consommateur qu'aucune conduite n'atteint là où il est posé
+   * — enfermé par d'autres bâtiments, ou derrière un réseau qu'il ne peut pas traverser — est
+   * reposé au plus près, contre une route, là où il se raccorde. Sans cela, il était retiré du
+   * plan et laissait un trou dans la couverture : 2 citernes sur 9 sur roman_island_large_03.
+   * Réservé à l'appelant qui pose les maisons APRÈS l'eau (planLattice) : il reste alors de la
+   * terre libre autour des services.
+   */
+  deplacer = false,
 ): WaterPlanResult {
   const W = grid.w, H = grid.h, N = W * H;
   const gaps: string[] = [];
@@ -218,7 +240,25 @@ export function planWater(
       if (x >= 0 && y >= 0 && x < W && y < H) bldOcc[y * W + x] = 1;
     }
   }
-  const pass = (c: number): boolean => !bldOcc[c] && (grid.usable[c] || mzone[c] === 1);
+  // relief à portée de débord de la terre constructible (cf. DEBORD_AQUEDUC)
+  const debord = new Uint8Array(N);
+  if (grid.relief) {
+    let f: number[] = [];
+    const d = new Int8Array(N).fill(-1);
+    for (let c = 0; c < N; c++) if (grid.usable[c] || grid.voies?.[c]) { d[c] = 0; f.push(c); }
+    for (let k = 1; k <= DEBORD_AQUEDUC && f.length; k++) {
+      const nx: number[] = [];
+      for (const c of f) {
+        const x = c % W;
+        for (const nb of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, c - W, c + W]) {
+          if (nb < 0 || nb >= N || d[nb] >= 0 || !grid.relief[nb]) continue;
+          d[nb] = k; debord[nb] = 1; nx.push(nb);
+        }
+      }
+      f = nx;
+    }
+  }
+  const pass = (c: number): boolean => !bldOcc[c] && (grid.usable[c] || mzone[c] === 1 || debord[c] === 1);
   // « l'eau ne monte pas » : une conduite reliée à une source ne grimpe jamais au-dessus
   // de la TÊTE DE CETTE source (+marge). `maxSrcQ` = max global, utilisé comme borne
   // LÂCHE pendant l'expansion BFS ; la contrainte stricte PAR SOURCE (srcMaxQ) est
@@ -412,6 +452,54 @@ export function planWater(
     return false;
   };
 
+  // ── DÉPLACEMENT d'un consommateur irraccordable ──
+  // Emprise libre (terre, ni bâtiment, ni route, ni conduite), contre une route — un service
+  // sans rue ne dessert personne — et raccordable. Les positions qui touchent déjà le réseau
+  // ne coûtent rien à tester ; les autres coûtent une recherche de conduite, d'où un plafond.
+  const RAYON_DEPLACEMENT = 24, ESSAIS_CONDUITE = 8;
+  const moved: { uid: string; x: number; y: number }[] = [];
+  const deplacerVers = (c: { b: PlacedBuilding; fp: FP; amount: number }): boolean => {
+    const { w, h } = c.fp;
+    const libre = (x: number, y: number): boolean => {
+      if (x < 0 || y < 0 || x + w > W || y + h > H) return false;
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+        const q = (y + j) * W + (x + i);
+        if (!grid.usable[q] || bldOcc[q] || roadAt[q] || netDist[q] >= 0) return false;
+      }
+      return true;
+    };
+    const marquer = (fp: FP, v: 0 | 1) => {
+      for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) bldOcc[(fp.y + j) * W + fp.x + i] = v;
+    };
+    const cands: { x: number; y: number; d: number; touche: boolean }[] = [];
+    for (let dy = -RAYON_DEPLACEMENT; dy <= RAYON_DEPLACEMENT; dy++) {
+      for (let dx = -RAYON_DEPLACEMENT; dx <= RAYON_DEPLACEMENT; dx++) {
+        if (!dx && !dy) continue;
+        const x = c.fp.x + dx, y = c.fp.y + dy;
+        if (!libre(x, y)) continue;
+        const per = perimeter({ x, y, w, h });
+        if (!per.some((q) => roadAt[q])) continue;
+        cands.push({ x, y, d: Math.abs(dx) + Math.abs(dy), touche: per.some((q) => netDist[q] >= 0 && !roadAt[q]) });
+      }
+    }
+    cands.sort((a, b) => Number(b.touche) - Number(a.touche) || a.d - b.d);
+    marquer(c.fp, 0);
+    let essais = 0;
+    for (const k of cands) {
+      if (!k.touche && essais++ >= ESSAIS_CONDUITE) break;
+      const fp = { x: k.x, y: k.y, w, h };
+      marquer(fp, 1);
+      if (connect({ fp, amount: c.amount })) {
+        c.fp = fp;
+        moved.push({ uid: c.b.uid, x: k.x, y: k.y });
+        return true;
+      }
+      marquer(fp, 0);
+    }
+    marquer(c.fp, 1);
+    return false;
+  };
+
   // gros consommateurs d'abord (budget), puis citernes (raccordement seul)
   const ordered = [...consumers].sort((a, b) => (ordre === "petits" ? a.amount - b.amount : b.amount - a.amount));
   const report: WaterConsumerReport[] = [];
@@ -422,6 +510,7 @@ export function planWater(
       // slot est à portée de conduite (au-delà de MAX_RUN, la pose serait gaspillée)
       if (takeSlotNear(c.fp.x, c.fp.y, MAX_RUN) && connect(c)) ok = true;
     }
+    if (!ok && deplacer) ok = deplacerVers(c);
     report.push({ uid: c.b.uid, name: c.def.name, amount: c.amount, connected: ok });
     if (!ok) {
       gaps.push(`${c.def.name} non raccordé au réseau d'eau (inactif)`);
@@ -435,6 +524,7 @@ export function planWater(
     capacity: sources.length * WATER_CAPACITY,
     used: srcUsed.reduce((a, b) => a + b, 0),
     consumers: report,
+    ...(moved.length ? { moved } : {}),
     gaps: [...new Set(gaps)],
   };
 }
