@@ -259,3 +259,25 @@ describe("planWater", () => {
     expect(Math.abs(m!.x - 60) + Math.abs(m!.y - 60)).toBeLessThanOrEqual(48);
   });
 });
+
+describe("planWater et les routes diagonales", () => {
+  // Une route en biais d'un bord à l'autre, en losanges (k, 140 − k) : chaque case de la
+  // diagonale x + y = 139 en est à moitié couverte. Règle prudente tant que le jeu n'a pas
+  // tranché (question Q3) : une conduite n'entre pas sous un losange de route.
+  const enBiais = Array.from({ length: 141 }, (_, k) => ({ x: k, y: 140 - k, losange: true as const }));
+
+  it("une conduite ne franchit pas une route diagonale", () => {
+    const grid = gridWithMountain();
+    const citerne = [pb(CITERNE, 45, 100)]; // de l'autre côté de la diagonale x + y = 139
+    expect(planWater(grid, citerne, [], lookup).consumers[0].connected).toBe(true);
+    const r = planWater(grid, citerne, enBiais, lookup);
+    expect(r.consumers[0].connected).toBe(false);
+    for (const a of r.aqueducts) expect(a.x + a.y).not.toBe(139);
+  });
+
+  it("une route droite, elle, se franchit à angle droit", () => {
+    const grid = gridWithMountain();
+    const droite = Array.from({ length: 140 }, (_, x) => ({ x, y: 70 }));
+    expect(planWater(grid, [pb(CITERNE, 45, 100)], droite, lookup).consumers[0].connected).toBe(true);
+  });
+});

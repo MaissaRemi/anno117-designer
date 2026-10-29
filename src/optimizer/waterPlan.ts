@@ -4,6 +4,7 @@ import type { AqueductTile, BuildingDef, GridShape, PlacedBuilding, RoadTile } f
 import { worldOf } from "../economy/economy";
 import { regionOfIsland } from "../data/islands";
 import type { DefLookup } from "../engine/rules";
+import { casesSousLosange, coinDe, reseauDeRoutes, routesAuContactRect } from "../engine/reseauRoutier";
 import { facadeDe, posesSurEmplacement } from "./emplacements";
 
 /**
@@ -174,9 +175,21 @@ export function planWater(
 ): WaterPlanResult {
   const W = grid.w, H = grid.h, N = W * H;
   const gaps: string[] = [];
-  const roadAt = new Uint8Array(N);
-  for (const r of roads) {
-    if (r.x >= 0 && r.y >= 0 && r.x < W && r.y < H) roadAt[r.y * W + r.x] = 1;
+  // le réseau en graphe (`engine/reseauRoutier`) : cases droites, et losanges s'il y en a
+  const reseau = reseauDeRoutes(W, H, roads);
+  const roadAt = reseau.droite;
+  // CONDUITE ET ROUTE DIAGONALE. Une conduite droite franchit une route droite à angle droit
+  // (l'arche enjambe) ; franchir une route en biais, le jeu le permet-il, et sur combien de
+  // cases ? Pas encore vérifié en jeu (question Q3 de la conception du réseau en graphe). En
+  // attendant, règle prudente : aucune conduite ni source sur une case dont un losange de route
+  // couvre la moitié.
+  const sousLosange = new Uint8Array(N);
+  if (reseau.losanges) {
+    for (let k = 0; k < reseau.losange.length; k++) {
+      if (!reseau.losange[k]) continue;
+      const { X, Y } = coinDe(reseau, reseau.N + k);
+      casesSousLosange(reseau, X, Y, (c) => { sousLosange[c] = 1; });
+    }
   }
 
   // consommateurs présents dans la disposition
@@ -258,7 +271,8 @@ export function planWater(
       f = nx;
     }
   }
-  const pass = (c: number): boolean => !bldOcc[c] && (grid.usable[c] || mzone[c] === 1 || debord[c] === 1);
+  const pass = (c: number): boolean =>
+    !bldOcc[c] && !sousLosange[c] && (grid.usable[c] || mzone[c] === 1 || debord[c] === 1);
   // « l'eau ne monte pas » : une conduite reliée à une source ne grimpe jamais au-dessus
   // de la TÊTE DE CETTE source (+marge). `maxSrcQ` = max global, utilisé comme borne
   // LÂCHE pendant l'expansion BFS ; la contrainte stricte PAR SOURCE (srcMaxQ) est
@@ -464,7 +478,7 @@ export function planWater(
       if (x < 0 || y < 0 || x + w > W || y + h > H) return false;
       for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
         const q = (y + j) * W + (x + i);
-        if (!grid.usable[q] || bldOcc[q] || roadAt[q] || netDist[q] >= 0) return false;
+        if (!grid.usable[q] || bldOcc[q] || roadAt[q] || sousLosange[q] || netDist[q] >= 0) return false;
       }
       return true;
     };
@@ -478,7 +492,11 @@ export function planWater(
         const x = c.fp.x + dx, y = c.fp.y + dy;
         if (!libre(x, y)) continue;
         const per = perimeter({ x, y, w, h });
-        if (!per.some((q) => roadAt[q])) continue;
+        // contre une route : le périmètre, coins compris (écart au jeu gardé tel quel, le corriger
+        // change des plans), ou un losange touché par un coin
+        const contreUneRoute = per.some((q) => roadAt[q])
+          || (reseau.losanges > 0 && routesAuContactRect(reseau, x, y, w, h).length > 0);
+        if (!contreUneRoute) continue;
         cands.push({ x, y, d: Math.abs(dx) + Math.abs(dy), touche: per.some((q) => netDist[q] >= 0 && !roadAt[q]) });
       }
     }
