@@ -1,5 +1,5 @@
 import { uid } from "../model/factories";
-import { footprintSize } from "../engine/geometry";
+import { footprintSize, routeSeule } from "../engine/geometry";
 import type { BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import type { DefLookup } from "../engine/rules";
 
@@ -159,16 +159,22 @@ export function reserveKontor(grid: GridShape, def: BuildingDef): KontorReservat
  * des composantes secondaires de 1 à 3 cases, et aucun bâtiment isolé.
  *
  * Sans comptoir, on garde la plus grande composante — c'est là que le joueur s'installera.
+ *
+ * UNE RIVIÈRE SE FRANCHIT PAR UN PONT, la mer non. Ses cases relient donc les deux rives (sans
+ * devenir constructibles). Tant que les rivières étaient lues en miroir, elles ne coupaient
+ * rien d'utile ; à leur vraie place, celle de roman_island_medium_01 isolait toute la moitié
+ * nord de l'île, et le plan perdait 60 % de ses maisons.
  */
 export function keepMainLandmass(grid: GridShape, seed?: { x: number; y: number }): GridShape {
   const W = grid.w, H = grid.h, N = W * H;
+  const relie = (c: number) => grid.usable[c] || routeSeule(grid, c);
   const comp = new Int32Array(N).fill(-1);
   let best = -1, bestSize = 0, seedComp = -1;
   const seedIdx = seed && seed.x >= 0 && seed.y >= 0 && seed.x < W && seed.y < H
     ? seed.y * W + seed.x : -1;
   let nComp = 0;
   for (let i = 0; i < N; i++) {
-    if (!grid.usable[i] || comp[i] >= 0) continue;
+    if (!relie(i) || comp[i] >= 0) continue;
     const id = nComp++;
     let size = 0;
     let fr = [i];
@@ -179,7 +185,7 @@ export function keepMainLandmass(grid: GridShape, seed?: { x: number; y: number 
         size++;
         const x = c % W, y = (c / W) | 0;
         for (const n of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
-          if (n >= 0 && grid.usable[n] && comp[n] < 0) { comp[n] = id; next.push(n); }
+          if (n >= 0 && relie(n) && comp[n] < 0) { comp[n] = id; next.push(n); }
         }
       }
       fr = next;

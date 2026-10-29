@@ -115,7 +115,8 @@ function drawGrid(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
       const river = grid.rivers?.[i];
       const [sx, sy] = gridToScreen(v, x, y);
       // rivière (argile/ponts) / terre constructible / eau (mer) / hors-zone
-      ctx.fillStyle = river ? "#2d5a73" : usable ? "#2b333c" : water ? "#1c3a52" : "#171a1d";
+      // ni terre, ni eau : montagne ou falaise (masque des pentes), en gris roche
+      ctx.fillStyle = river ? "#2d5a73" : usable ? "#2b333c" : water ? "#1c3a52" : "#4a4c52";
       ctx.fillRect(sx, sy, v.cell, v.cell);
     }
   }

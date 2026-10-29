@@ -1,6 +1,6 @@
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import type { DefLookup } from "../engine/rules";
-import { footprintSize } from "../engine/geometry";
+import { footprintSize, routeSeule } from "../engine/geometry";
 import { economy } from "../economy/economy";
 import { uid } from "../model/factories";
 import { planFromBasket, pickWarehouse, type BasketPlan } from "../prodlayout";
@@ -126,12 +126,14 @@ export function disposerProduction(
   for (const r of ville.roads) { occ[r.y * W + r.x] = 1; route[r.y * W + r.x] = 1; }
   for (const a of ville.aqueducts ?? []) occ[a.y * W + a.x] = 1;
   const libre = (c: number) => base.usable[c] && !occ[c];
+  /** Une route y passe : une case libre, ou une case réservée à la route (cf. routeSeule). */
+  const franchissable = (c: number) => libre(c) || (routeSeule(base, c) && !occ[c]);
 
   // distance le long de la terre depuis la ville : c'est elle qui range les emplacements
   const graines: number[] = [];
   for (let c = 0; c < N; c++) if (route[c]) graines.push(c);
   if (!graines.length) graines.push(Math.round(opts.centre.y) * W + Math.round(opts.centre.x));
-  const terre: GridShape = { ...base, usable: base.usable.map((u, c) => u || route[c] === 1) };
+  const terre: GridShape = { ...base, usable: base.usable.map((u, c) => u || route[c] === 1 || routeSeule(base, c)) };
   const dist = distancesDeCroissance(terre, graines);
 
   /** Route la plus courte d'une case jusqu'au réseau, par des cases libres ; null sinon. */
@@ -152,7 +154,7 @@ export function disposerProduction(
             for (let cur = c; cur >= 0; cur = prev[cur]) chemin.push({ x: cur % W, y: (cur / W) | 0 });
             return chemin;
           }
-          if (!libre(n)) continue;
+          if (!franchissable(n)) continue;
           prev[n] = c;
           next.push(n);
         }
@@ -207,7 +209,7 @@ export function disposerProduction(
         if (sx < 0 || sy < 0 || sx >= W || sy >= H) continue;
         const s = sy * W + sx;
         const d = dist[s];
-        if (d < 0 || !(route[s] || libre(s))) continue;
+        if (d < 0 || !(route[s] || franchissable(s))) continue;
         cands.push({ p, x, y, d, sortie: s });
       }
     }

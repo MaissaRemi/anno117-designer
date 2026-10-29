@@ -30,7 +30,6 @@ import rda_extract as rda
 from filedb import parse
 
 GAME = os.environ.get("ANNO_GAME_DIR", r"F:\Anno 117 - Pax Romana\maindata")
-assert os.path.isdir(GAME), f"Repertoire jeu introuvable : {GAME!r}. Definir ANNO_GAME_DIR."
 HERE = os.path.dirname(os.path.dirname(__file__))
 OUT = os.path.join(HERE, "src", "data", "terrain.generated.json")
 OUT_HEIGHTS = os.path.join(HERE, "src", "data", "terrain.heights.generated.json")
@@ -137,6 +136,8 @@ def heights_from_gamedata(root, w: int, h: int):
 
 
 def main():
+    # verifie ici, pas a l'import : build_pentes.py reutilise rle_encode sans le jeu
+    assert os.path.isdir(GAME), f"Repertoire jeu introuvable : {GAME!r}. Definir ANNO_GAME_DIR."
     terrain = {}
     heights_out = {}
     patched = rda.PatchOverlay(GAME)

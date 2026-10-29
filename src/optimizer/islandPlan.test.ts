@@ -93,7 +93,9 @@ describe("planIslandImport (mode import)", () => {
     // Le bilan positif est le contrat du mode STRICT ; l'indicatif est verrouillé par
     // `bilanIndicatif.test.ts`.
     const r = planIslandImport({ catalog, grid, tierGuid: t4.guid, coverageFloor: 0.8, viability: "strict" });
-    expect(r.residents).toBeGreaterThan(24_000);
+    // Mesuré 15 931 le 29/10/2026, une fois montagnes, emplacements et rivières à leur vraie
+    // place : les ~28 000 précédents comptaient des maisons sur la montagne, que le jeu refuse.
+    expect(r.residents).toBeGreaterThan(14_000);
     expect(r.viable).toBe(true);
     for (const k of ["Happiness", "Money", "Health", "FireSafety"]) {
       expect(r.attrsTotal[k]).toBeGreaterThanOrEqual(0);

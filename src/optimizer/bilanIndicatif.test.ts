@@ -36,10 +36,12 @@ describe("bilan d'attributs : indicatif par défaut, strict sur demande", () => 
   const indicatif = plan();
   const strict = plan({ viability: "strict" });
 
-  it("en indicatif, le sol sert : moins d'un service par maison, moins de 25 % de terre vide", () => {
+  it("en indicatif, le sol sert : moins d'un service par maison, moins d'un tiers de terre vide", () => {
     const q = planQuality(indicatif, grid, lookup);
     expect(q.servicesPerHouse).toBeLessThan(1);
-    expect(q.pct.free).toBeLessThan(25);
+    // Mesuré 29 % depuis le masque des pentes (29/10/2026), 25 % avant : il retire la roche mais
+    // laisse entre deux pentes des franges trop étroites pour une maison 3 × 3.
+    expect(q.pct.free).toBeLessThan(33);
   });
 
   it("en strict, l'historique : le garde-fou démolit, et le plan loge bien moins", () => {
