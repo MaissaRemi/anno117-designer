@@ -12,8 +12,10 @@ import {
   gridScale,
   isBuildable,
   isUsable,
+  isWater,
   neighbors8,
   orthoNeighbors,
+  partieEauPosee,
 } from "./geometry";
 import { planningRange } from "./roads";
 
@@ -69,12 +71,35 @@ export function canPlace(
   exceptUid?: string,
 ): boolean {
   const scale = gridScale(layout.grid);
+  if (!terrainConvient(layout.grid, def, x, y, rot, scale)) return false;
   const blocked = blockedSet(layout, lookup, exceptUid, scale);
   for (const c of footprintCells(def, x, y, rot, scale)) {
-    // terre vs eau selon le terrain de pose du bâtiment
-    if (!isBuildable(layout.grid, c.x, c.y, def.placement)) return false;
     if (blocked.has(cellKey(c.x, c.y))) return false;
   }
+  return true;
+}
+
+/**
+ * Le terrain convient-il à `def` posé en (x, y) ? Un bâtiment côtier (`partieEau`) a sa partie
+ * dans l'eau sur l'eau constructible — y compris là où elle déborde de l'emprise — et le reste
+ * à terre, côté quai ; tout autre bâtiment a chaque case selon son terrain de pose. Exiger toute
+ * l'emprise dans l'eau, comme avant, rendait la Cabane de pêcheur (7 colonnes dans l'eau sur 8)
+ * impossible à poser contre une côte.
+ */
+export function terrainConvient(
+  grid: Layout["grid"], def: BuildingDef, x: number, y: number, rot: Rotation, scale: number,
+): boolean {
+  const eau = partieEauPosee(def, rot, scale);
+  if (!eau) {
+    for (const c of footprintCells(def, x, y, rot, scale)) if (!isBuildable(grid, c.x, c.y, def.placement)) return false;
+    return true;
+  }
+  const ex = x + eau.x, ey = y + eau.y;
+  const dansEau = (cx: number, cy: number) => cx >= ex && cx < ex + eau.w && cy >= ey && cy < ey + eau.h;
+  for (const c of footprintCells(def, x, y, rot, scale)) {
+    if (dansEau(c.x, c.y) ? !isWater(grid, c.x, c.y) : !isUsable(grid, c.x, c.y)) return false;
+  }
+  for (let j = 0; j < eau.h; j++) for (let i = 0; i < eau.w; i++) if (!isWater(grid, ex + i, ey + j)) return false;
   return true;
 }
 
@@ -361,12 +386,11 @@ export function validateLayout(layout: Layout, lookup: DefLookup): Map<string, B
     const def = lookup(b.defId);
     if (!def) continue;
     const cells = footprintCells(def, b.x, b.y, b.rotation, scale);
-    // terrain : chaque case de l'emprise doit correspondre au terrain de pose
-    let terrain = false;
-    let overlap = false;
+    // terrain de pose (cf. `terrainConvient`) ; un mauvais terrain compte aussi en recouvrement
+    const terrain = !terrainConvient(layout.grid, def, b.x, b.y, b.rotation, scale);
+    let overlap = terrain;
     for (const c of cells) {
       const k = cellKey(c.x, c.y);
-      if (!isBuildable(layout.grid, c.x, c.y, def.placement)) { terrain = true; overlap = true; continue; }
       // même sémantique que `canPlace` : un autre bâtiment, une route, ou le champ d'AUTRUI
       if ((cover.get(k) ?? 0) > 1 || roadCells.has(k)) { overlap = true; continue; }
       const fo = fieldOwner.get(k);

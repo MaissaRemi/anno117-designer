@@ -406,7 +406,20 @@ def parse_ifo_size(data):
         if xs and zs:
             w = max(1, round(max(xs) - min(xs)))
             h = max(1, round(max(zs) - min(zs)))
-            return {"w": w, "h": h}
+            size = {"w": w, "h": h}
+            # PARTIE DANS L'EAU des batiments cotiers (pecheur, saline, chantier naval) : le
+            # WaterBlocker, en cases depuis le coin de l'emprise. Le reste est a terre — le quai
+            # (QuayArea). La Cabane de pecheur 8 x 3 a ainsi 7 colonnes dans l'eau et 1 a quai.
+            wb = root.find("./WaterBlocker")
+            if wb is not None:
+                wx = [float(p.findtext("xf") or 0) for p in wb.findall("./Position")]
+                wz = [float(p.findtext("zf") or 0) for p in wb.findall("./Position")]
+                if wx and wz:
+                    size["eau"] = {
+                        "x": round(min(wx) - min(xs)), "y": round(min(wz) - min(zs)),
+                        "w": max(1, round(max(wx) - min(wx))), "h": max(1, round(max(wz) - min(wz))),
+                    }
+            return size
     # repli : Extents (demi-taille du mesh, ×2) si pas de BuildBlocker
     ext = root.find("./BoundingBox/Extents")
     if ext is None:
@@ -433,6 +446,9 @@ def resolve_sizes(buildings):
             continue
         size = parse_ifo_size(data)
         if size:
+            eau = size.pop("eau", None)
+            if eau:
+                b["partieEau"] = eau
             b["size"] = size
             ok += 1
     print(f"  tailles resolues : {ok}/{len(buildings)}", file=sys.stderr)
@@ -467,6 +483,8 @@ def to_app_catalog(buildings, product_name):
             "needsRoad": bool(b.get("needsRoad")),
             "color": CATEGORY_COLOR.get(b["category"], "#8d6e63"),
         }
+        if b.get("partieEau"):
+            entry["partieEau"] = b["partieEau"]
         if b.get("placement") == "water":
             entry["placement"] = "water"  # se pose sur l'eau/la côte (port, pêcherie…)
         if b.get("template") in ROOT_TEMPLATES:

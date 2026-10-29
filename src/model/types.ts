@@ -36,6 +36,12 @@ export interface BuildingDef {
   rotatable: boolean;
   needsRoad: boolean;
   placement?: "land" | "water"; // "water" = se pose sur l'eau/la côte (défaut land)
+  /**
+   * Bâtiment côtier : la partie de l'emprise qui doit être DANS L'EAU (WaterBlocker du `.ifo`),
+   * en cases depuis le coin de l'emprise non tournée ; le reste est à terre, côté quai. Peut
+   * déborder de l'emprise : un chantier naval exige de l'eau au-delà de ses murs.
+   */
+  partieEau?: { x: number; y: number; w: number; h: number };
   transporterRange?: number; // prod : distance-rue max vers un entrepôt (défaut 30)
   template?: string; // template du jeu (SlotFactoryBuilding7 = mines, Warehouse…)
   freeArea?: { radius: number; area: number }; // prod ∝ cases libres dans le rayon

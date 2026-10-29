@@ -1,7 +1,7 @@
 import { uid } from "../model/factories";
-import { footprintSize, routeSeule } from "../engine/geometry";
-import type { BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
-import type { DefLookup } from "../engine/rules";
+import { footprintSize, partieEauPosee, routeSeule } from "../engine/geometry";
+import type { BuildingDef, GridShape, PlacedBuilding, RoadTile, Rotation } from "../model/types";
+import { terrainConvient, type DefLookup } from "../engine/rules";
 
 /**
  * COMPTOIR (kontor) — racine du réseau de routes et point d'entrée des marchandises.
@@ -48,7 +48,7 @@ export interface KontorReservation {
   def: BuildingDef;
   x: number;
   y: number;
-  rotation: 0 | 90;
+  rotation: Rotation;
   /** Grille avec l'emprise retirée du masque constructible (à donner aux moteurs). */
   grid: GridShape;
 }
@@ -113,6 +113,33 @@ export function reserveKontor(grid: GridShape, def: BuildingDef): KontorReservat
     }
     return false;
   };
+
+  // LE COMPTOIR EST À MOITIÉ DANS L'EAU. Son `.ifo` déclare une partie dans l'eau (6 colonnes
+  // sur 8 pour le comptoir romain) : le poser entièrement à terre, au contact de l'eau, le
+  // laissait à l'intérieur des terres, et l'éditeur le marquait sur un mauvais terrain. Même
+  // règle que les bâtiments côtiers (cf. `terrainConvient`), dans les quatre orientations.
+  if (def.partieEau) {
+    for (const c of coast) {
+      const cx = c % W, cy = (c / W) | 0;
+      for (const rot of (def.rotatable ? [0, 90, 180, 270] : [0]) as Rotation[]) {
+        const { w, h } = footprintSize(def, rot);
+        for (let oy = 0; oy < h; oy++) for (let ox = 0; ox < w; ox++) {
+          const x = cx - ox, y = cy - oy;
+          if (x < 0 || y < 0 || x + w > W || y + h > H) continue;
+          if (!terrainConvient(grid, def, x, y, rot, 1)) continue;
+          // l'emprise et sa partie dans l'eau sortent des deux masques : ni maison ni pêcheur
+          const usable = grid.usable.slice(), eau = water.slice();
+          for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { usable[(y + j) * W + x + i] = false; eau[(y + j) * W + x + i] = false; }
+          const p = partieEauPosee(def, rot)!;
+          for (let j = 0; j < p.h; j++) for (let i = 0; i < p.w; i++) {
+            const xx = x + p.x + i, yy = y + p.y + j;
+            if (xx >= 0 && yy >= 0 && xx < W && yy < H) eau[yy * W + xx] = false;
+          }
+          return { def, x, y, rotation: rot, grid: { ...grid, usable, water: eau } };
+        }
+      }
+    }
+  }
 
   const dims: [number, number, 0 | 90][] = [];
   const d0 = footprintSize(def, 0), d90 = footprintSize(def, 90);
