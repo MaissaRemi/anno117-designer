@@ -303,8 +303,11 @@ en soi.
 
 ### Ce qui reste
 
-- **Prix des maisons rasées dans le tracé droit** : +1 364 habitants mesurés, sans losange, donc
-  sans rien à changer dans l'éditeur ; à adopter par défaut (prix à régler), golden recapturé.
+- ~~Prix des maisons rasées dans le tracé droit~~ : ADOPTÉ par défaut (`PRIX_CASE_RASEE` = 3,
+  réglé sur 1, 3, 6 et 10 : 3 est le meilleur, +1 364 habitants, aucune île en baisse). Le
+  plus court chemin pondéré sert désormais au comptoir et à la réparation ; le tracé historique
+  reste le recours quand aucun chemin ne tient dans la longueur permise, prix compris. Golden
+  recapturé : tous les plans du panel gagnent de 20 à 158 habitants.
 - **small_05** : la cause de ses 74 maisons rasées et 16 services coupés reste à trouver.
 - **Afficher et poser des losanges** : éditeur, rendu, persistance, invariants, moteurs de
   production lisent tous `RoadTile` sans sa forme ; préalable à toute option losange visible.

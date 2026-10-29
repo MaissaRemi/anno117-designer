@@ -89,7 +89,8 @@ réseau d'eau, un bilan) : seule la géométrie est locale. Étapes restantes :
   corrigés : la trame diagonale seule ne gagne plus que sur 5 îles romaines sur 27 (small_05
   +41 %, small_07 +26 %). Étape 6 faite derrière l'option `liaisonsDiagonales` (désactivée) :
   les liaisons diagonales n'apportent rien de mesurable ; un PRIX des maisons rasées dans le
-  tracé du comptoir, lui, donne +1 364 habitants sur 27 îles, aucune en recul — à adopter.
+  tracé du comptoir, lui, donne +1 364 habitants sur 27 îles, aucune en recul — adopté
+  (`PRIX_CASE_RASEE` = 3, `optimizer/kontor.ts`).
   Q2 et Q3 restent à vérifier — détail dans la conception ;
 3. carte d'orientation de l'île selon ses côtes ;
 4. squelette de rues mêlé, recousu aux jonctions ;

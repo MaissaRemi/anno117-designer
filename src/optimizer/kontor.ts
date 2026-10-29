@@ -379,8 +379,9 @@ export function connectKontor(
   }
   const MAX_STUB = 60;
 
-  if (opts.diagonales) {
-    // le chemin ne traverse pas l'emprise du comptoir, absente de `buildings`
+  {
+    // Le plus court chemin qui épargne les maisons (`prixCaseRasee`), en losanges aussi avec
+    // `diagonales`. Le chemin ne traverse pas l'emprise du comptoir, absente de `buildings`.
     const interdit = new Uint8Array(N);
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const x = res.x + i, y = res.y + j;
@@ -397,7 +398,8 @@ export function connectKontor(
       for (const n of chemin) for (const c of t.casesDe(n)) if (owner[c] >= 0) removed.add(buildings[owner[c]].uid);
       return { building, roads: chemin.map((n) => routeDe(reseau, n)), removed: [...removed], connected: true };
     }
-    // aucun chemin, ou deux losanges qui se chevaucheraient : le tracé droit historique
+    // aucun chemin dans la longueur permise, prix compris, ou deux losanges qui se
+    // chevaucheraient : le tracé historique, le plus court à travers les maisons
   }
 
   const passable = (c: number): boolean => {
@@ -549,9 +551,7 @@ export function repairRoadConnectivity(
   // d'eux que l'utilisateur a besoin, pas du nombre de cases de route concernées.
   const strandedIdx = new Set<number>();
   const razedIdx = new Set<number>();
-  const terrain = opts.diagonales
-    ? terrainDeLiaison(grid, reseau, owner, buildings, demolishable, new Uint8Array(N), opts)
-    : null;
+  const terrain = terrainDeLiaison(grid, reseau, owner, buildings, demolishable, new Uint8Array(N), opts);
   for (let i = 0; i < T; i++) {
     if (!estRoute(reseau, i) || inCore[i] || seen[i]) continue;
     const comp: number[] = [];
@@ -566,8 +566,9 @@ export function repairRoadConnectivity(
       fr = next;
     }
     let linked = false;
-    if (terrain) {
-      // réseau mêlé : le plus court chemin peut poser des losanges
+    {
+      // le plus court chemin qui épargne les maisons, en losanges aussi avec `diagonales` ;
+      // à défaut, le BFS historique ci-dessous, le plus court à travers les maisons
       const chemin = cheminMele(
         reseau, comp.map((id) => ({ id, cout: 0 })), (n) => inCore[n] === 1, terrain.posable, terrain.coutEntree, maxDetour,
       );
@@ -672,11 +673,23 @@ export interface OptionsLiaison {
   /** Conduites d'eau : un losange ne se pose pas dessus (règle prudente, question Q3). */
   aqueducs?: readonly { x: number; y: number }[];
   /**
-   * Prix d'une case de maison traversée, en longueur de route : 0, le plus court chemin, comme
-   * le tracé droit historique ; plus, un détour qui épargne des maisons.
+   * Prix d'une case de maison traversée, en longueur de route (défaut `PRIX_CASE_RASEE`) : 0,
+   * le plus court chemin à travers les maisons ; plus, un détour qui les épargne.
    */
   prixCaseRasee?: number;
 }
+
+/**
+ * ═══ UNE MAISON RASÉE COÛTE PLUS QU'UN DÉTOUR ═════════════════════════════════════════════
+ *
+ * Le raccordement du comptoir et la réparation des îlots prenaient le plus court chemin, à
+ * travers les maisons, sans les compter : toutes les îles en rasaient (263 sur 27 îles
+ * romaines, Patriciens, pavée). Une case de maison traversée coûte désormais ce prix, en cases
+ * de route. Mesuré sur ces 27 îles (étape 6 de la trame mêlée) : à 3, 197 maisons rasées,
+ * +1 364 habitants, 23 îles en hausse, aucune en baisse ; à 1, +1 163 ; à 6 et 10, +1 284 et
+ * +1 271, les détours s'allongent et medium_02 recule.
+ */
+export const PRIX_CASE_RASEE = 3;
 
 /** Ce qu'une liaison peut traverser, et ce que chaque pas lui coûte. */
 function terrainDeLiaison(
@@ -691,7 +704,7 @@ function terrainDeLiaison(
   const { W, N } = reseau;
   const sousConduite = new Uint8Array(N);
   for (const a of opts.aqueducs ?? []) if (a.x >= 0 && a.y >= 0 && a.x < W && a.y < grid.h) sousConduite[a.y * W + a.x] = 1;
-  const prix = opts.prixCaseRasee ?? 0;
+  const prix = opts.prixCaseRasee ?? PRIX_CASE_RASEE;
   const caseOk = (c: number): boolean => {
     if (interdit[c] || (!grid.usable[c] && !routeSeule(grid, c))) return false;
     const o = owner[c];
