@@ -94,7 +94,9 @@ jeu ; sans effet tant qu'aucun losange n'est posé.
 
 ## Raccordement au comptoir : corrigé
 
-Recensement sur les 27 îles romaines (Patriciens, pavée, Foi, 80 %), avant → après :
+Recensement sur les 27 îles romaines du LATIUM (Patriciens, pavée, Foi, 80 %) — rien n'a été
+mesuré en Albion, où les peuples (Celtes, romanisation) et les bâtiments diffèrent —, avant →
+après :
 1 078 230 → 1 082 207 habitants, 263 → 113 maisons rasées, 31 → 1 service sans accès au
 comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/planLattice.ts` :
 - **une maison rasée coûte plus qu'un détour** (`PRIX_CASE_RASEE` = 3) dans le raccordement du
@@ -114,10 +116,11 @@ comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/plan
   de bâtiment) ne relie au comptoir réservé est déclarée murée, ses services sortent du plan et
   aucune maison ne s'y pose. medium_05 : 3 → 0 services sans accès, −69 habitants AFFICHÉS
   (l'ancien chiffre comptait trois services inactifs) ; plan diagonal de medium_01 : 37 → 2.
-  Effet de bord assumé : la recette retenue peut changer. celtic_island_large_07 (sans
-  hauteurs) passe de 14 400 à 12 301 habitants affichés : la recette qui l'emportait devait
-  son bilan à huit services d'un quartier muré, inactifs en jeu (piste la plus probable, non
-  isolée formellement). Les poches laissées vides peuvent déclencher l'invariant `terre-vide`.
+  Effet de bord assumé : la recette retenue peut changer. Seul cas vu en Albion, par le test
+  `bilanIndicatif` : celtic_island_large_07, branche ROMANISÉE (Nobles), sans hauteurs, passe
+  de 14 400 à 12 301 habitants affichés ; la recette qui l'emportait devait son bilan à huit
+  services (versions d'Albion) d'un quartier muré, inactifs en jeu — piste la plus probable,
+  non isolée. Recensement d'Albion, branche celte et branche romanisée à part : à faire. Les poches laissées vides peuvent déclencher l'invariant `terre-vide`.
 
 ## La suite, par intérêt
 
