@@ -733,6 +733,9 @@ export function planLattice(
   // `usable`, aucune construction n'y tient) et les cases libres, jamais un bâtiment. Les
   // cases posées deviennent des routes ordinaires : l'élagage ancré au comptoir les rattache
   // ensuite au réseau enraciné comme n'importe quelles autres.
+  // Cases des chemins creusés vers les sources : l'élagage des routes doit les garder entières
+  // (cf. `pruneRoads`), elles ne touchent un bâtiment qu'à leur extrémité.
+  const routesDesSources: number[] = [];
   if (water?.sources.length) {
     const nearMountain = new Uint8Array(N);
     const rad = MOUNTAIN_BLOCK_RADIUS + 2;
@@ -786,6 +789,7 @@ export function planLattice(
       if (hit < 0) continue;
       for (let cur = hit; cur >= 0; cur = prev[cur]) {
         if (!roadAt[cur]) { roadAt[cur] = 1; occ[cur] = 0; }
+        routesDesSources.push(cur);
       }
     }
   }
@@ -966,6 +970,11 @@ export function planLattice(
   const pruneRoads = (): RoadTile[] => {
     const keep = new Uint8Array(N);
     for (let i = 0; i < N; i++) if (roadAt[i] && bldAdj[i]) keep[i] = 1;
+    // LE CHEMIN D'UNE SOURCE RESTE ENTIER. Il traverse le relief et ne touche la source qu'à un
+    // bout : `bldAdj` n'en gardait que la première case, et la source perdait son accès
+    // (mesuré sur roman_island_small_06 avec les données du patch 200 : un chemin de 8 cases
+    // creusé, une seule gardée). Le raccord à la racine, plus bas, part de ses cases.
+    for (const c of routesDesSources) if (roadAt[c]) keep[c] = 1;
     const housesPlaced = buildings.filter((b) => resIdSet.has(b.defId));
     const chainKept = new Map<string, Uint8Array>();
     for (const t of types) chainKept.set(t.def.id, new Uint8Array(N));
