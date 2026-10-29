@@ -150,7 +150,7 @@ interface Maison { cle: number; x: number; y: number }
  * orthogonal) jusqu'au réseau, par des cases de terre libres — ni bâtiment, ni conduite.
  * Sert au comptoir et aux sources d'aqueduc. `null` si aucun chemin n'existe.
  */
-function routeVersReseau(
+export function routeVersReseau(
   grid: GridShape,
   k: { x: number; y: number; w: number; h: number },
   buildings: PlacedBuilding[],
@@ -171,7 +171,8 @@ function routeVersReseau(
       if (x >= 0 && y >= 0 && x < W && y < H) pris[y * W + x] = 1;
     }
   }
-  for (const a of aqueducs) pris[a.y * W + a.x] = 1;
+  const conduite = new Uint8Array(N);
+  for (const a of aqueducs) conduite[a.y * W + a.x] = 1;
   for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) pris[(k.y + j) * W + k.x + i] = 1;
   const depart: number[] = [];
   for (let i = 0; i < k.w; i++) for (const y of [k.y - 1, k.y + k.h]) if (y >= 0 && y < H) depart.push(y * W + k.x + i);
@@ -180,18 +181,48 @@ function routeVersReseau(
   const prev = new Int32Array(N).fill(-2);
   let front: number[] = [];
   for (const c of depart) if (grid.usable[c] && !pris[c] && prev[c] === -2) { prev[c] = -1; front.push(c); }
+  const chemin = (fin: number): RoadTile[] => {
+    const out: RoadTile[] = [];
+    for (let cur = fin; cur >= 0; cur = prev[cur]) out.push({ x: cur % W, y: (cur / W) | 0 });
+    return out;
+  };
+  /** Case voisine de `c` dans la direction `d` (±1 : horizontale, ±W : verticale), ou -1. */
+  const voisine = (c: number, d: number): number => {
+    const x = c % W;
+    if ((d === 1 && x === W - 1) || (d === -1 && x === 0)) return -1;
+    const n = c + d;
+    return n >= 0 && n < N ? n : -1;
+  };
+  // UNE ROUTE FRANCHIT UNE CONDUITE À ANGLE DROIT, comme une conduite franchit une route.
+  // Interdire toute case de conduite coupait le comptoir de la ville dès qu'un aqueduc longeait
+  // le bas des quartiers : le chemin échouait, le raccord de secours s'accrochait à un bout de
+  // route isolé, et les 300 maisons de roman_island_medium_01 (Patriciens, routes pavées,
+  // données du patch 200) se retrouvaient sans accès au comptoir. Le franchissement va tout
+  // droit, sur une conduite qui passe perpendiculairement, vers une case libre ou une route.
+  const franchit = (n: number, d: number): boolean => {
+    if (!conduite[n]) return false;
+    const avant = voisine(n, -d), apres = voisine(n, d);
+    return !(avant >= 0 && conduite[avant]) && !(apres >= 0 && conduite[apres]);
+  };
   while (front.length) {
     const next: number[] = [];
     for (const c of front) {
-      const x = c % W;
-      for (const n of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, c >= W ? c - W : -1, c < N - W ? c + W : -1]) {
+      for (const d of [1, -1, W, -W]) {
+        const n = voisine(c, d);
         if (n < 0 || prev[n] !== -2) continue;
-        if (route[n]) {
-          const out: RoadTile[] = [];
-          for (let cur = c; cur >= 0; cur = prev[cur]) out.push({ x: cur % W, y: (cur / W) | 0 });
-          return out;
-        }
+        if (route[n]) return chemin(c);
         if (!grid.usable[n] || pris[n]) continue;
+        if (conduite[n]) {
+          if (!franchit(n, d)) continue;
+          const au = voisine(n, d);
+          if (au < 0 || prev[au] !== -2) continue;
+          if (route[au]) { prev[n] = c; return chemin(n); }
+          if (!grid.usable[au] || pris[au] || conduite[au]) continue;
+          prev[n] = c;
+          prev[au] = n;
+          next.push(au);
+          continue;
+        }
         prev[n] = c;
         next.push(n);
       }

@@ -7,7 +7,7 @@ import { computeRadiusCoverage, makeLookup, roadConnected, rootedRoadSet } from 
 import { copiesEnTrop } from "../optimizer/doublons";
 import { footprintSize } from "../engine/geometry";
 import { economy } from "../economy/economy";
-import { besoinEnIlots, disposerQuartiers } from "./ilots";
+import { besoinEnIlots, disposerQuartiers, routeVersReseau } from "./ilots";
 import type { Commande } from "./nomenclature";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
@@ -158,5 +158,38 @@ describe("corridors d'eau", () => {
       { region: "Roman", maisons: [{ tierGuid: PATRICIENS, maisons: 300 }], routes: "pavee" }, catalog, lookup, { corridors: 2 });
     expect(verifierPlan(p)).toEqual({ chevauchements: 0, horsTerre: 0, hasRoot: true, coupes: [] });
     expect(p.maisonsParPalier[PATRICIENS]).toBe(300);
+  });
+});
+
+describe("route du comptoir et aqueducs", () => {
+  // Grille 9 × 9 : comptoir 2 × 2 en bas, route en haut (y = 0), conduite horizontale en y = 4.
+  const grid = { w: 9, h: 9, usable: new Array(81).fill(true) };
+  const routes = Array.from({ length: 9 }, (_, x) => ({ x, y: 0 }));
+  const comptoir = { x: 3, y: 7, w: 2, h: 2 };
+  it("franchit une conduite perpendiculaire, tout droit", () => {
+    const conduite = Array.from({ length: 9 }, (_, x) => ({ x, y: 4 }));
+    const chemin = routeVersReseau(grid, comptoir, [], routes, conduite, lookup);
+    expect(chemin).not.toBeNull();
+    // la case franchie est sur la conduite, et ses deux voisines du chemin sont au-dessus et au-dessous
+    const franchie = chemin!.find((c) => c.y === 4)!;
+    expect(chemin!.some((c) => c.x === franchie.x && c.y === 3)).toBe(true);
+    expect(chemin!.some((c) => c.x === franchie.x && c.y === 5)).toBe(true);
+  });
+  it("ne longe jamais une conduite : seule une traversée à angle droit est permise", () => {
+    // seule la colonne x = 3 est praticable, et une conduite la parcourt dans sa longueur
+    const colonne = { w: 9, h: 9, usable: Array.from({ length: 81 }, (_, c) => c % 9 === 3) };
+    const conduite = Array.from({ length: 6 }, (_, k) => ({ x: 3, y: 1 + k }));
+    expect(routeVersReseau(colonne, { x: 3, y: 7, w: 1, h: 1 }, [], routes, conduite, lookup)).toBeNull();
+  });
+});
+
+describe("routes pavées : la ville reste reliée au comptoir", () => {
+  // Données du patch 200 : la recette des Patriciens prend la Citerne, l'aqueduc longe alors le
+  // bas de la ville et coupait le chemin du comptoir (300 maisons sans accès).
+  it("300 Patriciens sur roman_island_medium_01", () => {
+    const p = disposerQuartiers(grille("roman_island_medium_01"),
+      { region: "Roman", maisons: [{ tierGuid: PATRICIENS, maisons: 300 }], routes: "pavee" }, catalog, lookup);
+    expect(verifierPlan(p)).toEqual({ chevauchements: 0, horsTerre: 0, hasRoot: true, coupes: [] });
+    expect(p.manques).toEqual([]);
   });
 });
