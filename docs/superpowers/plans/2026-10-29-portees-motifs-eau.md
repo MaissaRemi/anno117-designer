@@ -136,3 +136,37 @@ maisons sur la montagne — roman_island_medium_01 en « Remplir l'île », pav�
 25 364 habitants ; roman_island_small_06, surtout rocheuse, ne loge plus 300 Patriciens au
 palier. Limite connue : 300 Patriciens sur medium_01 en routes de terre, le Forum reste sec
 (une seule source sert la moitié nord) ; servis en pavé.
+
+## Terre constructible et côte, lues dans le jeu (remplace le masque des pentes)
+
+Le gamedata de chaque île (`.a7m` → `gamedata.data`) dit où l'on bâtit :
+`GameSessionManager/AreaIDs` (16 bits par case, blocs 16 × 16, bit 0x2000 = constructible)
+croisé avec `WorldManager/Water` (1 = terre). Trois zones, extraites par `build_terrain.py` :
+terre constructible, **eau constructible** (bande côtière), **relief** (montagnes, falaises).
+Le masque des pentes estimé ne s'accordait qu'à 76 % et laissait bâtir 4 127 cases interdites
+sur roman_island_medium_01, où le jeu compte plus de relief (15 215) que de terre
+constructible (14 679). Bit 0x4000 (943 cases d'eau, carte continentale) non interprété.
+
+**Bâtiments côtiers à cheval.** Le `.ifo` déclare un `WaterBlocker` (partie dans l'eau) et un
+`QuayArea` (quai) : Cabane de pêcheur 8 × 3 = 7 colonnes dans l'eau, 1 à quai ; comptoir
+romain 6 colonnes sur 8 dans l'eau. Champ `partieEau` au catalogue, règle `terrainConvient`
+(éditeur, production côtière, comptoir). Le jeu permet par recherche (« WaterPlacement ») de
+poser la production entièrement sur l'eau : non modélisé.
+
+## Dieux : ce que disent les données (non branché)
+
+`economy.patrons` (8 dieux) : pour chacun, un bonus de productivité (+10 % à +150 % selon la
+dévotion, paliers de 50 à 300 000) sur un groupe de bâtiments (« Boost <dieu> Goods »), un
+effet sur les résidences (Cérès Population, Minerve Connaissance, Cernunnos Santé et
+Connaissance, Epona Population et Prestige ; Vulcain : main-d'œuvre, et en dominant +2 Sécurité
+incendie en rayon), et des effets « dominant » au-delà de 7 000. `ReligionBalancing` : la
+dévotion s'accumule dans le temps (`DevotionRateScaling`), par dieu, par île et sur toutes les
+îles ; seuils autel 1 000, merveille 4 000, dominant 7 000. Hypothèse à vérifier en jeu : la
+dévotion d'une île tend vers sa Croyance (`TimePerDevotionToBeliefStep`).
+
+## Onglet Production : diagnostic (à retravailler plus tard)
+
+Il calcule une chaîne par ratios exacts puis un plan compact HORS de toute île : ni côte, ni
+emplacements, ni relief ; aucun bonus de productivité (dieux, recherche, objets) ; données de
+juin jusqu'au 29/10 (moulin 30 → 20 s au patch 200). À refaire comme un mode de « Planifier »
+(île de production) sur la vraie géométrie, avec les bonus des dieux.
