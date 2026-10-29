@@ -4,7 +4,9 @@
 > l'onglet **Commande** : le joueur commande, le moteur dresse la nomenclature et dispose quartiers
 > et production (`src/commande/`). L'ancien moteur reste, comme « Remplir l'île ». Découpage,
 > mesures et suite : `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md` — c'est le point
-> d'entrée. Le reste de ce document décrit l'état au 2026-08-22.
+> d'entrée. Suite du même jour (portée selon la route, doublons, motifs, corridors d'eau,
+> objectif « maximum de maisons ») : `docs/superpowers/plans/2026-10-29-portees-motifs-eau.md`.
+> Le reste de ce document décrit l'état au 2026-08-22.
 
 Dernière mise à jour : 2026-08-22 (troisième session). Branche `dev`, arbre propre, 407 tests verts
 (`pnpm test:fast` en écarte les 11 balayages lourds et tourne en 21 s).
