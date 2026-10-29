@@ -302,3 +302,118 @@ describe("computeRadiusCoverage (distance le long des rues)", () => {
     expect(covered.has("9,5")).toBe(false); // hors rayon euclidien (range 2)
   });
 });
+
+/**
+ * L'analyseur à l'échelle 1 passe par le réseau en graphe (`reseauRoutier`). Avec des routes
+ * toutes droites, il doit rendre exactement ce que rendait la 4-adjacence d'avant, recopiée
+ * ici comme oracle — y compris dans les cas tordus : routes sous une emprise, emprises qui
+ * se chevauchent ou débordent de la grille, cases inconstructibles.
+ */
+describe("analyseur à l'échelle 1 : le graphe rend ce que rendait la 4-adjacence", () => {
+  const key = (x: number, y: number) => `${x},${y}`;
+  const ortho = (x: number, y: number) => [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]];
+  const cases = (b: { x: number; y: number; rotation: number }, w: number, h: number) => {
+    const out: [number, number][] = [];
+    const [fw, fh] = b.rotation === 90 ? [h, w] : [w, h];
+    for (let j = 0; j < fh; j++) for (let i = 0; i < fw; i++) out.push([b.x + i, b.y + j]);
+    return out;
+  };
+
+  const kontor = makeBuildingDef({ id: "k", size: { w: 4, h: 3 }, needsRoad: true, roadRoot: true });
+  const svcA = makeBuildingDef({ id: "a", size: { w: 2, h: 3 }, needsRoad: true, radius: { kind: "service", range: 9 }, streetRange: 7 });
+  const svcB = makeBuildingDef({ id: "b", size: { w: 1, h: 1 }, needsRoad: true, radius: { kind: "service", range: 4 }, streetRange: 2 });
+  const maison = makeBuildingDef({ id: "m", size: { w: 3, h: 3 }, needsRoad: true });
+  const defs = [kontor, svcA, svcB, maison];
+  const lookup = makeLookup(defs);
+
+  /** PRNG déterministe (mulberry32). */
+  const prng = (seed: number) => () => {
+    seed = (seed + 0x6d2b79f5) >>> 0;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+
+  for (let essai = 0; essai < 30; essai++) {
+    it(`plan aléatoire ${essai}`, () => {
+      const rnd = prng(7 + essai);
+      const W = 12 + Math.floor(rnd() * 20), H = 10 + Math.floor(rnd() * 20);
+      const layout = tileLayout(W, H);
+      for (let i = 0; i < W * H; i++) layout.grid.usable[i] = rnd() < 0.9;
+      layout.roadType = rnd() < 0.5 ? "pavee" : "terre";
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (rnd() < 0.5) layout.roads.push({ x, y });
+      const nb = 3 + Math.floor(rnd() * 8);
+      for (let k = 0; k < nb; k++) {
+        const d = k === 0 && rnd() < 0.8 ? kontor : defs[1 + Math.floor(rnd() * 3)];
+        layout.buildings.push(placeBuilding(d.id, Math.floor(rnd() * W) - 1, Math.floor(rnd() * H) - 1, rnd() < 0.5 ? 0 : 90));
+      }
+      const roads = new Set(layout.roads.map((r) => key(r.x, r.y)));
+      const empriseDe = (b: (typeof layout.buildings)[number]) => {
+        const d = lookup(b.defId)!;
+        return cases(b, d.size.w, d.size.h);
+      };
+
+      // oracle : réseau enraciné
+      const seeds: string[] = [];
+      for (const b of layout.buildings) {
+        if (!lookup(b.defId)!.roadRoot) continue;
+        for (const [x, y] of empriseDe(b)) for (const [nx, ny] of ortho(x, y)) if (roads.has(key(nx, ny))) seeds.push(key(nx, ny));
+      }
+      let racine = roads;
+      if (seeds.length) {
+        racine = new Set(seeds);
+        const file = [...seeds];
+        while (file.length) {
+          const [x, y] = file.pop()!.split(",").map(Number);
+          for (const [nx, ny] of ortho(x, y)) {
+            const k = key(nx, ny);
+            if (roads.has(k) && !racine.has(k)) { racine.add(k); file.push(k); }
+          }
+        }
+      }
+      const obtenu = rootedRoadSet(layout, lookup);
+      expect(obtenu.hasRoot).toBe(seeds.length > 0);
+      expect(obtenu.set).toEqual(racine);
+
+      // oracle : raccordement de chaque bâtiment
+      for (const b of layout.buildings) {
+        const attendu = empriseDe(b).some(([x, y]) => ortho(x, y).some(([nx, ny]) => racine.has(key(nx, ny))));
+        expect(roadConnected(layout, lookup, b, obtenu.set)).toBe(attendu);
+      }
+
+      // oracle : couverture le long des rues
+      const cov = computeRadiusCoverage(layout, lookup);
+      for (const b of layout.buildings) {
+        const d = lookup(b.defId)!;
+        if (!d.radius) continue;
+        const fp = new Set(empriseDe(b).map(([x, y]) => key(x, y)));
+        const limite = Math.floor(d.streetRange! * (layout.roadType === "pavee" ? 1.5 : 1));
+        const dist = new Map<string, number>();
+        const file: string[] = [];
+        for (const [x, y] of empriseDe(b)) for (const [nx, ny] of ortho(x, y)) {
+          const k = key(nx, ny);
+          if (fp.has(k) || !roads.has(k) || dist.has(k)) continue;
+          dist.set(k, 1); file.push(k);
+        }
+        while (file.length) {
+          const k = file.shift()!, dk = dist.get(k)!;
+          if (dk >= limite) continue;
+          const [x, y] = k.split(",").map(Number);
+          for (const [nx, ny] of ortho(x, y)) {
+            const nk = key(nx, ny);
+            if (roads.has(nk) && !dist.has(nk)) { dist.set(nk, dk + 1); file.push(nk); }
+          }
+        }
+        const servies = new Set<string>();
+        for (const k of dist.keys()) {
+          const [x, y] = k.split(",").map(Number);
+          for (const [nx, ny] of ortho(x, y)) {
+            if (nx >= 0 && ny >= 0 && nx < W && ny < H && layout.grid.usable[ny * W + nx]) servies.add(key(nx, ny));
+          }
+        }
+        expect(cov.get(b.uid)).toEqual(servies);
+      }
+    });
+  }
+});

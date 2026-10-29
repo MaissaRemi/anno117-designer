@@ -8,7 +8,7 @@ import { planningRange } from "../engine/roads";
 import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
 import { catalogueDiagonal, centreDroit, grilleDiagonale, versDiagonalPoint } from "./cadreDiagonal";
-import { coinDe, creerParcours, estLosange, idLosange, noeudsAuContact, parcourir, reseauVide, voisins } from "./reseauRoutier";
+import { coinDe, creerParcours, estLosange, idLosange, noeudsAuContact, parcourir, reseauVide, voisins } from "../engine/reseauRoutier";
 
 /**
  * PROJECTION D'UN PLAN DIAGONAL DANS LE RÉSEAU COMMUN.

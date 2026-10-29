@@ -32,11 +32,17 @@
  * visite donc les mêmes cases dans le même ordre qu'avant : mêmes `parent`, même plan.
  */
 
-export interface ReseauRoutier {
+/** Les dimensions seules : la géométrie des contacts n'a pas besoin des routes. */
+export interface Trame {
   W: number;
   H: number;
   /** Nombre de cases droites, W·H ; premier identifiant de losange. */
   N: number;
+}
+
+export const trameDe = (W: number, H: number): Trame => ({ W, H, N: W * H });
+
+export interface ReseauRoutier extends Trame {
   /** Cases droites portant une route (l'actuel `roadAt`). */
   droite: Uint8Array;
   /** Losanges portant une route, indexés par coin : `Y·(W+1) + X`. */
@@ -55,12 +61,12 @@ export function reseauDeCases(W: number, H: number, roads: readonly { x: number;
 }
 
 /** Nombre total d'identifiants : cases droites puis coins. */
-export const tailleReseau = (r: ReseauRoutier): number => r.N + (r.W + 1) * (r.H + 1);
+export const tailleReseau = (r: Trame): number => r.N + (r.W + 1) * (r.H + 1);
 
-export const idLosange = (r: ReseauRoutier, X: number, Y: number): number => r.N + Y * (r.W + 1) + X;
-export const estLosange = (r: ReseauRoutier, id: number): boolean => id >= r.N;
+export const idLosange = (r: Trame, X: number, Y: number): number => r.N + Y * (r.W + 1) + X;
+export const estLosange = (r: Trame, id: number): boolean => id >= r.N;
 /** Coin (X, Y) du losange `id`. */
-export function coinDe(r: ReseauRoutier, id: number): { X: number; Y: number } {
+export function coinDe(r: Trame, id: number): { X: number; Y: number } {
   const k = id - r.N;
   return { X: k % (r.W + 1), Y: (k / (r.W + 1)) | 0 };
 }
@@ -68,8 +74,8 @@ export function coinDe(r: ReseauRoutier, id: number): { X: number; Y: number } {
 export const estRoute = (r: ReseauRoutier, id: number): boolean =>
   id < r.N ? r.droite[id] === 1 : r.losange[id - r.N] === 1;
 
-const coinValide = (r: ReseauRoutier, X: number, Y: number): boolean => X >= 0 && Y >= 0 && X <= r.W && Y <= r.H;
-const caseValide = (r: ReseauRoutier, x: number, y: number): boolean => x >= 0 && y >= 0 && x < r.W && y < r.H;
+const coinValide = (r: Trame, X: number, Y: number): boolean => X >= 0 && Y >= 0 && X <= r.W && Y <= r.H;
+const caseValide = (r: Trame, x: number, y: number): boolean => x >= 0 && y >= 0 && x < r.W && y < r.H;
 
 /**
  * Les 8 losanges qui touchent la case droite (x, y) par une pointe posée sur l'un de ses
@@ -87,7 +93,7 @@ const CASES_DE_POINTE: readonly (readonly [number, number])[] = POINTES_DE_CASE.
 /** Losanges voisins par un côté. */
 const COTES_DE_LOSANGE: readonly (readonly [number, number])[] = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
 
-export const idDroite = (r: ReseauRoutier, x: number, y: number): number => y * r.W + x;
+export const idDroite = (r: Trame, x: number, y: number): number => y * r.W + x;
 
 /**
  * Tous les nœuds (route ou non) au contact du nœud `id` — la relation unique du réseau : par
@@ -97,20 +103,24 @@ export const idDroite = (r: ReseauRoutier, x: number, y: number): number => y * 
  * (ordre de `streetGrid.bfsType`), puis les 8 losanges en pointe. Losange : ses 4 voisins par
  * un côté, puis les 8 cases droites en pointe. Hors de la grille : sautés.
  */
-export function noeudsAuContact(r: ReseauRoutier, id: number, f: (id: number) => void): void {
-  const { W, H, N } = r;
-  if (id < N) {
-    const x = id % W, y = (id / W) | 0;
-    if (x > 0) f(id - 1);
-    if (x < W - 1) f(id + 1);
-    if (y > 0) f(id - W);
-    if (y < H - 1) f(id + W);
-    for (const [dx, dy] of POINTES_DE_CASE) if (coinValide(r, x + dx, y + dy)) f(idLosange(r, x + dx, y + dy));
-    return;
-  }
+export function noeudsAuContact(r: Trame, id: number, f: (id: number) => void): void {
+  if (id < r.N) { noeudsAuContactDeCase(r, id % r.W, (id / r.W) | 0, f); return; }
   const { X, Y } = coinDe(r, id);
   for (const [dx, dy] of COTES_DE_LOSANGE) if (coinValide(r, X + dx, Y + dy)) f(idLosange(r, X + dx, Y + dy));
-  for (const [dx, dy] of CASES_DE_POINTE) if (caseValide(r, X + dx, Y + dy)) f((Y + dy) * W + X + dx);
+  for (const [dx, dy] of CASES_DE_POINTE) if (caseValide(r, X + dx, Y + dy)) f((Y + dy) * r.W + X + dx);
+}
+
+/**
+ * Les nœuds au contact de la case droite (x, y), qui peut déborder de la grille (une emprise
+ * de bâtiment côtier, par exemple) : ses voisines dans la grille, puis les losanges en pointe.
+ */
+export function noeudsAuContactDeCase(r: Trame, x: number, y: number, f: (id: number) => void): void {
+  const { W } = r;
+  if (caseValide(r, x - 1, y)) f(y * W + x - 1);
+  if (caseValide(r, x + 1, y)) f(y * W + x + 1);
+  if (caseValide(r, x, y - 1)) f((y - 1) * W + x);
+  if (caseValide(r, x, y + 1)) f((y + 1) * W + x);
+  for (const [dx, dy] of POINTES_DE_CASE) if (coinValide(r, x + dx, y + dy)) f(idLosange(r, x + dx, y + dy));
 }
 
 /**
@@ -125,7 +135,7 @@ export function voisins(r: ReseauRoutier, id: number, f: (id: number) => void): 
  * Les cases droites au contact du nœud `id` : celles qu'une route atteinte sert, puisqu'un
  * bâtiment droit qui en occupe une s'y raccorde.
  */
-export function casesAuContact(r: ReseauRoutier, id: number, f: (c: number) => void): void {
+export function casesAuContact(r: Trame, id: number, f: (c: number) => void): void {
   noeudsAuContact(r, id, (n) => { if (n < r.N) f(n); });
 }
 

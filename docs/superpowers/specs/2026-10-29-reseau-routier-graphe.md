@@ -1,6 +1,6 @@
 # Trame mêlée, étape 2 : le réseau routier en graphe — conception
 
-Statut : **proposée, en attente de validation par Rémi.** Aucun code écrit.
+Statut : **validée par Rémi** ; étapes 0 à 2 faites (voir « Avancement » en fin de document).
 Suite de `2026-10-29-diagonales-moteur.md`, section « Trame mêlée : conception ».
 
 But de l'étape : que couverture, accès au comptoir et traversées d'aqueduc se calculent sur un
@@ -82,7 +82,7 @@ Recommandé : garder l'état là où il est, et ajouter un second masque.
   `layRoad`, `stamp`, etc. ;
 - `routeLosange: Uint8Array((W+1)·(H+1))` — nouveau, vide tant qu'aucun moteur ne pose de
   diagonale ;
-- un module `optimizer/reseauRoutier.ts` qui lit ces deux masques : `voisins(id, f)`,
+- un module `engine/reseauRoutier.ts` qui lit ces deux masques : `voisins(id, f)`,
   `contacts(emprise, f)`, `bfsPortee(sources, portée)`, `racine(sourcesComptoir)`,
   `degre(id)`.
 
@@ -196,3 +196,31 @@ L'éditeur (grille ½-tuile, `neighbors8`) relie deux objets droits qui ne se to
 coin, ce que le moteur refuse à juste titre. Un plan affiché peut donc paraître mieux
 raccordé qu'il ne l'est en jeu. À traiter quand l'éditeur passera au graphe, pas dans cette
 étape.
+
+## Avancement
+
+**Étape 0 — golden** (`optimizer/trameDroite.golden.test.ts`, empreintes dans
+`optimizer/__golden__/`, forcées en LF par `.gitattributes`). 15 cas : 11 plans d'île droits
+(réglages de l'écran Planifier : 80 %, pavée, dévotion selon la Foi ; plus terre, objectif
+maisons, ateliers et emplacements), 2 plans diagonaux dans leur repère, 2 commandes,
+`planLattice` seul. Déterministe (deux passes identiques). 3 cas rapides bloquants (3,5 s),
+le panel entier avec `GOLDEN=1` (≈ 65 s). Recapture volontaire : `-u`.
+
+**Étape 1 — `engine/reseauRoutier.ts`.** Placé dans `engine` et non `optimizer` : l'analyseur
+(`engine/rules.ts`) s'en sert, et `engine` ne dépend pas d'`optimizer`. Une seule relation,
+`noeudsAuContact` : elle sert d'arête du graphe ET de raccordement d'une case de bâtiment
+(côté entre objets de même orientation, pointe entre droite et losange). `voisins` (les routes
+au contact), `casesAuContact` (les cases droites servies), `parcourir` (portée en nœuds,
+parcours réutilisable). Tests : contact confronté à l'oracle du maillage de triangles ;
+parcours identique à `bfsType` sur 40 masques aléatoires (atteints, ordre, parents) ; plan
+diagonal de small_06 projeté en losanges : même réseau enraciné et mêmes couvertures que
+l'analyseur dans le repère tourné (`optimizer/reseauRoutier.projection.test.ts`).
+
+**Étape 2 — analyseur à l'échelle 1.** `rootedRoadSet`, `roadConnected` et la couverture le
+long des rues passent par le graphe ; l'échelle 2 de l'éditeur est inchangée. Golden identique
+sur les 15 cas ; test différentiel contre l'ancienne 4-adjacence sur 30 plans aléatoires
+(routes sous les emprises, emprises qui débordent), qui échoue bien si l'on fausse le contact.
+Les ensembles renvoyés gardent les clés `"x,y"` ; un losange y aurait la clé `"Lx,y"`.
+
+Reste ouvert : un `Layout` ne sait pas encore porter de losange (`RoadTile` n'a pas de
+forme). Inutile tant qu'aucun moteur n'en pose ; à décider avant l'étape 6.

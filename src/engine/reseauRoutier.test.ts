@@ -4,8 +4,8 @@ import {
   casesAuContact, coinDe, creerParcours, degre, estLosange, idDroite, idLosange, noeudsAuContact, parcourir,
   reseauVide, tailleReseau, voisins, type ReseauRoutier,
 } from "./reseauRoutier";
-import { trianglesDeCase, trianglesDuCoin } from "./maillageTriangles";
-import { makeStreetGrid, type Footprint, type ReachState } from "./streetGrid";
+import { trianglesDeCase, trianglesDuCoin } from "../optimizer/maillageTriangles";
+import { makeStreetGrid, type Footprint, type ReachState } from "../optimizer/streetGrid";
 
 /** PRNG déterministe (mulberry32). */
 function prng(seed: number) {

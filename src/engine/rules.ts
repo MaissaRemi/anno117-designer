@@ -18,6 +18,19 @@ import {
   partieEauPosee,
 } from "./geometry";
 import { planningRange } from "./roads";
+import {
+  casesAuContact,
+  coinDe,
+  creerParcours,
+  estRoute,
+  noeudsAuContactDeCase,
+  parcourir,
+  reseauDeCases,
+  trameDe,
+  type Parcours,
+  type ReseauRoutier,
+  type Trame,
+} from "./reseauRoutier";
 
 export type DefLookup = (defId: string) => BuildingDef | undefined;
 
@@ -28,6 +41,21 @@ export type DefLookup = (defId: string) => BuildingDef | undefined;
  * historique (snapshots + oracle vérité-terrain inchangés).
  */
 const roadAdj = (scale: number) => (scale === 2 ? neighbors8 : orthoNeighbors);
+
+/**
+ * À l'échelle 1 — la grille des moteurs, celle que vérifient `invariants`, `ilots` et
+ * `planifier` —, le réseau est celui de `reseauRoutier` : cases droites et losanges, contact
+ * par un côté entre objets de même orientation, par un point entre les deux. Avec des routes
+ * toutes droites, c'est exactement la 4-adjacence d'avant (golden de la trame droite).
+ *
+ * Clé d'un nœud dans les ensembles renvoyés : `"x,y"` pour une case droite, comme toujours ;
+ * `"Lx,y"` pour un losange centré sur le coin (x, y).
+ */
+const cleDeNoeud = (t: Trame, id: number): string => {
+  if (id < t.N) return cellKey(id % t.W, (id / t.W) | 0);
+  const { X, Y } = coinDe(t, id);
+  return `L${X},${Y}`;
+};
 
 export function makeLookup(catalog: Catalog): DefLookup {
   const map = new Map(catalog.map((d) => [d.id, d]));
@@ -113,6 +141,7 @@ export function rootedRoadSet(
   lookup: DefLookup,
 ): { set: Set<string>; hasRoot: boolean } {
   const scale = gridScale(layout.grid);
+  if (scale === 1) return rootedRoadSetEnNoeuds(layout, lookup);
   const adj = roadAdj(scale);
   const roads = new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
   // graines : routes adjacentes à un bâtiment racine
@@ -146,6 +175,22 @@ export function rootedRoadSet(
   return { set: reachable, hasRoot: true };
 }
 
+function rootedRoadSetEnNoeuds(layout: Layout, lookup: DefLookup): { set: Set<string>; hasRoot: boolean } {
+  const r = reseauDeCases(layout.grid.w, layout.grid.h, layout.roads);
+  const seeds: number[] = [];
+  for (const b of layout.buildings) {
+    const def = lookup(b.defId);
+    if (!def?.roadRoot) continue;
+    for (const c of footprintCells(def, b.x, b.y, b.rotation, 1)) {
+      noeudsAuContactDeCase(r, c.x, c.y, (n) => { if (estRoute(r, n)) seeds.push(n); });
+    }
+  }
+  if (seeds.length === 0) return { set: new Set(layout.roads.map((c) => cellKey(c.x, c.y))), hasRoot: false };
+  const p = creerParcours(r);
+  parcourir(r, p, seeds);
+  return { set: new Set(p.atteints.map((id) => cleDeNoeud(r, id))), hasRoot: true };
+}
+
 /**
  * Le bâtiment touche-t-il une route reliée au comptoir ?
  * - needsRoad === false ou roadRoot === true => toujours vrai.
@@ -163,6 +208,15 @@ export function roadConnected(
   const roads = rootSet ?? new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
   if (roads.size === 0) return false;
   const scale = gridScale(layout.grid);
+  if (scale === 1) {
+    const t = trameDe(layout.grid.w, layout.grid.h);
+    for (const c of footprintCells(def, b.x, b.y, b.rotation, 1)) {
+      let touche = false;
+      noeudsAuContactDeCase(t, c.x, c.y, (n) => { if (!touche && roads.has(cleDeNoeud(t, n))) touche = true; });
+      if (touche) return true;
+    }
+    return false;
+  }
   const adj = roadAdj(scale);
   for (const c of footprintCells(def, b.x, b.y, b.rotation, scale)) {
     for (const n of adj(c.x, c.y)) {
@@ -312,6 +366,33 @@ function streetCoverage(
 }
 
 /**
+ * `streetCoverage` à l'échelle 1, sur le réseau en graphe : même sémantique (départ des routes
+ * au contact de l'emprise, portée en nœuds, cases servies au contact des routes atteintes).
+ * Réseau et parcours sont partagés par tous les bâtiments du plan.
+ */
+function couvertureEnNoeuds(
+  layout: Layout,
+  def: BuildingDef,
+  b: PlacedBuilding,
+  ctx: { r: ReseauRoutier; p: Parcours },
+): Set<string> {
+  const { r, p } = ctx;
+  const { w: W, usable } = layout.grid;
+  const emprise = footprintCells(def, b.x, b.y, b.rotation, 1);
+  const dansEmprise = new Set(emprise.map((c) => cellKey(c.x, c.y)));
+  const depart: number[] = [];
+  for (const c of emprise) {
+    noeudsAuContactDeCase(r, c.x, c.y, (n) => {
+      if (estRoute(r, n) && !dansEmprise.has(cleDeNoeud(r, n))) depart.push(n);
+    });
+  }
+  parcourir(r, p, depart, planningRange(def, layout.roadType));
+  const covered = new Set<string>();
+  for (const id of p.atteints) casesAuContact(r, id, (c) => { if (usable[c]) covered.add(cellKey(c % W, (c / W) | 0)); });
+  return covered;
+}
+
+/**
  * Cases couvertes par le rayon de chaque bâtiment d'influence. Utilise la
  * distance le long des rues (`streetRange`) quand le bâtiment en a une et que
  * des routes existent ; sinon repli sur le disque euclidien (`radius.range`).
@@ -324,11 +405,20 @@ export function computeRadiusCoverage(
   const result = new Map<string, Set<string>>();
   const scale = gridScale(layout.grid);
   const roads = new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
+  let enNoeuds: { r: ReseauRoutier; p: Parcours } | null = null;
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
     if (!def || !def.radius) continue;
     // forcer l'euclidien (borne de planification, indépendante des rues) si demandé
     const useStreet = !opts.euclidean && def.streetRange && def.streetRange > 0 && roads.size > 0;
+    if (useStreet && scale === 1) {
+      if (!enNoeuds) {
+        const r = reseauDeCases(layout.grid.w, layout.grid.h, layout.roads);
+        enNoeuds = { r, p: creerParcours(r) };
+      }
+      result.set(b.uid, couvertureEnNoeuds(layout, def, b, enNoeuds));
+      continue;
+    }
     result.set(b.uid, useStreet ? streetCoverage(layout, def, b, roads, scale) : euclideanCoverage(layout, def, b, scale));
   }
   return result;
