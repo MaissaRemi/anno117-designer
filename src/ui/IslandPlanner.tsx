@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { economy, tiers, worldOf } from "../economy/economy";
 import { runIslandPlan, type AnyIslandPlanResult } from "../optimizer/runIslandPlan";
+import { PRIX_DU_BILAN } from "../optimizer/prixDuBilan";
 import { gridWithObstacles } from "../optimizer/halfTileAdapter";
 import { makeLookup } from "../engine/rules";
 import { producibleGoods as producibleGoodsSet } from "../economy/resources";
@@ -70,6 +71,9 @@ export function IslandPlanner({ onClose }: Props) {
   // `optimizer/viability.ts` : au-delà de 30 000 habitants le malus de rang de cité dépasse
   // ce qu'une maison peut encaisser, et sans cette soupape aucune grande île ne se peuple.
   const [tolerance, setTolerance] = useState(0);
+  // Prix du bilan, en indicatif : part de la population escomptée par point de déficit vital
+  // par maison, pour COMPARER les plans (rien n'est démoli). En pourcents.
+  const [prixBilan, setPrixBilan] = useState(Math.round(PRIX_DU_BILAN * 100));
   // Dieu tutélaire et dévotion : ses effets valent pour l'île entière, sans sol ni permis. La
   // dévotion suit par défaut la Foi du plan, comme en jeu (`economy/dieux.ts`).
   const [dieu, setDieu] = useState("");
@@ -162,6 +166,7 @@ export function IslandPlanner({ onClose }: Props) {
         autoTier,
         ...(essayerDiagonale ? { essayerDiagonale } : {}),
         viability: strictBilan ? "strict" : "indicatif",
+        ...(!strictBilan ? { prixDuBilan: prixBilan / 100 } : {}),
         ...(strictBilan && tolerance > 0 ? { tolerance } : {}),
         ...(dieu ? { dieu } : {}),
         ...(devotion === "foi" ? { devotionSelonFoi: true } : { devotion }),
@@ -378,6 +383,15 @@ export function IslandPlanner({ onClose }: Props) {
                   </span>
                 </span>
               </label>
+              {!strictBilan && (
+                <label className="slider" title={"Pour comparer les plans, chaque point de déficit vital par maison retire "
+                  + `${prixBilan} % de leur population. 0 : la population seule décide. Rien n'est démoli.`}>
+                  <span style={{ color: "var(--muted)", fontSize: 12 }}>Prix du bilan</span>
+                  <input type="range" min={0} max={20} step={1} value={prixBilan}
+                    onChange={(e) => setPrixBilan(parseInt(e.target.value))} />
+                  <span className="muted">{prixBilan === 0 ? "aucun" : `${prixBilan} %`}</span>
+                </label>
+              )}
               {strictBilan && (
                 <label className="slider" title={toleranceHelp}>
                   <span style={{ color: "var(--muted)", fontSize: 12 }}>Risque toléré</span>
