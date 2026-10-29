@@ -570,6 +570,18 @@ export function repairRoadConnectivity(
     ilots.push(comp);
   }
 
+  /** Pose les nœuds d'un chemin qui ne sont pas déjà des routes ; ce qu'il traverse est rasé. */
+  const poserChemin = (chemin: number[]) => {
+    for (const cur of chemin) {
+      if (estRoute(reseau, cur)) continue;
+      for (const c of terrain.casesDe(cur)) if (owner[c] >= 0) razedIdx.add(owner[c]);
+      if (cur < N) roadAt[cur] = 1;
+      else { const t = routeDe(reseau, cur); poserLosange(reseau, t.x, t.y); }
+      extra.push(cur);
+      added++;
+    }
+  };
+
   /** Raccroche l'îlot au noyau par un court chemin ; vrai si c'est fait. */
   const raccrocher = (comp: number[]): boolean => {
     let linked = false;
@@ -579,17 +591,7 @@ export function repairRoadConnectivity(
       const chemin = cheminMele(
         reseau, comp.map((id) => ({ id, cout: 0 })), (n) => inCore[n] === 1, terrain.posable, terrain.coutEntree, maxDetour,
       );
-      if (chemin) {
-        for (const cur of chemin) {
-          if (estRoute(reseau, cur)) continue;
-          for (const c of terrain.casesDe(cur)) if (owner[c] >= 0) razedIdx.add(owner[c]);
-          if (cur < N) roadAt[cur] = 1;
-          else { const t = routeDe(reseau, cur); poserLosange(reseau, t.x, t.y); }
-          extra.push(cur);
-          added++;
-        }
-        linked = true;
-      }
+      if (chemin) { poserChemin(chemin); linked = true; }
     }
     // raccrochage : BFS court depuis l'îlot, à travers les cases LIBRES, vers le noyau
     const prev = new Map<number, number>();
@@ -650,12 +652,45 @@ export function repairRoadConnectivity(
     enAttente = echecs;
   }
 
-  // les bâtiments desservis par le noyau, une fois tous les raccords posés
-  servedByCore.fill(0);
-  for (let c = 0; c < T; c++) {
-    if (!inCore[c]) continue;
-    casesAuContact(reseau, c, (n) => { if (owner[n] >= 0) servedByCore[owner[n]] = 1; });
+  const recompterServis = () => {
+    servedByCore.fill(0);
+    for (let c = 0; c < T; c++) {
+      if (!inCore[c]) continue;
+      casesAuContact(reseau, c, (n) => { if (owner[n] >= 0) servedByCore[owner[n]] = 1; });
+    }
+  };
+
+  // RACCORDER LE BÂTIMENT, PAS SEULEMENT SON ÎLOT. Le chemin partait des seules cases de
+  // l'îlot : une source d'aqueduc, dont la route est creusée côté montagne, ne pouvait pas
+  // revenir vers la ville, alors que de l'autre côté de son emprise le noyau était à 2 ou 3
+  // cases (mesuré sur roman_island_large_02 et medium_02). Pour chaque bâtiment qu'un îlot
+  // irrécupérable laissait seul, on cherche donc aussi un chemin depuis tout son pourtour —
+  // sans jamais traverser le bâtiment lui-même.
+  recompterServis();
+  for (const comp of enAttente) {
+    if (inCore[comp[0]]) continue;
+    const seuls = new Set<number>();
+    for (const c of comp) casesAuContact(reseau, c, (n) => { if (owner[n] >= 0 && !servedByCore[owner[n]]) seuls.add(owner[n]); });
+    for (const bi of seuls) {
+      if (servedByCore[bi]) continue; // servi entre-temps par un autre raccord
+      const b = buildings[bi], d = lookup(b.defId);
+      if (!d?.needsRoad || d.roadRoot) continue;
+      const fp = footprintSize(d, b.rotation);
+      const horsDuBatiment = (n: number) => terrain.posable(n) && !terrain.casesDe(n).some((c) => owner[c] === bi);
+      const departs: { id: number; cout: number }[] = [];
+      noeudsAuContactRect(reseau, b.x, b.y, fp.w, fp.h, (id) => {
+        if (horsDuBatiment(id)) departs.push({ id, cout: estRoute(reseau, id) ? 0 : terrain.coutEntree(id) });
+      });
+      const chemin = cheminMele(reseau, departs, (n) => inCore[n] === 1, horsDuBatiment, terrain.coutEntree, maxDetour);
+      if (!chemin) continue;
+      poserChemin(chemin);
+      grow(chemin);
+      recompterServis();
+    }
   }
+
+  // les bâtiments desservis par le noyau, une fois tous les raccords posés
+  recompterServis();
   for (const comp of enAttente) {
     // Irrécupérable. Deux cas très différents :
     //  - tous les bâtiments qu'il dessert touchent déjà le réseau enraciné → l'îlot ne sert

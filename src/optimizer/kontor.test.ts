@@ -262,3 +262,29 @@ describe("réparation : un îlot se raccroche à travers un autre", () => {
     expect(roadConnected(layout, lookup, maisonB, set)).toBe(true);
   });
 });
+
+describe("réparation : raccorder le bâtiment, pas seulement son îlot", () => {
+  it("un service dont la route part du mauvais côté est raccordé par son autre côté", () => {
+    // le service (12, 5) 2 × 2 n'a qu'une route, à l'est (14, 5-6), dans un cul-de-sac muré ;
+    // à l'ouest, le noyau (route x = 9, reliée au comptoir) est à 2 cases
+    const kdef = pickKontorDef(catalog, "Roman")!;
+    const { w } = footprintSize(kdef, 0);
+    const svc = { ...catalog.find((d) => d.id === "g3145")!, id: "svc", size: { w: 2, h: 2 }, needsRoad: true };
+    const lk = makeLookup([...catalog, svc]);
+    const g = makeGrid(30, 20);
+    for (const [x, y] of [[14, 4], [14, 7], [15, 5], [15, 6]]) g.usable[y * 30 + x] = false;
+    const kontor = { uid: "k", defId: kdef.id, x: 1, y: 10, rotation: 0 as const, locked: false };
+    const service = { uid: "s", defId: "svc", x: 12, y: 5, rotation: 0 as const, locked: false };
+    const routes = [
+      ...Array.from({ length: Math.max(w, 9) }, (_, i) => ({ x: 1 + i, y: 9 })),
+      ...[5, 6, 7, 8].map((y) => ({ x: 9, y })),
+      { x: 14, y: 5 }, { x: 14, y: 6 },
+    ];
+    const r = repairRoadConnectivity(g, [kontor, service], routes, lk, 24, () => false);
+    expect(r.stranded).toEqual([]);
+    expect(r.added).toBe(2);
+    const layout = { grid: g, buildings: [kontor, service], roads: r.roads, fields: [] };
+    const { set } = rootedRoadSet(layout, lk);
+    expect(roadConnected(layout, lk, service, set)).toBe(true);
+  });
+});
