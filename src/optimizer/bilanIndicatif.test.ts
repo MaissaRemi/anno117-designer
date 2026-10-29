@@ -45,10 +45,12 @@ describe("bilan d'attributs : indicatif par défaut, strict sur demande", () => 
   });
 
   it("en strict, l'historique : le garde-fou démolit, et le plan loge bien moins", () => {
-    // Mesuré : 245 maisons en strict contre 1 932 en indicatif. Le facteur 4 laisse de la
-    // marge aux variations de placement sans laisser passer un garde-fou désarmé.
+    // Mesuré (29/10/2026, terre constructible du jeu, comptoir à cheval sur l'eau) : 329 maisons
+    // en strict contre 903 en indicatif — 245 contre 1 932 auparavant, sur une terre qui
+    // comptait la montagne. Le facteur 2 laisse passer les variations de placement, pas un
+    // garde-fou désarmé.
     expect(strict.viable).toBe(true);
-    expect(indicatif.houses).toBeGreaterThan(4 * strict.houses);
+    expect(indicatif.houses).toBeGreaterThan(2 * strict.houses);
     expect(indicatif.residents).toBeGreaterThan(strict.residents);
   });
 

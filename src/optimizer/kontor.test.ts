@@ -4,7 +4,7 @@ import { buildIslandGrid } from "../data/islandGrid";
 import { makeGrid } from "../model/factories";
 import type { BuildingDef, GridShape } from "../model/types";
 import { economy } from "../economy/economy";
-import { makeLookup, rootedRoadSet } from "../engine/rules";
+import { makeLookup, rootedRoadSet, terrainConvient } from "../engine/rules";
 import { footprintSize } from "../engine/geometry";
 import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
@@ -64,28 +64,25 @@ describe("comptoir (racine du réseau routier)", () => {
     expect(def!.nameInternal ?? "").toMatch(/^Harbor Warehouse/i);
   });
 
-  it("reserveKontor pose l'emprise sur la TERRE, au contact de la MER, et la retire du masque", () => {
+  it("reserveKontor pose le comptoir À CHEVAL : sa partie dans l'eau sur l'eau, le reste à terre", () => {
+    // Le `.ifo` du comptoir romain déclare 6 colonnes dans l'eau sur 8 : posé tout à terre,
+    // il restait à l'intérieur des terres et l'éditeur le marquait sur un mauvais terrain.
     const grid = realIsland("roman_island_medium_01");
     const def = pickKontorDef(catalog, "Roman")!;
-    const res = reserveKontor(grid, def);
+    expect(def.partieEau).toBeDefined();
+    const res = reserveKontor(grid, def)!;
     expect(res).not.toBeNull();
-    const { w, h } = footprintSize(res!.def, res!.rotation);
-    let touchesSea = false;
-    for (let j = -1; j <= h; j++) {
-      for (let i = -1; i <= w; i++) {
-        const x = res!.x + i, y = res!.y + j;
-        if (x < 0 || y < 0 || x >= grid.w || y >= grid.h) continue;
-        const inside = i >= 0 && i < w && j >= 0 && j < h;
-        const c = y * grid.w + x;
-        if (inside) {
-          expect(grid.usable[c]).toBe(true); // toute l'emprise sur la terre
-          expect(res!.grid.usable[c]).toBe(false); // retirée du masque donné aux moteurs
-        } else if (grid.water![c]) {
-          touchesSea = true;
-        }
-      }
+    expect(terrainConvient(grid, def, res.x, res.y, res.rotation, 1)).toBe(true);
+    const { w, h } = footprintSize(res.def, res.rotation);
+    let eau = 0, terre = 0;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const c = (res.y + j) * grid.w + res.x + i;
+      if (grid.water![c]) eau++; else if (grid.usable[c]) terre++;
+      expect(res.grid.usable[c]).toBe(false); // retiré du masque donné aux moteurs
+      expect(res.grid.water![c]).toBe(false); // et de l'eau : aucun pêcheur dessus
     }
-    expect(touchesSea).toBe(true);
+    expect(eau).toBeGreaterThan(0);
+    expect(terre).toBeGreaterThan(0);
   });
 
   it("sans carte d'eau (grille libre), aucun comptoir n'est réservé", () => {

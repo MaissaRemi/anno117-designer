@@ -1,6 +1,6 @@
-import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
-import type { DefLookup } from "../engine/rules";
-import { footprintSize, routeSeule } from "../engine/geometry";
+import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile, Rotation } from "../model/types";
+import { terrainConvient, type DefLookup } from "../engine/rules";
+import { footprintSize, partieEauPosee, routeSeule } from "../engine/geometry";
 import { economy } from "../economy/economy";
 import { uid } from "../model/factories";
 import { planFromBasket, pickWarehouse, type BasketPlan } from "../prodlayout";
@@ -306,18 +306,47 @@ export function disposerProduction(
       }
       return false;
     };
+    /** Emprise et partie dans l'eau (débordement compris) libres de tout bâtiment, route, champ. */
+    const libreDeTout = (x: number, y: number, w: number, h: number, p: { x: number; y: number; w: number; h: number }) => {
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (occ[(y + j) * W + x + i]) return false;
+      for (let j = 0; j < p.h; j++) for (let i = 0; i < p.w; i++) {
+        const xx = x + p.x + i, yy = y + p.y + j;
+        if (xx < 0 || yy < 0 || xx >= W || yy >= H || occ[yy * W + xx]) return false;
+      }
+      return true;
+    };
+    /** Distance à la ville de la case de quai la plus proche (la terre de l'emprise), −1 sinon. */
+    const distanceDuQuai = (x: number, y: number, w: number, h: number, p: { x: number; y: number; w: number; h: number }) => {
+      let best = -1;
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+        if (i >= p.x && i < p.x + p.w && j >= p.y && j < p.y + p.h) continue;
+        const v = dist[(y + j) * W + x + i];
+        if (v >= 0 && (best < 0 || v < best)) best = v;
+      }
+      return best;
+    };
     const aServir: PlacedBuilding[] = [];
     for (const l of cotiers) {
       const d = lookup(l.defId)!;
       let n = 0;
       for (; n < l.count; n++) {
         reintegrer();
-        let best: { x: number; y: number; rot: 0 | 90; d: number } | null = null;
-        for (const rot of (d.rotatable ? [0, 90] : [0]) as (0 | 90)[]) {
+        let best: { x: number; y: number; rot: Rotation; d: number } | null = null;
+        for (const rot of (d.rotatable ? [0, 90, 180, 270] : [0]) as Rotation[]) {
           const { w, h } = footprintSize(d, rot);
+          const partie = partieEauPosee(d, rot);
           for (let y = 0; y + h <= H; y++) for (let x = 0; x + w <= W; x++) {
-            if (!boiteLibre(x, y, w, h) || !toucheMer(x, y, w, h)) continue;
-            const dd = dist[y * W + x];
+            let dd: number;
+            if (partie) {
+              // la vraie règle du jeu : sa partie dans l'eau sur l'eau constructible, le reste à
+              // terre (le quai), rien d'occupé ; la distance se lit sur le quai
+              if (!terrainConvient(grid, d, x, y, rot, 1) || !libreDeTout(x, y, w, h, partie)) continue;
+              dd = distanceDuQuai(x, y, w, h, partie);
+            } else {
+              if (rot === 180 || rot === 270) continue; // ancienne règle : deux orientations suffisent
+              if (!boiteLibre(x, y, w, h) || !toucheMer(x, y, w, h)) continue;
+              dd = dist[y * W + x];
+            }
             if (dd < 0) continue;
             if (!best || dd < best.d) best = { x, y, rot, d: dd };
           }
@@ -327,6 +356,12 @@ export function disposerProduction(
         const { w, h } = footprintSize(d, best.rot);
         // l'emprise est marquée AVANT de chercher la route : sans cela le raccord la traversait
         marquer(b);
+        // sa partie dans l'eau aussi, débordement compris : deux pêcheurs ne partagent pas leur eau
+        const partie = partieEauPosee(d, best.rot);
+        if (partie) for (let j = 0; j < partie.h; j++) for (let i = 0; i < partie.w; i++) {
+          const xx = best.x + partie.x + i, yy = best.y + partie.y + j;
+          if (xx >= 0 && yy >= 0 && xx < W && yy < H) occ[yy * W + xx] = 1;
+        }
         let chemin: RoadTile[] | null = null;
         for (const [px, py] of perimetre(best.x, best.y, w, h, W, H)) {
           chemin = relier(py * W + px);

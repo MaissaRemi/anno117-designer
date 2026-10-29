@@ -29,7 +29,7 @@ function verifierPlan(p: ReturnType<typeof disposerQuartiers>) {
   for (const b of layout.buildings) {
     const d = lookup(b.defId)!;
     const fp = footprintSize(d, b.rotation);
-    const horsMasqueOk = d.placement === "water" || !!d.slotType || d.template === "AqueductProducerSlot";
+    const horsMasqueOk = d.placement === "water" || !!d.slotType || d.template === "AqueductProducerSlot" || !!d.partieEau;
     for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
       const c = (b.y + j) * W + b.x + i;
       if (pris.has(c)) chevauchements++;

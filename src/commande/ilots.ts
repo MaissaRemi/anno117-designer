@@ -282,7 +282,7 @@ function disposer(
   const kontor = kontorDef ? reserveKontor(grid, kontorDef) : null;
   if (!kontor) avertissements.push("Aucun comptoir posable : pas de littoral exploitable");
   const base = blockMountains(keepMainLandmass(kontor?.grid ?? grid, kontor ?? undefined));
-  const kontorRect = kontor ? { x: kontor.x, y: kontor.y, ...taille(kontor.def, kontor.rotation) } : undefined;
+  const kontorRect = kontor ? { x: kontor.x, y: kontor.y, ...footprintSize(kontor.def, kontor.rotation) } : undefined;
   const graines: number[] = [];
   if (kontorRect) {
     for (let x = kontorRect.x - 1; x <= kontorRect.x + kontorRect.w; x++) {

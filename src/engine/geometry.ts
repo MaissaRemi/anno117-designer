@@ -24,6 +24,24 @@ export function footprintSize(def: BuildingDef, rot: Rotation, scale = 1): { w: 
   return rot === 90 || rot === 270 ? { w: h, h: w } : { w, h };
 }
 
+/**
+ * Partie dans l'eau d'un bâtiment côtier posé avec `rot`, en cases relatives à son coin (même
+ * échelle que l'emprise), ou undefined s'il n'en a pas — ou s'il est en diagonale, où le jeu ne
+ * pose pas de bâtiment côtier. Rotation horaire : la case (i, j) va en (h − 1 − j, i) à 90°.
+ */
+export function partieEauPosee(
+  def: BuildingDef, rot: Rotation, scale = 1,
+): { x: number; y: number; w: number; h: number } | undefined {
+  const e = def.partieEau;
+  if (!e || isDiagonal(rot)) return undefined;
+  const W = def.size.w, H = def.size.h;
+  const r = rot === 90 ? { x: H - (e.y + e.h), y: e.x, w: e.h, h: e.w }
+    : rot === 180 ? { x: W - (e.x + e.w), y: H - (e.y + e.h), w: e.w, h: e.h }
+      : rot === 270 ? { x: e.y, y: W - (e.x + e.w), w: e.h, h: e.w }
+        : e;
+  return { x: r.x * scale, y: r.y * scale, w: r.w * scale, h: r.h * scale };
+}
+
 /** Liste des cases occupées (EN CELLULES) par un bâtiment posé en (x,y). Diagonale → diamant rastérisé. */
 export function footprintCells(def: BuildingDef, x: number, y: number, rot: Rotation, scale = 1): Cell[] {
   const cells: Cell[] = [];
