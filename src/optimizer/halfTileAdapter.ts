@@ -103,5 +103,9 @@ export function scaleResultToHalfTile<
     roads: upscaleTiles(result.roads),
     fields: upscaleTiles(result.fields),
     ...(result.aqueducts ? { aqueducts: upscaleTiles(result.aqueducts) } : {}),
+    // les plans au choix sont des plans complets, dans le même repère : à reprojeter aussi
+    ...(alternativesDe(result) ? { alternatives: alternativesDe(result)!.map((a) => scaleResultToHalfTile(a, true)) } : {}),
   };
 }
+
+const alternativesDe = <R>(r: R): R[] | undefined => (r as { alternatives?: R[] }).alternatives;

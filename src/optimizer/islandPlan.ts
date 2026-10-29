@@ -24,6 +24,7 @@ import { regionOfIsland } from "../data/islands";
 // LA RÈGLE DE VIABILITÉ NE VIT QU'À UN ENDROIT (cf. `viability.ts`) : le verdict tolérant et
 // le garde-fou strict y cohabitent, et personne ne réécrit sa propre version du test.
 import { BRUIT_VITAL, populationEffective, severiteVitale, verdictViable } from "./viability";
+import { choisirPlansContrastes, type Critere } from "./plansAuChoix";
 import { pruneDeadEnds } from "./roadCleanup";
 import type { RoadType } from "../engine/roads";
 
@@ -194,6 +195,13 @@ export interface IslandPlanResult {
    *  retombe au meilleur palier atteint (min = base) — d'où residents = somme mixte. */
   tierCounts: Record<string, number>;
   residents: number; // habitants TOTAUX (mixte, tous paliers atteints)
+  /** Critères sur lesquels ce plan est le meilleur des plans proposés (cf. `alternatives`). */
+  atouts?: Critere[];
+  /**
+   * PLANS AU CHOIX : jusqu'à deux autres plans complets, chacun nettement meilleur sur un
+   * autre critère (`plansAuChoix.ts`). Celui-ci est le recommandé, selon l'objectif demandé.
+   */
+  alternatives?: IslandPlanResult[];
   buildings: PlacedBuilding[]; // résidences + services + sources d'eau
   roads: RoadTile[];
   fields: FieldTile[];
@@ -1641,10 +1649,36 @@ export function planIslandImport(
     return a.money.net > b.money.net;
   };
   let out: IslandPlanResult | null = null;
+  /** Tous les plans LIVRÉS, pour les plans au choix (cf. `plansAuChoix.ts`). */
+  const livres: IslandPlanResult[] = [];
   for (let i = 0; i < shortlist.length; i++) {
     onProgress?.(trials.length + nVariantes + 2 + i + 1, total);
     const r = finalize(shortlist[i]);
+    livres.push(r);
     if (!out || betterFinal(r, out)) out = r;
+  }
+  // PLANS CONTRASTÉS : les finalistes sont pris sur la population ; on finalise en plus le
+  // meilleur candidat sur chaque autre critère — bilan, maisons au palier, argent — pour que
+  // le joueur ait un vrai choix. Une passe aval chacun, ~10 % d'un plan.
+  {
+    const parCritere: ((e: Evaluated) => number)[] = [
+      (e) => -severiteVitale(e.attrsTotal, e.cand.houses),
+      (e) => e.tierCounts[req.tierGuid] ?? 0,
+      (e) => e.houseMoney,
+    ];
+    const enPlus: Evaluated[] = [];
+    for (const f of parCritere) {
+      let m: Evaluated | undefined;
+      for (const c of cands) if (waterViable(c) && (!m || f(c) > f(m))) m = c;
+      if (m && !seen.has(m.sig)) { seen.add(m.sig); enPlus.push(m); }
+    }
+    total += enPlus.length;
+    for (let i = 0; i < enPlus.length; i++) {
+      onProgress?.(trials.length + nVariantes + 2 + shortlist.length + i + 1, total);
+      const r = finalize(enPlus[i]);
+      livres.push(r);
+      if (!out || betterFinal(r, out)) out = r;
+    }
   }
 
   /**
@@ -1693,8 +1727,14 @@ export function planIslandImport(
       // démolitions que de 70 à 59, pour un gain de population nul.
       const pin = out.workshops.flatMap((w) => w.placed.map((b) => ({ x: b.x, y: b.y })));
       const r2 = finalize(runLattice(bestTrial, coverageFloor, reserved), pin);
+      livres.push(r2);
       if (betterFinal(r2, out)) out = r2;
     }
   }
-  return out!;
+  const choix = choisirPlansContrastes(out!, livres);
+  return {
+    ...choix[0].plan,
+    atouts: choix[0].atouts,
+    alternatives: choix.slice(1).map((c) => ({ ...c.plan, atouts: c.atouts })),
+  };
 }

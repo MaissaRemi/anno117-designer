@@ -13,6 +13,7 @@ import type { RoadType } from "../engine/roads";
 import { regionOfIsland } from "../data/islands";
 import { DieuSelect, type ChoixDevotion } from "./components/DieuSelect";
 import { resumeEffets } from "../economy/dieux";
+import { PlansAuChoix } from "./components/PlansAuChoix";
 
 interface Props {
   onClose: () => void;
@@ -80,7 +81,13 @@ export function IslandPlanner({ onClose }: Props) {
   const [prodRate, setProdRate] = useState(10);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ step: number; total: number } | null>(null);
-  const [result, setResult] = useState<AnyIslandPlanResult | null>(null);
+  const [brut, setBrut] = useState<AnyIslandPlanResult | null>(null);
+  // PLANS AU CHOIX : le recommandé et ses alternatives ; `result` est celui qu'on regarde
+  const [choix, setChoix] = useState(0);
+  const plans: AnyIslandPlanResult[] = brut
+    ? (brut.mode === "import" ? [brut, ...(brut.alternatives ?? [])] : [brut])
+    : [];
+  const result = plans[choix] ?? brut;
   const [placeMsg, setPlaceMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -135,7 +142,7 @@ export function IslandPlanner({ onClose }: Props) {
 
   const run = () => {
     const s = useStore.getState();
-    setRunning(true); setResult(null); setPlaceMsg(null); setProgress(null); setError(null);
+    setRunning(true); setBrut(null); setChoix(0); setPlaceMsg(null); setProgress(null); setError(null);
     cancelRef.current?.();
     const locked = s.layout.buildings.filter((b) => b.locked);
     const grid = gridWithObstacles(s.layout.grid, locked, makeLookup(s.catalog));
@@ -163,7 +170,7 @@ export function IslandPlanner({ onClose }: Props) {
     );
     cancelRef.current = cancel;
     promise
-      .then(setResult)
+      .then((r) => { setBrut(r); setChoix(0); })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => { setRunning(false); cancelRef.current = null; });
   };
@@ -404,6 +411,10 @@ export function IslandPlanner({ onClose }: Props) {
         {!result && !running && <p className="muted">Lance un calcul pour voir le résultat ici.</p>}
         {result && !running && result.buildings.length === 0 && (
           <div className="warn">Aucun plan trouvé{result.gaps?.length ? ` — ${result.gaps[0]}` : " (île trop petite ou fragmentée)"}.</div>
+        )}
+
+        {!running && plans.length > 1 && (
+          <PlansAuChoix plans={plans} choix={choix} onChoix={setChoix} />
         )}
 
         {/* Sur écran large : la carte à gauche (elle reste visible pendant qu'on fait défiler

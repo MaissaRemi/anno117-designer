@@ -183,6 +183,17 @@ label { font-size: 13px; }
 .plan-switch button:hover { background: var(--s2); }
 .plan-switch button.active { background: var(--accent-soft); color: var(--accent); }
 .plan-switch .sub { font-size: 11px; font-weight: 400; color: var(--muted); }
+/* ---- plans au choix : une carte par plan proposé ---- */
+.plans-choix { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.plans-choix button {
+  flex: 1 1 200px; min-width: 0; height: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: var(--sp-2) var(--sp-3); background: var(--s1); border: 1px solid var(--line); border-radius: var(--r-md);
+  color: var(--t2); text-align: left;
+}
+.plans-choix button:hover { background: var(--s2); }
+.plans-choix button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--t); }
+.plans-choix .titre { font-weight: 600; color: var(--t); }
+.plans-choix .sub { font-size: 11px; color: var(--muted); }
 details.avance { margin-top: var(--sp-3); }
 details.avance > summary { cursor: pointer; color: var(--t2); font-size: 12px; padding: var(--sp-1) 0; }
 details.avance[open] > summary { margin-bottom: var(--sp-2); }
