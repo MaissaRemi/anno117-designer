@@ -92,7 +92,10 @@ réseau d'eau, un bilan) : seule la géométrie est locale. Étapes restantes :
   tracé du comptoir, lui, donne +1 364 habitants sur 27 îles, aucune en recul — adopté
   (`PRIX_CASE_RASEE` = 3, `optimizer/kontor.ts`).
   Q2 et Q3 restent à vérifier — détail dans la conception ;
-3. carte d'orientation de l'île selon ses côtes ;
+3. carte d'orientation de l'île selon ses côtes — **étude préalable faite, en suspens** :
+   l'orientation des côtes ne prédit rien, et le plafond de gain de la trame mêlée est du même
+   ordre que le bruit entre deux plans droits (section « étape 3 : étude préalable » de l'étude
+   des diagonales). Décision de Rémi attendue avant d'investir dans les étapes 3 à 6 ;
 4. squelette de rues mêlé, recousu aux jonctions ;
 5. placement global unique des services, de l'eau et des maisons sur ce graphe ;
 6. trame droite, diagonale et mêlée comparées dans les plans au choix.

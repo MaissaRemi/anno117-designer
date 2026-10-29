@@ -150,6 +150,29 @@ exactement, sans approximation.
 
 Comptoir et emplacements de montagne restent droits dans toutes les trames.
 
+## Trame mêlée, étape 3 : étude préalable (la carte d'orientation vaut-elle l'effort ?)
+
+Après la correction de la portée (√2 par losange), deux sondes sur les 27 îles romaines,
+Patriciens, pavée, Foi, 80 %. Sondes jetables, non versionnées.
+
+**L'orientation des côtes ne prédit rien.** Part de côte en biais (gradient d'un masque de
+terre lissé sur 7 × 7, aux cases de bord) : 40 à 60 % sur toutes les îles, comme un cercle
+(50 %). small_05 (+41 % en diagonale) en a 45 %, medium_06 (−15 %) 59 %. Le critère « direction
+dominante du bord » de la conception ne départage pas les îles.
+
+**Plafond optimiste de la trame mêlée.** Par bloc de 32 × 32 cases, le meilleur des deux plans
+entiers (droit, diagonal), en maisons comptées par leur centre : +5 à +18 % sur la plupart des
+îles, +42 % sur small_05. Mais prendre le meilleur de DEUX PLANS DROITS différents gagne déjà,
+par le seul jeu des fluctuations locales : 8,4 % sur small_07 (190 et 189 maisons), 6,9 % sur
+extralarge_02, 16,3 % sur medium_05. (Témoin imparfait : sur les autres îles, l'objectif
+« maisons » redonne le même plan droit, excès nul, sans valeur de mesure.) Le plafond de la
+trame mêlée est donc du même ordre que ce bruit, AVANT le coût des coutures entre zones et de
+l'économie commune. Seule small_05 sort du lot, et le plan entièrement diagonal, déjà proposé
+parmi les plans au choix, le capte (+41 %).
+
+**Conclusion provisoire** : les étapes 3 à 6 de la trame mêlée sont un gros chantier pour un
+gain attendu faible. Décision à prendre par Rémi avant d'aller plus loin.
+
 ## Ce que coûtent aujourd'hui les raccordements à angle droit
 
 Recensement du 29/10/2026, « Remplir l'île », Patriciens, routes pavées, 23 îles romaines :
