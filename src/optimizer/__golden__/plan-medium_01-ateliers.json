@@ -1,0 +1,31 @@
+{
+  "recommande": {
+    "palier": "1498",
+    "maisons": 526,
+    "habitants": 20562,
+    "maisonsAuPalier": 466,
+    "paliers": {
+      "1497": 44,
+      "1498": 466,
+      "1499": 16
+    },
+    "batiments": 645,
+    "routes": 3285,
+    "conduites": 419,
+    "champs": 0,
+    "eau": {
+      "sources": 4,
+      "utilisee": 165
+    },
+    "repere": "droit",
+    "analyse": {
+      "reseauEnracine": 3285,
+      "batimentsCoupes": 2,
+      "casesCouvertes": 158348,
+      "hachageCouvertures": "0b1dc89850b6d2c4"
+    },
+    "violations": 1,
+    "hachage": "84f3c09f5d6a2c88"
+  },
+  "alternatives": []
+}

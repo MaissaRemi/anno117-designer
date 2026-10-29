@@ -1,0 +1,13 @@
+{
+  "maisons": 128,
+  "maisonsAuPalier": 114,
+  "habitants": 4961,
+  "routes": 2907,
+  "analyse": {
+    "reseauEnracine": -1,
+    "batimentsCoupes": 0,
+    "casesCouvertes": 75290,
+    "hachageCouvertures": "8e651e8d32ff1318"
+  },
+  "hachage": "8d001158e79ef01e"
+}

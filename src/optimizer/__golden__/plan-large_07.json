@@ -1,0 +1,62 @@
+{
+  "recommande": {
+    "palier": "1498",
+    "maisons": 1566,
+    "habitants": 64691,
+    "maisonsAuPalier": 1368,
+    "paliers": {
+      "1496": 8,
+      "1497": 143,
+      "1498": 1368,
+      "1499": 47
+    },
+    "batiments": 1743,
+    "routes": 7723,
+    "conduites": 757,
+    "champs": 0,
+    "eau": {
+      "sources": 5,
+      "utilisee": 255
+    },
+    "repere": "droit",
+    "analyse": {
+      "reseauEnracine": 7723,
+      "batimentsCoupes": 0,
+      "casesCouvertes": 297707,
+      "hachageCouvertures": "727493b6416bbe96"
+    },
+    "violations": 1,
+    "hachage": "0f2e10d04facd488"
+  },
+  "alternatives": [
+    {
+      "palier": "1498",
+      "maisons": 1570,
+      "habitants": 57095,
+      "maisonsAuPalier": 1380,
+      "paliers": {
+        "1496": 7,
+        "1497": 136,
+        "1498": 1380,
+        "1499": 47
+      },
+      "batiments": 1746,
+      "routes": 7708,
+      "conduites": 811,
+      "champs": 0,
+      "eau": {
+        "sources": 5,
+        "utilisee": 255
+      },
+      "repere": "droit",
+      "analyse": {
+        "reseauEnracine": 7708,
+        "batimentsCoupes": 0,
+        "casesCouvertes": 293486,
+        "hachageCouvertures": "c6b95f95916dc6b5"
+      },
+      "violations": 0,
+      "hachage": "c95abbe915f0bee0"
+    }
+  ]
+}

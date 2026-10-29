@@ -1,0 +1,18 @@
+{
+  "batiments": 343,
+  "routes": 1145,
+  "conduites": 209,
+  "champs": 0,
+  "servi": false,
+  "manques": [
+    "27 Résidence de Patriciens non logée(s) à leur palier sur 300"
+  ],
+  "lignes": 13,
+  "analyse": {
+    "reseauEnracine": 1140,
+    "batimentsCoupes": 0,
+    "casesCouvertes": 56381,
+    "hachageCouvertures": "8c9ad85d849d1b3d"
+  },
+  "hachage": "b41dd4987180178f"
+}
