@@ -11,7 +11,7 @@ import { MAX_RUN, needsWater, planWater, type WaterPlanResult } from "./waterPla
 import { makeStreetGrid } from "./streetGrid";
 import { copiesEnTrop } from "./doublons";
 import { planningRange, type RoadType } from "../engine/roads";
-import { casesAuContact, losangeAuContact, routeDe, routesDuReseau, tailleReseau, voisins } from "../engine/reseauRoutier";
+import { casesAuContact, losangeSur, routeDe, routesDuReseau, tailleReseau, voisins } from "../engine/reseauRoutier";
 
 
 export interface LatticeOpts {
@@ -824,8 +824,8 @@ export function planLattice(
       for (let depth = 0; depth < 200 && fr.length && hit < 0; depth++) {
         const next: number[] = [];
         for (const c of fr) {
-          // un losange de route touché par un coin : le chemin s'arrête là
-          if (losangeAuContact(reseau, c) >= 0) { hit = c; break; }
+          // la case est sous un losange de route (jonction par recouvrement) : le chemin s'arrête là
+          if (losangeSur(reseau, c) >= 0) { hit = c; break; }
           for (const n of [c % W > 0 ? c - 1 : -1, c % W < W - 1 ? c + 1 : -1,
             c >= W ? c - W : -1, c < N - W ? c + W : -1]) {
             if (n < 0 || prev[n] !== -2 || !passable(n)) continue;

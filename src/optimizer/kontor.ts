@@ -3,7 +3,7 @@ import { footprintSize, partieEauPosee, routeSeule } from "../engine/geometry";
 import type { BuildingDef, GridShape, PlacedBuilding, RoadTile, Rotation } from "../model/types";
 import { terrainConvient, type DefLookup } from "../engine/rules";
 import {
-  casesAuContact, estLosange, estRoute, idDeRoute, losangeAuContact, noeudsAuContactDuReseau, reseauDeRoutes,
+  casesAuContact, estLosange, estRoute, idDeRoute, losangeSur, noeudsLiesDuReseau, reseauDeRoutes,
   retirerLosange, routeDe, routesAuContactRect, tailleReseau, voisins,
 } from "../engine/reseauRoutier";
 
@@ -403,8 +403,8 @@ export function connectKontor(
   for (let depth = 0; depth < MAX_STUB && frontier.length; depth++) {
     const next: number[] = [];
     for (const c of frontier) {
-      // un losange de route touché par un coin : le réseau diagonal est atteint
-      if (losangeAuContact(reseau, c) >= 0) return chemin(c);
+      // la case est sous un losange de route : jonction par recouvrement, le réseau diagonal est atteint
+      if (losangeSur(reseau, c) >= 0) return chemin(c);
       const x = c % W, y = (c / W) | 0;
       for (const nb of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
         if (nb < 0 || prev[nb] !== -2) continue;
@@ -546,8 +546,8 @@ export function repairRoadConnectivity(
     for (let depth = 0; depth <= maxDetour && frontier.length && !linked; depth++) {
       const next: number[] = [];
       for (const c of frontier) {
-        // au contact de `c` : les cases droites (gauche, droite, haut, bas), puis les losanges
-        noeudsAuContactDuReseau(reseau, c, (n) => {
+        // liés à `c` : les cases droites (gauche, droite, haut, bas), puis les losanges qui la recouvrent
+        noeudsLiesDuReseau(reseau, c, (n) => {
           if (linked || prev.has(n)) return;
           if (inCore[n]) {
             for (let cur = c; cur >= 0 && !estRoute(reseau, cur); cur = prev.get(cur)!) {

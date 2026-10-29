@@ -1,5 +1,7 @@
 import type { BuildingDef } from "../model/types";
-import { losangeAuContact, reseauVide, routesAuContactRect, tailleReseau, voisins } from "../engine/reseauRoutier";
+import {
+  creerParcours, losangeSur, parcourir, reseauVide, routesAuContactRect, tailleReseau, voisins,
+} from "../engine/reseauRoutier";
 
 /**
  * Primitives de grille/rue des moteurs de placement — partagées entre planLattice et packPlan
@@ -18,7 +20,8 @@ import { losangeAuContact, reseauVide, routesAuContactRect, tailleReseau, voisin
  * `poserLosange`. Contact d'une emprise, portée et raccordement d'un anneau passent par le
  * graphe ; sans losange, ils visitent les mêmes cases dans le même ordre qu'avant (golden de la
  * trame droite). Les routes que le moteur TRACE à travers le terrain libre restent droites :
- * seul leur arrêt — « le réseau est atteint » — reconnaît aussi un losange touché par un coin.
+ * seul leur arrêt — « le réseau est atteint » — reconnaît aussi une case sous un losange de route
+ * (jonction par recouvrement, comme en jeu).
  */
 export interface StreetGridParams {
   W: number;
@@ -46,6 +49,11 @@ export interface StreetGridParams {
  */
 export interface ReachState {
   def: BuildingDef;
+  /**
+   * Portée : une LONGUEUR de trajet (1 par case droite, √2 par losange). `planLattice` y met la
+   * portée de planification, arrondie à l'entier : exacte sur un réseau droit, un peu courte
+   * (moins d'une case) sur un trajet qui emprunte des losanges.
+   */
   range: number;
   reach: Uint8Array;
   reachList: number[];
@@ -142,8 +150,8 @@ export function makeStreetGrid(p: StreetGridParams) {
     for (let depth = 0; depth < maxDepth && frontier.length; depth++) {
       const next: number[] = [];
       for (const c of frontier) {
-        // un losange touché par un coin : le réseau diagonal est atteint
-        if (!roadAt[c] && losangeAuContact(reseau, c) >= 0) {
+        // la case est sous un losange de route : jonction par recouvrement, le réseau est atteint
+        if (!roadAt[c] && losangeSur(reseau, c) >= 0) {
           let cur = c;
           while (cur >= 0 && !roadAt[cur]) { roadAt[cur] = 1; cur = prev.get(cur)!; }
           return;
@@ -174,6 +182,15 @@ export function makeStreetGrid(p: StreetGridParams) {
     tc.reach = new Uint8Array(n);
     tc.reachList = [];
     tc.parent = new Int32Array(n).fill(-2);
+    if (reseau.losanges) {
+      // réseau mêlé : la portée est une longueur, un losange coûte √2 (`parcourir`)
+      const p = creerParcours(reseau);
+      const sources = (placements.get(tc.def.id) ?? []).flatMap((pl) => routesAuContact(pl.x, pl.y, pl.w, pl.h));
+      parcourir(reseau, p, sources, tc.range);
+      for (const c of p.atteints) { tc.reach[c] = 1; tc.parent[c] = p.parent[c]; }
+      tc.reachList = p.atteints;
+      return;
+    }
     let frontier: number[] = [];
     for (const pl of placements.get(tc.def.id) ?? []) {
       for (const c of routesAuContact(pl.x, pl.y, pl.w, pl.h)) {
@@ -182,8 +199,9 @@ export function makeStreetGrid(p: StreetGridParams) {
         tc.reachList.push(c); frontier.push(c);
       }
     }
+    // tant que la case suivante tient dans la portée (une longueur ; 1 par case droite)
     let d = 1;
-    while (frontier.length && d < tc.range) {
+    while (frontier.length && d + 1 <= tc.range) {
       const next: number[] = [];
       for (const c of frontier) {
         voisins(reseau, c, (nb) => {

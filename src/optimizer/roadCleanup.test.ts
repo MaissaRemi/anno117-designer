@@ -55,12 +55,19 @@ describe("élagage des culs-de-sac sur le réseau en graphe", () => {
     expect(r.removed).toBe(2);
   });
 
-  it("une jonction droite–losange compte comme un voisin : le tronçon qui relie reste", () => {
+  it("une jonction par recouvrement compte comme un voisin : le tronçon qui relie reste", () => {
     // maison A (0,0)-(2,2) desservie par la route droite y=3 x=0..2 ; la case (3,3) n'en touche
-    // aucune mais la relie, par sa pointe (4,3), au losange (5,3) — lequel touche par sa pointe
-    // (6,3) le coin haut-gauche de la maison B en (6,3).
+    // aucune mais le losange (4,3), qui la recouvre, la relie à la maison B en (5,3), dont il
+    // touche le coin haut-gauche par sa pointe (5,3).
+    const routes = [...ligne(3, 0, 3), L(4, 3)];
+    const r = pruneDeadEnds(grid(14, 10), [maison(0, 0), maison(5, 3)], routes, lookup);
+    expect(r.removed).toBe(0);
+  });
+
+  it("une case droite contre la seule pointe d'un losange n'est pas reliée : elle tombe", () => {
+    // même plan, losange (5,3) : sa pointe gauche (4,3) touche la case (3,3) sans la recouvrir
     const routes = [...ligne(3, 0, 3), L(5, 3)];
     const r = pruneDeadEnds(grid(14, 10), [maison(0, 0), maison(6, 3)], routes, lookup);
-    expect(r.removed).toBe(0);
+    expect(cles(r.roads)).toEqual(cles([...ligne(3, 0, 2), L(5, 3)]));
   });
 });

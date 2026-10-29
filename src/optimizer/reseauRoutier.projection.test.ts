@@ -4,11 +4,13 @@ import type { BuildingDef, Layout } from "../model/types";
 import { buildIslandGrid } from "../data/islandGrid";
 import { computeRadiusCoverage, makeLookup, rootedRoadSet } from "../engine/rules";
 import { cellKey, footprintCells } from "../engine/geometry";
-import { planningRange } from "../engine/roads";
+import { porteeDeTrajet } from "../engine/roads";
 import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
 import { catalogueDiagonal, centreDroit, grilleDiagonale, versDiagonalPoint } from "./cadreDiagonal";
-import { coinDe, creerParcours, estLosange, idLosange, noeudsAuContact, parcourir, poserLosange, reseauVide, voisins } from "../engine/reseauRoutier";
+import {
+  coinDe, creerParcours, estLosange, idLosange, noeudsAuContact, parcourir, poserLosange, reseauVide, routesAuContact,
+} from "../engine/reseauRoutier";
 
 /**
  * PROJECTION D'UN PLAN DIAGONAL DANS LE RÉSEAU COMMUN.
@@ -19,6 +21,10 @@ import { coinDe, creerParcours, estLosange, idLosange, noeudsAuContact, parcouri
  * repère tourné : même réseau relié au comptoir, mêmes cases servies par chaque service. C'est
  * ce qui valide les arêtes losange–losange et le raccordement par un côté d'un bâtiment
  * diagonal sur un vrai plan.
+ *
+ * La portée, elle, s'y compte de deux façons qui doivent coïncider : en pas de losange dans le
+ * repère tourné (portée-rue du catalogue diagonal, divisée par √2 puis arrondie), en LONGUEUR
+ * dans le réseau commun (portée-rue d'origine, √2 par losange).
  */
 const catalog = rawCatalog as unknown as BuildingDef[];
 const PATRICIENS = "1498";
@@ -58,7 +64,7 @@ describe("un plan diagonal projeté dans le réseau commun", () => {
     const sources: number[] = [];
     for (const b of plan.buildings) {
       if (!lookupD(b.defId)?.roadRoot) continue;
-      for (const id of emprise(b)) voisins(reseau, id, (n) => sources.push(n));
+      for (const id of emprise(b)) routesAuContact(reseau, id, (n) => sources.push(n));
     }
     parcourir(reseau, p, sources);
     expect(new Set(p.atteints.map(versCle))).toEqual(racine);
@@ -71,8 +77,9 @@ describe("un plan diagonal projeté dans le réseau commun", () => {
       if (!d.radius || !d.streetRange) continue;
       const fp = new Set(emprise(b));
       const depart: number[] = [];
-      for (const id of fp) voisins(reseau, id, (n) => { if (!fp.has(n)) depart.push(n); });
-      parcourir(reseau, p, depart, planningRange(d, D.roadType));
+      for (const id of fp) routesAuContact(reseau, id, (n) => { if (!fp.has(n)) depart.push(n); });
+      const origine = catalog.find((x) => x.id === d.id)!;
+      parcourir(reseau, p, depart, porteeDeTrajet(origine, D.roadType));
       const servies = new Set<string>();
       for (const id of p.atteints) {
         noeudsAuContact(reseau, id, (n) => {

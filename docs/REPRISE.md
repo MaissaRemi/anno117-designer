@@ -48,8 +48,9 @@ Détail et mesures : `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`, 
 - **Plans au choix** : jusqu'à trois plans contrastés (front de Pareto : habitants, maisons
   au palier, bilan, argent), présentés en cartes (`optimizer/plansAuChoix.ts`).
 - **Trame diagonale expérimentale** (`optimizer/cadreDiagonal.ts`) : l'île planifiée dans la
-  grille tournée de 45°, proposée parmi les plans au choix (option avancée). +12 à +24 % sur
-  large_07 et large_03 ; moins bonne sur les îles à goulets.
+  grille tournée de 45°, proposée parmi les plans au choix (option avancée). Une fois la portée
+  comptée en longueur, elle ne gagne plus que sur quelques îles en biais (small_05 +41 %,
+  small_07 +26 %) et perd ailleurs (−4 à −44 %).
 - **Maillage de triangles** (`optimizer/maillageTriangles.ts`) : 4 triangles par case, socle
   commun aux trames droite et diagonale (étape 1 de la trame mêlée).
 
@@ -84,8 +85,9 @@ réseau d'eau, un bilan) : seule la géométrie est locale. Étapes restantes :
    analyseur à l'échelle 1, `streetGrid`, `planLattice`, comptoir, réparation, élagage,
    `waterPlan`. Une route de plan peut être un losange (`RoadTile.losange`). Restent : les
    liaisons diagonales (étape 6, option), l'occupation des losanges, `commande/ilots.ts` ;
-   Q1 tranchée (jonction par recouvrement, portée en longueur) : le graphe et `cadreDiagonal`
-  sont à corriger ; Q2 et Q3 restent à vérifier — détail dans la conception ;
+   Q1 tranchée (jonction par recouvrement, portée en longueur), graphe et `cadreDiagonal`
+  corrigés : la trame diagonale seule ne gagne plus que sur 5 îles romaines sur 27 (small_05
+  +41 %, small_07 +26 %). Q2 et Q3 restent à vérifier — détail dans la conception ;
 3. carte d'orientation de l'île selon ses côtes ;
 4. squelette de rues mêlé, recousu aux jonctions ;
 5. placement global unique des services, de l'eau et des maisons sur ce graphe ;

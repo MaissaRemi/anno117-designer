@@ -146,7 +146,7 @@ describe("comptoir et réparation sur le réseau en graphe", () => {
   const g = makeGrid(34, 20);
   const kontor = { uid: "k", defId: kdef.id, x: 1, y: 1, rotation: 0 as const, locked: false };
 
-  it("connectKontor trace en droit jusqu'à toucher un losange par un coin", () => {
+  it("connectKontor trace en droit jusqu'à entrer sous un losange (jonction par recouvrement)", () => {
     const X = 1 + w + 6, Y = 2;
     const losange = { x: X, y: Y, losange: true as const };
     const k = connectKontor(g, { def: kdef, x: 1, y: 1, rotation: 0, grid: g }, [], [losange], lookup, () => false);
@@ -158,8 +158,8 @@ describe("comptoir et réparation sur le réseau en graphe", () => {
   });
 
   it("repairRoadConnectivity raccroche un îlot de losanges au noyau par des cases droites", () => {
-    // noyau : la route droite sous le comptoir, de x = 1 à xFin ; îlot : un losange 2 cases
-    // plus loin, qui dessert une maison par sa pointe droite
+    // noyau : la route droite sous le comptoir, de x = 1 à xFin ; îlot : un losange qui
+    // recouvre les colonnes xFin+3 et xFin+4 et dessert une maison par sa pointe droite
     const y = 1 + h, xFin = w + 3, X = xFin + 4;
     const routes = [
       ...Array.from({ length: xFin }, (_, i) => ({ x: 1 + i, y })),
@@ -167,7 +167,7 @@ describe("comptoir et réparation sur le réseau en graphe", () => {
     ];
     const maisonB = { uid: "m", defId: RESIDENCE, x: X + 1, y, rotation: 0 as const, locked: false };
     const r = repairRoadConnectivity(g, [kontor, maisonB], routes, lookup);
-    expect(r.added).toBe(2);
+    expect(r.added).toBe(3); // xFin+1, xFin+2, puis xFin+3 en recouvrement
     expect(r.stranded).toEqual([]);
     const layout = { grid: g, buildings: [kontor, maisonB], roads: r.roads, fields: [] };
     const { set } = rootedRoadSet(layout, lookup);
@@ -177,8 +177,8 @@ describe("comptoir et réparation sur le réseau en graphe", () => {
 
   it("un îlot de losanges déjà joint au noyau par une jonction n'est pas réparé", () => {
     const y = 1 + h, xFin = w + 3;
-    // losange (xFin + 2, y) : pointe gauche (xFin + 1, y), coin haut-droit de la dernière case
-    const routes = [...Array.from({ length: xFin }, (_, i) => ({ x: 1 + i, y })), { x: xFin + 2, y, losange: true as const }];
+    // losange (xFin + 1, y) : il recouvre la dernière case droite (xFin, y)
+    const routes = [...Array.from({ length: xFin }, (_, i) => ({ x: 1 + i, y })), { x: xFin + 1, y, losange: true as const }];
     const r = repairRoadConnectivity(g, [kontor], routes, lookup);
     expect(r.added).toBe(0);
     expect(r.dropped).toBe(0);

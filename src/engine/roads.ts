@@ -40,3 +40,13 @@ export function planningRange(def: BuildingDef, roadType?: RoadType): number {
   if (def.streetRange) return Math.floor(def.streetRange * roadFactor(roadType));
   return def.radius?.range || 0;
 }
+
+/**
+ * Portée en LONGUEUR de trajet, sans arrondi : pour un réseau qui mêle cases droites (1) et
+ * losanges diagonaux (√2, cf. `reseauRoutier`). Sur un réseau tout droit elle donne les mêmes
+ * cases que `planningRange`, dont elle est la valeur avant l'entier inférieur.
+ */
+export function porteeDeTrajet(def: BuildingDef, roadType?: RoadType): number {
+  if (def.streetRange) return def.streetRange * roadFactor(roadType);
+  return def.radius?.range || 0;
+}

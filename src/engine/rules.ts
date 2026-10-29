@@ -17,7 +17,7 @@ import {
   orthoNeighbors,
   partieEauPosee,
 } from "./geometry";
-import { planningRange } from "./roads";
+import { planningRange, porteeDeTrajet } from "./roads";
 import {
   casesAuContact,
   coinDe,
@@ -396,7 +396,7 @@ function couvertureEnNoeuds(
       if (estRoute(r, n) && !dansEmprise.has(cleDeNoeud(r, n))) depart.push(n);
     });
   }
-  parcourir(r, p, depart, planningRange(def, layout.roadType));
+  parcourir(r, p, depart, porteeDeTrajet(def, layout.roadType));
   const covered = new Set<string>();
   for (const id of p.atteints) casesAuContact(r, id, (c) => { if (usable[c]) covered.add(cellKey(c % W, (c / W) | 0)); });
   return covered;

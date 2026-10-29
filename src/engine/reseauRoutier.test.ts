@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { BuildingDef } from "../model/types";
 import {
   casesAuContact, coinDe, creerParcours, degre, estLosange, idDroite, idLosange, noeudsAuContact, parcourir,
-  noeudsAuContactDeCase, noeudsAuContactRect, poserLosange, reseauDeRoutes, reseauVide, routesAuContactRect,
+  noeudsAuContactDeCase, noeudsAuContactRect, noeudsLies, poserLosange, reseauDeRoutes, reseauVide, routesAuContactRect,
   routesDuReseau, tailleReseau, voisins, type ReseauRoutier,
 } from "./reseauRoutier";
 import { trianglesDeCase, trianglesDuCoin } from "../optimizer/maillageTriangles";
@@ -67,22 +67,30 @@ function oracle(W: number, H: number) {
   };
 }
 
-describe("réseau routier : la relation de contact", () => {
+describe("réseau routier : arêtes du graphe et contact d'un bâtiment", () => {
   const W = 5, H = 4;
   const r = reseauVide(W, H);
   const contact = oracle(W, H);
   const n = tailleReseau(r);
+  const attendus = (garder: (c: ReturnType<typeof contact>, memeSorte: boolean) => boolean) => (a: number) => {
+    const out: number[] = [];
+    for (let b = 0; b < n; b++) {
+      if (b !== a && garder(contact(r, a, b), estLosange(r, a) === estLosange(r, b))) out.push(b);
+    }
+    return out;
+  };
 
-  it("contact = côté entre objets de même orientation, point entre droite et losange (oracle des triangles)", () => {
+  it("arête = côté entre routes de même orientation, recouvrement entre droite et losange (oracle des triangles)", () => {
+    const arete = attendus((c, meme) => (meme ? c === "cote" : c === "chevauche"));
     for (let a = 0; a < n; a++) {
-      const attendu: number[] = [];
-      for (let b = 0; b < n; b++) {
-        if (b === a) continue;
-        const c = contact(r, a, b);
-        const memeSorte = estLosange(r, a) === estLosange(r, b);
-        if ((c === "cote" && memeSorte) || (c === "point" && !memeSorte)) attendu.push(b);
-      }
-      expect(lister((f) => noeudsAuContact(r, a, f)).sort((x, y) => x - y), `nœud ${a}`).toEqual(attendu);
+      expect(lister((f) => noeudsLies(r, a, f)).sort((x, y) => x - y), `nœud ${a}`).toEqual(arete(a));
+    }
+  });
+
+  it("contact d'un bâtiment = côté entre objets de même orientation, point entre droite et losange", () => {
+    const touche = attendus((c, meme) => (meme ? c === "cote" : c === "point"));
+    for (let a = 0; a < n; a++) {
+      expect(lister((f) => noeudsAuContact(r, a, f)).sort((x, y) => x - y), `nœud ${a}`).toEqual(touche(a));
     }
   });
 
@@ -109,13 +117,17 @@ describe("réseau routier : la relation de contact", () => {
     const g = reseauVide(10, 10);
     g.droite[idDroite(g, 3, 5)] = 1;
     g.droite[idDroite(g, 2, 5)] = 1;
-    poserLosange(g, 5, 5); // pointe gauche (4, 5) = coin haut-droit de la case (3, 5)
-    poserLosange(g, 6, 6); // voisin par un côté
-    poserLosange(g, 7, 5); // pointe contre pointe avec (5, 5) : pas relié
-    const L55 = idLosange(g, 5, 5), L66 = idLosange(g, 6, 6), L75 = idLosange(g, 7, 5);
-    expect(lister((f) => voisins(g, idDroite(g, 3, 5), f))).toEqual([idDroite(g, 2, 5), L55]);
-    expect(lister((f) => voisins(g, L55, f)).sort()).toEqual([L66, idDroite(g, 3, 5)].sort());
-    expect(degre(g, L75)).toBe(1); // (6, 6) seulement
+    poserLosange(g, 4, 6); // recouvre la case (3, 5) : jonction
+    poserLosange(g, 5, 5); // voisin de (4, 6) par un côté
+    poserLosange(g, 6, 6); // voisin de (5, 5) par un côté ; pointe contre pointe avec (4, 6)
+    g.droite[idDroite(g, 6, 4)] = 1; // touche la pointe (6, 5) de (5, 5), sans recouvrement : pas reliée
+    const L46 = idLosange(g, 4, 6), L55 = idLosange(g, 5, 5), L66 = idLosange(g, 6, 6);
+    expect(lister((f) => voisins(g, idDroite(g, 3, 5), f))).toEqual([idDroite(g, 2, 5), L46]);
+    expect(lister((f) => voisins(g, L46, f)).sort()).toEqual([L55, idDroite(g, 3, 5)].sort());
+    expect(lister((f) => voisins(g, L66, f))).toEqual([L55]);
+    expect(degre(g, idDroite(g, 6, 4))).toBe(0);
+    // une maison, elle, se raccorde à cette pointe : la case (6, 4) est servie par le losange (5, 5)
+    expect(lister((f) => casesAuContact(g, L55, f))).toContain(idDroite(g, 6, 4));
     expect(lister((f) => casesAuContact(g, idDroite(g, 0, 0), f))).toEqual([idDroite(g, 1, 0), idDroite(g, 0, 1)]);
   });
 });
@@ -158,19 +170,48 @@ describe("réseau routier : l'emprise d'un bâtiment et les routes d'un plan", (
   });
 });
 
-describe("réseau routier : la portée en nœuds", () => {
-  it("une case de route, droite ou losange, compte pour un pas, jonction comprise", () => {
+describe("réseau routier : la portée, une longueur de trajet", () => {
+  // une rangée droite (1..4, 5) qui ENTRE dans une route en biais vers le nord-est : la case
+  // (4, 5) est sous le losange (5, 5), suivi de (6, 4) et (7, 3)
+  const routeMelee = () => {
     const g = reseauVide(12, 12);
-    for (const x of [1, 2, 3]) g.droite[idDroite(g, x, 5)] = 1;
-    for (const [X, Y] of [[5, 5], [6, 6], [7, 7]]) poserLosange(g, X, Y);
+    for (const x of [1, 2, 3, 4]) g.droite[idDroite(g, x, 5)] = 1;
+    for (const [X, Y] of [[5, 5], [6, 4], [7, 3]]) poserLosange(g, X, Y);
+    return g;
+  };
+
+  it("une case droite coûte 1, un losange √2 ; la jonction par recouvrement ne coûte rien de plus", () => {
+    const g = routeMelee();
     const p = creerParcours(g);
     parcourir(g, p, [idDroite(g, 1, 5)]);
-    expect([1, 2, 3].map((x) => p.dist[idDroite(g, x, 5)])).toEqual([1, 2, 3]);
-    expect([[5, 5], [6, 6], [7, 7]].map(([X, Y]) => p.dist[idLosange(g, X, Y)])).toEqual([4, 5, 6]);
-    parcourir(g, p, [idDroite(g, 1, 5)], 4);
-    expect(p.dist[idLosange(g, 5, 5)]).toBe(4);
-    expect(p.dist[idLosange(g, 6, 6)]).toBe(-1);
-    expect(p.atteints).toHaveLength(4);
+    expect([1, 2, 3, 4].map((x) => p.dist[idDroite(g, x, 5)])).toEqual([1, 2, 3, 4]);
+    const losanges = [[5, 5], [6, 4], [7, 3]].map(([X, Y]) => p.dist[idLosange(g, X, Y)]);
+    losanges.forEach((d, k) => expect(d).toBeCloseTo(4 + (k + 1) * Math.SQRT2));
+    expect(p.parent[idLosange(g, 5, 5)]).toBe(idDroite(g, 4, 5));
+  });
+
+  it("le budget borne la longueur : 8 cases atteignent 4 + 2√2, pas 4 + 3√2", () => {
+    const g = routeMelee();
+    const p = creerParcours(g);
+    parcourir(g, p, [idDroite(g, 1, 5)], 8);
+    expect(p.dist[idLosange(g, 6, 4)]).toBeGreaterThan(0);
+    expect(p.dist[idLosange(g, 7, 3)]).toBe(-1);
+    expect(p.atteints).toHaveLength(6);
+    parcourir(g, p, [idDroite(g, 1, 5)], 4 + 3 * Math.SQRT2); // pile la longueur : atteint
+    expect(p.dist[idLosange(g, 7, 3)]).toBeGreaterThan(0);
+  });
+
+  it("un trajet en biais plus court l'emporte sur un détour droit", () => {
+    // deux chemins de (0, 0) à la case (4, 4) : en équerre, 9 cases ; en coupant par 3
+    // losanges, (0,0) (1,0) puis (2,1) (3,2) (4,3), qui recouvrent (1,0) et (4,3), puis (4,3) (4,4)
+    const g = reseauVide(8, 8);
+    for (let i = 0; i <= 4; i++) { g.droite[idDroite(g, i, 0)] = 1; g.droite[idDroite(g, 4, i)] = 1; }
+    for (const k of [1, 2, 3]) poserLosange(g, k + 1, k);
+    const p = creerParcours(g);
+    parcourir(g, p, [idDroite(g, 0, 0)]);
+    expect(p.dist[idDroite(g, 4, 4)]).toBeCloseTo(4 + 3 * Math.SQRT2); // 8,24 < 9
+    expect(p.parent[idDroite(g, 4, 4)]).toBe(idDroite(g, 4, 3));
+    expect(p.parent[idDroite(g, 4, 3)]).toBe(idLosange(g, 4, 3));
   });
 
   /** L'ancien `streetGrid.bfsType` (4-adjacence écrite en dur), gardé comme oracle. */

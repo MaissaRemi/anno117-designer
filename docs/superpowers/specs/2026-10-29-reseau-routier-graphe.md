@@ -203,9 +203,9 @@ avancer avec la règle géométrique ci-dessus et un test qui la fige, à corrig
   La règle notée le 30/10 (« un pas par case diagonale ») était fausse ; elle est encore dans
   `cadreDiagonal` (portées-rue non réduites) et dans `parcourir` (un pas par nœud).
 
-Corrections qui en découlent : jonction par recouvrement dans le graphe ; portée pondérée
-(1 par case droite, √2 par losange) ; portées-rue du catalogue diagonal divisées par √2 ; gains
-de la trame diagonale recalculés.
+Corrections qui en découlent, FAITES (voir « Avancement ») : jonction par recouvrement dans le
+graphe ; portée pondérée (1 par case droite, √2 par losange) ; portées-rue du catalogue
+diagonal divisées par √2 ; gains de la trame diagonale recalculés (étude des diagonales).
 
 ## 6. Écart relevé en passant
 
@@ -261,6 +261,20 @@ de route couvre la moitié (`casesSousLosange`).
 
 Golden identique à chaque étape ; suite complète verte. Les branches losange sont testées là
 où une entrée peut en porter (module, `streetGrid`, comptoir, réparation, élagage, eau).
+
+**Correction après Q1.** Deux relations distinctes dans `engine/reseauRoutier.ts` :
+- ARÊTES du graphe (`noeudsLies`, `voisins`) : côté entre routes de même orientation,
+  RECOUVREMENT entre case droite et losange (les 4 losanges sur les coins d'une case) ;
+- CONTACT d'un bâtiment (`noeudsAuContact`, `routesAuContactRect`, `casesAuContact`) : côté,
+  ou point entre orientations différentes — inchangé.
+
+Portée en longueur : `parcourir` est un Dijkstra (1 par case droite, √2 par losange) quand le
+réseau porte des losanges, et reste le parcours en largeur d'avant sinon ; `bfsType` de même.
+L'analyseur prend la portée non arrondie (`porteeDeTrajet`). Les tracés droits s'arrêtent en
+entrant dans une case recouverte par un losange (`losangeSur`). Validation croisée : le plan
+diagonal de small_06, projeté en losanges, donne les mêmes couvertures en longueur (portées
+d'origine, √2 par losange) que dans son repère en pas (portées ÷ √2). Golden des plans droits
+identique ; oracles des triangles pour les deux relations.
 
 ### Ce qui reste
 
