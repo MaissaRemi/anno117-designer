@@ -353,7 +353,7 @@ export function IslandPlanner({ onClose }: Props) {
                   </span>
                 </span>
               </label>
-              <label className="checkbox" title="Planifie aussi l'île avec routes et bâtiments à 45° (maison 3×3 → 2×2 cases de route diagonale, mesuré en jeu) et propose ce plan parmi les plans au choix. Hypothèses à vérifier : une case de route diagonale compte pour un pas de portée ; comptoir et sources posés en biais. Double le temps de calcul.">
+              <label className="checkbox" title="Planifie aussi l'île avec routes et bâtiments à 45° (maison 3×3 → 2×2 cases de route diagonale, mesuré en jeu) et propose ce plan parmi les plans au choix. Une case de route diagonale compte pour un pas de portée, comme en droit (vérifié en jeu). Limite : comptoir et sources posés en biais. Double le temps de calcul.">
                 <input type="checkbox" checked={essayerDiagonale} onChange={(e) => setEssayerDiagonale(e.target.checked)} />
                 <span>
                   Essayer aussi une trame diagonale

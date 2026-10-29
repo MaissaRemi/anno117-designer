@@ -120,7 +120,7 @@ const enDiagonale = (n: number): number => Math.max(1, Math.round(n / Math.SQRT2
 /**
  * Le catalogue à l'échelle du repère diagonal : emprises divisées par √2 et arrondies (3 → 2,
  * mesuré en jeu), portées euclidiennes aussi. Les portées le long des routes restent en cases
- * de route : une case diagonale compte pour un pas (hypothèse, à vérifier en jeu). La partie
+ * de route : une case diagonale compte pour un pas (vérifié en jeu le 30/10/2026). La partie
  * dans l'eau des bâtiments côtiers est ignorée : leur pose diagonale n'est pas modélisée.
  */
 export function catalogueDiagonal(catalog: BuildingDef[]): BuildingDef[] {

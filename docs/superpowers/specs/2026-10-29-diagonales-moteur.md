@@ -85,15 +85,44 @@ Correctif au passage (vaut aussi en droit) : `keepMainLandmass` gardait la terre
 PROCHE du comptoir, pas la plus grande — dans le repère diagonal, une case isolée collée au
 comptoir faisait perdre l'île entière.
 
-**Hypothèses à vérifier avant d'aller plus loin** :
-- une case de route diagonale compte pour UN pas de portée (elle avance de √2) : c'est sans
-  doute l'essentiel du gain de large_03 (1 949 maisons au palier contre 1 496) ;
-- comptoir et sources d'aqueduc, d'orientation fixe en jeu, sont posés en biais ; sur les petites
-  îles, l'accès au comptoir est le point faible du plan diagonal.
+**Vérifié en jeu (30/10/2026)** : une case de route diagonale compte pour UN pas de portée,
+comme une case droite — elle avance pourtant de √2. C'est l'essentiel du gain de large_03
+(1 949 maisons au palier contre 1 496).
 
-**Suite** : trame mêlée (une partie droite, une partie diagonale, un seul réseau, une seule
-économie d'île) — comptoir et emplacements restent droits, les quartiers en biais suivent les
-côtes en biais.
+**Limites connues** : comptoir et sources d'aqueduc, d'orientation fixe en jeu, sont posés en
+biais. Sur les îles à goulets (medium_01), le passage se rétrécit dans le repère diagonal, de
+grands services y coupent la route et le sud reste isolé (256 maisons rasées) : les plans au
+choix ne retiennent alors pas le plan diagonal. Correctif au passage : la réparation des routes
+et le raccordement du comptoir franchissent les rivières par un pont, comme le reste du moteur.
+
+## Trame mêlée : conception
+
+Demande de Rémi : une île peut être droite ici et en biais là ; une seule économie d'île
+(un Amphithéâtre, un dieu, un réseau d'eau, un bilan), seule la géométrie est locale.
+
+**Le maillage commun : les triangles.** Une case droite coupée par ses deux diagonales donne 4
+triangles (la grille du dessin de Rémi). Une case droite = ses 4 triangles ; une case
+diagonale = les 8 triangles autour d'un coin (2 par case droite). Les deux trames s'écrivent donc
+sur un même maillage de 4 triangles par case : occupation, collisions et jonctions s'y lisent
+exactement, sans approximation.
+
+**Étapes** :
+1. *Occupation en triangles* : emprises droites et diagonales, routes, eau ; validation des
+   collisions. Les plans actuels (droits, ou diagonaux via `cadreDiagonal`) s'y projettent sans
+   perte — premier test.
+2. *Réseau routier en graphe* : une case de route (droite ou losange) = un nœud ; arêtes par côté
+   partagé ; un bâtiment se raccorde par côté ou par coin (vérifié en jeu). Portée = distance en
+   nœuds (une case diagonale compte pour un pas, vérifié). Couverture, accès au comptoir et
+   traversées d'aqueduc se calculent sur ce graphe.
+3. *Carte d'orientation* : pour chaque partie de l'île, droite ou diagonale selon l'orientation
+   de ses côtes (direction dominante du bord), avec un seuil de taille pour ne pas émietter.
+4. *Squelette mêlé* : le peigne de rues de `planLattice` tracé dans le repère de chaque partie,
+   recousu aux jonctions par des rues de liaison (pertes locales acceptées).
+5. *Placement global* : services, bâtiments uniques, eau, maisons posés UNE fois sur le graphe
+   de toute l'île — le moteur actuel, ses entrées passant de la grille au graphe.
+6. *Comparaison* : trame droite, diagonale et mêlée rejoignent les plans au choix.
+
+Comptoir et emplacements de montagne restent droits dans toutes les trames.
 
 ## Ce que coûtent aujourd'hui les raccordements à angle droit
 

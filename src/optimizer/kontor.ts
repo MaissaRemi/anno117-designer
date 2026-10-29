@@ -372,7 +372,7 @@ export function connectKontor(
   }
 
   const passable = (c: number): boolean => {
-    if (!grid.usable[c]) return false;
+    if (!grid.usable[c] && !routeSeule(grid, c)) return false; // pont sur une rivière
     const o = owner[c];
     return o < 0 || demolishable(buildings[o].defId);
   };
@@ -561,7 +561,10 @@ export function repairRoadConnectivity(
           // rejoindre le noyau en passant par un îlot voisin. La mer bloque toujours ; un
           // bâtiment aussi, SAUF s'il est démolissable — une poignée de maisons contre une
           // dizaine de bâtiments rendus actifs est un échange évident.
-          if (!grid.usable[n]) continue;
+          // une rivière se franchit par un pont, comme partout ailleurs dans le moteur
+          // (`routeSeule`) : sans cela, une rive bâtie restait coupée du comptoir — mesuré
+          // dans le repère diagonal de roman_island_medium_01, 256 maisons rasées
+          if (!grid.usable[n] && !routeSeule(grid, n)) continue;
           if (occ[n] && !(owner[n] >= 0 && demolishable?.(buildings[owner[n]].defId))) continue;
           prev.set(n, c);
           next.push(n);
