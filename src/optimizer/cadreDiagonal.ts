@@ -119,15 +119,19 @@ const enDiagonale = (n: number): number => Math.max(1, Math.round(n / Math.SQRT2
 
 /**
  * Le catalogue à l'échelle du repère diagonal : emprises divisées par √2 et arrondies (3 → 2,
- * mesuré en jeu), portées euclidiennes aussi. Les portées le long des routes restent en cases
- * de route : une case diagonale compte pour un pas (vérifié en jeu le 30/10/2026). La partie
- * dans l'eau des bâtiments côtiers est ignorée : leur pose diagonale n'est pas modélisée.
+ * mesuré en jeu), portées euclidiennes aussi. Les portées le long des routes sont divisées par
+ * √2 SANS arrondi : la portée est une longueur de trajet, et une case de route diagonale est
+ * longue de √2 (captures en jeu de Rémi ; la règle « un pas par case diagonale » notée le
+ * 30/10/2026 était fausse). `planningRange` arrondit ensuite, facteur de route compris : le
+ * budget en losanges est l'entier inférieur de (longueur ÷ √2). La partie dans l'eau des
+ * bâtiments côtiers est ignorée : leur pose diagonale n'est pas modélisée.
  */
 export function catalogueDiagonal(catalog: BuildingDef[]): BuildingDef[] {
   return catalog.map((d) => ({
     ...d,
     size: { w: enDiagonale(d.size.w), h: enDiagonale(d.size.h) },
     ...(d.radius ? { radius: { ...d.radius, range: enDiagonale(d.radius.range) } } : {}),
+    ...(d.streetRange ? { streetRange: d.streetRange / Math.SQRT2 } : {}),
     ...(d.freeArea ? { freeArea: { radius: enDiagonale(d.freeArea.radius), area: Math.max(1, Math.round(d.freeArea.area / 2)) } } : {}),
     ...(d.field ? { field: { ...d.field, tiles: Math.max(1, Math.round(d.field.tiles / 2)) } } : {}),
     partieEau: undefined,

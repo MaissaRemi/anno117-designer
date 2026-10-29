@@ -312,9 +312,11 @@ export function planIsland(
  * 45°, aux dimensions mesurées en jeu (maison 3 × 3 → 2 × 2 cases de route diagonale). Le
  * plan obtenu rejoint les plans au choix ; le plan droit reste le recommandé.
  *
- * Une case de route diagonale compte pour un pas de portée, comme une case droite (vérifié en
- * jeu le 30/10/2026) — elle avance pourtant de √2 : c'est l'avantage du biais. Limite dite au
- * joueur : comptoir et sources d'aqueduc, d'orientation fixe en jeu, sont posés tournés.
+ * La portée est une longueur de trajet : une case de route diagonale, longue de √2, coûte √2 pas
+ * (captures en jeu de Rémi ; la règle « un pas par case diagonale » notée le 30/10/2026 était
+ * fausse et gonflait ce plan). Le biais n'avance donc pas plus vite : il ne vaut que par la
+ * forme de l'île. Limite dite au joueur : comptoir et sources d'aqueduc, d'orientation fixe en
+ * jeu, sont posés tournés.
  */
 function avecTrameDiagonale(
   req: IslandPlanRequest,

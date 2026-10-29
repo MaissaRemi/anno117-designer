@@ -44,13 +44,14 @@ describe("repère diagonal", () => {
     }
   });
 
-  it("le catalogue diagonal : maison 3 × 3 → 2 × 2 (mesuré en jeu), portées-rue inchangées", () => {
+  it("le catalogue diagonal : maison 3 × 3 → 2 × 2 (mesuré en jeu), portées-rue divisées par √2", () => {
     const maison = catalog.find((d) => d.id === "g3141")!;
     const diag = catalogueDiagonal(catalog).find((d) => d.id === "g3141")!;
     expect(maison.size).toEqual({ w: 3, h: 3 });
     expect(diag.size).toEqual({ w: 2, h: 2 });
+    // la portée est une longueur de trajet : un losange de route est long de √2
     const taverne = catalogueDiagonal(catalog).find((d) => d.streetRange && d.radius)!;
-    expect(taverne.streetRange).toBe(catalog.find((d) => d.id === taverne.id)!.streetRange);
+    expect(taverne.streetRange! * Math.SQRT2).toBeCloseTo(catalog.find((d) => d.id === taverne.id)!.streetRange!);
   });
 });
 
@@ -68,9 +69,11 @@ describe("terre gardée autour du comptoir", () => {
 });
 
 describe("trame diagonale dans les plans au choix", () => {
-  it("roman_island_large_07 : le plan diagonal est proposé, dans son repère", () => {
+  // small_05 : la seule île romaine où la diagonale gagne nettement (+41 % d'habitants) une fois
+  // la portée comptée en longueur (√2 par losange) ; large_07, l'exemple d'avant, y perd 10 %.
+  it("roman_island_small_05 : le plan diagonal est proposé, dans son repère", () => {
     const r = planIsland({
-      catalog, grid: downscaleGrid(buildIslandGrid("roman_island_large_07")!), tierGuid: "1498",
+      catalog, grid: downscaleGrid(buildIslandGrid("roman_island_small_05")!), tierGuid: "1498",
       coverageFloor: 0.8, roadType: "pavee", essayerDiagonale: true,
     }) as IslandPlanResult;
     expect(r.repere).toBeUndefined(); // le recommandé reste le plan droit

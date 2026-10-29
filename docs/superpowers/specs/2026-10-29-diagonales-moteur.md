@@ -86,8 +86,29 @@ PROCHE du comptoir, pas la plus grande — dans le repère diagonal, une case is
 comptoir faisait perdre l'île entière.
 
 **⚠ INFIRMÉ ENSUITE (captures de Rémi, conception du réseau en graphe, Q1)** : la portée est une
-longueur de trajet, une case diagonale coûte environ √2 pas. Le paragraphe suivant, et les gains
-du tableau ci-dessus, reposent sur la règle fausse et sont à recalculer.
+longueur de trajet, une case diagonale coûte environ √2 pas. Le paragraphe suivant et le tableau
+ci-dessus reposent sur la règle fausse. Corrigé : `catalogueDiagonal` divise les portées-rue par
+√2 (sans arrondi, `planningRange` arrondit après le facteur de route).
+
+**Gains recalculés**, mêmes réglages (Patriciens, pavée, Foi, 80 %), 27 îles romaines :
+
+| Île | droit (hab.) | diagonal (hab.) | écart |
+|---|---|---|---|
+| small_05 | 3 780 | 5 313 | **+41 %** |
+| small_07 | 6 411 | 8 109 | **+26 %** |
+| medium_07 | 24 746 | 25 207 | +2 % |
+| large_01 | 67 654 | 68 800 | +2 % |
+| small_03 | 9 030 | 9 090 | +1 % |
+| extralarge_01 à 03 | 85 755 à 87 229 | 80 544 à 83 749 | −4 à −7 % |
+| large_03 | 70 281 | 66 782 | −5 % |
+| large_07 | 64 691 | 58 212 | −10 % |
+| 15 autres | | | −8 à −44 % (medium_01 −43 %, small_06 −44 %) |
+| extralarge_04 | 81 382 | 0 | échec du plan diagonal |
+
+La trame diagonale entière ne vaut donc que sur quelques îles à la forme en biais ; small_05
+est aussi celle dont le plan droit rase le plus de maisons pour joindre le comptoir (74). C'est
+plutôt un argument pour la trame MÊLÉE (droite ici, en biais là) que pour la diagonale seule.
+L'échec complet sur extralarge_04 n'est pas expliqué.
 
 ~~Vérifié en jeu (30/10/2026)~~ : une case de route diagonale compte pour UN pas de portée,
 comme une case droite — elle avance pourtant de √2. C'est l'essentiel du gain de large_03
