@@ -104,6 +104,13 @@ export interface IslandPlanRequest {
   /** Type des routes du plan : allonge les portées-rue (cf. engine/roads). Défaut terre. */
   roadType?: RoadType;
   /**
+   * Ce que le plan maximise. `habitants` (défaut) : la population. `maisons` : le nombre de
+   * maisons posées contre une route — l'île couverte, quitte à ce que celles d'un coin que
+   * rien ne dessert restent à un palier bas ; elles logent encore du monde par les biens.
+   * À nombre de maisons égal, la population départage.
+   */
+  objectif?: "habitants" | "maisons";
+  /**
    * DÉVOTION de l'île, 0 par défaut. État de partie, comme les permis.
    *
    * Elle débloque par paliers les effets de la divinité tutélaire, qui valent pour l'île
@@ -310,7 +317,8 @@ interface RegleDeBilan {
   strict: boolean;
   /** Le drapeau `viable` rendu au joueur : tolérance nulle en indicatif, la sienne en strict. */
   verdict: (attrs: Record<string, number>, houses: number) => boolean;
-  /** Ce que les comparateurs classent : population brute, ou escomptée du risque en strict. */
+  /** Ce que les comparateurs classent : population (ou maisons, selon l'objectif), escomptée du
+   *  risque en strict. */
   classer: (residents: number, attrs: Record<string, number>, houses: number) => number;
 }
 
@@ -323,11 +331,18 @@ function regleDeBilan(req: IslandPlanRequest): RegleDeBilan {
   // respectait exactement la contrainte demandée — et `better()`, qui départage d'abord sur
   // `viable`, aurait préféré un plan bridé à un plan conforme à l'option.
   const tol = strict ? Math.max(0, req.tolerance ?? 0) : 0;
+  const parMaisons = req.objectif === "maisons";
   return {
     strict,
     verdict: (attrs, houses) => verdictViable(attrs, houses, tol),
-    classer: (residents, attrs, houses) =>
-      (strict ? populationEffective(residents, attrs, houses, tol) : residents),
+    classer: (residents, attrs, houses) => {
+      const pop = strict ? populationEffective(residents, attrs, houses, tol) : residents;
+      if (!parMaisons) return pop;
+      // Les maisons d'abord, escomptées du même risque que la population en strict ; les
+      // habitants ne font que départager (une maison loge bien moins de 1 000 personnes).
+      const maisons = strict && residents > 0 ? (houses * pop) / residents : houses;
+      return maisons + pop / 1000;
+    },
   };
 }
 
