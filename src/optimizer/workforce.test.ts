@@ -41,9 +41,11 @@ describe("main-d'œuvre — données du jeu", () => {
     const pat = tierNamed("Patriciens");
     const kappa = (to: ReturnType<typeof tierNamed>) =>
       (pat.capacityDefault - to.capacityDefault) / (to.capacityDefault * to.factor);
-    expect(kappa(tierNamed("Equites"))).toBeCloseTo(2.29, 1);
-    expect(kappa(tierNamed("Plébéiens"))).toBeCloseTo(5.64, 1);
-    expect(kappa(tierNamed("Liberti"))).toBeCloseTo(9.67, 1);
+    // capacités du patch 200 : Patriciens 41 (45 avec l'Hippodrome optionnel), Equites 30,
+    // Plébéiens 15, Liberti 9
+    expect(kappa(tierNamed("Equites"))).toBeCloseTo(1.83, 1);
+    expect(kappa(tierNamed("Plébéiens"))).toBeCloseTo(5.78, 1);
+    expect(kappa(tierNamed("Liberti"))).toBeCloseTo(7.11, 1);
     expect(kappa(tierNamed("Equites"))).toBeLessThan(kappa(tierNamed("Liberti")));
   });
 });

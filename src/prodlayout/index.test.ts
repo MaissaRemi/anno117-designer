@@ -17,12 +17,12 @@ describe("planProductionLayout — bout en bout sur la boulangerie romaine", () 
   });
 
   it("suggère le lot parfait quand le ratio est incomplet", () => {
-    expect(plan.order.perfectMultiplier).toBe(2);
-    expect(plan.order.items.find((i) => i.defId === "g3075")!.utilisation).toBe(0.5);
+    expect(plan.order.perfectMultiplier).toBe(3); // moulin à 20 s depuis le patch 200
+    expect(plan.order.items.find((i) => i.defId === "g3075")!.utilisation).toBe(1 / 3);
   });
 
   it("le lot parfait ne gaspille plus rien", () => {
-    const perfect = planProductionLayout(catalog, "g3174", 2);
+    const perfect = planProductionLayout(catalog, "g3174", 3);
     expect(perfect.order.perfectMultiplier).toBe(1);
     expect(perfect.order.items.every((i) => i.utilisation === 1)).toBe(true);
   });

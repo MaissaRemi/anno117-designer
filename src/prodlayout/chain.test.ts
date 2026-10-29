@@ -9,11 +9,11 @@ const byId = new Map(catalog.map((d) => [d.id, d]));
 const lookup = (id: string) => byId.get(id);
 
 describe("buildChain — le pain romain", () => {
-  it("rend 1 boulangerie : 1/2 moulin : 1 ferme", () => {
+  it("rend 1 boulangerie : 1/3 moulin : 1 ferme", () => {
     const c = buildChain("g3174", 1, lookup);
     expect(c.nodes.map((n) => n.defId)).toEqual(["g3174", "g3075", "g2693"]);
     expect(c.nodes[0].exact).toEqual(frac(1));
-    expect(c.nodes[1].exact).toEqual(frac(1, 2));
+    expect(c.nodes[1].exact).toEqual(frac(1, 3)); // moulin à 20 s depuis le patch 200
     expect(c.nodes[2].exact).toEqual(frac(1, 1));
     expect(c.imports).toEqual([]);
     expect(c.gaps).toEqual([]);
@@ -21,7 +21,7 @@ describe("buildChain — le pain romain", () => {
 
   it("met la chaîne à l'échelle linéairement", () => {
     const c = buildChain("g3174", 4, lookup);
-    expect(c.nodes[1].exact).toEqual(frac(2));
+    expect(c.nodes[1].exact).toEqual(frac(4, 3));
     expect(c.nodes[2].exact).toEqual(frac(4));
   });
 

@@ -24,9 +24,9 @@ describe("completeBasket", () => {
 
   it("un panier déjà complet n'est pas touché", () => {
     const parfait = normalizeBasket([
-      { defId: "g3174", count: 2 },
+      { defId: "g3174", count: 3 },
       { defId: "g3075", count: 1 },
-      { defId: "g2693", count: 2 },
+      { defId: "g2693", count: 3 },
     ]);
     expect(completeBasket(parfait, lookup)).toEqual(parfait);
   });

@@ -213,7 +213,6 @@
   },
   {
     "id": "g149870",
-    "sizeGuessed": true,
     "guid": 149870,
     "name": "Arbre mort",
     "nameInternal": "HoF Ornament Celtic 1x1 Dead Tree",
@@ -221,8 +220,8 @@
     "category": "ornement",
     "region": null,
     "size": {
-      "w": 3,
-      "h": 3
+      "w": 1,
+      "h": 1
     },
     "rotatable": true,
     "needsRoad": false,
@@ -400,24 +399,6 @@
     "icon": "icons/icon_3d_arch_roof.png"
   },
   {
-    "id": "g149836",
-    "sizeGuessed": true,
-    "guid": 149836,
-    "name": "Bancs de marbre",
-    "nameInternal": "HoF Ornament Roman 1x1 Benches",
-    "template": "OrnamentalBuilding",
-    "category": "ornement",
-    "region": null,
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": false,
-    "color": "#9c8cb5",
-    "icon": "icons/icon_3d_benches_01.png"
-  },
-  {
     "id": "g95595",
     "sizeGuessed": true,
     "guid": 95595,
@@ -454,6 +435,23 @@
     "icon": "icons/icon_3d_banner_ornate.png"
   },
   {
+    "id": "g152317",
+    "guid": 152317,
+    "name": "Bassin de la vertu",
+    "nameInternal": "cDLC02 Ornament Pond Square 3x3",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc02_pond_square.png"
+  },
+  {
     "id": "g93381",
     "guid": 93381,
     "name": "Bassin de sérénité",
@@ -469,6 +467,23 @@
     "needsRoad": false,
     "color": "#9c8cb5",
     "icon": "icons/icon_3d_bathhouse_preorder.png"
+  },
+  {
+    "id": "g174709",
+    "guid": 174709,
+    "name": "Boxeur épuisé",
+    "nameInternal": "cDLC03 Ornament Statue 2x3 Boxer",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_statue_boxer.png"
   },
   {
     "id": "g80828",
@@ -595,7 +610,7 @@
     "id": "g90960",
     "guid": 90960,
     "name": "Columna Annorum",
-    "nameInternal": "HoF Ornament Roman 3x3 Anno Pillar",
+    "nameInternal": "HoF Ornament Roman 4x4 Anno Pillar",
     "template": "OrnamentalBuilding",
     "category": "ornement",
     "region": null,
@@ -828,6 +843,23 @@
     "needsRoad": false,
     "color": "#9c8cb5",
     "icon": "icons/icon_3d_statue_woman.png"
+  },
+  {
+    "id": "g152322",
+    "guid": 152322,
+    "name": "Figuier",
+    "nameInternal": "cDLC02 Ornament Plant_Arrangement 02 1x1",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc02_plant_02.png"
   },
   {
     "id": "g80629",
@@ -1068,6 +1100,23 @@
     "icon": "icons/icon_3d_construction_main_group_ornaments.png"
   },
   {
+    "id": "g152324",
+    "guid": 152324,
+    "name": "Gommier",
+    "nameInternal": "cDLC02 Ornament Plant_Arrangement 04 1x1",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc02_plant_04.png"
+  },
+  {
     "id": "g80576",
     "guid": 80576,
     "name": "Grand lithophyte",
@@ -1086,7 +1135,6 @@
   },
   {
     "id": "g149861",
-    "sizeGuessed": true,
     "guid": 149861,
     "name": "Grand étal de marché",
     "nameInternal": "HoF Ornament Roman 3x3 Market Stall Large",
@@ -1094,13 +1142,30 @@
     "category": "ornement",
     "region": null,
     "size": {
-      "w": 3,
-      "h": 3
+      "w": 2,
+      "h": 2
     },
     "rotatable": true,
     "needsRoad": false,
     "color": "#9c8cb5",
     "icon": "icons/icon_3d_market_stand_11.png"
+  },
+  {
+    "id": "g152325",
+    "guid": 152325,
+    "name": "Grenadier",
+    "nameInternal": "cDLC02 Ornament Plant_Arrangement 05 1x1",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc02_plant_05.png"
   },
   {
     "id": "g110126",
@@ -1111,13 +1176,32 @@
     "category": "ornement",
     "region": null,
     "size": {
-      "w": 4,
-      "h": 4
+      "w": 1,
+      "h": 1
     },
     "rotatable": true,
     "needsRoad": false,
     "color": "#9c8cb5",
     "icon": "icons/icon_3d_banner_twitch_germany.png"
+  },
+  {
+    "id": "g174719",
+    "guid": 174719,
+    "name": "Halle des échos",
+    "nameInternal": "cDLC03 Ornament Special MusicHall",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 7,
+      "h": 7
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_hall_of_echoes.png",
+    "unique": true,
+    "uniqueType": "Ornament01"
   },
   {
     "id": "g42198",
@@ -1188,6 +1272,40 @@
     "icon": "icons/icon_3d_pavilion_water.png"
   },
   {
+    "id": "g172256",
+    "guid": 172256,
+    "name": "La Muse",
+    "nameInternal": "Connect Ornament 1x1 Statue Theater",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_theatre.png"
+  },
+  {
+    "id": "g152321",
+    "guid": 152321,
+    "name": "Laurier-rose",
+    "nameInternal": "cDLC02 Ornament Plant_Arrangement 01 1x1",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc02_plant_01.png"
+  },
+  {
     "id": "g95153",
     "guid": 95153,
     "name": "Lion d'or",
@@ -1239,8 +1357,24 @@
     "icon": "icons/icon_3d_capitoline_wolf.png"
   },
   {
+    "id": "g152316",
+    "guid": 152316,
+    "name": "Mare de la vertu",
+    "nameInternal": "cDLC02 Ornament Pond Round 2x2",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc02_pond_round.png"
+  },
+  {
     "id": "g149831",
-    "sizeGuessed": true,
     "guid": 149831,
     "name": "Mausolée sylvestre",
     "nameInternal": "HoF Ornament Roman 7x8 Mausoleum",
@@ -1248,8 +1382,8 @@
     "category": "ornement",
     "region": null,
     "size": {
-      "w": 3,
-      "h": 3
+      "w": 7,
+      "h": 8
     },
     "rotatable": true,
     "needsRoad": false,
@@ -1359,6 +1493,23 @@
     "icon": "icons/icon_3d_celtic_obelisk.png"
   },
   {
+    "id": "g174502",
+    "guid": 174502,
+    "name": "Obélisque de constructeur",
+    "nameInternal": "Twitch Ornament Obelisk",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_obelisk_builders.png"
+  },
+  {
     "id": "g88285",
     "guid": 88285,
     "name": "Officier de la Pax",
@@ -1461,6 +1612,40 @@
     "needsRoad": false,
     "color": "#9c8cb5",
     "icon": "icons/icon_attractivenessbtn.png"
+  },
+  {
+    "id": "g174712",
+    "guid": 174712,
+    "name": "Pallas Athéna",
+    "nameInternal": "cDLC03 Ornament Statue 2x3 Athena",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_statue_athena.png"
+  },
+  {
+    "id": "g152323",
+    "guid": 152323,
+    "name": "Palmier",
+    "nameInternal": "cDLC02 Ornament Plant_Arrangement 03 1x1",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc02_plant_03.png"
   },
   {
     "id": "g80579",
@@ -1583,7 +1768,6 @@
   },
   {
     "id": "g149859",
-    "sizeGuessed": true,
     "guid": 149859,
     "name": "Petit étal de marché",
     "nameInternal": "HoF Ornament Roman 1x1 Market Stall Small",
@@ -1591,13 +1775,31 @@
     "category": "ornement",
     "region": null,
     "size": {
-      "w": 3,
-      "h": 3
+      "w": 1,
+      "h": 1
     },
     "rotatable": true,
     "needsRoad": false,
     "color": "#9c8cb5",
     "icon": "icons/icon_3d_market_stand_01.png"
+  },
+  {
+    "id": "g174715",
+    "guid": 174715,
+    "name": "Phare de Pharos",
+    "nameInternal": "cDLC03 Ornament HarborArea WaterColumn",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "placement": "water",
+    "icon": "icons/icon_3d_cdlc03_column_pharos.png"
   },
   {
     "id": "g92744",
@@ -1632,6 +1834,23 @@
     "needsRoad": false,
     "color": "#9c8cb5",
     "icon": "icons/icon_3d_treeplanter_celtic_tall.png"
+  },
+  {
+    "id": "g152326",
+    "guid": 152326,
+    "name": "Pin parasol",
+    "nameInternal": "cDLC02 Ornament Plant_Arrangement 06 1x1",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc02_plant_06.png"
   },
   {
     "id": "g92734",
@@ -1685,6 +1904,23 @@
     "icon": "icons/icon_3d_statue_torchbearer.png"
   },
   {
+    "id": "g174703",
+    "guid": 174703,
+    "name": "Python et Apollon",
+    "nameInternal": "cDLC03 Ornament Statue 2x2 Apollo",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_statue_apollo.png"
+  },
+  {
     "id": "g80632",
     "guid": 80632,
     "name": "Roi Numa",
@@ -1700,6 +1936,23 @@
     "needsRoad": false,
     "color": "#9c8cb5",
     "icon": "icons/icon_3d_statue_man.png"
+  },
+  {
+    "id": "g172255",
+    "guid": 172255,
+    "name": "Saumon de la Connaissance",
+    "nameInternal": "Connect Ornament 3x3 Salmon",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_salmon.png"
   },
   {
     "id": "g88309",
@@ -1736,6 +1989,57 @@
     "icon": "icons/icon_3d_banner_twitch_china.png"
   },
   {
+    "id": "g152320",
+    "guid": 152320,
+    "name": "Sphinx du maçon",
+    "nameInternal": "cDLC02 Ornament Lamassu 1x1",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc02_sphinx.png"
+  },
+  {
+    "id": "g174713",
+    "guid": 174713,
+    "name": "Statue d'Artémis Kallistè",
+    "nameInternal": "cDLC03 Ornament Statue 2x2 Artemis",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_statue_artemis.png"
+  },
+  {
+    "id": "g174710",
+    "guid": 174710,
+    "name": "Statue d'Asclépios",
+    "nameInternal": "cDLC03 Ornament Statue 2x3 Asclepios",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_statue_asclepios.png"
+  },
+  {
     "id": "g80820",
     "guid": 80820,
     "name": "Statue d'un lion",
@@ -1751,6 +2055,74 @@
     "needsRoad": false,
     "color": "#9c8cb5",
     "icon": "icons/icon_3d_statue_lion.png"
+  },
+  {
+    "id": "g174718",
+    "guid": 174718,
+    "name": "Statue de Kassandra",
+    "nameInternal": "cDLC03 Ornament Statue Kassandra",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_statue_kassandra.png"
+  },
+  {
+    "id": "g174708",
+    "guid": 174708,
+    "name": "Statue de Korè",
+    "nameInternal": "cDLC03 Ornament Statue 2x2 Kore",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_statue_kore.png"
+  },
+  {
+    "id": "g174714",
+    "guid": 174714,
+    "name": "Statue de Léonidas",
+    "nameInternal": "cDLC03 Ornament Statue 3x3 Leonidas",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_statue_leonidas.png"
+  },
+  {
+    "id": "g174711",
+    "guid": 174711,
+    "name": "Statue de Pénélope",
+    "nameInternal": "cDLC03 Ornament Statue 2x2 GreekWoman",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 2,
+      "h": 2
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_cdlc03_statue_penelope.png"
   },
   {
     "id": "g87384",
@@ -1770,8 +2142,25 @@
     "icon": "icons/icon_3d_statue_towncrier.png"
   },
   {
+    "id": "g174716",
+    "guid": 174716,
+    "name": "Statue de Zeus Ombrios",
+    "nameInternal": "cDLC03 Ornament HarborArea WaterStatue",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 4,
+      "h": 8
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "placement": "water",
+    "icon": "icons/icon_3d_cdlc03_statue_zeus.png"
+  },
+  {
     "id": "g149829",
-    "sizeGuessed": true,
     "guid": 149829,
     "name": "Statue de l'empereur Servius",
     "nameInternal": "HoF Ornament Roman 1x1 Emperor Statue",
@@ -1779,8 +2168,8 @@
     "category": "ornement",
     "region": null,
     "size": {
-      "w": 3,
-      "h": 3
+      "w": 1,
+      "h": 1
     },
     "rotatable": true,
     "needsRoad": false,
@@ -1805,8 +2194,24 @@
     "icon": "icons/icon_3d_statue_community.png"
   },
   {
+    "id": "g149836",
+    "guid": 149836,
+    "name": "Table de jeu",
+    "nameInternal": "HoF Ornament Roman 1x1 Benches",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 1,
+      "h": 1
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_benches_01.png"
+  },
+  {
     "id": "g149837",
-    "sizeGuessed": true,
     "guid": 149837,
     "name": "Table de jeu",
     "nameInternal": "HoF Ornament Roman 2x1 Benches",
@@ -1814,8 +2219,8 @@
     "category": "ornement",
     "region": null,
     "size": {
-      "w": 3,
-      "h": 3
+      "w": 2,
+      "h": 1
     },
     "rotatable": true,
     "needsRoad": false,
@@ -1874,6 +2279,24 @@
     "icon": "icons/icon_3d_burialmound_entrance.png"
   },
   {
+    "id": "g172257",
+    "sizeGuessed": true,
+    "guid": 172257,
+    "name": "Veritas",
+    "nameInternal": "Connect Ornament 1x1 Statue Wine Woman",
+    "template": "OrnamentalBuilding",
+    "category": "ornement",
+    "region": null,
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": false,
+    "color": "#9c8cb5",
+    "icon": "icons/icon_3d_statue_wine.png"
+  },
+  {
     "id": "g95645",
     "guid": 95645,
     "name": "Vexillum lupin",
@@ -1892,7 +2315,6 @@
   },
   {
     "id": "g149860",
-    "sizeGuessed": true,
     "guid": 149860,
     "name": "Étal de marché commun",
     "nameInternal": "HoF Ornament Roman 2x1 Market Stall Medium",
@@ -1900,8 +2322,8 @@
     "category": "ornement",
     "region": null,
     "size": {
-      "w": 3,
-      "h": 3
+      "w": 2,
+      "h": 1
     },
     "rotatable": true,
     "needsRoad": false,
@@ -1939,11 +2361,11 @@
       ],
       "inputs": [
         {
-          "good": "Fer",
+          "good": "Cuir",
           "amount": 1.0
         },
         {
-          "good": "Cuir",
+          "good": "Fer",
           "amount": 1.0
         }
       ]
@@ -1981,11 +2403,11 @@
       ],
       "inputs": [
         {
-          "good": "Fer",
+          "good": "Cuir",
           "amount": 1.0
         },
         {
-          "good": "Cuir",
+          "good": "Fer",
           "amount": 1.0
         }
       ]
@@ -4491,44 +4913,6 @@
     }
   },
   {
-    "id": "g5847",
-    "guid": 5847,
-    "name": "Ferme à bœufs",
-    "nameInternal": "Production Marsh Celtic Aurochs",
-    "template": "Production Marsh Pasture",
-    "category": "production",
-    "region": "Celtic",
-    "size": {
-      "w": 7,
-      "h": 5
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#c9a227",
-    "icon": "icons/icon_3d_auroch_goods.png",
-    "radius": {
-      "kind": "service",
-      "range": 24
-    },
-    "streetRange": 28,
-    "field": {
-      "tiles": 5,
-      "fieldType": "b_ufs"
-    },
-    "slotType": "marsh",
-    "production": {
-      "cycleTime": 60,
-      "outputs": [
-        {
-          "good": "Bœufs",
-          "amount": 1.0
-        }
-      ],
-      "inputs": []
-    },
-    "transporterRange": 30
-  },
-  {
     "id": "g5605",
     "guid": 5605,
     "name": "Fibularium",
@@ -4871,7 +5255,7 @@
           "amount": 1.0
         },
         {
-          "good": "Bœufs",
+          "good": "Aurochs",
           "amount": 1.0
         }
       ]
@@ -5102,7 +5486,7 @@
       ],
       "inputs": [
         {
-          "good": "Bœufs",
+          "good": "Aurochs",
           "amount": 1.0
         }
       ]
@@ -5674,7 +6058,7 @@
     },
     "streetRange": 26,
     "production": {
-      "cycleTime": 30,
+      "cycleTime": 20,
       "outputs": [
         {
           "good": "Farine",
@@ -6417,7 +6801,7 @@
       ],
       "inputs": [
         {
-          "good": "Bœufs",
+          "good": "Aurochs",
           "amount": 1.0
         },
         {
@@ -7056,6 +7440,44 @@
     }
   },
   {
+    "id": "g5847",
+    "guid": 5847,
+    "name": "Élevage d'aurochs",
+    "nameInternal": "Production Marsh Celtic Aurochs",
+    "template": "Production Marsh Pasture",
+    "category": "production",
+    "region": "Celtic",
+    "size": {
+      "w": 7,
+      "h": 5
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#c9a227",
+    "icon": "icons/icon_3d_auroch_goods.png",
+    "radius": {
+      "kind": "service",
+      "range": 24
+    },
+    "streetRange": 28,
+    "field": {
+      "tiles": 5,
+      "fieldType": "aurochs"
+    },
+    "slotType": "marsh",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [
+        {
+          "good": "Aurochs",
+          "amount": 1.0
+        }
+      ],
+      "inputs": []
+    },
+    "transporterRange": 30
+  },
+  {
     "id": "g2971",
     "guid": 2971,
     "name": "Élevage d'esturgeons",
@@ -7470,9 +7892,9 @@
     "icon": "icons/icon_3d_colosseum.png",
     "radius": {
       "kind": "service",
-      "range": 250
+      "range": 420
     },
-    "streetRange": 250,
+    "streetRange": 420,
     "unique": true,
     "uniqueType": "Monument01"
   },
@@ -7721,6 +8143,342 @@
         }
       ]
     }
+  },
+  {
+    "id": "g81071",
+    "guid": 81071,
+    "name": "Autel d'Epona",
+    "nameInternal": "Public Roman Shrine Epona",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_epona.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g82491",
+    "guid": 82491,
+    "name": "Autel d'Epona",
+    "nameInternal": "Public Roman Celtic Shrine Epona",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_epona.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g81072",
+    "guid": 81072,
+    "name": "Autel de Cernunnos",
+    "nameInternal": "Public Roman Shrine Cernunnos",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_cernunnos.png",
+    "radius": {
+      "kind": "service",
+      "range": 18
+    },
+    "streetRange": 22,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g82492",
+    "guid": 82492,
+    "name": "Autel de Cernunnos",
+    "nameInternal": "Public Roman Celtic Shrine Cernunnos",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_cernunnos.png",
+    "radius": {
+      "kind": "service",
+      "range": 20
+    },
+    "streetRange": 24,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g81021",
+    "guid": 81021,
+    "name": "Autel de Cérès",
+    "nameInternal": "Public Roman Shrine Ceres",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_ceres.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g82487",
+    "guid": 82487,
+    "name": "Autel de Cérès",
+    "nameInternal": "Public Roman Celtic Shrine Ceres",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_ceres.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g80710",
+    "guid": 80710,
+    "name": "Autel de Mars",
+    "nameInternal": "Public Roman Shrine Mars",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_mars.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g82486",
+    "guid": 82486,
+    "name": "Autel de Mars",
+    "nameInternal": "Public Roman Celtic Shrine Mars",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_mars.png",
+    "radius": {
+      "kind": "service",
+      "range": 18
+    },
+    "streetRange": 22,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g81070",
+    "guid": 81070,
+    "name": "Autel de Mercure-Lug",
+    "nameInternal": "Public Roman Shrine Mercuy-Lugus",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_mercury.png",
+    "radius": {
+      "kind": "service",
+      "range": 14
+    },
+    "streetRange": 18,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g82490",
+    "guid": 82490,
+    "name": "Autel de Mercure-Lug",
+    "nameInternal": "Public Roman Celtic Shrine Mercuy-Lugus",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_mercury.png",
+    "radius": {
+      "kind": "service",
+      "range": 12
+    },
+    "streetRange": 16,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g81069",
+    "guid": 81069,
+    "name": "Autel de Minerve",
+    "nameInternal": "Public Roman Shrine Minerva",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_minerva.png",
+    "radius": {
+      "kind": "service",
+      "range": 18
+    },
+    "streetRange": 22,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g82489",
+    "guid": 82489,
+    "name": "Autel de Minerve",
+    "nameInternal": "Public Roman Celtic Shrine Minerva",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_minerva.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g81068",
+    "guid": 81068,
+    "name": "Autel de Neptune",
+    "nameInternal": "Public Roman Shrine Neptune",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_neptune.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20,
+    "unique": true,
+    "uniqueType": "Shrine"
+  },
+  {
+    "id": "g82488",
+    "guid": 82488,
+    "name": "Autel de Neptune",
+    "nameInternal": "Public Roman Celtic Shrine Neptune",
+    "template": "MiniInstitutionBuilding",
+    "category": "public",
+    "region": "Celtic",
+    "size": {
+      "w": 3,
+      "h": 3
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_shrine_neptune.png",
+    "radius": {
+      "kind": "service",
+      "range": 16
+    },
+    "streetRange": 20,
+    "unique": true,
+    "uniqueType": "Shrine"
   },
   {
     "id": "g144812",
@@ -8333,6 +9091,214 @@
     "icon": "icons/icon_3d_base_warehouse.png"
   },
   {
+    "id": "g152714",
+    "guid": 152714,
+    "name": "Hippodrome",
+    "nameInternal": "Wonder Roman Hippodrome",
+    "template": "HippodromeBuilding",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 28,
+      "h": 60
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_construction_category_hippodrome.png",
+    "radius": {
+      "kind": "service",
+      "range": 420
+    },
+    "streetRange": 420,
+    "unique": true,
+    "uniqueType": "Monument02"
+  },
+  {
+    "id": "g153792",
+    "guid": 153792,
+    "name": "Hippodrome : façade et arches",
+    "nameInternal": "Wonder Roman Hippodrome Phase 2",
+    "template": "Monument",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 28,
+      "h": 60
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_construction_category_hippodrome.png",
+    "unique": true,
+    "uniqueType": "Monument02",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Tuiles",
+          "amount": 6.0
+        },
+        {
+          "good": "Béton",
+          "amount": 5.0
+        },
+        {
+          "good": "Fer",
+          "amount": 4.0
+        },
+        {
+          "good": "Granite",
+          "amount": 4.0
+        },
+        {
+          "good": "Marbre",
+          "amount": 6.0
+        },
+        {
+          "good": "Mosaïques",
+          "amount": 6.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g153790",
+    "guid": 153790,
+    "name": "Hippodrome : fondations",
+    "nameInternal": "Wonder Roman Hippodrome Phase 0",
+    "template": "Monument",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 28,
+      "h": 60
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_construction_category_hippodrome.png",
+    "unique": true,
+    "uniqueType": "Monument02",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Planches",
+          "amount": 6.0
+        },
+        {
+          "good": "Corde",
+          "amount": 5.0
+        },
+        {
+          "good": "Tuiles",
+          "amount": 5.0
+        },
+        {
+          "good": "Tissu",
+          "amount": 4.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g153793",
+    "guid": 153793,
+    "name": "Hippodrome : gradins et loges",
+    "nameInternal": "Wonder Roman Hippodrome Phase 3",
+    "template": "Monument",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 28,
+      "h": 60
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_construction_category_hippodrome.png",
+    "unique": true,
+    "uniqueType": "Monument02",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Béton",
+          "amount": 3.0
+        },
+        {
+          "good": "Marbre",
+          "amount": 4.0
+        },
+        {
+          "good": "Mosaïques",
+          "amount": 2.0
+        },
+        {
+          "good": "Bronze",
+          "amount": 4.0
+        },
+        {
+          "good": "Coussins",
+          "amount": 5.0
+        },
+        {
+          "good": "Bois ouvragé",
+          "amount": 5.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "g153791",
+    "guid": 153791,
+    "name": "Hippodrome : piste",
+    "nameInternal": "Wonder Roman Hippodrome Phase 1",
+    "template": "Monument",
+    "category": "public",
+    "region": "Roman",
+    "size": {
+      "w": 28,
+      "h": 60
+    },
+    "rotatable": true,
+    "needsRoad": true,
+    "color": "#7cb342",
+    "icon": "icons/icon_3d_construction_category_hippodrome.png",
+    "unique": true,
+    "uniqueType": "Monument02",
+    "production": {
+      "cycleTime": 60,
+      "outputs": [],
+      "inputs": [
+        {
+          "good": "Planches",
+          "amount": 4.0
+        },
+        {
+          "good": "Tuiles",
+          "amount": 4.0
+        },
+        {
+          "good": "Béton",
+          "amount": 5.0
+        },
+        {
+          "good": "Fer",
+          "amount": 3.0
+        },
+        {
+          "good": "Granite",
+          "amount": 4.0
+        }
+      ]
+    }
+  },
+  {
     "id": "g31608",
     "guid": 31608,
     "name": "Jetée marchande",
@@ -8705,347 +9671,11 @@
     "streetRange": 38
   },
   {
-    "id": "g81071",
-    "guid": 81071,
-    "name": "Sanctuaire d'Epona",
-    "nameInternal": "Public Roman Shrine Epona",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Roman",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_epona.png",
-    "radius": {
-      "kind": "service",
-      "range": 16
-    },
-    "streetRange": 20,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g82491",
-    "guid": 82491,
-    "name": "Sanctuaire d'Epona",
-    "nameInternal": "Public Roman Celtic Shrine Epona",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Celtic",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_epona.png",
-    "radius": {
-      "kind": "service",
-      "range": 16
-    },
-    "streetRange": 20,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g81072",
-    "guid": 81072,
-    "name": "Sanctuaire de Cernunnos",
-    "nameInternal": "Public Roman Shrine Cernunnos",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Roman",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_cernunnos.png",
-    "radius": {
-      "kind": "service",
-      "range": 18
-    },
-    "streetRange": 22,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g82492",
-    "guid": 82492,
-    "name": "Sanctuaire de Cernunnos",
-    "nameInternal": "Public Roman Celtic Shrine Cernunnos",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Celtic",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_cernunnos.png",
-    "radius": {
-      "kind": "service",
-      "range": 20
-    },
-    "streetRange": 24,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g81021",
-    "guid": 81021,
-    "name": "Sanctuaire de Cérès",
-    "nameInternal": "Public Roman Shrine Ceres",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Roman",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_ceres.png",
-    "radius": {
-      "kind": "service",
-      "range": 16
-    },
-    "streetRange": 20,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g82487",
-    "guid": 82487,
-    "name": "Sanctuaire de Cérès",
-    "nameInternal": "Public Roman Celtic Shrine Ceres",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Celtic",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_ceres.png",
-    "radius": {
-      "kind": "service",
-      "range": 16
-    },
-    "streetRange": 20,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g80710",
-    "guid": 80710,
-    "name": "Sanctuaire de Mars",
-    "nameInternal": "Public Roman Shrine Mars",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Roman",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_mars.png",
-    "radius": {
-      "kind": "service",
-      "range": 16
-    },
-    "streetRange": 20,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g82486",
-    "guid": 82486,
-    "name": "Sanctuaire de Mars",
-    "nameInternal": "Public Roman Celtic Shrine Mars",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Celtic",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_mars.png",
-    "radius": {
-      "kind": "service",
-      "range": 18
-    },
-    "streetRange": 22,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g81070",
-    "guid": 81070,
-    "name": "Sanctuaire de Mercure-Lug",
-    "nameInternal": "Public Roman Shrine Mercuy-Lugus",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Roman",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_mercury.png",
-    "radius": {
-      "kind": "service",
-      "range": 14
-    },
-    "streetRange": 18,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g82490",
-    "guid": 82490,
-    "name": "Sanctuaire de Mercure-Lug",
-    "nameInternal": "Public Roman Celtic Shrine Mercuy-Lugus",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Celtic",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_mercury.png",
-    "radius": {
-      "kind": "service",
-      "range": 12
-    },
-    "streetRange": 16,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g81069",
-    "guid": 81069,
-    "name": "Sanctuaire de Minerve",
-    "nameInternal": "Public Roman Shrine Minerva",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Roman",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_minerva.png",
-    "radius": {
-      "kind": "service",
-      "range": 18
-    },
-    "streetRange": 22,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g82489",
-    "guid": 82489,
-    "name": "Sanctuaire de Minerve",
-    "nameInternal": "Public Roman Celtic Shrine Minerva",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Celtic",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_minerva.png",
-    "radius": {
-      "kind": "service",
-      "range": 16
-    },
-    "streetRange": 20,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g81068",
-    "guid": 81068,
-    "name": "Sanctuaire de Neptune",
-    "nameInternal": "Public Roman Shrine Neptune",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Roman",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_neptune.png",
-    "radius": {
-      "kind": "service",
-      "range": 16
-    },
-    "streetRange": 20,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
-    "id": "g82488",
-    "guid": 82488,
-    "name": "Sanctuaire de Neptune",
-    "nameInternal": "Public Roman Celtic Shrine Neptune",
-    "template": "MiniInstitutionBuilding",
-    "category": "public",
-    "region": "Celtic",
-    "size": {
-      "w": 3,
-      "h": 3
-    },
-    "rotatable": true,
-    "needsRoad": true,
-    "color": "#7cb342",
-    "icon": "icons/icon_3d_shrine_neptune.png",
-    "radius": {
-      "kind": "service",
-      "range": 16
-    },
-    "streetRange": 20,
-    "unique": true,
-    "uniqueType": "Shrine"
-  },
-  {
     "id": "g19691",
     "guid": 19691,
     "name": "Source d'aqueduc",
     "nameInternal": "Aqueduct Roman Basin",
-    "template": "AqueductProducer",
+    "template": "AqueductProducerSlot",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -9062,7 +9692,7 @@
     "guid": 29524,
     "name": "Source d'aqueduc",
     "nameInternal": "Aqueduct Roman Celtic Basin",
-    "template": "AqueductProducer",
+    "template": "AqueductProducerSlot",
     "category": "public",
     "region": "Celtic",
     "size": {
@@ -9101,7 +9731,7 @@
     "guid": 3619,
     "name": "Temple",
     "nameInternal": "Public Roman Temple",
-    "template": "PublicServiceBuilding",
+    "template": "PublicServiceRitualBuilding",
     "category": "public",
     "region": "Roman",
     "size": {
@@ -9123,7 +9753,7 @@
     "guid": 6729,
     "name": "Temple",
     "nameInternal": "Wonder Roman Celtic Temple",
-    "template": "PublicServiceBuilding",
+    "template": "PublicServiceRitualBuilding",
     "category": "public",
     "region": "Celtic",
     "size": {

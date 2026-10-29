@@ -73,15 +73,22 @@ describe("compileTierEvaluator — palier atteint", () => {
     expect(r.cap).toBeGreaterThan(0);
   });
 
-  it("le plus gros Wonder est indispensable : les deux petits ne franchissent pas le seuil", () => {
-    // GAME_MECHANICS §9 : Forum 4 + Bains 4 = 8 < 12 → l'Amphithéâtre est obligatoire
+  it("un gros Wonder est indispensable : les deux petits ne franchissent pas le seuil", () => {
+    // GAME_MECHANICS §9 : Forum 4 + Bains 4 = 8 < 12 → il faut un gros Wonder. Le test
+    // admet plusieurs gros : l'Hippodrome (8, patch 200) en sera un quand l'option des
+    // bâtiments en plus le remettra dans `services`.
     const wonders = svc(t4, "Wonders").sort(byWeightDesc);
-    const petits = wonders.slice(1).map((s) => s.building!);
+    const lourd = wonders[0].weight;
+    const petits = wonders.filter((s) => s.weight < lourd).map((s) => s.building!);
+    const gros = wonders.filter((s) => s.weight === lourd).map((s) => s.building!);
+    expect(petits.length).toBeGreaterThan(0);
     const publics = svc(t4, "Public").map((s) => s.building!); // tout le Public possible
     const r = ev.evaluate(maskOf(ev, [...publics, ...petits]));
     expect(r.tier.guid).not.toBe(t4.guid);
-    const gros = ev.evaluate(maskOf(ev, [...publics, ...petits, wonders[0].building!]));
-    expect(gros.tier.guid).toBe(t4.guid);
+    for (const g of gros) {
+      const avec = ev.evaluate(maskOf(ev, [...publics, ...petits, g]));
+      expect(avec.tier.guid).toBe(t4.guid);
+    }
   });
 
   it("monotonie : ajouter un service ne fait jamais baisser le palier ni la capacité", () => {

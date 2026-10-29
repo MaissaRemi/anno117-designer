@@ -52,7 +52,7 @@ describe("nomenclature d'une commande", () => {
     });
     expect(ligne(complet, BOULANGERIE)).toMatchObject({ nombre: 2, raison: "demandé" });
     expect(ligne(complet, MOULIN)).toMatchObject({ nombre: 1, raison: "complète une chaîne demandée" });
-    expect(ligne(complet, FERME_CEREALES)).toMatchObject({ nombre: 2 });
+    expect(ligne(complet, FERME_CEREALES)).toMatchObject({ nombre: 3 }); // le moulin (20 s depuis le patch 200) tire 3 blé/min
   });
 
   it("produire les biens des maisons : rien de l'autre monde, et la main-d'œuvre est logée", () => {

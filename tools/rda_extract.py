@@ -15,6 +15,7 @@ Usage :
   python rda_extract.py get    <archive.rda> <chemin_interne> <sortie>
   python rda_extract.py dump   <archive.rda> <prefixe_interne> <dossier_sortie>
 """
+import re
 import struct
 import sys
 import zlib
@@ -109,6 +110,38 @@ def decrypt(data: bytes) -> bytes:
         out[i + 1] = (word >> 8) & 0xFF
         key = (key * 0x7FED + 0x6073) & 0xFFFF
     return bytes(out)
+
+
+PATCH_ARCHIVE = re.compile(r"zz_patchfiles_(\d+)\.rda", re.IGNORECASE)
+
+
+def patch_archives(game_dir):
+    """Archives de patch du dossier jeu, la plus recente d'abord.
+
+    Le jeu charge les zz_patchfiles_<n>.rda par-dessus les archives de base : un fichier
+    present dans un patch remplace celui de meme chemin (taille .ifo, ile .a7m, icone...).
+    """
+    found = [(int(m.group(1)), name) for name in os.listdir(game_dir)
+             if (m := PATCH_ARCHIVE.fullmatch(name))]
+    return [name for _, name in sorted(found, reverse=True)]
+
+
+class PatchOverlay:
+    """Fichiers remplaces par les patchs, indexes par chemin normalise (/ et minuscules).
+
+    find(chemin) -> (fh, RDAFile) de la version la plus recente, ou None si aucun patch
+    ne touche ce chemin : l'appelant retombe alors sur son archive de base.
+    """
+
+    def __init__(self, game_dir):
+        self.files = {}
+        for name in reversed(patch_archives(game_dir)):  # le plus recent ecrase les autres
+            fh = open(os.path.join(game_dir, name), "rb")
+            for f in read_index(fh):
+                self.files[f.path.replace("\\", "/").lower()] = (fh, f)
+
+    def find(self, internal_path):
+        return self.files.get(internal_path.replace("\\", "/").lower())
 
 
 def main():

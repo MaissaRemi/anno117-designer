@@ -13,6 +13,7 @@ Mécanique :
 Sortie : src/data/economy.generated.json
 """
 import json
+import ntpath
 import os
 import re
 import sys
@@ -30,7 +31,7 @@ OUT = os.path.join(HERE, "src", "data", "economy.generated.json")
 BUILDING_TEMPLATES = {
     "Production", "Production Field", "Production Area", "Production Marsh",
     "Production Marsh Area", "Production Marsh Pasture", "SlotFactoryBuilding7",
-    "PublicServiceBuilding", "MiniInstitutionBuilding", "CityInstitutionBuilding",
+    "PublicServiceBuilding", "PublicServiceRitualBuilding", "MiniInstitutionBuilding", "CityInstitutionBuilding",
     "CityInstitutionBuilding_Marsh", "Monument", "Warehouse", "Warehouse_Marsh",
     "HarborWarehouse", "ResidenceBuilding",
 }
@@ -67,6 +68,17 @@ SERVICE_BUILDING_OVERRIDES = {
     # (36908, Monument, aucune portée). Le bâtiment FINAL est 3621 (MonumentEventBuilding,
     # street 250, eau 50u Mandatory) — cf. GAME_MECHANICS.md §9.
     "2783": "g3621",
+    # HIPPODROME (patch 200) : meme piege, l'icone tombe sur la phase « fondations » (153790).
+    # Le batiment FINAL est 152714 (HippodromeBuilding).
+    "152717": "g152714",
+}
+
+# BESOINS OPTIONNELS : declares par le jeu sur une residence, mais remplis par un batiment que
+# le joueur n'ajoute que s'il le demande. Ils sortent de `services` (donc de la capacite et
+# des attributs par maison) et vont dans `optionalServices`, que l'option « batiments en
+# plus » reintegrera. Sans eux, les Patriciens plafonnent a 41 habitants au lieu de 45.
+OPTIONAL_NEEDS = {
+    "152717",  # Hippodrome (DLC 2, patch 200) : 28x60, pose seulement sur demande
 }
 
 
@@ -155,7 +167,7 @@ def main():
     # residences a portee. C'est la mecanique des « +1 Argent », « -2 Sante » autour des
     # ateliers et des mines. Trois tables intermediaires, resolues apres le parcours.
     fx_effects = {}      # GUID Effect -> {scope, buffs:[GUID], targets:[GUID pool]}
-    pool_min_tier = {}   # GUID AssetPoolNamed -> palier MINIMUM servi (1..4 ; 0 = aucun)
+    pool_min_tier = {}   # GUID AssetPool -> palier MINIMUM servi (1..4 ; 0 = aucun)
     patrons = {}         # GUID Patron -> {name, shrinePool, shrineDefId, wonder, local, dominant}
     religion = {}        # seuils de devotion (ReligionBalancing)
     fx_buffs = {}        # GUID BuildingBuff -> {attrs:{}, stackable}
@@ -320,7 +332,7 @@ def main():
                 })
             el.clear(); continue
 
-        if tpl == "AssetPoolNamed":
+        if tpl in ("AssetPoolNamed", "AssetPool"):  # renomme AssetPool au patch 200
             # CIBLES D'UN EFFET DE ZONE. Un effet ne s'applique pas a toutes les residences :
             # il vise un POOL, et les pools publics sont nommes « Public Attribute Buff Tier N ».
             # Un bâtiment de palier N sert le palier N ET TOUS CEUX AU-DESSUS — un service de
@@ -415,7 +427,7 @@ def main():
                         pass
             needs[guid] = {
                 "product": t(el, "./Values/Need/NeedProduct"),
-                "icon": os.path.basename(t(el, "./Values/Standard/IconFilename") or ""),
+                "icon": ntpath.basename(t(el, "./Values/Standard/IconFilename") or ""),
                 "attrs": attrs,
                 # mécanique d'UPGRADE (cf. GAME_MECHANICS.md §3) : chaque besoin REMPLI
                 # ajoute SupplyWeight au score de sa catégorie ; sans NeedCategoryType
@@ -431,6 +443,14 @@ def main():
         fe = [i.findtext("FunctionalEffect")
               for i in vals.findall("./Building/FunctionalEffects/Item")]
         fe = [x for x in fe if x]
+        if not fe:
+            # Depuis le patch 200, l'Amphitheatre n'a plus de FunctionalEffects : son aura
+            # passe par BuildingRank, dix rangs gagnes par l'experience des evenements. On
+            # retient le rang 0, celui d'un batiment tout juste construit (identique a
+            # l'ancienne aura) ; la progression des rangs n'est pas modelisee.
+            fe = [i.findtext("Effect")
+                  for i in vals.findall("./BuildingRank/Ranks/Item[1]/RankEffects/Item")]
+            fe = [x for x in fe if x]
         if fe:
             rad = t(el, "./Values/EffectSource/RadiusDistance")
             street = t(el, "./Values/EffectSource/StreetDistance")
@@ -442,7 +462,7 @@ def main():
             el.clear(); continue
 
         defId = f"g{guid}"
-        icon = os.path.basename(t(el, "./Values/Standard/IconFilename") or "")
+        icon = ntpath.basename(t(el, "./Values/Standard/IconFilename") or "")
         if icon:
             icon_to_def.setdefault(icon, defId)
             icon_to_defs[icon].append(defId)
@@ -846,6 +866,21 @@ def main():
             sv["attrs"] = new
             sv["pop"] = new.get("Population", 0)
             sv["money"] = new.get("Money", 0)
+
+    # Apres l'alignement ci-dessus : le besoin optionnel sort avec les attributs que son
+    # batiment emet reellement.
+    for tr in tiers:
+        optional = [sv for sv in tr["services"] if sv["need"] in OPTIONAL_NEEDS]
+        if not optional:
+            continue
+        tr["services"] = [sv for sv in tr["services"] if sv["need"] not in OPTIONAL_NEEDS]
+        ph = dict(tr["perHouse"])
+        for sv in optional:
+            for k, v in sv["attrs"].items():
+                ph[k] = ph.get(k, 0) - v
+            tr["capacityDefault"] -= int(round(sv["pop"]))
+        tr["perHouse"] = {k: v for k, v in ph.items() if v}
+        tr["optionalServices"] = optional
 
     # Les assets derives d'un comptoir rejoignent wf_grants, en heritant item par item.
     for g, d in derived.items():
