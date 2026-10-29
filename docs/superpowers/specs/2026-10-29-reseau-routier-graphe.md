@@ -322,7 +322,7 @@ en soi.
 - **Hors périmètre, oubliés par la conception** : le moteur des commandes (`commande/ilots.ts`,
   `atteintes` et `routeVersReseau`) a ses propres parcours en 4-adjacence ; de même les moteurs
   de production (`slotPlan`, `prodPlan`, `localProd`, `prodlayout`). L'éditeur (échelle 2).
-- **Deux écarts au jeu gardés pour la parité** : les graines du noyau de
+- ~~Deux écarts au jeu gardés pour la parité~~ (corrigés le 30/10/2026, sans effet mesuré) : les graines du noyau de
   `repairRoadConnectivity` et le test « contre une route » du déplacement d'un consommateur
   d'eau comptent les 4 cases EN COIN d'une emprise, que le jeu ne raccorde pas. Les corriger
   change des plans : à faire à part, golden recapturé et écarts mesurés.

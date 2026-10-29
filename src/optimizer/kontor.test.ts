@@ -288,3 +288,22 @@ describe("réparation : raccorder le bâtiment, pas seulement son îlot", () => 
     expect(roadConnected(layout, lk, service, set)).toBe(true);
   });
 });
+
+describe("réparation : une route en coin du comptoir n'est pas un raccordement", () => {
+  it("l'îlot qui ne touche le comptoir que par un coin est raccroché, pas compté relié", () => {
+    // noyau : la route qui longe le côté haut du comptoir ; îlot : une case EN COIN (bas-droit),
+    // qui dessert une maison. Le jeu ne raccorde pas par un coin.
+    const kdef = pickKontorDef(catalog, "Roman")!;
+    const { w, h } = footprintSize(kdef, 0);
+    const g = makeGrid(40, 30);
+    const kontor = { uid: "k", defId: kdef.id, x: 5, y: 5, rotation: 0 as const, locked: false };
+    const coin = { x: 5 + w, y: 5 + h };
+    const maison = { uid: "m", defId: "g3145", x: 6 + w, y: 5 + h, rotation: 0 as const, locked: false };
+    const routes = [...Array.from({ length: w }, (_, i) => ({ x: 5 + i, y: 4 })), coin];
+    const r = repairRoadConnectivity(g, [kontor, maison], routes, lookup, 24, () => false);
+    expect(r.added).toBeGreaterThan(0);
+    const layout = { grid: g, buildings: [kontor, maison], roads: r.roads, fields: [] };
+    const { set } = rootedRoadSet(layout, lookup);
+    expect(roadConnected(layout, lookup, maison, set)).toBe(true);
+  });
+});

@@ -128,10 +128,9 @@ comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/plan
    travers du seul passage d'une zone la condamne ; le moteur devrait éviter de le poser là.
    Reste aussi 1 service sans accès (medium_02, une source d'aqueduc barrée par un service).
    Plus largement : un service sans accès compte encore dans la couverture et le bilan calculés.
-2. **Deux écarts au jeu gardés pour la parité** : les graines du noyau de
-   `repairRoadConnectivity` et le test « contre une route » du déplacement d'un consommateur
-   d'eau comptent les 4 cases EN COIN d'une emprise, que le jeu ne raccorde pas. À corriger,
-   golden recapturé et recensement refait.
+2. ~~Deux écarts « cases en coin »~~ : corrigés (graines du noyau de `repairRoadConnectivity`,
+   déplacement d'un consommateur d'eau). Aucun effet sur le recensement du Latium ni sur le
+   golden ; un test reproduit le cas de la réparation.
 3. **Échec complet du plan diagonal sur extralarge_04** (0 habitant), non expliqué.
 4. Chantiers d'interface : onglet Production à refaire (mode « île de production » de
    Planifier) ; prix du bilan non réglable ; plan diagonal non posable dans l'éditeur (il ne

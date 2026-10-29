@@ -506,22 +506,10 @@ export function repairRoadConnectivity(
     const d = lookup(b.defId);
     if (!d?.roadRoot) continue;
     const fp = footprintSize(d, b.rotation);
-    for (let i = -1; i <= fp.w; i++) {
-      for (const yy of [b.y - 1, b.y + fp.h]) {
-        const x = b.x + i;
-        if (yy >= 0 && yy < H && x >= 0 && x < W && roadAt[yy * W + x]) seeds.push(yy * W + x);
-      }
-    }
-    for (let j = 0; j < fp.h; j++) {
-      for (const xx of [b.x - 1, b.x + fp.w]) {
-        const y = b.y + j;
-        if (xx >= 0 && xx < W && y >= 0 && y < H && roadAt[y * W + xx]) seeds.push(y * W + xx);
-      }
-    }
-    // ⚠ Les graines droites ci-dessus comptent aussi les 4 cases EN COIN de l'emprise, que le
-    // jeu ne raccorde pas (cf. `connectKontor`, `rootedRoadSet`). Gardé tel quel : le corriger
-    // change des plans, c'est un changement à mesurer à part (golden de la trame droite).
-    if (reseau.losanges) for (const id of routesAuContactRect(reseau, b.x, b.y, fp.w, fp.h)) if (estLosange(reseau, id)) seeds.push(id);
+    // Les routes AU CONTACT de la racine : par un côté, ou un losange par sa pointe. Les 4 cases
+    // EN COIN de l'emprise, comptées jusqu'au 30/10/2026, ne sont pas un raccordement en jeu
+    // (cf. `connectKontor`, `rootedRoadSet`) : une route posée là faisait croire le noyau relié.
+    seeds.push(...routesAuContactRect(reseau, b.x, b.y, fp.w, fp.h));
   }
   if (!seeds.length) return { roads, added: 0, dropped: 0, orphans: 0, stranded: [], removed: [] };
   const grow = (from: number[]) => {

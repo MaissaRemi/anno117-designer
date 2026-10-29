@@ -492,11 +492,10 @@ export function planWater(
         const x = c.fp.x + dx, y = c.fp.y + dy;
         if (!libre(x, y)) continue;
         const per = perimeter({ x, y, w, h });
-        // contre une route : le périmètre, coins compris (écart au jeu gardé tel quel, le corriger
-        // change des plans), ou un losange touché par un coin
-        const contreUneRoute = per.some((q) => roadAt[q])
-          || (reseau.losanges > 0 && routesAuContactRect(reseau, x, y, w, h).length > 0);
-        if (!contreUneRoute) continue;
+        // contre une route : par un côté, ou un losange par sa pointe. Le périmètre de
+        // `perimeter`, coins compris, acceptait une route qui ne touche l'emprise que par un coin :
+        // le service déplacé n'avait alors aucun accès en jeu.
+        if (!routesAuContactRect(reseau, x, y, w, h).length) continue;
         cands.push({ x, y, d: Math.abs(dx) + Math.abs(dy), touche: per.some((q) => netDist[q] >= 0 && !roadAt[q]) });
       }
     }
