@@ -89,14 +89,9 @@ describe("exploitations : aucune stérile ne survit au plan", () => {
   // `droppedSlots` qui rend le retrait observable — et donc testable.
   //
   // Le NOMBRE retiré dépend du dessin du plan (il bouge dès qu'un service change de place) : on
-  // verrouille la nature du retrait — total ou partiel —, pas son compte.
+  // verrouille la nature du retrait — total ou partiel —, pas son compte. celtic_island_small_07
+  // n'y figure plus : avec la terre constructible du jeu, ses exploitations expédient toutes.
   const CAS: { id: string; retrait: "total" | "partiel"; pourquoi: string }[] = [
-    {
-      id: "celtic_island_small_07",
-      retrait: "total",
-      pourquoi: "le pire cas mesuré : ses DEUX exploitations étaient sans débouché. Le plan"
-        + " doit les retirer toutes plutôt que de livrer une île de façade",
-    },
     {
       id: "celtic_island_large_03",
       retrait: "partiel",

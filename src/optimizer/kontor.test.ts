@@ -28,41 +28,25 @@ function realIsland(id: string): GridShape {
 
 describe("une seule masse continentale", () => {
   it("ne garde que le tenant du comptoir", () => {
-    // Les « îles » du jeu ne sont pas des blocs pleins : 85 composantes de terre sur
-    // celtic_island_small_06, 112 sur celtic_island_small_01 dont une de 1 193 cases. Les
-    // moteurs y bâtissaient, aucune route ne franchissant la mer — 31 bâtiments INACTIFS en
-    // jeu sur une île de 67 maisons, marchés et puits compris, donc des maisons comptées
-    // comme desservies par des services qui ne tournent pas.
-    //
-    // Ni un détour plus long (essayé à 96 cases) ni le droit de raser des maisons pour ouvrir
-    // un passage (essayé aussi) n'y changeaient rien : on ne traverse pas la mer.
-    const grid = realIsland("celtic_island_small_01");
-    const W = grid.w, H = grid.h, N = W * H;
-    const kept = keepMainLandmass(grid);
-    const seen = new Uint8Array(N);
-    const sizes: number[] = [];
-    for (let i = 0; i < N; i++) {
-      if (!kept.usable[i] || seen[i]) continue;
-      let n = 0;
-      let fr = [i];
-      seen[i] = 1;
-      while (fr.length) {
-        const nx: number[] = [];
-        for (const c of fr) {
-          n++;
-          const x = c % W, y = (c / W) | 0;
-          for (const d of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
-            if (d >= 0 && kept.usable[d] && !seen[d]) { seen[d] = 1; nx.push(d); }
-          }
-        }
-        fr = nx;
-      }
-      sizes.push(n);
-    }
-    expect(sizes.length).toBe(1); // un seul tenant subsiste
-    const before = grid.usable.filter(Boolean).length;
-    expect(sizes[0]).toBeLessThan(before); // l'île en avait bien plusieurs
-    expect(sizes[0]).toBeGreaterThan(before * 0.5); // et on a gardé le principal
+    // Les « îles » du jeu ne sont pas des blocs pleins : bancs et lobes détachés. Les moteurs y
+    // bâtissaient, aucune route ne franchissant la mer — 31 bâtiments INACTIFS en jeu sur une
+    // île de 67 maisons. Depuis que la terre constructible vient du jeu (AreaIDs), les îles
+    // réelles mesurées sont d'un seul tenant : le cas est donc construit.
+    //   terre x 0..9 | mer x 10..19 | terre x 20..29, comptoir à gauche
+    const w = 30, h = 10;
+    const usable = Array.from({ length: w * h }, (_, c) => c % w < 10 || c % w >= 20);
+    const kept = keepMainLandmass({ w, h, usable }, { x: 2, y: 5 });
+    expect(kept.usable.filter(Boolean).length).toBe(100);
+    expect(kept.usable[5 * w + 25]).toBe(false);
+  });
+
+  it("une rivière relie ses deux rives : un pont la franchit", () => {
+    const w = 30, h = 10;
+    const usable = Array.from({ length: w * h }, (_, c) => c % w < 10 || c % w >= 20);
+    const rivers = Array.from({ length: w * h }, (_, c) => c % w >= 10 && c % w < 20 && ((c / w) | 0) === 5);
+    const kept = keepMainLandmass({ w, h, usable, rivers }, { x: 2, y: 5 });
+    expect(kept.usable.filter(Boolean).length).toBe(200);
+    expect(kept.usable[5 * w + 10]).toBe(false); // la rivière reste non constructible
   });
 
   it("une grille d'un seul tenant est rendue telle quelle", () => {

@@ -30,6 +30,7 @@ import rda_extract as rda
 from filedb import parse
 
 GAME = os.environ.get("ANNO_GAME_DIR", r"F:\Anno 117 - Pax Romana\maindata")
+assert os.path.isdir(GAME), f"Repertoire jeu introuvable : {GAME!r}. Definir ANNO_GAME_DIR."
 HERE = os.path.dirname(os.path.dirname(__file__))
 OUT = os.path.join(HERE, "src", "data", "terrain.generated.json")
 OUT_HEIGHTS = os.path.join(HERE, "src", "data", "terrain.heights.generated.json")
@@ -95,6 +96,50 @@ def grid_bits(node, w: int, h: int):
     return bits
 
 
+def zones_from_gamedata(root, w: int, h: int):
+    """ZONES CONSTRUCTIBLES de l'ile, telles que le jeu les definit (repere des donnees).
+
+    GameSessionManager/AreaIDs : une valeur 16 bits par case, en blocs de 16 x 16 (le premier
+    enfant decrit le bloc et sa valeur par defaut). Bits bas = zone de l'ile (0 = aucune),
+    bit 0x2000 = CONSTRUCTIBLE. WorldManager/Water : 1 bit par case, 1 sur la terre, 0 sur l'eau.
+    Croises, ils donnent :
+      - terre constructible : 0x2000 et terre ;
+      - eau constructible   : 0x2000 et eau — la bande cotiere des ports, pecheurs, salines ;
+      - relief              : zone de l'ile, terre, sans 0x2000 — montagnes et falaises.
+    Valide sur roman_island_medium_01, celtic_island_large_07 et la carte continentale. Le bit
+    0x4000, vu seulement sur la continentale (943 cases d'eau), n'est pas interprete.
+
+    Renvoie (terre, eau, relief) en listes de bits, ou None si les grilles manquent ou ne sont
+    pas a la taille de l'ile.
+    """
+    a = root.path("GameSessionManager", "AreaIDs")
+    wat = root.path("GameSessionManager", "WorldManager", "Water")
+    if a is None or wat is None:
+        return None
+    if struct.unpack("<II", a.attr("x") + a.attr("y")) != (w, h):
+        return None
+    s16 = lambda b: struct.unpack("<H", b)[0] if b else 0
+    ids = [0] * (w * h)
+    for b in a.children[1:]:
+        bx, by = s16(b.attr("x")), s16(b.attr("y"))
+        v = b.attr("values")
+        vals = [struct.unpack("<H", v[i:i + 2])[0] for i in range(0, 512, 2)] if v else [s16(b.attr("default"))] * 256
+        for j in range(16):
+            for i in range(16):
+                x, y = bx + i, by + j
+                if x < w and y < h:
+                    ids[y * w + x] = vals[j * 16 + i]
+    terre = grid_bits(wat, w, h)
+    if terre is None:
+        return None
+    constructible = [1 if v & 0x2000 else 0 for v in ids]
+    return (
+        [c & t for c, t in zip(constructible, terre)],
+        [c & (1 - t) for c, t in zip(constructible, terre)],
+        [1 if (v & 0xFF) and not c and t else 0 for v, c, t in zip(ids, constructible, terre)],
+    )
+
+
 def gamedata_from_a7m(data: bytes):
     """gamedata.data parsé (a7m = RDA imbriqué), ou None."""
     fh = io.BytesIO(data)
@@ -136,8 +181,6 @@ def heights_from_gamedata(root, w: int, h: int):
 
 
 def main():
-    # verifie ici, pas a l'import : build_pentes.py reutilise rle_encode sans le jeu
-    assert os.path.isdir(GAME), f"Repertoire jeu introuvable : {GAME!r}. Definir ANNO_GAME_DIR."
     terrain = {}
     heights_out = {}
     patched = rda.PatchOverlay(GAME)
@@ -167,6 +210,7 @@ def main():
                 continue
             rivers = None
             heights = None
+            zones = None
             a7m_path = info_path[: -len(".a7minfo")] + ".a7m"
             if a7m_path in index:
                 try:
@@ -174,12 +218,18 @@ def main():
                     if gd is not None:
                         rivers = rivers_from_gamedata(gd, w, hgt)
                         heights = heights_from_gamedata(gd, w, hgt)
+                        zones = zones_from_gamedata(gd, w, hgt)
                 except Exception as e:
                     print(f"  ! {island_id}: a7m {e}", file=sys.stderr)
             riverCount = sum(rivers) if rivers else 0
             terrain[island_id] = {
                 "slots": slots,
                 "rivers": rle_encode(rivers) if rivers and riverCount else None,
+                # zones constructibles DU JEU (terre, eau cotiere, relief) : elles remplacent le
+                # masque tire de l'image, qui tient la roche pour de la terre
+                "constructible": rle_encode(zones[0]) if zones else None,
+                "eauConstructible": rle_encode(zones[1]) if zones else None,
+                "relief": rle_encode(zones[2]) if zones else None,
                 # les hauteurs (~95 % du volume) vont dans un fichier SÉPARÉ chargé à
                 # la demande (import dynamique) — hors du bundle principal
                 "hasHeights": bool(heights),

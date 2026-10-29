@@ -41,9 +41,11 @@ const COL_SEA: RGB = [8, 14, 24];
 const EDGE_SHADE = 0.55;
 const shade = (c: RGB, k: number): RGB => [Math.round(c[0] * k), Math.round(c[1] * k), Math.round(c[2] * k)];
 const COL_LAND: RGB = [30, 34, 40];
-/** Montagne et falaise : de la terre, mais pas constructible (masque des pentes). */
+/** Montagne et falaise : de la terre, mais pas constructible (relief, d'après le jeu). */
 const COL_ROCK: RGB = [74, 76, 82];
 const COL_RIVER: RGB = [45, 90, 115];
+/** Eau côtière constructible (ports, pêcheurs, salines). */
+const COL_COAST: RGB = [18, 44, 64];
 const COL_ROAD: RGB = [96, 100, 108];
 const COL_AQUA: RGB = [64, 176, 208];
 const COL_SERVICE: RGB = [214, 92, 76];
@@ -125,7 +127,8 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, roadTyp
     for (let i = 0; i < W * H; i++) {
       const c = grid.usable[i] ? COL_LAND
         : grid.rivers?.[i] ? COL_RIVER
-          : grid.water && !grid.water[i] ? COL_ROCK : COL_SEA;
+          : grid.relief?.[i] ? COL_ROCK
+            : grid.water?.[i] ? COL_COAST : COL_SEA;
       const o = i * 4;
       px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255;
     }

@@ -109,6 +109,8 @@ export interface GridShape {
   usable: boolean[]; // longueur w*h, index = y*w + x — cases TERRE constructibles
   water?: boolean[]; // optionnel : cases EAU/mer (pour bâtiments côtiers). Îles surtout.
   rivers?: boolean[]; // optionnel : cases RIVIÈRE (argile, slots river)
+  /** Optionnel : terre de l'île non constructible (montagnes, falaises), d'après le jeu. */
+  relief?: boolean[];
   /** Optionnel : cases réservées à la route, sans bâtiment (façade d'un emplacement de montagne). */
   voies?: boolean[];
   slots?: GridSlot[]; // optionnel : slots de ressource (mines, argile, source d'aqueduc)

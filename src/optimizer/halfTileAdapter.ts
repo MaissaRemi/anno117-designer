@@ -64,6 +64,7 @@ export function downscaleGrid(g: GridShape): GridShape {
     usable: reduce(g.usable, "and")!,
     water: reduce(g.water, "or"),
     rivers: reduce(g.rivers, "or"),
+    relief: reduce(g.relief, "or"),
     slots: g.slots?.map((s) => ({ ...s, x: Math.floor(s.x / 2), y: Math.floor(s.y / 2) })),
     islandId: g.islandId,
     // cellsPerTile absent → tuile (scale 1) côté moteurs/coverage
