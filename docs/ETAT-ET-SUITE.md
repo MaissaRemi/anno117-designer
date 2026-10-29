@@ -1,5 +1,7 @@
 # État du projet et chantiers ouverts
 
+> **Reprise au 29/10/2026 : lire d'abord `docs/REPRISE.md`.**
+
 > **2026-10-29 — refonte du moteur d'île faite (8 étapes).** Le chemin principal est désormais
 > l'onglet **Commande** : le joueur commande, le moteur dresse la nomenclature et dispose quartiers
 > et production (`src/commande/`). L'ancien moteur reste, comme « Remplir l'île ». Découpage,
