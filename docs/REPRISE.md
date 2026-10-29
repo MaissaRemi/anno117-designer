@@ -94,8 +94,14 @@ jeu ; sans effet tant qu'aucun losange n'est posé.
 
 ## Raccordement au comptoir : corrigé
 
-Recensement sur les 27 îles romaines du LATIUM (Patriciens, pavée, Foi, 80 %) — rien n'a été
-mesuré en Albion, où les peuples (Celtes, romanisation) et les bâtiments diffèrent —, avant →
+**Albion**, mesuré à part (22 îles, pavée, Foi, 80 %, hauteurs), avant les corrections
+(commit 62e8e0b) → après, chaque branche séparément, aucune île en recul :
+- branche celte (Aldermen) : 339 540 → 339 973 habitants, 114 → 73 maisons rasées, 0 service
+  sans accès avant comme après ;
+- branche romanisée (Nobles) : 354 443 → 356 489 habitants, 171 → 68 maisons rasées, 18 → 0
+  services sans accès (tous sur small_04 : 1 011 → 2 612 habitants).
+
+Recensement sur les 27 îles romaines du **Latium** (Patriciens, pavée, Foi, 80 %), avant →
 après :
 1 078 230 → 1 082 207 habitants, 263 → 113 maisons rasées, 31 → 1 service sans accès au
 comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/planLattice.ts` :
@@ -133,13 +139,16 @@ comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/plan
 3. ~~Plan diagonal d'extralarge_04 à 0 habitant~~ : il loge désormais 2 218 maisons ; l'une
    des corrections du raccordement ou des poches a levé l'échec, non isolée.
 4. **Un service sans accès compte encore dans la couverture et le bilan** : reporté. Il n'en
-   reste qu'un en Latium (medium_02, une source d'aqueduc barrée par un service) ; le corriger
-   demande de réévaluer chaque maison sans les services inactifs, or `planLattice` n'exporte
-   que le palier atteint, pas la couverture. À reprendre si le recensement d'Albion en montre.
+   reste qu'un en Latium (medium_02, une source d'aqueduc barrée par un service) et aucun en
+   Albion ; le corriger demande de réévaluer chaque maison sans les services inactifs, or
+   `planLattice` n'exporte que le palier atteint, pas la couverture.
 5. **Île de production** : conception à valider, quatre questions pour Rémi
    (`docs/superpowers/specs/2026-10-30-ile-de-production-design.md`).
-6. Chantiers d'interface : prix du bilan non réglable ; plan diagonal non posable dans
-   l'éditeur (il ne gagne plus nettement que sur small_07, +26 %).
+6. ~~Prix du bilan non réglable~~ : curseur dans les options avancées de « Remplir l'île »
+   (indicatif seulement, 0 à 20 %, 6 % par défaut).
+7. **Plan diagonal non posable dans l'éditeur** : reporté. L'éditeur (demi-cases) ne sait
+   représenter ni un losange de route ni une maison diagonale sans approximation, et la
+   diagonale ne gagne plus nettement que sur small_07 (+26 %).
 
 ## Pièges connus
 
