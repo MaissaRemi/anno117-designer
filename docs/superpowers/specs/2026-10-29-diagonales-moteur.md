@@ -106,7 +106,10 @@ ci-dessus reposent sur la règle fausse. Corrigé : `catalogueDiagonal` divise l
 | extralarge_04 | 81 382 | 0 | échec du plan diagonal |
 
 La trame diagonale entière ne vaut donc que sur quelques îles à la forme en biais ; small_05
-est aussi celle dont le plan droit rase le plus de maisons pour joindre le comptoir (74). C'est
+est aussi celle dont le plan droit rase le plus de maisons pour joindre le comptoir (74).
+**Mise à jour** : ces 74 maisons et 16 services coupés venaient d'un défaut de la réparation
+des îlots (traités une seule fois, dans l'ordre de la grille), corrigé : le plan droit de
+small_05 monte à 6 450 habitants et dépasse le diagonal. Reste small_07 (+26 %). C'est
 plutôt un argument pour la trame MÊLÉE (droite ici, en biais là) que pour la diagonale seule.
 L'échec complet sur extralarge_04 n'est pas expliqué.
 
@@ -170,8 +173,8 @@ trame mêlée est donc du même ordre que ce bruit, AVANT le coût des coutures 
 l'économie commune. Seule small_05 sort du lot, et le plan entièrement diagonal, déjà proposé
 parmi les plans au choix, le capte (+41 %).
 
-**Conclusion provisoire** : les étapes 3 à 6 de la trame mêlée sont un gros chantier pour un
-gain attendu faible. Décision à prendre par Rémi avant d'aller plus loin.
+**Décision** : les étapes 3 à 6 de la trame mêlée sont un gros chantier pour un gain attendu
+faible ; elles sont mises en pause (Rémi m'a laissé trancher).
 
 ## Ce que coûtent aujourd'hui les raccordements à angle droit
 

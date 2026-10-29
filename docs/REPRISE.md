@@ -72,36 +72,51 @@ Détail et mesures : `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`, 
 - Les demi-cases au bord d'une route diagonale sont constructibles par un bâtiment diagonal.
 - La route du jeu est un graphe de tronçons (`MeshGraph`), pas une peinture de cases.
 
-## La suite : trame mêlée, étape 2 — le réseau routier en graphe
+## Où en est la trame mêlée : EN PAUSE
 
-Conception complète dans l'étude des diagonales, section « Trame mêlée : conception ». Une île
-peut être droite ici et en biais là, avec UNE seule économie (un Amphithéâtre, un dieu, un
-réseau d'eau, un bilan) : seule la géométrie est locale. Étapes restantes :
-2. réseau routier en graphe (cases droites et losanges, raccordement par côté ou par coin,
-   portée en nœuds) — couverture, accès au comptoir et traversées d'aqueduc dessus.
-   Conception et avancement : `docs/superpowers/specs/2026-10-29-reseau-routier-graphe.md`.
-   Faits : golden de la trame droite (`pnpm vitest run src/optimizer/trameDroite.golden.test.ts`,
-   `GOLDEN=1` pour tout le panel), module `engine/reseauRoutier.ts`, et sur le graphe :
-   analyseur à l'échelle 1, `streetGrid`, `planLattice`, comptoir, réparation, élagage,
-   `waterPlan`. Une route de plan peut être un losange (`RoadTile.losange`). Restent : les
-   liaisons diagonales (étape 6, option), l'occupation des losanges, `commande/ilots.ts` ;
-   Q1 tranchée (jonction par recouvrement, portée en longueur), graphe et `cadreDiagonal`
-  corrigés : la trame diagonale seule ne gagne plus que sur 5 îles romaines sur 27 (small_05
-  +41 %, small_07 +26 %). Étape 6 faite derrière l'option `liaisonsDiagonales` (désactivée) :
-  les liaisons diagonales n'apportent rien de mesurable ; un PRIX des maisons rasées dans le
-  tracé du comptoir, lui, donne +1 364 habitants sur 27 îles, aucune en recul — adopté
-  (`PRIX_CASE_RASEE` = 3, `optimizer/kontor.ts`).
-  Q2 et Q3 restent à vérifier — détail dans la conception ;
-3. carte d'orientation de l'île selon ses côtes — **étude préalable faite, en suspens** :
-   l'orientation des côtes ne prédit rien, et le plafond de gain de la trame mêlée est du même
-   ordre que le bruit entre deux plans droits (section « étape 3 : étude préalable » de l'étude
-   des diagonales). Décision de Rémi attendue avant d'investir dans les étapes 3 à 6 ;
-4. squelette de rues mêlé, recousu aux jonctions ;
-5. placement global unique des services, de l'eau et des maisons sur ce graphe ;
-6. trame droite, diagonale et mêlée comparées dans les plans au choix.
+Décidé après mesure (section « étape 3 : étude préalable » de l'étude des diagonales) : le
+gain espéré d'une île droite ici et en biais là est du même ordre que le bruit entre deux plans
+droits, et l'orientation des côtes ne prédit rien. Les étapes 3 à 6 (carte d'orientation,
+squelette mêlé, placement global, comparaison) ne sont pas commencées.
 
-Autres chantiers : onglet Production à refaire (mode « île de production » de Planifier) ;
-prix du bilan non réglable dans l'interface ; plan diagonal non posable dans l'éditeur.
+Ce qui en reste, utilisable :
+- le **réseau routier en graphe** (`engine/reseauRoutier.ts`), cases droites et losanges, sous
+  l'analyseur, `streetGrid`, `planLattice`, le comptoir, la réparation, l'élagage et l'eau.
+  Conception et bilan : `docs/superpowers/specs/2026-10-29-reseau-routier-graphe.md` ;
+- le **golden de la trame droite** (`pnpm vitest run src/optimizer/trameDroite.golden.test.ts`,
+  `GOLDEN=1` pour les 15 cas, `-u` pour recapturer un changement VOULU) ;
+- les **liaisons diagonales** vers le comptoir, derrière l'option `liaisonsDiagonales`
+  (désactivée : elles n'apportent rien de mesurable, et l'éditeur ne sait pas dessiner un
+  losange — `RoadTile.losange`).
+
+Q2 (deux losanges pointe contre pointe) et Q3 (aqueduc et route en biais) restent à vérifier en
+jeu ; sans effet tant qu'aucun losange n'est posé.
+
+## Raccordement au comptoir : corrigé
+
+Recensement sur les 27 îles romaines (Patriciens, pavée, Foi, 80 %), avant → après :
+1 078 230 → 1 082 276 habitants, 263 → 126 maisons rasées, 31 → 8 services sans accès au
+comptoir, aucune île en recul. Deux corrections dans `optimizer/kontor.ts` :
+- **une maison rasée coûte plus qu'un détour** (`PRIX_CASE_RASEE` = 3) dans le raccordement du
+  comptoir et la réparation des îlots ;
+- **la réparation repasse sur ses échecs** tant qu'un îlot s'est raccroché : un îlot du fond ne
+  se raccroche souvent qu'à travers un autre, traité après lui. small_05 : 3 780 → 6 450
+  habitants, 16 → 1 service coupé ; son plan droit dépasse désormais le diagonal (5 313), dont
+  le « +41 % » venait surtout de ce défaut.
+
+## La suite, par intérêt
+
+1. **Les 8 services encore sans accès** : medium_05 (3), medium_02 (2), small_05 (1, une source
+   d'aqueduc), extralarge_04 (1), large_02 (1). Même démarche : carte de l'île, sonde au moment
+   de la réparation.
+2. **Deux écarts au jeu gardés pour la parité** : les graines du noyau de
+   `repairRoadConnectivity` et le test « contre une route » du déplacement d'un consommateur
+   d'eau comptent les 4 cases EN COIN d'une emprise, que le jeu ne raccorde pas. À corriger,
+   golden recapturé et recensement refait.
+3. **Échec complet du plan diagonal sur extralarge_04** (0 habitant), non expliqué.
+4. Chantiers d'interface : onglet Production à refaire (mode « île de production » de
+   Planifier) ; prix du bilan non réglable ; plan diagonal non posable dans l'éditeur (il ne
+   gagne plus nettement que sur small_07, +26 %).
 
 ## Pièges connus
 

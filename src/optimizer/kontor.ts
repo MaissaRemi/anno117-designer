@@ -552,6 +552,8 @@ export function repairRoadConnectivity(
   const strandedIdx = new Set<number>();
   const razedIdx = new Set<number>();
   const terrain = terrainDeLiaison(grid, reseau, owner, buildings, demolishable, new Uint8Array(N), opts);
+  // les îlots : composantes de routes hors noyau
+  const ilots: number[][] = [];
   for (let i = 0; i < T; i++) {
     if (!estRoute(reseau, i) || inCore[i] || seen[i]) continue;
     const comp: number[] = [];
@@ -565,6 +567,11 @@ export function repairRoadConnectivity(
       }
       fr = next;
     }
+    ilots.push(comp);
+  }
+
+  /** Raccroche l'îlot au noyau par un court chemin ; vrai si c'est fait. */
+  const raccrocher = (comp: number[]): boolean => {
     let linked = false;
     {
       // le plus court chemin qui épargne les maisons, en losanges aussi avec `diagonales` ;
@@ -623,7 +630,33 @@ export function repairRoadConnectivity(
       }
       frontier = next;
     }
-    if (linked) { grow(comp); continue; }
+    return linked;
+  };
+
+  // PASSES JUSQU'À STABILITÉ. Un îlot ne se raccroche souvent qu'À TRAVERS un autre, raccroché
+  // plus tard dans l'ordre de la grille : traités une seule fois, du haut vers le bas, les îlots
+  // du fond restaient isolés pour toujours. Mesuré sur roman_island_small_05 : tout le quartier
+  // nord, derrière un îlot du milieu, coupé du comptoir — 495 cases de route orphelines, 87
+  // bâtiments isolés, 74 maisons rasées et 16 services inactifs. On repasse donc sur les échecs
+  // tant qu'un raccrochage a réussi : le noyau a grandi, ils en sont peut-être à portée.
+  let enAttente = ilots;
+  for (let progres = true; progres && enAttente.length;) {
+    progres = false;
+    const echecs: number[][] = [];
+    for (const comp of enAttente) {
+      if (inCore[comp[0]]) continue; // absorbé par un raccord voisin
+      if (raccrocher(comp)) { grow(comp); progres = true; } else echecs.push(comp);
+    }
+    enAttente = echecs;
+  }
+
+  // les bâtiments desservis par le noyau, une fois tous les raccords posés
+  servedByCore.fill(0);
+  for (let c = 0; c < T; c++) {
+    if (!inCore[c]) continue;
+    casesAuContact(reseau, c, (n) => { if (owner[n] >= 0) servedByCore[owner[n]] = 1; });
+  }
+  for (const comp of enAttente) {
     // Irrécupérable. Deux cas très différents :
     //  - tous les bâtiments qu'il dessert touchent déjà le réseau enraciné → l'îlot ne sert
     //    À RIEN (reliquat d'élagage : case d'accès secondaire d'une maison). On le SUPPRIME,

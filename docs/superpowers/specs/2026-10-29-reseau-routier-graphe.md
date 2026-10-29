@@ -308,7 +308,9 @@ en soi.
   plus court chemin pondéré sert désormais au comptoir et à la réparation ; le tracé historique
   reste le recours quand aucun chemin ne tient dans la longueur permise, prix compris. Golden
   recapturé : tous les plans du panel gagnent de 20 à 158 habitants.
-- **small_05** : la cause de ses 74 maisons rasées et 16 services coupés reste à trouver.
+- ~~small_05~~ : trouvé et corrigé — la réparation traitait chaque îlot une seule fois, dans
+  l'ordre de la grille ; elle repasse désormais sur ses échecs (+2 682 habitants sur 27 îles,
+  services sans accès 31 → 8).
 - **Afficher et poser des losanges** : éditeur, rendu, persistance, invariants, moteurs de
   production lisent tous `RoadTile` sans sa forme ; préalable à toute option losange visible.
 - **Non testé sur des losanges** : les branches losange de `planLattice` (élagage ancré au

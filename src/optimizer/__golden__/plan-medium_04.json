@@ -40,7 +40,7 @@
         "1499": 26
       },
       "batiments": 613,
-      "routes": 2912,
+      "routes": 2914,
       "conduites": 172,
       "champs": 0,
       "eau": {
@@ -49,13 +49,13 @@
       },
       "repere": "droit",
       "analyse": {
-        "reseauEnracine": 2902,
+        "reseauEnracine": 2914,
         "batimentsCoupes": 0,
-        "casesCouvertes": 98057,
-        "hachageCouvertures": "7a1fec4123dcf8ee"
+        "casesCouvertes": 98298,
+        "hachageCouvertures": "6d487eb82225ed4a"
       },
       "violations": 1,
-      "hachage": "26ba7dea92da2383"
+      "hachage": "2537ed3a50269f04"
     }
   ]
 }

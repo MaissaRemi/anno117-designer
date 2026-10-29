@@ -242,3 +242,23 @@ describe("liaisons en diagonale", () => {
     expect(rootedRoadSet(layout, lookup).set.has(`${ilot[0].x},${ilot[0].y}`)).toBe(true);
   });
 });
+
+describe("réparation : un îlot se raccroche à travers un autre", () => {
+  it("l'îlot du fond, traité le premier, est repris une fois l'îlot du milieu raccroché", () => {
+    // comptoir en bas ; noyau : la route qui longe son côté haut (y = 29). Îlot A (5, 20) à 8
+    // cases du noyau ; îlot B (5, 12), plus haut donc traité avant A, à 16 cases du noyau mais
+    // à 7 de A. Détour permis : 10 cases. Une maison n'est desservie que par B.
+    const kdef = pickKontorDef(catalog, "Roman")!;
+    const { w } = footprintSize(kdef, 0);
+    const g = makeGrid(20, 40);
+    const kontor = { uid: "k", defId: kdef.id, x: 1, y: 30, rotation: 0 as const, locked: false };
+    const maisonB = { uid: "m", defId: "g3145", x: 6, y: 11, rotation: 0 as const, locked: false };
+    const routes = [...Array.from({ length: w }, (_, i) => ({ x: 1 + i, y: 29 })), { x: 5, y: 20 }, { x: 5, y: 12 }];
+    const r = repairRoadConnectivity(g, [kontor, maisonB], routes, lookup, 10, () => false);
+    expect(r.stranded).toEqual([]);
+    expect(r.added).toBe(8 + 7);
+    const layout = { grid: g, buildings: [kontor, maisonB], roads: r.roads, fields: [] };
+    const { set } = rootedRoadSet(layout, lookup);
+    expect(roadConnected(layout, lookup, maisonB, set)).toBe(true);
+  });
+});
