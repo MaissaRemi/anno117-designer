@@ -95,8 +95,8 @@ jeu ; sans effet tant qu'aucun losange n'est posé.
 ## Raccordement au comptoir : corrigé
 
 Recensement sur les 27 îles romaines (Patriciens, pavée, Foi, 80 %), avant → après :
-1 078 230 → 1 082 276 habitants, 263 → 126 maisons rasées, 31 → 4 services sans accès au
-comptoir, aucune île en recul. Trois corrections dans `optimizer/kontor.ts` :
+1 078 230 → 1 082 207 habitants, 263 → 113 maisons rasées, 31 → 1 service sans accès au
+comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/planLattice.ts` :
 - **une maison rasée coûte plus qu'un détour** (`PRIX_CASE_RASEE` = 3) dans le raccordement du
   comptoir et la réparation des îlots ;
 - **la réparation repasse sur ses échecs** tant qu'un îlot s'est raccroché : un îlot du fond ne
@@ -108,19 +108,23 @@ comptoir, aucune île en recul. Trois corrections dans `optimizer/kontor.ts` :
   revenait pas vers la ville alors que le réseau était à 2 ou 3 cases de l'autre côté
   (large_02, medium_02, small_05, extralarge_04). Services sans accès : 8 → 4. La population
   affichée ne bouge pas — le moteur comptait déjà ces services actifs —, mais en jeu une
-  source coupée assèche tout son réseau d'eau.
+  source coupée assèche tout son réseau d'eau ;
+- **les poches murées restent vides** (`planLattice`) : un grand bâtiment posé contre le relief
+  peut murer une bande de terre ; une route qu'aucun chemin à travers la terre (sans traverser
+  de bâtiment) ne relie au comptoir réservé est déclarée murée, ses services sortent du plan et
+  aucune maison ne s'y pose. medium_05 : 3 → 0 services sans accès, −69 habitants AFFICHÉS
+  (l'ancien chiffre comptait trois services inactifs) ; plan diagonal de medium_01 : 37 → 2.
+  Effet de bord assumé : la recette retenue peut changer. celtic_island_large_07 (sans
+  hauteurs) passe de 14 400 à 12 301 habitants affichés : la recette qui l'emportait devait
+  son bilan à huit services d'un quartier muré, inactifs en jeu (piste la plus probable, non
+  isolée formellement). Les poches laissées vides peuvent déclencher l'invariant `terre-vide`.
 
 ## La suite, par intérêt
 
-1. **Les 4 services encore sans accès**, deux causes hors de portée de la réparation :
-   - medium_05 (3 services, 8 maisons de Liberti rasées) : l'Amphithéâtre, 22 cases de large,
-     est posé contre le relief et des cases non constructibles ; il mure une bande de terre où
-     le moteur pose quand même maisons et services. Défaut de PLACEMENT (`planLattice`) : ne
-     rien poser dans une poche que le réseau ne peut pas atteindre, ou poser l'Amphithéâtre
-     ailleurs ;
-   - medium_02 (1 source d'aqueduc) : barrée par un service, sans autre passage.
-   Plus largement : un service sans accès compte quand même dans la couverture calculée ; ses
-   maisons sont donc comptées servies à tort. À retirer du plan, couverture recomptée.
+1. **Mieux que laisser les poches vides : ne pas les créer.** Un grand bâtiment posé en
+   travers du seul passage d'une zone la condamne ; le moteur devrait éviter de le poser là.
+   Reste aussi 1 service sans accès (medium_02, une source d'aqueduc barrée par un service).
+   Plus largement : un service sans accès compte encore dans la couverture et le bilan calculés.
 2. **Deux écarts au jeu gardés pour la parité** : les graines du noyau de
    `repairRoadConnectivity` et le test « contre une route » du déplacement d'un consommateur
    d'eau comptent les 4 cases EN COIN d'une emprise, que le jeu ne raccorde pas. À corriger,

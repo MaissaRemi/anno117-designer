@@ -11,7 +11,9 @@ import { MAX_RUN, needsWater, planWater, type WaterPlanResult } from "./waterPla
 import { makeStreetGrid } from "./streetGrid";
 import { copiesEnTrop } from "./doublons";
 import { planningRange, type RoadType } from "../engine/roads";
-import { casesAuContact, losangeSur, routeDe, routesDuReseau, tailleReseau, voisins } from "../engine/reseauRoutier";
+import {
+  casesAuContact, losangeSur, noeudsAuContactRect, routeDe, routesDuReseau, tailleReseau, voisins,
+} from "../engine/reseauRoutier";
 
 
 export interface LatticeOpts {
@@ -549,13 +551,19 @@ export function planLattice(
 
   // --- carte de demande (où une maison TIENT, après les services) ---
   // recalculable : chaque densification stampe une emprise → des slots meurent.
+  // Routes murées (cf. « LES POCHES MURÉES RESTENT VIDES ») : une maison ne s'y raccorde pas.
+  let enclave: Uint8Array | null = null;
+  const desservable = (x: number, y: number): boolean => {
+    if (!touchesRoad(x, y)) return false;
+    return !enclave || routesAuContact(x, y, rw, rh).some((c) => !enclave![c]);
+  };
   let demand = new Uint8Array(N);
   let demandTotal = 0;
   const rebuildDemand = () => {
     demand = new Uint8Array(N);
     demandTotal = 0;
     for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
-      if (fitsHouse(x, y) && touchesRoad(x, y)) { demand[y * W + x] = 1; demandTotal++; }
+      if (fitsHouse(x, y) && desservable(x, y)) { demand[y * W + x] = 1; demandTotal++; }
     }
   };
   rebuildDemand();
@@ -878,6 +886,70 @@ export function planLattice(
     retirerDuPlan(enTrop);
   }
 
+  // ═══ LES POCHES MURÉES RESTENT VIDES ═══════════════════════════════════════════════════
+  //
+  // Un grand bâtiment posé contre le relief peut murer une bande de terre : son emprise efface
+  // les routes du peigne qui la traversaient, et la bande n'a plus aucun passage vers le reste
+  // de l'île. Le moteur y posait quand même maisons et services, contre des routes qui ne
+  // mènent nulle part ; la réparation ne pouvait rien (il aurait fallu traverser un bâtiment),
+  // les maisons étaient rasées et les services restaient inactifs en jeu. Mesuré sur
+  // roman_island_medium_05 : l'Amphithéâtre mure une bande, 8 maisons rasées, 3 services
+  // (Latrine, Puits, Tour de guet) sans accès au comptoir.
+  //
+  // Une route est murée si AUCUN chemin à travers la terre — routes, cases libres, conduites
+  // (une route les franchit), mais aucun bâtiment — ne la relie au comptoir réservé. Les
+  // services dont toutes les routes au contact sont murées sortent du plan ; aucune maison ne
+  // se pose contre une route murée. Sans comptoir réservé (planLattice seul), rien ne change.
+  enclave = (() => {
+    const R = opts.reserved;
+    if (!R) return null;
+    const bati = new Uint8Array(N);
+    for (const b of buildings) {
+      const fp = footprintSize(lookup(b.defId)!, b.rotation);
+      for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
+        const x = b.x + i, y = b.y + j;
+        if (x >= 0 && y >= 0 && x < W && y < H) bati[y * W + x] = 1;
+      }
+    }
+    const passe = (c: number) => roadAt[c] === 1 || ((grid.usable[c] || routeSeule(grid, c)) && !bati[c]);
+    const atteint = new Uint8Array(N);
+    let fr: number[] = [];
+    noeudsAuContactRect(reseau, R.x, R.y, R.w, R.h, (c) => {
+      if (c < N && passe(c) && !atteint[c]) { atteint[c] = 1; fr.push(c); }
+    });
+    while (fr.length) {
+      const next: number[] = [];
+      for (const c of fr) {
+        const x = c % W;
+        for (const n of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, c - W, c + W]) {
+          if (n < 0 || n >= N || atteint[n] || !passe(n)) continue;
+          atteint[n] = 1; next.push(n);
+        }
+      }
+      fr = next;
+    }
+    const muree = new Uint8Array(N);
+    let routesAtteintes = 0, routesMurees = 0;
+    for (let c = 0; c < N; c++) {
+      if (!roadAt[c]) continue;
+      if (atteint[c]) routesAtteintes++;
+      else { muree[c] = 1; routesMurees++; }
+    }
+    // garde-fou : un comptoir lui-même enfermé ne doit pas vider l'île
+    if (!routesMurees || routesMurees >= routesAtteintes) return null;
+    return muree;
+  })();
+  if (enclave) {
+    const enPoche = new Set<string>();
+    for (const b of buildings) {
+      if (!typeCov.has(b.defId)) continue; // services et institutions seulement
+      const fp = footprintSize(lookup(b.defId)!, b.rotation);
+      const contacts = routesAuContact(b.x, b.y, fp.w, fp.h);
+      if (contacts.length && contacts.every((c) => enclave![c])) enPoche.add(b.uid);
+    }
+    retirerDuPlan(enPoche);
+  }
+
   // refresh FINAL de tous les types : les stamps tardifs ont pu invalider les BFS
   // précédents (routes écrasées) — le filtre maisons doit voir l'état exact.
   rebuildDemand();
@@ -932,7 +1004,7 @@ export function planLattice(
     })[] = [];
     const targetGuid = chain[chain.length - 1]?.guid ?? tierGuid;
     for (let y = y0; y + rh - 1 <= y1; y++) for (let x = x0; x + rw - 1 <= x1; x++) {
-      if (!fitsHouse(x, y) || !touchesRoad(x, y)) continue;
+      if (!fitsHouse(x, y) || !desservable(x, y)) continue;
       const o = y * W + x;
       let coveredMask = 0;
       for (let t = 0; t < types.length; t++) {

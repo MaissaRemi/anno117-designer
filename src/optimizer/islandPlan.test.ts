@@ -213,3 +213,17 @@ describe("verdict de viabilité — plancher de bruit du modèle (BRUIT_VITAL)",
     expect(verdictViable({}, 0)).toBe(true);
   });
 });
+
+describe("poches murées", () => {
+  // Sur roman_island_medium_05, un grand bâtiment mure une bande de terre contre le relief : le
+  // moteur y posait maisons et services contre des routes qui ne mènent nulle part (3 services
+  // inactifs en jeu, des maisons rasées). La poche reste désormais vide.
+  it("roman_island_medium_05 : aucun service sans accès au comptoir", () => {
+    const r = planIslandImport({
+      catalog, grid: downscaleGrid(buildIslandGrid("roman_island_medium_05")!), tierGuid: "1498",
+      coverageFloor: 0.8, roadType: "pavee", devotionSelonFoi: true,
+    });
+    expect(r.houses).toBeGreaterThan(400);
+    expect(r.gaps.filter((g) => /sans accès au comptoir/.test(g))).toEqual([]);
+  }, 600_000);
+});

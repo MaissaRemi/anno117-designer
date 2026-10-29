@@ -40,7 +40,7 @@
         "1499": 94
       },
       "batiments": 1854,
-      "routes": 4612,
+      "routes": 4601,
       "conduites": 196,
       "champs": 0,
       "eau": {
@@ -51,11 +51,11 @@
       "analyse": {
         "reseauEnracine": 4601,
         "batimentsCoupes": 0,
-        "casesCouvertes": 256709,
-        "hachageCouvertures": "4ccb8d1c2f91e4bd"
+        "casesCouvertes": 256691,
+        "hachageCouvertures": "36ad385470dcc638"
       },
       "violations": 3,
-      "hachage": "b8cf5984d972ae25"
+      "hachage": "a1353669e2679730"
     }
   ]
 }

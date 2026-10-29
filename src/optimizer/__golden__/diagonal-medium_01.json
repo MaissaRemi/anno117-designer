@@ -1,60 +1,60 @@
 {
   "recommande": {
     "palier": "1498",
-    "maisons": 377,
-    "habitants": 13987,
-    "maisonsAuPalier": 328,
+    "maisons": 407,
+    "habitants": 14384,
+    "maisonsAuPalier": 311,
     "paliers": {
-      "1498": 328,
-      "1499": 49
+      "1496": 63,
+      "1497": 16,
+      "1498": 311,
+      "1499": 17
     },
-    "batiments": 467,
-    "routes": 1963,
-    "conduites": 427,
+    "batiments": 456,
+    "routes": 1253,
+    "conduites": 357,
     "champs": 0,
     "eau": {
       "sources": 5,
-      "utilisee": 190
+      "utilisee": 140
     },
     "repere": "droit",
     "analyse": {
-      "reseauEnracine": 1283,
-      "batimentsCoupes": 37,
-      "casesCouvertes": 98010,
-      "hachageCouvertures": "6ca986b1cbd23f21"
+      "reseauEnracine": 1251,
+      "batimentsCoupes": 2,
+      "casesCouvertes": 58020,
+      "hachageCouvertures": "781f4ea03296bb2a"
     },
-    "violations": 4,
-    "hachage": "e816fb1a5bfe115e"
+    "violations": 5,
+    "hachage": "1cd8c08369206fd2"
   },
   "alternatives": [
     {
       "palier": "1498",
-      "maisons": 407,
-      "habitants": 14791,
-      "maisonsAuPalier": 311,
+      "maisons": 400,
+      "habitants": 12520,
+      "maisonsAuPalier": 284,
       "paliers": {
-        "1496": 63,
-        "1497": 16,
-        "1498": 311,
-        "1499": 17
+        "1498": 284,
+        "1499": 116
       },
-      "batiments": 492,
-      "routes": 1949,
-      "conduites": 357,
+      "batiments": 449,
+      "routes": 1271,
+      "conduites": 401,
       "champs": 0,
       "eau": {
         "sources": 5,
-        "utilisee": 140
+        "utilisee": 190
       },
       "repere": "droit",
       "analyse": {
-        "reseauEnracine": 1251,
-        "batimentsCoupes": 38,
-        "casesCouvertes": 95670,
-        "hachageCouvertures": "464aa326d61f3822"
+        "reseauEnracine": 1270,
+        "batimentsCoupes": 1,
+        "casesCouvertes": 59865,
+        "hachageCouvertures": "4b77cd0c789f8952"
       },
       "violations": 4,
-      "hachage": "970b665124ada107"
+      "hachage": "372cadd2a1568c06"
     }
   ]
 }
