@@ -191,12 +191,12 @@ export function IslandPlanner({ onClose }: Props) {
   const servicesHelp = needMode === "auto"
     ? "Essaie plusieurs jeux de services et garde celui qui loge le plus de monde."
     : needMode === "maisons"
-      ? "Couvre l'île de maisons reliées à la route. Celles qu'aucun service n'atteint restent à un palier plus bas, mais logent encore du monde."
+      ? "Loge le plus de maisons possible AU PALIER CHOISI. Celles qu'aucun service n'atteint restent à un palier plus bas, mais logent encore du monde."
       : "Pose tous les services du palier : bonus maximal par maison, mais ils prennent beaucoup de place.";
   const servicesShort = needMode === "auto"
     ? "Garde le jeu de services qui loge le plus de monde."
     : needMode === "maisons"
-      ? "Couvre l'île de maisons ; certaines restent à un palier plus bas."
+      ? "Le plus de maisons au palier choisi."
       : "Tous les services du palier : bonus maximal, mais beaucoup de place.";
   const localProductionHelp = "Pose des ateliers pour fabriquer une partie des biens au lieu de tout importer. "
     + "Ils remplacent des maisons et pèsent sur les attributs"
@@ -244,7 +244,7 @@ export function IslandPlanner({ onClose }: Props) {
               <span>Services</span>
               <select value={needMode} onChange={(e) => setNeedMode(e.target.value as NeedMode)}>
                 <option value="auto">Recette optimisée (max d'habitants)</option>
-                <option value="maisons">Maximum de maisons (services au mieux)</option>
+                <option value="maisons">Maximum de maisons au palier</option>
                 <option value="all">Tous les services (max de bonus par maison)</option>
               </select>
               <span className="muted" style={{ fontSize: 11 }}>{servicesShort}</span>
