@@ -29,6 +29,8 @@ export interface LocalProdOptions {
   region?: string;
   /** Nombre maximal d'ateliers posés (garde-fou de temps). Défaut 40. */
   maxBuildings?: number;
+  /** Productivité par atelier (defId → multiplicateur), celle du dieu de l'île. */
+  productivity?: Record<string, number>;
   /**
    * GRAND-LIVRE DE MAIN-D'ŒUVRE. Un atelier ne coûte pas que du sol et un effet de zone : il
    * réclame la main-d'œuvre d'un palier précis, qu'il faut produire en RÉTROGRADANT des
@@ -291,7 +293,9 @@ export function planLocalProduction(
     if (!defId) continue;
     const def = lookup(defId);
     if (!def || def.slotType) continue; // les productions à emplacement passent par slotPlan
-    const rate = ratePerMin(defId, d.good);
+    // un atelier dopé par le dieu tourne plus vite : il produit ET consomme davantage
+    const vitesse = opts.productivity?.[defId] ?? 1;
+    const rate = ratePerMin(defId, d.good) * vitesse;
     if (rate <= 0) continue;
     // un vœu impose son nombre ; une entrée de manifeste le déduit du débit, borné pour ne
     // pas bétonner l'île
@@ -377,7 +381,7 @@ export function planLocalProduction(
     const prod = economy.buildingProd[defId];
     if (prod) {
       for (const inp of prod.inputs) {
-        const need = inputRatePerMin(prod, inp.amount) * ws.copies;
+        const need = inputRatePerMin(prod, inp.amount) * vitesse * ws.copies;
         if (need <= 0) continue;
         ws.inputs.push({ good: inp.good, perMin: Math.round(need * 100) / 100 });
         if (!queued.has(inp.good)) { queued.add(inp.good); wanted.push({ good: inp.good, perMin: need }); }

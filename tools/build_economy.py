@@ -168,6 +168,7 @@ def main():
     # ateliers et des mines. Trois tables intermediaires, resolues apres le parcours.
     fx_effects = {}      # GUID Effect -> {scope, buffs:[GUID], targets:[GUID pool]}
     pool_min_tier = {}   # GUID AssetPool -> palier MINIMUM servi (1..4 ; 0 = aucun)
+    pool_members = {}    # GUID AssetPool -> [GUID membre] (batiments, ou autres pools)
     patrons = {}         # GUID Patron -> {name, shrinePool, shrineDefId, wonder, local, dominant}
     religion = {}        # seuils de devotion (ReligionBalancing)
     fx_buffs = {}        # GUID BuildingBuff -> {attrs:{}, stackable}
@@ -190,7 +191,11 @@ def main():
         vals = el.find("Values")
         guid = t(el, "./Values/Standard/GUID")
         oasis = t(el, "./Values/Text/OasisId")
-        if not guid or vals is None:
+        if vals is None:
+            # `<Asset>` sert aussi de reference DANS les pools (`AssetList/Item/Asset`) :
+            # le vider ici effacait les membres avant que le pool ne se ferme.
+            continue
+        if not guid:
             el.clear(); continue
 
         if tpl == "PopulationLevel":
@@ -312,6 +317,8 @@ def main():
                             for x in item.findall("./Milestones/Item")]
                 patrons[guid] = {
                     "name": (t(el, "./Values/Standard/Name") or "").replace("Patron", "") or guid,
+                    "nameFr": texts.get(pn.findtext("PatronName") or ""),
+                    "culture": pn.findtext("RomanizationType") or None,
                     "shrinePool": pn.findtext("Shrine") or None,
                     "shrineDefId": pn.findtext("ShrineEffectIcon") or None,
                     "wonder": pn.findtext("Wonder") or None,
@@ -341,6 +348,8 @@ def main():
             nm = t(el, "./Values/Standard/Name") or ""
             m = re.search(r"Tier (\d)", nm)
             pool_min_tier[guid] = int(m.group(1)) if m else 0
+            pool_members[guid] = [a.text.strip() for a in vals.findall("./AssetPool/AssetList/Item/Asset")
+                                  if a.text and a.text.strip()]
             el.clear(); continue
 
         if tpl == "Effect":
@@ -790,6 +799,20 @@ def main():
             out["grants"] = greffes
         return out
 
+    def _membres(pool, _vus=None):
+        """Batiments d'un pool, sous-pools deplies ; seuls ceux de l'economie sont gardes."""
+        _vus = _vus or set()
+        if pool in _vus:
+            return []
+        _vus.add(pool)
+        out = []
+        for a in pool_members.get(pool, []):
+            if a in pool_members:
+                out += _membres(a, _vus)
+            elif ("g" + a) in bprod or ("g" + a) in fx_owner:
+                out.append("g" + a)
+        return out
+
     patrons_out = []
     for g, p in sorted(patrons.items()):
         loc = []
@@ -797,6 +820,10 @@ def main():
             r = _resolve_fx(it["effect"])
             if r:
                 r["milestones"] = it["milestones"]
+                # PRODUCTIVITE : le pool cible (« Ceres Goods »...) liste les ATELIERS dopes.
+                # Sans lui, le bonus restait un nombre sans destinataire.
+                if r.get("factory"):
+                    r["boosted"] = sorted({m for tg in r["targets"] for m in _membres(tg)})
                 loc.append(r)
         dom = [r for r in (_resolve_fx(e) for e in p["dominant"]) if r]
         patrons_out.append({
@@ -804,6 +831,10 @@ def main():
             "name": p["name"],
             "shrineDefId": ("g" + p["shrineDefId"]) if p["shrineDefId"] else None,
             "shrinePool": p["shrinePool"],
+            "nameFr": p["nameFr"],
+            "culture": p["culture"],
+            # tous les autels du dieu, deux regions : c'est par eux que l'autel pose suit le dieu
+            "shrines": sorted(set(_membres(p["shrinePool"]))) if p["shrinePool"] else [],
             "wonder": p["wonder"],
             "local": loc,
             "dominant": dom,

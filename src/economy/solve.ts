@@ -34,6 +34,12 @@ export interface SolveOptions {
    * entretien, pas pour dresser la liste de ce qu'on va poser (cf. `pickProducerInWorld`).
    */
   strictWorld?: boolean;
+  /**
+   * PRODUCTIVITÉ par atelier (defId → multiplicateur, 1,6 = +60 %), celle du dieu de l'île
+   * (`economy/dieux.ts`). Elle divise le nombre d'ateliers sans toucher au rapport intrant /
+   * produit : un moulin plus rapide moud plus de grain, pas moins par sac de farine.
+   */
+  productivity?: Record<string, number>;
 }
 
 export interface TierProfile {
@@ -232,10 +238,11 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
         if (!p) return;
         const r = prodRatePerMin(p, good);
         if (r <= 0) return;
-        const count = ratePerMin / r;
+        const count = ratePerMin / (r * (opts.productivity?.[defId] ?? 1));
         counts[defId] = (counts[defId] || 0) + count;
         stack.add(good);
-        for (const inp of p.inputs) requireGood(inp.good, count * inputRatePerMin(p, inp.amount), region);
+        // l'intrant suit le produit : `ratePerMin / r` unités de cycle, quelle que soit la vitesse
+        for (const inp of p.inputs) requireGood(inp.good, (ratePerMin / r) * inputRatePerMin(p, inp.amount), region);
         stack.delete(good);
       };
       for (const [good, rate] of Object.entries(demand)) {

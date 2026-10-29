@@ -5,7 +5,9 @@ import { economy, residentialChainExtended, upkeepOf } from "../economy/economy"
 import { buildTierProfile, solve } from "../economy/solve";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { cityStatusAttrs, tierByGuid } from "../economy/economy";
-import { bestDeityAttrs, institutionDefs, pickPatron, SHRINE_TYPE, VITAL_ATTRS, worstAttr } from "../economy/attributes";
+import { bestDeity, institutionDefs, patronResidenceAttrs, pickPatron, SHRINE_TYPE, VITAL_ATTRS, worstAttr } from "../economy/attributes";
+import { devotionDeFoi, dieuDeLAutel, dieuParId, effetsDuDieu, nomDuDieu, productiviteDuDieu, prochainPalier } from "../economy/dieux";
+import type { Patron } from "../economy/economy";
 import { effectOf } from "../economy/economy";
 import { footprintSize } from "../engine/geometry";
 import { candidateRecipes } from "./recipes";
@@ -118,6 +120,17 @@ export interface IslandPlanRequest {
    */
   devotion?: number;
   /**
+   * DIEU TUTÉLAIRE imposé (`Patron.id`). Absent : le moteur le choisit, sur la population
+   * livrée. Imposé, son autel est le seul candidat et ses effets valent seuls pour l'île.
+   */
+  dieu?: string;
+  /**
+   * La dévotion suit la FOI DU PLAN au lieu de `devotion` : le jeu la fait monter jusqu'à la Foi
+   * de l'île (cf. `economy/dieux.ts`). Le plan est rejoué une fois si la Foi mesurée tombe
+   * dans un autre palier d'effets que celle estimée au départ.
+   */
+  devotionSelonFoi?: boolean;
+  /**
    * LISTE DE VŒUX DE PRODUCTION — ce que l'utilisateur veut voir sur l'île.
    *
    * `workshops` amorce la file de `planLocalProduction`, en unités de BÂTIMENT et non de bien,
@@ -201,6 +214,23 @@ export interface IslandPlanResult {
   droppedSlots: number;
   /** Ateliers posés sur l'île (option `localProduction`) — leur production sort du manifeste. */
   workshops: LocalWorkshop[];
+  /**
+   * DIEU TUTÉLAIRE retenu et ce qu'il rend à la dévotion du plan (`devotion`).
+   */
+  /** FOI de l'île livrée, rang de cité compris : la dévotion que son dieu atteindra en jeu. */
+  foi: number;
+  dieu?: {
+    id: string;
+    nom: string;
+    autel: string | null;
+    devotion: number;
+    productivitePct: number;
+    ateliers: string[];
+    residence: Record<string, number>;
+    mainDoeuvrePct: number;
+    dominant: boolean;
+    prochainPalier?: number;
+  };
   /** BILAN DE L'ÎLE par attribut vital : somme sur toutes les maisons, malus de rang de
    *  cité compris. C'est le total qui doit rester ≥ 0 — une maison en déficit compensée
    *  par ses voisines ne pose pas de problème. */
@@ -396,10 +426,52 @@ function balayerPaliers(
   return best;
 }
 
+/**
+ * ═══ LA DÉVOTION SUIT LA FOI DU PLAN ═══════════════════════════════════════════════════
+ *
+ * La dévotion d'une île monte jusqu'à sa Foi, et la Foi dépend du plan : un cercle, qu'on
+ * rompt en partant d'une Foi ESTIMÉE sur la taille de l'île. Si la Foi mesurée tombe dans un
+ * autre palier d'effets, on rejoue une seule fois à la Foi mesurée — les paliers sont larges
+ * (4 500, 11 000, 25 000…), un second écart ne déplacerait presque rien.
+ */
+function planSelonLaFoi(
+  req: IslandPlanRequest,
+  onProgress?: (step: number, total: number) => void,
+): IslandPlanResult {
+  const base: IslandPlanRequest = { ...req, devotionSelonFoi: false };
+  const d0 = devotionDeFoi(estimerFoi(req));
+  const r0 = planIslandImport({ ...base, devotion: d0 }, onProgress);
+  const d1 = devotionDeFoi(r0.foi);
+  return memesEffets(d0, d1) ? r0 : planIslandImport({ ...base, devotion: d1 }, onProgress);
+}
+
+/**
+ * Foi d'une île pleine, estimée avant tout plan : ~5 % de la terre constructible en maisons
+ * (mesuré 4 à 5,5 % sur small_06, medium_01, large_03, celtic large_07), chacune avec la
+ * Croyance de son palier et le bonus de rang de cité.
+ */
+function estimerFoi(req: IslandPlanRequest): number {
+  const tier = tierByGuid(req.tierGuid);
+  if (!tier) return 0;
+  const maisons = req.grid.usable.filter(Boolean).length * 0.05;
+  const rang = cityStatusAttrs(maisons * tier.capacityDefault, tier.region);
+  return maisons * ((tier.perHouse?.Belief ?? 0) + (rang.Belief ?? 0));
+}
+
+/** Deux dévotions rendent-elles les mêmes effets, quel que soit le dieu ? */
+function memesEffets(a: number, b: number): boolean {
+  const cle = (d: number) => JSON.stringify((economy.patrons ?? []).map((p) => {
+    const fx = effetsDuDieu(p, d);
+    return [fx.productivitePct, fx.residence];
+  }));
+  return cle(a) === cle(b);
+}
+
 export function planIslandImport(
   req: IslandPlanRequest,
   onProgress?: (step: number, total: number) => void,
 ): IslandPlanResult {
+  if (req.devotionSelonFoi) return planSelonLaFoi(req, onProgress);
   const needMode = req.needMode ?? "auto";
   const regle = regleDeBilan(req);
   const lookup = makeLookup(req.catalog);
@@ -442,7 +514,19 @@ export function planIslandImport(
   // L'ordre inverse était le défaut mesuré — un autel gagnait la présélection sur son rayon, la
   // divinité se trouvait verrouillée sur ce dieu sans effet d'île, puis le raffinage retirait
   // l'autel. Ni autel ni dieu, et aucun réglage de dévotion ne produisait le moindre effet.
-  const deityAttrs = bestDeityAttrs(req.devotion ?? 0);
+  //
+  // Un dieu IMPOSÉ par le joueur remplace ce choix : ses effets seuls, son autel seul.
+  const devotion = req.devotion ?? 0;
+  const dieuImpose = dieuParId(req.dieu);
+  const dieuSansAutel = dieuImpose ?? bestDeity(devotion);
+  const attrsDuDieu = (p: Patron | undefined) => (p ? patronResidenceAttrs(p, devotion) : {});
+  // relu par `runLattice` : il suit l'autel candidat pendant l'élection, pour que l'autel posé
+  // et les effets crédités aux maisons soient ceux d'un même dieu
+  let deityAttrs = attrsDuDieu(dieuSansAutel);
+  if (dieuImpose) {
+    const siens = new Set([...(dieuImpose.shrines ?? []), ...(dieuImpose.shrineDefId ? [dieuImpose.shrineDefId] : [])]);
+    instCands = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE || siens.has(i.defId));
+  }
   const institutions = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE).map((i) => i.defId);
   const kontorDef = pickKontorDef(req.catalog, islandRegion);
   const kontor = kontorDef ? reserveKontor(req.grid, kontorDef) : null;
@@ -489,6 +573,8 @@ export function planIslandImport(
     waterPct: number;
     /** bilan de l'île par attribut vital, rang de cité compris */
     attrsTotal: Record<string, number>;
+    /** Foi de l'île, rang de cité compris : la dévotion qu'elle atteindra */
+    foi: number;
     /** le bilan de l'île tient-il ? */
     viable: boolean;
     /**
@@ -552,6 +638,7 @@ export function planIslandImport(
       residents,
       waterPct: nCons ? nOk / nCons : 1,
       attrsTotal,
+      foi: cand.foiSum + cand.houses * (rank.Belief ?? 0),
       viable: regle.verdict(attrsTotal, cand.houses),
       sig: `${buildings.length}:${sig}`,
     };
@@ -792,8 +879,9 @@ export function planIslandImport(
     }
     let meilleur: Evaluated | undefined, meilleurDieu: string | undefined;
     for (const g of shortlist) {
-      // `runLattice` lit `patron` par fermeture : il faut l'affecter AVANT l'appel.
+      // `runLattice` lit `patron` et `deityAttrs` par fermeture : à affecter AVANT l'appel.
       patron = g;
+      deityAttrs = attrsDuDieu(dieuImpose ?? dieuDeLAutel(g) ?? dieuSansAutel);
       // La passe est rejouée AU MÊME SEUIL que celle qui a servi à mesurer le déficit.
       // Tenté un temps de la fusionner avec le raffinage, pour économiser 1,15 s : le patron
       // était alors choisi sur un plan et appliqué à un autre, et le bilan de l'île finissait
@@ -808,6 +896,7 @@ export function planIslandImport(
     } else {
       patron = undefined; // l'autel ne paie pas son sol : on s'en passe
     }
+    deityAttrs = attrsDuDieu(dieuImpose ?? (patron ? dieuDeLAutel(patron) : undefined) ?? dieuSansAutel);
   }
 
   // RAFFINAGE : la recette gagnante rejouée à un seuil de densification plus exigeant.
@@ -856,6 +945,8 @@ export function planIslandImport(
    * livré — habitants réellement logés, bilan réellement tenu — qui tranche.
    */
   const finalize = (chosen: Evaluated, preferred?: { x: number; y: number }[]): IslandPlanResult => {
+    const dieuRetenu = dieuImpose ?? (patron ? dieuDeLAutel(patron) : undefined) ?? dieuSansAutel;
+    const productivity = productiviteDuDieu(dieuRetenu, devotion);
     const relevant = chosen.relevant;
     const dist = chosen.cand;
     const water = chosen.water;
@@ -1224,7 +1315,7 @@ export function planIslandImport(
         // En indicatif, les ateliers restent bornés par la demande, la main-d'œuvre, la place
         // et le quota du module — pas par un bilan que l'on a choisi de ne pas imposer.
         regle.strict ? attrsTotal : BUDGET_ILLIMITE,
-        { region: islandRegion, workforce: ledger, preferred, requested: req.wanted?.workshops },
+        { region: islandRegion, workforce: ledger, preferred, requested: req.wanted?.workshops, productivity },
       );
       // ═══ RECUL SUR POSE ═══════════════════════════════════════════════════════════════
       // Le garde-fou de `planLocalProduction` compare un devis PRÉDICTIF à son budget, et ce
@@ -1411,6 +1502,7 @@ export function planIslandImport(
     layout.roads = pruneDeadEnds(req.grid, layout.buildings, layout.roads, lookup).roads;
 
     const hasWaterConsumers = water.consumers.length > 0;
+    const fx = dieuRetenu ? effetsDuDieu(dieuRetenu, devotion) : undefined;
     return {
       mode: "import",
       roadType: req.roadType,
@@ -1432,6 +1524,13 @@ export function planIslandImport(
       exploited,
       droppedSlots,
       workshops,
+      foi: Math.round(chosen.foi),
+      dieu: dieuRetenu && fx ? {
+        id: dieuRetenu.id, nom: nomDuDieu(dieuRetenu), autel: patron ?? null, devotion,
+        productivitePct: fx.productivitePct, ateliers: fx.ateliers,
+        residence: fx.residence, mainDoeuvrePct: fx.mainDoeuvrePct, dominant: fx.dominant,
+        prochainPalier: prochainPalier(dieuRetenu, devotion),
+      } : undefined,
       attrsTotal,
       workforce: {
         offer: wf.offer, demand: wf.demand, deficit: wf.deficit, alien: wf.alien,

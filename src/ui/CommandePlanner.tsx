@@ -6,11 +6,13 @@ import { regionOfIsland } from "../data/islands";
 import { gridWithObstacles } from "../optimizer/halfTileAdapter";
 import { isProducer } from "../prodlayout/chain";
 import { nomenclature, type ChoixServices, type Commande } from "../commande/nomenclature";
+import { resumeEffets } from "../economy/dieux";
 import { runPlanifier } from "../commande/runPlanifier";
 import type { ResultatCommande } from "../commande/planifier";
 import { RunPanel } from "./components/RunPanel";
 import { PlanPreview } from "./components/PlanPreview";
 import { RoadTypeSelect } from "./components/RoadTypeSelect";
+import { DieuSelect, type ChoixDevotion } from "./components/DieuSelect";
 import type { RoadType } from "../engine/roads";
 
 /**
@@ -64,6 +66,8 @@ export function CommandePlanner() {
   const [biens, setBiens] = useState<"importer" | "produire">("importer");
   const [mainOeuvre, setMainOeuvre] = useState<"loger" | "signaler">("loger");
   const [routes, setRoutes] = useState<RoadType>("pavee");
+  const [dieu, setDieu] = useState("");
+  const [devotion, setDevotion] = useState<ChoixDevotion>("foi");
   const [recherche, setRecherche] = useState("");
 
   const terre = useMemo(() => {
@@ -81,7 +85,9 @@ export function CommandePlanner() {
     mainOeuvre,
     routes,
     terre: islandId ? terre : undefined,
-  }), [region, maisons, services, institutions, production, completer, biens, mainOeuvre, routes, islandId, terre]);
+    ...(dieu ? { dieu } : {}),
+    ...(devotion === "foi" ? {} : { devotion }),
+  }), [region, maisons, services, institutions, production, completer, biens, mainOeuvre, routes, islandId, terre, dieu, devotion]);
   const devis = useMemo(() => nomenclature(commande, catalog, lookup), [commande, catalog, lookup]);
 
   const [running, setRunning] = useState(false);
@@ -148,6 +154,7 @@ export function CommandePlanner() {
           </select>
         </div>
         <RoadTypeSelect value={routes} onChange={setRoutes} />
+        <DieuSelect dieu={dieu} onDieu={setDieu} devotion={devotion} onDevotion={setDevotion} vide="aucun" />
 
         <h4>Production</h4>
         <input type="search" placeholder="Ajouter un bâtiment de production…" value={recherche}
@@ -200,6 +207,11 @@ export function CommandePlanner() {
         <div className="opt-result" style={{ marginTop: 8 }}>
           <b>Devis</b> — {nbBatiments.toLocaleString("fr")} bâtiments, {devis.habitants.toLocaleString("fr")} habitants,
           ~{devis.surface.total.toLocaleString("fr")} cases{islandId ? ` sur ${terre.toLocaleString("fr")}` : ""}
+          <div className="muted" style={{ fontSize: "0.85em" }}>
+            🙏 Foi {devis.foi.toLocaleString("fr")}
+            {devis.dieu && ` · ${devis.dieu.nom} à ${devis.dieu.devotion.toLocaleString("fr")} : `
+              + resumeEffets(devis.dieu.productivitePct, devis.dieu.ateliers, devis.dieu.residence)}
+          </div>
           <ul className="muted" style={{ fontSize: "0.85em", margin: "4px 0 0 16px", padding: 0 }}>
             {Object.entries(ROLES).map(([role, label]) => {
               const ls = devis.lignes.filter((l) => l.role === role);

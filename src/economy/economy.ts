@@ -96,8 +96,8 @@ export interface ResolvedEffect {
    * se lit « cet effet ne fait rien ». `ProductivityUpgrade` est le seul terme rencontré à ce
    * jour ; l'échelle de dévotion le multiplie comme les autres.
    *
-   * Aucun consommateur dans le moteur pour l'instant : la productivité ne loge personne et ne
-   * change aucun bilan d'île. Elle est extraite pour que la donnée cesse de mentir.
+   * Elle ne loge personne et ne change aucun bilan d'île : elle réduit le nombre d'ateliers
+   * qu'une demande réclame (`economy/dieux.ts`, `SolveOptions.productivity`).
    */
   factory?: Record<string, number>;
   /**
@@ -110,6 +110,11 @@ export interface ResolvedEffect {
    * touche aussi, mais par la main-d'œuvre, pas par un attribut vital.
    */
   workforcePct?: number;
+  /**
+   * ATELIERS DOPÉS par un effet de productivité : le pool cible déplié (« Ceres Goods » →
+   * fermes, moulins, boulangeries…). Absent hors productivité.
+   */
+  boosted?: string[];
 }
 
 /**
@@ -131,6 +136,12 @@ export interface Patron {
   shrineDefId: string | null;
   /** Pool de TOUS les autels de ce dieu. */
   shrinePool: string | null;
+  /** Nom affiché en jeu (« Cérès », « Mercure-Lug »). */
+  nameFr?: string | null;
+  /** `Roman`, `Regional` (dieu celte), ou absent pour les dieux des deux mondes. */
+  culture?: string | null;
+  /** Tous les autels de ce dieu, les deux régions (`shrinePool` déplié). */
+  shrines?: string[];
   wonder: string | null;
   local: (ResolvedEffect & { milestones: [number, number][] })[];
   dominant: ResolvedEffect[];

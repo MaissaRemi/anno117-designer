@@ -91,4 +91,28 @@ describe("divinité tutélaire — un seul dieu par île", () => {
     });
     expect(r.buildings.filter((b) => byId.get(b.defId)?.uniqueType === SHRINE_TYPE)).toHaveLength(0);
   }, 300_000);
+
+  it("le dieu imposé est seul : son autel, ses effets, comptés jusque dans les habitants", () => {
+    // Cérès ajoute 3 habitants par maison à 4 500 de dévotion. Le règlement de main-d'œuvre
+    // recomptait les habitants sur des options sans le dieu : le bonus disparaissait du plan.
+    const grid = downscaleGrid(buildIslandGrid("roman_island_small_06")!);
+    const base = { catalog, grid, tierGuid: topTierOf("Roman").guid, coverageFloor: 0.8, roadType: "pavee" as const };
+    const sans = planIslandImport({ ...base, dieu: "43594", devotion: 0 });
+    const avec = planIslandImport({ ...base, dieu: "43594", devotion: 4500 });
+    expect(avec.dieu).toMatchObject({ nom: "Cérès", devotion: 4500, residence: { Population: 3 } });
+    expect(avec.residents / avec.houses - sans.residents / sans.houses).toBeGreaterThan(2.5);
+    // aucun autel d'un autre dieu
+    const autels = avec.buildings.filter((b) => byId.get(b.defId)?.uniqueType === SHRINE_TYPE);
+    for (const b of autels) expect(["g81021", ...(economy.patrons ?? []).find((p) => p.id === "43594")!.shrines!]).toContain(b.defId);
+    expect(avec.foi).toBeGreaterThan(0);
+  }, 300_000);
+
+  it("la dévotion suit la Foi du plan livré", () => {
+    const grid = downscaleGrid(buildIslandGrid("roman_island_small_06")!);
+    const r = planIslandImport({ catalog, grid, tierGuid: topTierOf("Roman").guid, coverageFloor: 0.8, devotionSelonFoi: true });
+    expect(r.dieu).toBeDefined();
+    // même palier d'effets que la Foi mesurée : à un palier près, la dévotion EST la Foi
+    expect(Math.abs(r.dieu!.devotion - r.foi) / r.foi).toBeLessThan(0.5);
+    expect(r.dieu!.productivitePct).toBeGreaterThan(0);
+  }, 300_000);
 });

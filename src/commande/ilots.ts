@@ -1126,7 +1126,8 @@ function disposer(
     const o = attribution.get(b.uid);
     if (!o) continue;
     maisonsParPalier[o.guid] = (maisonsParPalier[o.guid] ?? 0) + 1;
-    habitants += o.cap;
+    // le dieu ajoute ses habitants à CHAQUE maison, à la dévotion du devis (sa Foi)
+    habitants += o.cap + Math.max(0, nom.dieu?.residence.Population ?? 0);
     for (const k of VITAL_ATTRS) somme[k] += o.attrs[k] ?? 0;
   }
   const nMaisons = Object.values(maisonsParPalier).reduce((a, b) => a + b, 0);

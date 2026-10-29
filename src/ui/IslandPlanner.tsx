@@ -11,7 +11,8 @@ import { PlanPreview, PlanPreviewLegend } from "./components/PlanPreview";
 import { RoadTypeSelect } from "./components/RoadTypeSelect";
 import type { RoadType } from "../engine/roads";
 import { regionOfIsland } from "../data/islands";
-import { bestDeityAttrs } from "../economy/attributes";
+import { DieuSelect, type ChoixDevotion } from "./components/DieuSelect";
+import { resumeEffets } from "../economy/dieux";
 
 interface Props {
   onClose: () => void;
@@ -36,10 +37,6 @@ const tiersOfWorld = (world: string) =>
 /** Choix des services : recette cherchée pour les habitants, pour les maisons, ou tous les services. */
 type NeedMode = "auto" | "maisons" | "all";
 
-/** Paliers de dévotion proposés — ceux de l'échelle du jeu (`economy.patrons`). */
-const DEVOTIONS = [0, 250, 1500, 4500, 25000, 250000];
-/** Population par maison que Cérès rend à cette dévotion, pour l'afficher sans deviner. */
-const DEVOTION_POP = (d: number) => bestDeityAttrs(d).Population ?? 0;
 
 export function IslandPlanner({ onClose }: Props) {
   const applyOptimization = useStore((s) => s.applyOptimization);
@@ -70,9 +67,10 @@ export function IslandPlanner({ onClose }: Props) {
   // `optimizer/viability.ts` : au-delà de 30 000 habitants le malus de rang de cité dépasse
   // ce qu'une maison peut encaisser, et sans cette soupape aucune grande île ne se peuple.
   const [tolerance, setTolerance] = useState(0);
-  // Dévotion de l'île : elle débloque par paliers les effets de la divinité tutélaire, qui
-  // valent pour l'île entière et ne coûtent ni sol ni permis. Voir `economy.patrons`.
-  const [devotion, setDevotion] = useState(0);
+  // Dieu tutélaire et dévotion : ses effets valent pour l'île entière, sans sol ni permis. La
+  // dévotion suit par défaut la Foi du plan, comme en jeu (`economy/dieux.ts`).
+  const [dieu, setDieu] = useState("");
+  const [devotion, setDevotion] = useState<ChoixDevotion>("foi");
   const [prodGood, setProdGood] = useState(() => {
     const first = Object.keys(economy.producers)
       .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
@@ -152,7 +150,8 @@ export function IslandPlanner({ onClose }: Props) {
         autoTier,
         viability: strictBilan ? "strict" : "indicatif",
         ...(strictBilan && tolerance > 0 ? { tolerance } : {}),
-        ...(devotion > 0 ? { devotion } : {}),
+        ...(dieu ? { dieu } : {}),
+        ...(devotion === "foi" ? { devotionSelonFoi: true } : { devotion }),
         ...(wishes.length || Object.keys(slotWish).length
           ? { wanted: { workshops: wishes, slots: slotWish } }
           : {}),
@@ -206,12 +205,6 @@ export function IslandPlanner({ onClose }: Props) {
   const strictHelp = strictBilan
     ? "Des maisons sont démolies jusqu'à ce que Bonheur, Argent, Santé et Sécurité incendie de l'île repassent à zéro. Sur une grande île, cela en rase jusqu'à neuf sur dix et laisse services et routes en place."
     : "Décoché : aucune maison n'est démolie pour tenir le bilan. Il est affiché avec le résultat, par maison et par attribut — à toi de juger le risque. La règle n'a pas encore été vérifiée en jeu.";
-  const devotionHelp = (devotion === 0
-    ? "Sans dévotion, la divinité tutélaire ne rend que l'effet de zone de son autel."
-    : `Cérès l'emporte : Population +${DEVOTION_POP(devotion)} sur CHAQUE maison de l'île, sans sol ni permis.`)
-    + (strictBilan
-      ? " Attention, l'effet est à double tranchant : plus d'habitants par maison alourdit le malus de rang de cité, donc le garde-fou rase davantage. Mesuré sur la carte continentale — sans tolérance la dévotion FAIT PERDRE 20 %, avec une tolérance de 3 elle fait gagner 34 % (70 057 → 93 622 habitants). Les deux réglages se tiennent."
-      : "");
   const toleranceHelp = (tolerance === 0
     ? "Aucun attribut vital ne peut être négatif : une seule maison en déficit fait raser jusqu'au retour à zéro."
     : `Chaque maison peut être en déficit de ${tolerance.toFixed(1)} sur un attribut vital. `
@@ -250,6 +243,7 @@ export function IslandPlanner({ onClose }: Props) {
               <span className="muted" style={{ fontSize: 11 }}>{servicesShort}</span>
             </div>
             <RoadTypeSelect value={roadType} onChange={setRoadType} />
+            <DieuSelect dieu={dieu} onDieu={setDieu} devotion={devotion} onDevotion={setDevotion} vide="choisi par le moteur" />
             <details className="avance">
               <summary>Options avancées</summary>
               <label className="checkbox" title="Mines, carrières, argile… sur les emplacements de montagne, rivière et marais que les aqueducs n'utilisent pas — l'eau reste prioritaire. Pose aussi les entrepôts nécessaires pour que la production sorte.">
@@ -370,17 +364,6 @@ export function IslandPlanner({ onClose }: Props) {
                   <span className="muted">{tolerance === 0 ? "aucun" : `−${tolerance.toFixed(1)}`}</span>
                 </label>
               )}
-              <label className="slider" title={devotionHelp}>
-                <span style={{ color: "var(--muted)", fontSize: 12 }}>Dévotion</span>
-                <input type="range" min={0} max={5} step={1} value={DEVOTIONS.indexOf(devotion)}
-                  onChange={(e) => setDevotion(DEVOTIONS[parseInt(e.target.value)] ?? 0)} />
-                <span className="muted">{devotion === 0 ? "aucune" : devotion.toLocaleString("fr")}</span>
-              </label>
-              <span className="muted" style={{ fontSize: 11 }} title={devotionHelp}>
-                {devotion === 0
-                  ? "Sans dévotion, seul l'effet de zone de l'autel s'applique."
-                  : `Cérès : Population +${DEVOTION_POP(devotion)} sur chaque maison.`}
-              </span>
               {strictBilan && (
                 <span className="muted" style={{ fontSize: 11 }} title={toleranceHelp}>
                   {tolerance === 0
@@ -513,6 +496,14 @@ export function IslandPlanner({ onClose }: Props) {
               💰 net <span style={{ color: result.money.net >= 0 ? "#8bc34a" : "#ff8a85" }}>{result.money.net >= 0 ? "+" : ""}{result.money.net.toLocaleString("fr")}/min</span>{" "}
               <span className="muted">(taxe {result.money.gross.toLocaleString("fr")} − entretien {result.money.upkeep.toLocaleString("fr")})</span>
             </div>
+            {result.dieu ? (
+              <div style={{ marginBottom: 6 }} title={`Foi de l'île : ${result.foi.toLocaleString("fr")}. La dévotion y monte en jeu.${result.dieu.prochainPalier ? ` Prochain palier d'effet : ${result.dieu.prochainPalier.toLocaleString("fr")}.` : ""}`}>
+                🙏 {result.dieu.nom}{result.dieu.autel ? " (autel posé)" : ""} · dévotion {result.dieu.devotion.toLocaleString("fr")} :{" "}
+                {resumeEffets(result.dieu.productivitePct, result.dieu.ateliers.length, result.dieu.residence)}
+              </div>
+            ) : (
+              <div className="muted" style={{ marginBottom: 6 }}>🙏 Foi de l'île : {result.foi.toLocaleString("fr")}</div>
+            )}
             {result.water && (
               <div style={{ marginBottom: 6 }}>
                 💧 Eau : {result.water.sources} source{result.water.sources > 1 ? "s" : ""} · {result.water.used}/{result.water.capacity} u ·{" "}

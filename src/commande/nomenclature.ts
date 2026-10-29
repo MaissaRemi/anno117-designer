@@ -1,6 +1,7 @@
 import type { BuildingDef } from "../model/types";
 import type { DefLookup } from "../engine/rules";
-import { economy, residentialChainExtended, tierByGuid, worldOf, goodName, type Tier } from "../economy/economy";
+import { cityStatusAttrs, economy, residentialChainExtended, tierByGuid, worldOf, goodName, type Tier } from "../economy/economy";
+import { devotionDeFoi, dieuParId, effetsDuDieu, nomDuDieu, productiviteDuDieu } from "../economy/dieux";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { solve } from "../economy/solve";
 import { workforceGrant } from "../economy/workforce";
@@ -71,6 +72,13 @@ export interface Commande {
   routes?: RoadType;
   /** Terre constructible de l'île, pour avertir si la commande ne tient pas. */
   terre?: number;
+  /** Dieu tutélaire de l'île (`Patron.id`). Absent : aucun. */
+  dieu?: string;
+  /**
+   * Dévotion de l'île. Absente : celle qu'atteindra la ville commandée, sa Foi
+   * (`economy/dieux.ts`). Un nombre fige un état de partie, une île encore jeune par exemple.
+   */
+  devotion?: number;
 }
 
 export type RoleLigne = "residence" | "ouvriers" | "service" | "institution" | "production" | "comptoir";
@@ -97,6 +105,10 @@ export interface Nomenclature {
   mainOeuvre: { demande: Record<string, number>; offre: Record<string, number>; manque: Record<string, number> };
   /** Surface estimée, en cases : quartiers d'habitation et zone de production. */
   surface: { quartiers: number; production: number; total: number };
+  /** Foi de la ville commandée, rang de cité compris. */
+  foi: number;
+  /** Le dieu de l'île et ce qu'il rend à cette dévotion. */
+  dieu?: { nom: string; devotion: number; productivitePct: number; ateliers: number; residence: Record<string, number> };
   avertissements: string[];
 }
 
@@ -190,6 +202,31 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
   };
   const capacite = new Map<string, number>();
 
+  // ─── DIEU TUTÉLAIRE : SA DÉVOTION SUIT LA FOI DE LA VILLE ───────────────────────────
+  // La Foi d'une maison est sa Croyance au palier atteint ; celle de la ville y ajoute le rang
+  // de cité. Elle fixe la dévotion, donc la productivité des ateliers et les habitants que le
+  // dieu ajoute à chaque maison — d'où son calcul sur la ville ENTIÈRE, ouvriers compris.
+  const dieu = dieuParId(commande.dieu);
+  const foiParMaison = (t: Tier): number => {
+    const { chaine: ch, ev } = evalDe(t.guid);
+    const m = masqueDe(ev);
+    const k = ouvre(t) ? ch.length - 1 : ev.evaluate(m).index;
+    return ev.attrsAt(k, m).Belief ?? 0;
+  };
+  const foiDe = (m: Map<string, number>): number => {
+    let foi = 0, pop = 0, n = 0;
+    for (const [g, k] of m) {
+      const t = tierByGuid(g)!;
+      foi += k * foiParMaison(t);
+      pop += k * (capacite.get(g) ?? t.capacityDefault);
+      n += k;
+    }
+    return foi + n * (cityStatusAttrs(pop, commande.region).Belief ?? 0);
+  };
+  const devotionDe = (m: Map<string, number>): number =>
+    commande.devotion ?? devotionDeFoi(foiDe(m));
+  const effetsDe = (m: Map<string, number>) => (dieu ? effetsDuDieu(dieu, devotionDe(m)) : undefined);
+
   // ─── PRODUCTION : PANIER, COMPLÉTION, BIENS DES MAISONS ─────────────────────────────
   const production = new Map<string, { nombre: number; raison: string }>();
   const ajouterProd = (defId: string, nombre: number, raison: string) => {
@@ -210,7 +247,8 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
 
   const residentsDe = (m: Map<string, number>) => {
     const out: Record<string, number> = {};
-    for (const [g, n] of m) out[g] = n * (capacite.get(g) ?? tierByGuid(g)!.capacityDefault);
+    const bonus = Math.max(0, effetsDe(m)?.residence.Population ?? 0);
+    for (const [g, n] of m) out[g] = n * ((capacite.get(g) ?? tierByGuid(g)!.capacityDefault) + bonus);
     return out;
   };
   const produire = commande.biensDesMaisons === "produire";
@@ -223,6 +261,7 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
       {
         includeProduction: produire, includeServices: false, includeWorkforce: false, capacities: caps,
         region: commande.region, strictWorld: true,
+        productivity: dieu ? productiviteDuDieu(dieu, devotionDe(m)) : undefined,
       },
     );
   };
@@ -328,6 +367,9 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
   }
 
   // ─── LIGNES ─────────────────────────────────────────────────────────────────────────
+  const ville = new Map(maisons);
+  for (const [g, n] of ouvriers) ville.set(g, (ville.get(g) ?? 0) + n);
+  const fxFinal = effetsDe(ville);
   const lignes: LigneNomenclature[] = [];
   for (const [g, n] of maisons) {
     const t = tierByGuid(g)!, d = lookup(t.residenceId!)!;
@@ -348,7 +390,8 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
     if (!n) continue;
     const d = lookup(id);
     if (!d) { avertissements.push(`Producteur absent du catalogue : ${id}`); continue; }
-    lignes.push({ defId: id, nom: d.name, nombre: n, role: "production", raison: "biens des maisons", emprise: empriseDe(d) });
+    const dope = fxFinal?.ateliers.includes(id) ? ` (+${fxFinal.productivitePct} % ${nomDuDieu(dieu!)})` : "";
+    lignes.push({ defId: id, nom: d.name, nombre: n, role: "production", raison: `biens des maisons${dope}`, emprise: empriseDe(d) });
   }
   if (kontor) {
     lignes.push({ defId: kontor.id, nom: kontor.name, nombre: 1, role: "comptoir", raison: "racine du réseau, entrée des imports", emprise: empriseDe(kontor) });
@@ -395,6 +438,11 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
     biens,
     mainOeuvre: { demande, offre, manque },
     surface: { quartiers, production: surfaceProduction, total },
+    foi: Math.round(foiDe(ville)),
+    dieu: dieu && fxFinal ? {
+      nom: nomDuDieu(dieu), devotion: fxFinal.devotion, productivitePct: fxFinal.productivitePct,
+      ateliers: fxFinal.ateliers.length, residence: fxFinal.residence,
+    } : undefined,
     avertissements,
   };
 }

@@ -153,16 +153,42 @@ romain 6 colonnes sur 8 dans l'eau. Champ `partieEau` au catalogue, règle `terr
 (éditeur, production côtière, comptoir). Le jeu permet par recherche (« WaterPlacement ») de
 poser la production entièrement sur l'eau : non modélisé.
 
-## Dieux : ce que disent les données (non branché)
+## Dieux tutélaires : branchés
 
-`economy.patrons` (8 dieux) : pour chacun, un bonus de productivité (+10 % à +150 % selon la
-dévotion, paliers de 50 à 300 000) sur un groupe de bâtiments (« Boost <dieu> Goods »), un
-effet sur les résidences (Cérès Population, Minerve Connaissance, Cernunnos Santé et
-Connaissance, Epona Population et Prestige ; Vulcain : main-d'œuvre, et en dominant +2 Sécurité
-incendie en rayon), et des effets « dominant » au-delà de 7 000. `ReligionBalancing` : la
-dévotion s'accumule dans le temps (`DevotionRateScaling`), par dieu, par île et sur toutes les
-îles ; seuils autel 1 000, merveille 4 000, dominant 7 000. Hypothèse à vérifier en jeu : la
-dévotion d'une île tend vers sa Croyance (`TimePerDevotionToBeliefStep`).
+**La dévotion suit la Foi de l'île.** Confirmé par le texte du jeu : « La Dévotion dépend du
+niveau de Foi de l'île. Dès lors qu'un dieu tutélaire est choisi, la Dévotion augmente
+progressivement jusqu'à atteindre cette valeur de Foi. » Foi = Croyance de toutes les maisons
+plus le rang de cité (~30 par maison de Patriciens). Un plan prend donc la dévotion égale à sa
+Foi (choix « selon la Foi de l'île », par défaut) ; un palier fixe décrit une île jeune.
+
+**Données** (`build_economy.py`) : nom affiché, culture, autels des deux régions, et pour chaque
+effet de productivité la liste des ateliers dopés (pool « Ceres Goods » déplié : 19 ateliers
+de la chaîne du pain, du vin, de l'huile ; Vulcain 16 mines et carrières ; Neptune 10 côtiers…).
+Corrigé au passage : l'extracteur vidait les `<Asset>` de référence des pools avant leur
+lecture — aucun pool n'avait de membres.
+
+**Effets** (`economy/dieux.ts`) : productivité valeur 1 × échelle 10 → 150 (+10 % à +150 %),
+attributs de résidence × échelle 1 → 7 (Cérès Population, Minerve Connaissance, Cernunnos
+Santé et Connaissance), main-d'œuvre de Vulcain, seuils autel / merveille / dominance.
+
+**Branchements** :
+- solveur (`SolveOptions.productivity`) : le nombre d'ateliers est divisé, les biens demandés et
+  le rapport intrant / produit ne changent pas ;
+- Ma commande (`Commande.dieu`, `devotion`) : Foi de la ville commandée, ateliers des biens des
+  maisons réduits, habitants du dieu ajoutés au devis et à la ville posée ;
+- Remplir l'île (`dieu`, `devotionSelonFoi`) : un dieu imposé est seul (son autel, ses effets) ;
+  en automatique, l'autel élu et les effets crédités aux maisons sont ceux d'un même dieu (avant,
+  Cérès était créditée aux maisons tandis que l'autel de Vulcain était posé). Foi estimée sur la
+  taille de l'île, plan rejoué une fois si la Foi mesurée change de palier d'effets ;
+- production locale du plan d'île : ateliers dopés plus rapides.
+
+**Bug corrigé** : le règlement de main-d'œuvre recomptait les habitants sur des options de
+maison sans le dieu — le bonus de Cérès disparaissait du plan. roman_island_small_06 : 7 894 →
+8 680 habitants (+3 par maison à 4 632 de Foi) ; large_03 : 60 581 → 69 958 (+5).
+
+**Non modélisé** : effets dominants (dévotion cumulée sur toutes les îles, dont l'incendie +2 de
+Vulcain autour des fonderies), effets sur navires et troupes, commerce passif de Mercure-Lug,
+montée de la dévotion dans le temps. L'onglet Production n'utilise pas encore les dieux.
 
 ## Onglet Production : diagnostic (à retravailler plus tard)
 

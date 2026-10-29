@@ -130,6 +130,11 @@ export interface LatticeResult {
    * `attrsSum[k] + houses × rangDeCité[k]`, et c'est lui qui doit rester ≥ 0.
    */
   attrsSum: Record<string, number>;
+  /**
+   * FOI de l'île hors rang de cité : somme de la Croyance des maisons retenues. La dévotion du
+   * dieu tutélaire monte jusqu'à la Foi de l'île (cf. `economy/dieux.ts`).
+   */
+  foiSum: number;
   /** Capacité cumulée PAR PALIER atteint (guid → habitants). Permet de recalculer la
    *  population après une démotion sans repasser par les masques de couverture. */
   capByTier: Record<string, number>;
@@ -153,6 +158,9 @@ export interface LatticeResult {
  *
  * Couverture = BFS le long des rues, sémantique = streetCoverage de l'analyseur.
  */
+/** Habitants qu'un dieu ajoute à chaque maison (Cérès, Epona) : une capacité, pas un attribut. */
+const capDieuDe = (patronAttrs: Record<string, number> | undefined): number => Math.max(0, patronAttrs?.Population ?? 0);
+
 export function planLattice(
   grid: GridShape,
   tierGuid: string,
@@ -202,7 +210,7 @@ export function planLattice(
     if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
     landCount++; sumX += x; sumY += y;
   }
-  if (x1 < 0) return { buildings: [], plots: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, attrsSum: {}, capByTier: {}, servicesPlaced: {} };
+  if (x1 < 0) return { buildings: [], plots: [], roads: [], fields: [], houses: 0, fullyCovered: 0, tierCounts: {}, residents: 0, houseMoney: 0, attrsSum: {}, foiSum: 0, capByTier: {}, servicesPlaced: {} };
   const gx = Math.round(sumX / landCount), gy = Math.round(sumY / landCount);
 
   // --- routes : grille régulière (lignes H tous STEPH, épines V tous STEPV) ---
@@ -860,8 +868,8 @@ export function planLattice(
     .map((tc, i) => ({ i, id: tc.def.id, fx: effectOf(tc.def.id) }))
     .filter((e) => instIds.includes(e.id) && !!e.fx);
 
-  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsSum" | "plots"> => {
-    let houses = 0, fullyCovered = 0, residents = 0, houseMoney = 0;
+  const placeHouses = (): Pick<LatticeResult, "houses" | "fullyCovered" | "tierCounts" | "residents" | "houseMoney" | "capByTier" | "attrsSum" | "foiSum" | "plots"> => {
+    let houses = 0, fullyCovered = 0, residents = 0, houseMoney = 0, foiSum = 0;
     const tierCounts: Record<string, number> = {};
     const capByTier: Record<string, number> = {};
     const attrsSum: Record<string, number> = {};
@@ -907,7 +915,7 @@ export function planLattice(
       // POPULATION EST UNE CAPACITÉ, PAS SEULEMENT UN ATTRIBUT. Les habitants viennent de
       // `reach.cap`, calculé par le modèle de besoins — la créditer dans `attrs` seul ne
       // logeait personne. Cérès donne jusqu'à +7 par maison : c'est ici qu'il faut l'ajouter.
-      const capDieu = Math.max(0, opts.patronAttrs?.Population ?? 0);
+      const capDieu = capDieuDe(opts.patronAttrs);
       placed.push({ b, key: o, cap: reach.cap + capDieu, money: reach.money, guid: reach.tier.guid, attrs, mask: coveredMask, inst });
     }
 
@@ -940,25 +948,28 @@ export function planLattice(
       capByTier[p.guid] = (capByTier[p.guid] ?? 0) + p.cap;
       if (p.guid === targetGuid) fullyCovered++;
       for (const k of VITAL_ATTRS) attrsSum[k] += p.attrs[k] ?? 0;
+      foiSum += p.attrs.Belief ?? 0;
 
       // PALIERS ATTEIGNABLES sur cette parcelle. Laisser une maison à un palier inférieur
       // alors que sa desserte lui permettrait mieux est un état de jeu parfaitement légal :
       // la montée de palier est un acte MANUEL du joueur. C'est ce qui rend la cascade de
       // main-d'œuvre possible sans rien démolir — les 9 résidences font 3×3, une conversion
       // n'est qu'un changement de `defId`.
-      const opts: HousePlot["opts"] = [];
+      const paliers: HousePlot["opts"] = [];
       for (let k = 0; k < chain.length; k++) {
         const r = evaluator.evaluateAt(k, p.mask);
         if (!r || !r.tier.residenceId) continue;
         const attrs: Record<string, number> = {};
         for (const key of VITAL_ATTRS) {
-          attrs[key] = (evaluator.attrsAt(k, p.mask)[key] ?? 0) + (p.inst[key] ?? 0);
+          attrs[key] = (evaluator.attrsAt(k, p.mask)[key] ?? 0) + (p.inst[key] ?? 0) + (opts.patronAttrs?.[key] ?? 0);
         }
-        opts.push({ guid: r.tier.guid, defId: r.tier.residenceId, cap: r.cap, attrs });
+        // le dieu vaut pour TOUTE maison de l'île, quel que soit son palier : sans lui ici, le
+        // règlement de main-d'œuvre, qui recompte les habitants sur ces options, effaçait Cérès
+        paliers.push({ guid: r.tier.guid, defId: r.tier.residenceId, cap: r.cap + capDieuDe(opts.patronAttrs), attrs });
       }
-      plots.push({ uid: p.b.uid, guid: p.guid, opts });
+      plots.push({ uid: p.b.uid, guid: p.guid, opts: paliers });
     }
-    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum, plots };
+    return { houses, fullyCovered, tierCounts, residents, houseMoney, capByTier, attrsSum, foiSum, plots };
   };
 
   // ═══ PHASE élagage routes : adjacentes aux bâtiments + chemins maison→service ═══

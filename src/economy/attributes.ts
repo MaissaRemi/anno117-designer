@@ -205,11 +205,17 @@ export function patronResidenceAttrs(patron: Patron, devotion: number): Attrs {
  * le reste, parce que c'est elle qui loge.
  */
 export function bestDeityAttrs(devotion: number): Attrs {
-  let best: Attrs = {}, score = 0;
+  const p = bestDeity(devotion);
+  return p ? patronResidenceAttrs(p, devotion) : {};
+}
+
+/** Le dieu dont `bestDeityAttrs` rend les attributs ; aucun si nul ne rend rien. */
+export function bestDeity(devotion: number): Patron | undefined {
+  let best: Patron | undefined, score = 0;
   for (const p of economy.patrons ?? []) {
     const g = patronResidenceAttrs(p, devotion);
     const s = (g.Population ?? 0) * 10 + Object.values(g).reduce((a, b) => a + b, 0);
-    if (s > score) { score = s; best = g; }
+    if (s > score) { score = s; best = p; }
   }
   return best;
 }
