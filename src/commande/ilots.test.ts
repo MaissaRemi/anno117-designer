@@ -3,7 +3,8 @@ import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef, PlacedBuilding } from "../model/types";
 import { buildIslandGrid } from "../data/islandGrid";
 import { downscaleGrid } from "../optimizer/halfTileAdapter";
-import { makeLookup, roadConnected, rootedRoadSet } from "../engine/rules";
+import { computeRadiusCoverage, makeLookup, roadConnected, rootedRoadSet } from "../engine/rules";
+import { copiesEnTrop } from "../optimizer/doublons";
 import { footprintSize } from "../engine/geometry";
 import { economy } from "../economy/economy";
 import { besoinEnIlots, disposerQuartiers } from "./ilots";
@@ -106,5 +107,45 @@ describe("disposer une commande en quartiers", () => {
     const b = disposerQuartiers(g, commande("Roman", PATRICIENS, 150), catalog, lookup);
     expect(pos(a)).toEqual(pos(b));
     expect(a.layout.roads.length).toBe(b.layout.roads.length);
+  });
+});
+
+describe("services sans doublons", () => {
+  // Juge INDÉPENDANT du placeur : la couverture de l'éditeur (`computeRadiusCoverage`), au type
+  // de route du plan. Une copie dont toutes les maisons sont vues par une autre copie du même
+  // type n'apporte rien à personne.
+  it("routes pavées : aucune copie en trop, et bien moins de services que sur la terre", () => {
+    const grid = grille("roman_island_small_06");
+    const commande = (routes: "terre" | "pavee"): Commande =>
+      ({ region: "Roman", maisons: [{ tierGuid: PATRICIENS, maisons: 300 }], routes });
+    const pave = disposerQuartiers(grid, commande("pavee"), catalog, lookup);
+    const terre = disposerQuartiers(grid, commande("terre"), catalog, lookup);
+    const nbServices = (p: typeof pave) => p.layout.buildings.filter((b) => {
+      const d = lookup(b.defId)!;
+      return !RESIDENCES.has(b.defId) && !!d.streetRange;
+    }).length;
+    expect(nbServices(pave)).toBeLessThan(nbServices(terre) * 0.7);
+
+    const layout = { ...pave.layout, roadType: "pavee" as const };
+    const cov = computeRadiusCoverage(layout, lookup);
+    const maisons = layout.buildings.filter((b) => RESIDENCES.has(b.defId));
+    const cases = maisons.map((m) => {
+      const fp = footprintSize(lookup(m.defId)!, m.rotation);
+      const out: string[] = [];
+      for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) out.push(`${m.x + i},${m.y + j}`);
+      return out;
+    });
+    const parType = new Map<string, PlacedBuilding[]>();
+    for (const b of layout.buildings) {
+      if (RESIDENCES.has(b.defId) || !lookup(b.defId)?.streetRange) continue;
+      parType.set(b.defId, [...(parType.get(b.defId) ?? []), b]);
+    }
+    for (const [defId, copies] of parType) {
+      const vues = copies.map((b) => {
+        const s = cov.get(b.uid) ?? new Set<string>();
+        return cases.flatMap((cs, i) => (cs.some((c) => s.has(c)) ? [i] : []));
+      });
+      expect(copiesEnTrop(vues, maisons.length), lookup(defId)!.name).toEqual([]);
+    }
   });
 });
