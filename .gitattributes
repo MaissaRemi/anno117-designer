@@ -1,0 +1,2 @@
+# Empreintes du golden : comparees octet pour octet par vitest, jamais converties en CRLF.
+src/optimizer/__golden__/*.json text eol=lf
