@@ -23,6 +23,7 @@ const LOURDS = [
   "src/optimizer/planLattice.test.ts",
   "src/optimizer/bilanIndicatif.test.ts",
   "src/optimizer/trameDroite.golden.test.ts",
+  "src/optimizer/reseauRoutier.projection.test.ts",
 ];
 
 export default defineConfig(({ mode }) => ({
