@@ -37,3 +37,19 @@ describe("l'eau du palier des Patriciens", () => {
     expect(citerne?.range).toBe(planningRange(byId.get(CITERNE)!, "pavee"));
   }, 300_000);
 });
+
+describe("prix du bilan", () => {
+  it("roman_island_medium_04 : un bilan incendie sain pour quelques habitants", async () => {
+    // sans prix, −4,6 de sécurité incendie par maison ; avec, les Bains reviennent
+    const id = "roman_island_medium_04";
+    const req = {
+      catalog, grid: downscaleGrid(buildIslandGrid(id)!), tierGuid: PATRICIENS, coverageFloor: 0.8,
+      roadType: "pavee" as const, heights: (await heightsOf(id)) ?? undefined,
+    };
+    const brut = planIslandImport({ ...req, prixDuBilan: 0 });
+    const sain = planIslandImport(req);
+    const feu = (r: typeof brut) => (r.attrsTotal.FireSafety ?? 0) / r.houses;
+    expect(feu(sain)).toBeGreaterThan(feu(brut) + 2);
+    expect(sain.residents).toBeGreaterThan(brut.residents * 0.9);
+  }, 300_000);
+});

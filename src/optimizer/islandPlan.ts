@@ -23,7 +23,7 @@ import { netOf, planLocalProduction, type LocalWorkshop } from "./localProd";
 import { regionOfIsland } from "../data/islands";
 // LA RÈGLE DE VIABILITÉ NE VIT QU'À UN ENDROIT (cf. `viability.ts`) : le verdict tolérant et
 // le garde-fou strict y cohabitent, et personne ne réécrit sa propre version du test.
-import { populationEffective, severiteVitale, verdictViable } from "./viability";
+import { BRUIT_VITAL, populationEffective, severiteVitale, verdictViable } from "./viability";
 import { pruneDeadEnds } from "./roadCleanup";
 import type { RoadType } from "../engine/roads";
 
@@ -112,6 +112,12 @@ export interface IslandPlanRequest {
    * de cité creusait à lui seul la sécurité incendie (−709). À égalité, la population départage.
    */
   objectif?: "habitants" | "maisons";
+  /**
+   * PRIX DU BILAN, en indicatif : part de la population retirée, pour COMPARER les plans, par
+   * point de déficit vital par maison (le pire des quatre attributs). 0 = la population seule.
+   * Défaut `PRIX_DU_BILAN`. Rien n'est démoli : seul le choix entre plans change.
+   */
+  prixDuBilan?: number;
   /**
    * DÉVOTION de l'île, 0 par défaut. État de partie, comme les permis.
    *
@@ -352,6 +358,19 @@ interface RegleDeBilan {
   classer: (residents: number, attrs: Record<string, number>, houses: number, auPalier: number) => number;
 }
 
+/**
+ * PRIX DU BILAN par défaut (cf. `IslandPlanRequest.prixDuBilan`) : 6 % de population par point
+ * de déficit par maison. Mesuré le 29/10/2026 sur neuf îles romaines, Patriciens, routes
+ * pavées : la sécurité incendie s'améliore sur sept (medium_04 −4,6 → +0,7 par maison,
+ * large_07 −3,1 → −0,4), quatre passent en positif, et la population totale ne bouge pas
+ * (+0,1 % ; small_06 −13 %, medium_05 +1,3 %). Les Bains, que le Forum évinçait, reviennent.
+ *
+ * C'est la plus petite valeur STABLE : 0,06, 0,08 et 0,10 rendent le même plan, mais 0,02 fait
+ * perdre 32 % à medium_05 et 0,04 dégrade small_06 sur les deux tableaux. Le prix ne change
+ * pas qu'un classement final : il réoriente les choix intermédiaires (recette, ancrage, dieu).
+ */
+export const PRIX_DU_BILAN = 0.06;
+
 function regleDeBilan(req: IslandPlanRequest): RegleDeBilan {
   const strict = req.viability === "strict";
   // LA TOLÉRANCE DOIT VALOIR POUR LE VERDICT AUSSI, PAS SEULEMENT POUR LA SÉLECTION.
@@ -362,15 +381,18 @@ function regleDeBilan(req: IslandPlanRequest): RegleDeBilan {
   // `viable`, aurait préféré un plan bridé à un plan conforme à l'option.
   const tol = strict ? Math.max(0, req.tolerance ?? 0) : 0;
   const parMaisons = req.objectif === "maisons";
+  const prix = Math.max(0, req.prixDuBilan ?? PRIX_DU_BILAN);
   return {
     strict,
     verdict: (attrs, houses) => verdictViable(attrs, houses, tol),
     classer: (residents, attrs, houses, auPalier) => {
-      const pop = strict ? populationEffective(residents, attrs, houses, tol) : residents;
+      const pop = strict ? populationEffective(residents, attrs, houses, tol)
+        : residents * Math.max(0, 1 - prix * Math.max(0, severiteVitale(attrs, houses) - BRUIT_VITAL));
       if (!parMaisons) return pop;
-      // Les maisons au palier cible d'abord, escomptées du même risque que la population en
-      // strict ; les habitants ne font que départager (aucune île n'en loge dix millions).
-      const maisons = strict && residents > 0 ? (auPalier * pop) / residents : auPalier;
+      // Les maisons au palier cible d'abord, escomptées du même risque que la population — en
+      // strict comme au prix du bilan ; les habitants ne font que départager (aucune île n'en
+      // loge dix millions).
+      const maisons = residents > 0 ? (auPalier * pop) / residents : auPalier;
       return maisons + pop / 1e7;
     },
   };

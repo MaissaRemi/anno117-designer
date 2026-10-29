@@ -232,6 +232,15 @@ source). Sans elle, large_07 raccorde toutes ses Citernes mais loge 2 000 habita
 (conduites plus longues). L'unité des hauteurs du jeu n'étant pas connue, la vraie règle n'est
 pas appliquée ; à vérifier en jeu.
 
+## Prix du bilan (choix de Rémi : un bilan sain vaut quelques habitants)
+
+En indicatif, les plans se comparent sur une population escomptée de 6 % par point de déficit
+vital par maison (`PRIX_DU_BILAN`, `IslandPlanRequest.prixDuBilan`) ; rien n'est démoli. Valeur
+mesurée sur neuf îles : voir le commentaire de `PRIX_DU_BILAN`. Les Bains reviennent sur
+medium_01, medium_04, medium_05, large_07.
+
+Suite proposée : diagonales dans les moteurs, `specs/2026-10-29-diagonales-moteur.md`.
+
 ## Onglet Production : diagnostic (à retravailler plus tard)
 
 Il calcule une chaîne par ratios exacts puis un plan compact HORS de toute île : ni côte, ni
