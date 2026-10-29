@@ -59,6 +59,14 @@ export const inBounds = (g: GridShape, x: number, y: number): boolean =>
 
 export const cellIndex = (g: GridShape, x: number, y: number): number => y * g.w + x;
 
+/**
+ * Une ROUTE peut-elle passer sur la case `c` alors qu'aucun bâtiment ne le peut ? Oui sur une
+ * rivière — un pont la franchit — et sur la façade réservée d'un emplacement de montagne, pour
+ * que sa route d'accès reste libre. Les moteurs s'en servent pour la connexité, les distances
+ * et le tracé des routes ; `usable` reste faux, donc rien ne s'y construit.
+ */
+export const routeSeule = (g: GridShape, c: number): boolean => !!(g.rivers?.[c] || g.voies?.[c]);
+
 export const isUsable = (g: GridShape, x: number, y: number): boolean =>
   inBounds(g, x, y) && g.usable[cellIndex(g, x, y)];
 

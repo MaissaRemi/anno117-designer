@@ -4,6 +4,7 @@ import type { AqueductTile, BuildingDef, GridShape, PlacedBuilding, RoadTile } f
 import { worldOf } from "../economy/economy";
 import { regionOfIsland } from "../data/islands";
 import type { DefLookup } from "../engine/rules";
+import { facadeDe, posesSurEmplacement } from "./emplacements";
 
 /**
  * Réseau d'eau (cf. GAME_MECHANICS.md §5) — approximations assumées :
@@ -84,24 +85,34 @@ export const waterDemandOf = (def: BuildingDef): number => waterAmountOf(def);
 export const needsWater = (def: BuildingDef): boolean => waterAmountOf(def) > 0;
 
 /**
- * Bloque les zones montagne (disque Chebyshev autour des slots) dans une COPIE du
- * masque usable — à donner aux moteurs de placement pour qu'ils n'y posent rien
- * (le masque mapimage marque la montagne comme constructible, c'est faux ; et la
- * source d'aqueduc a besoin de cette place).
+ * Réserve les emplacements de montagne dans une COPIE du masque usable — à donner aux moteurs
+ * de placement pour qu'ils n'y posent rien : la source d'aqueduc ou la mine en a besoin.
+ *
+ * La montagne elle-même n'est plus bloquée ici : le masque des pentes la retire déjà de la
+ * terre constructible (cf. data/terrain). Le carré de 13 × 13 qu'on bloquait autour de chaque
+ * emplacement couvrait surtout la prairie DEVANT lui — là où passe sa route d'accès.
  */
-export function blockMountains(grid: GridShape, radius = MOUNTAIN_BLOCK_RADIUS): GridShape {
+export function blockMountains(grid: GridShape): GridShape {
   const slots = (grid.slots ?? []).filter((s) => s.type === "mountain");
   if (!slots.length) return grid;
   const usable = grid.usable.slice();
+  const voies = grid.voies?.slice() ?? new Array<boolean>(grid.w * grid.h).fill(false);
   for (const s of slots) {
-    for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
-      const x = s.x + dx, y = s.y + dy;
-      if (x < 0 || y < 0 || x >= grid.w || y >= grid.h) continue;
-      usable[y * grid.w + x] = false;
-    }
+    // l'emprise que la source ou la mine y prendra, et sa façade, réservée à la route d'accès
+    // (cf. emplacements.ts) : un îlot ou une maison posés devant la laissaient sans route
+    const pose = posesSurEmplacement(grid, EMPRISE_MONTAGNE, s)[0];
+    if (!pose) continue;
+    for (let j = 0; j < pose.h; j++) for (let i = 0; i < pose.w; i++) usable[(pose.y + j) * grid.w + pose.x + i] = false;
+    for (const c of facadeDe(grid, pose)) if (grid.usable[c]) { usable[c] = false; voies[c] = true; }
   }
-  return { ...grid, usable };
+  return { ...grid, usable, voies };
 }
+
+/**
+ * Emprise des bâtiments d'emplacement de montagne : mines, carrières et source d'aqueduc font
+ * toutes 8 × 3 au catalogue. Sert à réserver l'emplacement avant de savoir ce qui s'y posera.
+ */
+const EMPRISE_MONTAGNE = { size: { w: 8, h: 3 }, rotatable: true };
 
 interface FP { x: number; y: number; w: number; h: number }
 
@@ -241,47 +252,37 @@ export function planWater(
     return out;
   };
 
-  // pose une source au plus près d'un slot (essaie les 2 orientations)
+  // pose la source SUR l'emplacement, dans l'orientation qu'il prévoit (cf. emplacements.ts)
   const placeSource = (sx: number, sy: number): PlacedBuilding | null => {
-    const dims: [number, number, 0 | 90][] = [
-      [srcDef.size.w, srcDef.size.h, 0],
-      [srcDef.size.h, srcDef.size.w, 90],
-    ];
-    for (let r = 0; r <= MOUNTAIN_ZONE_RADIUS + 2; r++) {
-      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        for (const [w, h, rot] of dims) {
-          const x = sx + dx - (w >> 1), y = sy + dy - (h >> 1);
-          if (x < 0 || y < 0 || x + w > W || y + h > H) continue;
-          let ok = true;
-          for (let j = 0; j < h && ok; j++) for (let i = 0; i < w; i++) {
-            if (!pass((y + j) * W + (x + i))) { ok = false; break; }
-          }
-          if (!ok) continue;
-          const pb: PlacedBuilding = { uid: uid("aqua"), defId: srcDef.id, x, y, rotation: rot, locked: false };
-          for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) bldOcc[(y + j) * W + (x + i)] = 1;
-          // graines réseau : périmètre de la source à dist 0 (jamais sur une route :
-          // une conduite ne peut pas se brancher/terminer sur une case route)
-          const srcIdx = sources.length;
-          for (const c of perimeter({ x, y, w, h })) {
-            if (!pass(c) || roadAt[c]) continue;
-            if (netDist[c] < 0) { netDist[c] = 0; netSrc[c] = srcIdx; }
-          }
-          sources.push(pb);
-          srcUsed.push(0);
-          // hauteur de tête de CETTE source (max de son emprise) : son plafond propre
-          let myQ = -128;
-          if (heights) {
-            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-              const q = heights[(y + j) * W + (x + i)];
-              if (q > myQ) myQ = q;
-            }
-            if (myQ > maxSrcQ) maxSrcQ = myQ;
-          }
-          srcMaxQ[srcIdx] = myQ;
-          return pb;
-        }
+    for (const { x, y, w, h, rot } of posesSurEmplacement(grid, srcDef, { x: sx, y: sy })) {
+      let ok = true;
+      for (let j = 0; j < h && ok; j++) for (let i = 0; i < w; i++) {
+        const c = (y + j) * W + (x + i);
+        if (!pass(c) || roadAt[c]) { ok = false; break; } // jamais sur une route
       }
+      if (!ok) continue;
+      const pb: PlacedBuilding = { uid: uid("aqua"), defId: srcDef.id, x, y, rotation: rot, locked: false };
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) bldOcc[(y + j) * W + (x + i)] = 1;
+      // graines réseau : périmètre de la source à dist 0 (jamais sur une route :
+      // une conduite ne peut pas se brancher/terminer sur une case route)
+      const srcIdx = sources.length;
+      for (const c of perimeter({ x, y, w, h })) {
+        if (!pass(c) || roadAt[c]) continue;
+        if (netDist[c] < 0) { netDist[c] = 0; netSrc[c] = srcIdx; }
+      }
+      sources.push(pb);
+      srcUsed.push(0);
+      // hauteur de tête de CETTE source (max de son emprise) : son plafond propre
+      let myQ = -128;
+      if (heights) {
+        for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+          const q = heights[(y + j) * W + (x + i)];
+          if (q > myQ) myQ = q;
+        }
+        if (myQ > maxSrcQ) maxSrcQ = myQ;
+      }
+      srcMaxQ[srcIdx] = myQ;
+      return pb;
     }
     return null;
   };

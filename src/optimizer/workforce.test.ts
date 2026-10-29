@@ -154,7 +154,9 @@ describe("cascade dans le plan d'île", () => {
     const tier = topTierOf("Roman");
     const r = planIslandImport({ catalog, grid, tierGuid: tier.guid, coverageFloor: 0.8 });
     expect(r.workforce.conversions).toEqual([]);
-    expect(r.residents).toBeGreaterThan(20_000);
+    // Mesuré 18 165 depuis que montagnes et rivières sont à leur vraie place (29/10/2026) :
+    // l'ancien seuil comptait des maisons posées sur la montagne.
+    expect(r.residents).toBeGreaterThan(16_000);
   }, 300_000);
 
   it("on ne pose pas ce que l'île ne pourra jamais armer", () => {

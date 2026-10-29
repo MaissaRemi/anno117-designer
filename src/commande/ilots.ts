@@ -1,7 +1,7 @@
 import type { BuildingDef, GridShape, Layout, PlacedBuilding, RoadTile } from "../model/types";
 import type { DefLookup } from "../engine/rules";
 import { rootedRoadSet, roadConnected } from "../engine/rules";
-import { footprintSize } from "../engine/geometry";
+import { footprintSize, routeSeule } from "../engine/geometry";
 import { cityStatusAttrs, economy, effectOf, residentialChainExtended, tierByGuid } from "../economy/economy";
 import { compileTierEvaluator } from "../economy/needsModel";
 import { VITAL_ATTRS } from "../economy/attributes";
@@ -107,12 +107,19 @@ class Trame {
   terre(x: number, y: number) {
     return x >= 0 && y >= 0 && x < this.grid.w && y < this.grid.h && this.grid.usable[y * this.grid.w + x];
   }
+  /** Une route y passe : la terre, ou une case réservée à la route (cf. `routeSeule`). */
+  routable(x: number, y: number) {
+    return this.terre(x, y) || (x >= 0 && y >= 0 && x < this.grid.w && y < this.grid.h
+      && routeSeule(this.grid, y * this.grid.w + x));
+  }
   /** Intérieur tout en terre, et les deux rangées de route qui le bordent aussi. */
   valide(i: number, j: number): boolean {
     if (i < 0 || j < 0 || i >= this.nI || j >= this.nJ) return false;
     const { x, y } = this.coin(i, j);
     for (let dy = -1; dy <= ILOT.hauteur; dy++) {
-      for (let dx = 0; dx < ILOT.largeur; dx++) if (!this.terre(x + dx, y + dy)) return false;
+      // l'intérieur en terre ; les rangées de route du bord peuvent franchir une rivière
+      const ok = dy < 0 || dy >= ILOT.hauteur ? this.routable.bind(this) : this.terre.bind(this);
+      for (let dx = 0; dx < ILOT.largeur; dx++) if (!ok(x + dx, y + dy)) return false;
     }
     return true;
   }
@@ -159,6 +166,8 @@ export function routeVersReseau(
   lookup: DefLookup,
 ): RoadTile[] | null {
   const W = grid.w, H = grid.h, N = W * H;
+  // terre, ou case réservée à la route (rivière franchie par un pont, façade d'emplacement)
+  const sol = (c: number) => grid.usable[c] || routeSeule(grid, c);
   const route = new Uint8Array(N);
   for (const r of roads) route[r.y * W + r.x] = 1;
   const pris = new Uint8Array(N);
@@ -180,7 +189,7 @@ export function routeVersReseau(
   if (depart.some((c) => route[c])) return [];
   const prev = new Int32Array(N).fill(-2);
   let front: number[] = [];
-  for (const c of depart) if (grid.usable[c] && !pris[c] && prev[c] === -2) { prev[c] = -1; front.push(c); }
+  for (const c of depart) if (sol(c) && !pris[c] && prev[c] === -2) { prev[c] = -1; front.push(c); }
   const chemin = (fin: number): RoadTile[] => {
     const out: RoadTile[] = [];
     for (let cur = fin; cur >= 0; cur = prev[cur]) out.push({ x: cur % W, y: (cur / W) | 0 });
@@ -211,13 +220,13 @@ export function routeVersReseau(
         const n = voisine(c, d);
         if (n < 0 || prev[n] !== -2) continue;
         if (route[n]) return chemin(c);
-        if (!grid.usable[n] || pris[n]) continue;
+        if (!sol(n) || pris[n]) continue;
         if (conduite[n]) {
           if (!franchit(n, d)) continue;
           const au = voisine(n, d);
           if (au < 0 || prev[au] !== -2) continue;
           if (route[au]) { prev[n] = c; return chemin(n); }
-          if (!grid.usable[au] || pris[au] || conduite[au]) continue;
+          if (!sol(au) || pris[au] || conduite[au]) continue;
           prev[n] = c;
           prev[au] = n;
           next.push(au);
@@ -421,7 +430,7 @@ function disposer(
   /** Routes de la ville dans son état courant. */
   const routes = (): Uint8Array => {
     const r = new Uint8Array(N);
-    const poser = (x: number, y: number) => { if (trame.terre(x, y)) r[y * W + x] = 1; };
+    const poser = (x: number, y: number) => { if (trame.routable(x, y)) r[y * W + x] = 1; };
     for (const c of etat.keys()) {
       const { i, j } = trame.ij(c);
       const { x, y } = trame.coin(i, j);
@@ -1091,7 +1100,11 @@ function disposer(
     const d = lookup(src.defId);
     if (!d) continue;
     const fp = footprintSize(d, src.rotation);
-    const chemin = routeVersReseau(grid, { x: src.x, y: src.y, ...fp }, buildings, roadTiles, water.aqueducts, lookup);
+    // vers le réseau RELIÉ au comptoir : un bout de route isolé au pied de la montagne passait
+    // pour un raccord, et la source restait sans accès (roman_island_medium_01, patch 200)
+    const { set: racine, hasRoot } = rootedRoadSet({ grid, buildings, roads: roadTiles, fields: [] }, lookup);
+    const cibles = hasRoot ? roadTiles.filter((r) => racine.has(`${r.x},${r.y}`)) : roadTiles;
+    const chemin = routeVersReseau(grid, { x: src.x, y: src.y, ...fp }, buildings, cibles, water.aqueducts, lookup);
     if (chemin === null) { manques.push(`Source d'aqueduc en (${src.x}, ${src.y}) sans route possible jusqu'au réseau`); continue; }
     const vu = new Set(roadTiles.map((r) => r.y * W + r.x));
     roadTiles = [...roadTiles, ...chemin.filter((r) => !vu.has(r.y * W + r.x))];

@@ -1,6 +1,7 @@
 import type { Catalog, GridShape, Layout } from "../model/types";
 import { upscale2x } from "../data/islands";
 import { seedCatalog } from "../data/seed";
+import { buildIslandGrid } from "../data/islandGrid";
 
 // v8 : grille VIVANTE en ½-tuiles (cellsPerTile=2) pour la construction 45°.
 //      Un état v7 (tuiles) est suréchantillonné ×2 au chargement.
@@ -81,13 +82,27 @@ function refreshFromGameData(persisted: Catalog): Catalog {
   return [...jeu, ...propres];
 }
 
+/**
+ * LA GRILLE D'UNE ÎLE CONNUE SUIT LES DONNÉES DU JEU, comme le catalogue (ci-dessus).
+ *
+ * Un plan enregistré embarque sa grille. Celle d'avant le 29/10/2026 plaçait emplacements et
+ * rivières en miroir vertical et tenait la montagne pour constructible : sans rafraîchissement,
+ * l'éditeur l'aurait gardée indéfiniment. Bâtiments, routes et champs du joueur sont conservés ;
+ * ceux qui tombent désormais sur la roche sont signalés par la validation de l'éditeur.
+ */
+function refreshGrid(persisted: GridShape): GridShape {
+  if (!persisted.islandId) return persisted;
+  const jeu = buildIslandGrid(persisted.islandId);
+  return jeu && jeu.w === persisted.w && jeu.h === persisted.h ? jeu : persisted;
+}
+
 export function loadState(): Persisted | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const data = JSON.parse(raw) as Persisted;
       if (!data.catalog || !data.layout) return null;
-      return { ...data, catalog: refreshFromGameData(data.catalog) };
+      return { catalog: refreshFromGameData(data.catalog), layout: { ...data.layout, grid: refreshGrid(data.layout.grid) } };
     }
     // pas de v8 : tenter une migration depuis v7 (tuiles → ½-tuiles ×2)
     const rawV7 = localStorage.getItem(KEY_V7);

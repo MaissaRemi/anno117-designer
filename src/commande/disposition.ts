@@ -1,6 +1,7 @@
 import type { GridShape, Layout, PlacedBuilding } from "../model/types";
 import type { PlanQuality } from "../optimizer/planQuality";
 import type { Nomenclature } from "./nomenclature";
+import { routeSeule } from "../engine/geometry";
 
 /**
  * ═══ DISPOSER UNE COMMANDE — TYPES ET OUTILS COMMUNS ══════════════════════════════════
@@ -101,6 +102,11 @@ class Tas {
  * Distance OCTILE le long de la terre depuis des graines (10 en ligne droite, 14 en diagonale,
  * la diagonale n'étant permise qu'entre deux cases de terre, pour qu'une zone prise par
  * distance croissante reste d'un seul tenant en 4-adjacence). −1 si inaccessible.
+ *
+ * Une case réservée à la route (rivière, façade d'emplacement — cf. `routeSeule`) se traverse,
+ * en ligne droite : un pont franchit la rivière. Sans cela, la ville ne
+ * dépassait pas la rive du comptoir — sur roman_island_large_03, une commande de 120 maisons
+ * ne trouvait qu'un îlot.
  */
 export function distancesDeCroissance(grid: GridShape, graines: number[]): Int32Array {
   return croissance(grid, graines).dist;
@@ -108,6 +114,7 @@ export function distancesDeCroissance(grid: GridShape, graines: number[]): Int32
 
 function croissance(grid: GridShape, graines: number[]): { dist: Int32Array } {
   const W = grid.w, H = grid.h, N = W * H;
+  const passe = (c: number) => grid.usable[c] || routeSeule(grid, c);
   const dist = new Int32Array(N).fill(-1);
   const fait = new Uint8Array(N);
   const tas = new Tas();
@@ -122,8 +129,8 @@ function croissance(grid: GridShape, graines: number[]): { dist: Int32Array } {
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
       const n = ny * W + nx;
-      if (!grid.usable[n] || fait[n]) continue;
-      if (dx && dy && !(grid.usable[y * W + nx] && grid.usable[ny * W + x])) continue;
+      if (!passe(n) || fait[n]) continue;
+      if (dx && dy && !(grid.usable[c] && grid.usable[n] && grid.usable[y * W + nx] && grid.usable[ny * W + x])) continue;
       const nd = d + (dx && dy ? 14 : 10);
       if (dist[n] < 0 || nd < dist[n]) { dist[n] = nd; tas.pousser(nd, n); }
     }

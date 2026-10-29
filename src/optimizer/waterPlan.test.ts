@@ -70,12 +70,16 @@ describe("planWater", () => {
     for (const c of r.consumers) expect(c.connected).toBe(true);
   });
 
-  it("blockMountains : zone autour du slot exclue du masque moteur", () => {
+  it("blockMountains : réserve l'emprise de l'emplacement et sa façade, pas la prairie autour", () => {
     const grid = gridWithMountain(60, 60, [{ type: "mountain", x: 30, y: 30 }]);
     const blocked = blockMountains(grid);
+    // terrain plat : pose couchée 8 × 3 centrée (x 26..33, y 29..31), façade au-dessus (y 28)
     expect(blocked.usable[30 * 60 + 30]).toBe(false);
-    expect(blocked.usable[30 * 60 + 36]).toBe(false); // r=6
-    expect(blocked.usable[30 * 60 + 38]).toBe(true); // hors zone
+    expect(blocked.usable[29 * 60 + 26]).toBe(false);
+    expect(blocked.usable[28 * 60 + 30]).toBe(false);
+    expect(blocked.voies?.[28 * 60 + 30]).toBe(true); // la façade reste à la route
+    expect(blocked.usable[30 * 60 + 34]).toBe(true); // à côté de l'emprise
+    expect(blocked.usable[30 * 60 + 36]).toBe(true); // l'ancien carré de 13 × 13 n'est plus bloqué
     expect(grid.usable[30 * 60 + 30]).toBe(true); // l'original intact
   });
 
@@ -195,7 +199,8 @@ describe("planWater", () => {
   });
 
   it("routes : croisement en ligne droite uniquement, jamais le long, terminus hors route", () => {
-    const grid = gridWithMountain(140, 140, [{ type: "mountain", x: 20, y: 70 }]);
+    // emplacement hors des routes : une source ne se pose jamais sur une route
+    const grid = gridWithMountain(140, 140, [{ type: "mountain", x: 20, y: 40 }]);
     // mur de routes vertical x=60 séparant source (gauche) et Bains (droite),
     // + route horizontale y=70 : la conduite DOIT croiser au moins le mur x=60
     const roads: { x: number; y: number }[] = [];

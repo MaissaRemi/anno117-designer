@@ -1,5 +1,5 @@
 import { uid } from "../model/factories";
-import { footprintSize } from "../engine/geometry";
+import { footprintSize, routeSeule } from "../engine/geometry";
 import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import { economy, effectOf, residentialChainExtended } from "../economy/economy";
 import { viableSubset, type Weighed } from "./viability";
@@ -7,7 +7,7 @@ import { uniqueCap } from "../economy/uniques";
 import { VITAL_ATTRS } from "../economy/attributes";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
-import { MAX_RUN, MOUNTAIN_BLOCK_RADIUS, needsWater, planWater, type WaterPlanResult } from "./waterPlan";
+import { MAX_RUN, needsWater, planWater, type WaterPlanResult } from "./waterPlan";
 import { makeStreetGrid } from "./streetGrid";
 import { copiesEnTrop } from "./doublons";
 import { planningRange, type RoadType } from "../engine/roads";
@@ -187,7 +187,13 @@ export function planLattice(
   // le masque TERRAIN à part — la route de montagne a besoin de savoir qu'une case est
   // bloquée par le relief, pas par une construction.
   const terrainBlocked = new Uint8Array(N);
-  for (let i = 0; i < N; i++) if (!grid.usable[i]) { occ[i] = 1; terrainBlocked[i] = 1; }
+  // Une case réservée à la route (rivière, façade d'emplacement — cf. `routeSeule`) reste libre
+  // pour les routes, pas pour les bâtiments, que `fitsBld`/`fitsHouse` refusent hors de `usable`.
+  for (let i = 0; i < N; i++) {
+    if (grid.usable[i]) continue;
+    terrainBlocked[i] = 1;
+    if (!routeSeule(grid, i)) occ[i] = 1;
+  }
   const roadAt = new Uint8Array(N);
   const bldAdj = new Uint8Array(N);
 
@@ -728,28 +734,17 @@ export function planLattice(
   // adjacente étaient des sources d'aqueduc — 7, 5 et 9 — et le balayage des 55 îles montrait
   // le même reliquat partout.
   //
-  // On creuse donc un accès depuis chaque source vers le réseau existant. Le chemin traverse
-  // le RELIEF (cases bloquées par le terrain, jamais par un bâtiment : `fitsBld` exige
-  // `usable`, aucune construction n'y tient) et les cases libres, jamais un bâtiment. Les
-  // cases posées deviennent des routes ordinaires : l'élagage ancré au comptoir les rattache
-  // ensuite au réseau enraciné comme n'importe quelles autres.
+  // On trace donc un accès depuis chaque source vers le réseau existant, par la TERRE libre
+  // seulement. La source est posée sur son emplacement, façade vers la terre constructible
+  // (cf. emplacements.ts) : l'accès part de cette façade. Il traversait autrefois le relief, à
+  // une époque où l'emplacement était lu en miroir et la source posée n'importe où autour —
+  // une route sur la montagne n'existe pas en jeu. Les cases posées deviennent des routes
+  // ordinaires, que l'élagage ancré au comptoir rattache au réseau enraciné.
   // Cases des chemins creusés vers les sources : l'élagage des routes doit les garder entières
   // (cf. `pruneRoads`), elles ne touchent un bâtiment qu'à leur extrémité.
   const routesDesSources: number[] = [];
   if (water?.sources.length) {
-    const nearMountain = new Uint8Array(N);
-    const rad = MOUNTAIN_BLOCK_RADIUS + 2;
-    for (const sl of mountainSlots) {
-      for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
-        const x = sl.x + dx, y = sl.y + dy;
-        if (x >= 0 && y >= 0 && x < W && y < H) nearMountain[y * W + x] = 1;
-      }
-    }
-    const passable = (c: number): boolean => {
-      if (roadAt[c]) return true;
-      if (terrainBlocked[c]) return nearMountain[c] === 1; // relief autour du slot
-      return !occ[c];
-    };
+    const passable = (c: number): boolean => roadAt[c] === 1 || ((!terrainBlocked[c] || routeSeule(grid, c)) && !occ[c]);
     for (const src of water.sources) {
       const fp = footprintSize(lookup(src.defId)!, src.rotation);
       const ring: number[] = [];

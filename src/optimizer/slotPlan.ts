@@ -4,6 +4,7 @@ import { economy, goodName, priceOf } from "../economy/economy";
 import type { DefLookup } from "../engine/rules";
 import type { BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
 import { MOUNTAIN_BLOCK_RADIUS } from "./waterPlan";
+import { posesSurEmplacement } from "./emplacements";
 import { pickWarehouseDef } from "./kontor";
 
 /**
@@ -231,7 +232,7 @@ export function planSlots(
    * cette tolérance, un puits d'argile ou une mine ne pouvait même pas amorcer son BFS
    * depuis son propre périmètre — il restait sans route, donc sans entrepôt à portée.
    */
-  const linkToRoads = (x: number, y: number, w: number, h: number, anchor?: { x: number; y: number }, maxLen = opts.raccordMax ?? 80): boolean => {
+  const linkToRoads = (x: number, y: number, w: number, h: number, maxLen = opts.raccordMax ?? 80): boolean => {
     // PÉRIMÈTRE ORTHO, sans les coins — le même défaut que `connectKontor` avait déjà : un coin
     // est DIAGONAL à l'emprise, l'accès routier du jeu est orthogonal. Une route touchant un coin
     // faisait répondre « déjà au bord d'une route », ou terminait le raccord en diagonale ; le
@@ -248,9 +249,10 @@ export function planSlots(
       }
     }
     if (perim.some((c) => roadAt[c])) return true; // déjà au bord d'une route
+    // par la terre seulement : l'emplacement donne sur elle (cf. emplacements.ts), et une route
+    // ne monte pas sur la montagne
     const passable = (c: number): boolean => {
-      const cx = c % W, cy = (c / W) | 0;
-      if (!grid.usable[c] && !(anchor && nearSlot(cx, cy, anchor))) return false;
+      if (!grid.usable[c]) return false;
       if (opts.bloquees?.[c]) return false;
       const o = owner[c];
       return o < 0 || demolishable(all[o].defId);
@@ -291,46 +293,36 @@ export function planSlots(
 
   // --- 2. pose d'une exploitation par slot libre ---------------------------------------
   const placedIdx: number[] = []; // index dans `all` des exploitations posées
-  /** Pose `def` au plus près du slot `s` ; rend false si rien ne tient. */
+  /** Pose `def` SUR le slot `s` (cf. emplacements.ts) ; rend false si rien ne tient. */
   const poserSur = (def: BuildingDef, s: { x: number; y: number; type: string }): boolean => {
     const sx = Math.round(s.x), sy = Math.round(s.y);
-    const dims: [number, number, 0 | 90][] = [
-      [def.size.w, def.size.h, 0],
-      [def.size.h, def.size.w, 90],
-    ];
-    for (let r = 0; r <= PLACE_RADIUS; r++) {
-      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        for (const [w, h, rot] of dims) {
-          const x = sx + dx - (w >> 1), y = sy + dy - (h >> 1);
-          if (!freeFor(x, y, w, h, { x: sx, y: sy })) continue;
-          const b: PlacedBuilding = { uid: uid("slot"), defId: def.id, x, y, rotation: rot, locked: false };
-          const idx = all.length;
-          all.push(b);
-          stampOcc(b, idx);
-          const relie = linkToRoads(x, y, w, h, { x: sx, y: sy });
-          // EN COMMANDE, un emplacement sans route possible n'est pas un emplacement : de l'autre
-          // côté d'un bras de mer, la mine serait posée puis retirée faute d'entrepôt. On défait
-          // la pose et l'appelant essaie l'emplacement suivant. Le mode historique, qui remplit
-          // tous les emplacements, garde son comportement.
-          if (!relie && opts.demandes) {
-            all.pop();
-            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) owner[(y + j) * W + x + i] = -1;
-            return false;
-          }
-          out.buildings.push(b);
-          opts.workforce?.charge([def.id]);
-          placedIdx.push(idx);
-          const r0 = ratePerMin(def.id);
-          out.exploited.push({
-            defId: def.id, name: def.name, slotType: s.type,
-            good: r0?.good ?? "", goodName: goodName(r0?.good ?? null),
-            perMin: Math.round((r0?.perMin ?? 0) * 100) / 100,
-            x, y, served: false,
-          });
-          return true;
-        }
+    for (const { x, y, w, h, rot } of posesSurEmplacement(grid, def, s)) {
+      if (!freeFor(x, y, w, h, { x: sx, y: sy })) continue;
+      const b: PlacedBuilding = { uid: uid("slot"), defId: def.id, x, y, rotation: rot, locked: false };
+      const idx = all.length;
+      all.push(b);
+      stampOcc(b, idx);
+      const relie = linkToRoads(x, y, w, h);
+      // EN COMMANDE, un emplacement sans route possible n'est pas un emplacement : de l'autre
+      // côté d'un bras de mer, la mine serait posée puis retirée faute d'entrepôt. On défait
+      // la pose et l'appelant essaie l'emplacement suivant. Le mode historique, qui remplit
+      // tous les emplacements, garde son comportement.
+      if (!relie && opts.demandes) {
+        all.pop();
+        for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) owner[(y + j) * W + x + i] = -1;
+        return false;
       }
+      out.buildings.push(b);
+      opts.workforce?.charge([def.id]);
+      placedIdx.push(idx);
+      const r0 = ratePerMin(def.id);
+      out.exploited.push({
+        defId: def.id, name: def.name, slotType: s.type,
+        good: r0?.good ?? "", goodName: goodName(r0?.good ?? null),
+        perMin: Math.round((r0?.perMin ?? 0) * 100) / 100,
+        x, y, served: false,
+      });
+      return true;
     }
     return false;
   };
