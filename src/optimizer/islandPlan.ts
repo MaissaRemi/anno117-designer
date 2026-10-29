@@ -105,9 +105,9 @@ export interface IslandPlanRequest {
   roadType?: RoadType;
   /**
    * Ce que le plan maximise. `habitants` (défaut) : la population. `maisons` : le nombre de
-   * maisons posées contre une route — l'île couverte, quitte à ce que celles d'un coin que
-   * rien ne dessert restent à un palier bas ; elles logent encore du monde par les biens.
-   * À nombre de maisons égal, la population départage.
+   * maisons AU PALIER CIBLE. Compter toutes les maisons faisait choisir une recette maigre :
+   * sur roman_island_small_01, 244 maisons sur 677 retombaient Liberti, et leur malus de rang
+   * de cité creusait à lui seul la sécurité incendie (−709). À égalité, la population départage.
    */
   objectif?: "habitants" | "maisons";
   /**
@@ -317,9 +317,9 @@ interface RegleDeBilan {
   strict: boolean;
   /** Le drapeau `viable` rendu au joueur : tolérance nulle en indicatif, la sienne en strict. */
   verdict: (attrs: Record<string, number>, houses: number) => boolean;
-  /** Ce que les comparateurs classent : population (ou maisons, selon l'objectif), escomptée du
-   *  risque en strict. */
-  classer: (residents: number, attrs: Record<string, number>, houses: number) => number;
+  /** Ce que les comparateurs classent : population (ou maisons au palier cible, selon
+   *  l'objectif), escomptée du risque en strict. */
+  classer: (residents: number, attrs: Record<string, number>, houses: number, auPalier: number) => number;
 }
 
 function regleDeBilan(req: IslandPlanRequest): RegleDeBilan {
@@ -335,13 +335,13 @@ function regleDeBilan(req: IslandPlanRequest): RegleDeBilan {
   return {
     strict,
     verdict: (attrs, houses) => verdictViable(attrs, houses, tol),
-    classer: (residents, attrs, houses) => {
+    classer: (residents, attrs, houses, auPalier) => {
       const pop = strict ? populationEffective(residents, attrs, houses, tol) : residents;
       if (!parMaisons) return pop;
-      // Les maisons d'abord, escomptées du même risque que la population en strict ; les
-      // habitants ne font que départager (une maison loge bien moins de 1 000 personnes).
-      const maisons = strict && residents > 0 ? (houses * pop) / residents : houses;
-      return maisons + pop / 1000;
+      // Les maisons au palier cible d'abord, escomptées du même risque que la population en
+      // strict ; les habitants ne font que départager (aucune île n'en loge dix millions).
+      const maisons = strict && residents > 0 ? (auPalier * pop) / residents : auPalier;
+      return maisons + pop / 1e7;
     },
   };
 }
@@ -377,8 +377,8 @@ function balayerPaliers(
   for (let i = 0; i < ladder.length; i++) {
     onProgress?.(i + 1, ladder.length);
     const r = planIslandImport({ ...req, tierGuid: ladder[i].guid, autoTier: false });
-    const pr = regle.classer(r.residents, r.attrsTotal, r.houses);
-    const pb = best ? regle.classer(best.residents, best.attrsTotal, best.houses) : -1;
+    const pr = regle.classer(r.residents, r.attrsTotal, r.houses, r.fullyCovered);
+    const pb = best ? regle.classer(best.residents, best.attrsTotal, best.houses, best.fullyCovered) : -1;
     const wins = !best
       || (r.feasible !== best.feasible ? r.feasible
         : pr !== pb ? pr > pb
@@ -584,8 +584,8 @@ export function planIslandImport(
     // 20 904 habitants contre un plan de 4 992 pour trois centièmes de point par maison.
     // La population est donc ESCOMPTÉE du risque qu'elle porte (cf. `populationEffective`),
     // ce qui laisse les plans sains strictement inchangés et rend la comparaison continue.
-    const pa = regle.classer(a.residents, a.attrsTotal, a.cand.houses);
-    const pb = regle.classer(b.residents, b.attrsTotal, b.cand.houses);
+    const pa = regle.classer(a.residents, a.attrsTotal, a.cand.houses, a.tierCounts[req.tierGuid] ?? 0);
+    const pb = regle.classer(b.residents, b.attrsTotal, b.cand.houses, b.tierCounts[req.tierGuid] ?? 0);
     const close = Math.abs(pa - pb) <= 0.02 * Math.max(pa, pb, 1);
     if (!close) return pa > pb;
     // INDICATIF : à population quasi égale, le bilan le plus sain l'emporte. C'est le seul
@@ -621,7 +621,7 @@ export function planIslandImport(
    * du même plan, qui livrent la même chose.
    */
   const FINALISTS = 3;
-  const total = trials.length + 2 + FINALISTS;
+  let total = trials.length + 2 + FINALISTS;
   /** Tous les plans NUS évalués — le vivier dans lequel les finalistes sont pris. */
   const cands: Evaluated[] = [];
   let pick: Evaluated | null = null;
@@ -637,11 +637,59 @@ export function planIslandImport(
       serviceIds ? new Set(serviceIds) : null,
     );
   let bestTrial: string[] | undefined;
+  const recetteDe = new Map<Evaluated, string[] | undefined>();
   for (let i = 0; i < trials.length; i++) {
     onProgress?.(i + 1, total);
     const ev = runLattice(trials[i], coverageFloor);
     cands.push(ev);
+    recetteDe.set(ev, trials[i]);
     if (!pick || better(ev, pick)) { pick = ev; bestTrial = trials[i]; }
+  }
+  // ═══ VARIANTES DE BILAN ═══════════════════════════════════════════════════════════════
+  //
+  // Les recettes énumérées sont les plus MAIGRES qui franchissent les seuils : rien n'y pousse
+  // un service pour le bilan qu'il apporte. Or certains besoins du palier relèvent directement
+  // un attribut vital à chaque maison couverte — Bains et Citerne +3 en sécurité incendie,
+  // Bibliothèque −2. Mesuré sur roman_island_small_01 (Patriciens, routes en marbre) : la
+  // meilleure recette augmentée des Bains loge autant de Patriciens (435 contre 433), 15 770
+  // habitants contre 14 399, Liberti 75 contre 244, incendie −570 contre −709, santé +231
+  // contre −179.
+  //
+  // Seulement en indicatif — en strict, le garde-fou rase de toute façon jusqu'à zéro — et
+  // seulement si le bilan du meilleur plan est négatif. Les deux meilleures recettes reçoivent
+  // chacune, à tour de rôle, chaque service du palier qui relève un attribut en déficit.
+  let nVariantes = 0;
+  if (!regle.strict && pick) {
+    const enDeficit = VITAL_ATTRS.filter((k) => (pick!.attrsTotal[k] ?? 0) < 0);
+    const aides = [...new Set(chain.flatMap((t) => t.services)
+      .filter((sv) => sv.building && enDeficit.some((k) => (sv.attrs?.[k] ?? 0) > 0))
+      .map((sv) => sv.building!))];
+    const pool = cands.filter((c) => recetteDe.get(c));
+    const meilleures: string[][] = [];
+    while (meilleures.length < 2 && pool.length) {
+      let bi = 0;
+      for (let i = 1; i < pool.length; i++) if (better(pool[i], pool[bi])) bi = i;
+      meilleures.push(recetteDe.get(pool.splice(bi, 1)[0])!);
+    }
+    const dejaVues = new Set(trials.filter((t) => t).map((t) => [...t!].sort().join("+")));
+    const variantes: string[][] = [];
+    for (const r of meilleures) {
+      for (const a of aides) {
+        if (r.includes(a)) continue;
+        const v = [...r, a].sort();
+        const cle = v.join("+");
+        if (!dejaVues.has(cle)) { dejaVues.add(cle); variantes.push(v); }
+      }
+    }
+    nVariantes = variantes.length;
+    total += nVariantes;
+    for (let i = 0; i < variantes.length; i++) {
+      onProgress?.(trials.length + i + 1, total);
+      const ev = runLattice(variantes[i], coverageFloor);
+      cands.push(ev);
+      recetteDe.set(ev, variantes[i]);
+      if (better(ev, pick)) { pick = ev; bestTrial = variantes[i]; }
+    }
   }
   // ═══ DIVINITÉ TUTÉLAIRE ═══════════════════════════════════════════════════════════════
   // Le choix ne peut pas être fait à l'avance : il dépend de l'attribut qui MANQUE, et celui
@@ -766,12 +814,12 @@ export function planIslandImport(
   // Mesuré +4,0 % (65 357 → 67 940 habitants) — le moteur pose une ou deux copies de plus
   // là où la couverture était juste, et récupère des maisons entières au palier cible.
   if (Math.abs(coverageFloor - REFINE_FLOOR) > 1e-6) {
-    onProgress?.(trials.length + 1, total);
+    onProgress?.(trials.length + nVariantes + 1, total);
     const ev = runLattice(bestTrial, REFINE_FLOOR);
     cands.push(ev);
     if (!pick || better(ev, pick)) pick = ev;
   }
-  onProgress?.(trials.length + 2, total);
+  onProgress?.(trials.length + nVariantes + 2, total);
   // ═══ packPlan, LE MOTEUR « HOUSES-FIRST », RETIRÉ ═══════════════════════════════════
   //
   // Sorti du portefeuille en août, puis retiré du code le 2026-10-29 (étape 8 de la refonte) :
@@ -1430,8 +1478,8 @@ export function planIslandImport(
     if (a.feasible !== b.feasible) return a.feasible;
     // Même escompte continu que le pré-tri : le drapeau reste juste et s'affiche, mais il ne
     // décide plus seul d'un facteur quatre de population.
-    const pa = regle.classer(a.residents, a.attrsTotal, a.houses);
-    const pb = regle.classer(b.residents, b.attrsTotal, b.houses);
+    const pa = regle.classer(a.residents, a.attrsTotal, a.houses, a.fullyCovered);
+    const pb = regle.classer(b.residents, b.attrsTotal, b.houses, b.fullyCovered);
     // Même départage qu'au pré-tri en indicatif : à 2 % près, le plan au bilan le plus sain.
     // La bande rend la comparaison non transitive, sans conséquence ici — elle ne sert qu'à
     // un balayage linéaire de trois ou quatre finalistes.
@@ -1445,7 +1493,7 @@ export function planIslandImport(
   };
   let out: IslandPlanResult | null = null;
   for (let i = 0; i < shortlist.length; i++) {
-    onProgress?.(trials.length + 2 + i + 1, total);
+    onProgress?.(trials.length + nVariantes + 2 + i + 1, total);
     const r = finalize(shortlist[i]);
     if (!out || betterFinal(r, out)) out = r;
   }
