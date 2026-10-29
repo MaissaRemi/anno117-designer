@@ -73,9 +73,11 @@ réseau d'eau, un bilan) : seule la géométrie est locale. Étapes restantes :
    portée en nœuds) — couverture, accès au comptoir et traversées d'aqueduc dessus.
    Conception et avancement : `docs/superpowers/specs/2026-10-29-reseau-routier-graphe.md`.
    Faits : golden de la trame droite (`pnpm vitest run src/optimizer/trameDroite.golden.test.ts`,
-   `GOLDEN=1` pour tout le panel), module `engine/reseauRoutier.ts`, analyseur à l'échelle 1
-   sur le graphe. Restent : `streetGrid` et `planLattice`, comptoir et élagage, `waterPlan`,
-   puis les liaisons diagonales (option) ; trois règles à vérifier en jeu (Q1 à Q3) ;
+   `GOLDEN=1` pour tout le panel), module `engine/reseauRoutier.ts`, et sur le graphe :
+   analyseur à l'échelle 1, `streetGrid`, `planLattice`, comptoir, réparation, élagage,
+   `waterPlan`. Une route de plan peut être un losange (`RoadTile.losange`). Restent : les
+   liaisons diagonales (étape 6, option), l'occupation des losanges, `commande/ilots.ts` ;
+   trois règles à vérifier en jeu (Q1 à Q3) — détail dans « Ce qui reste » de la conception ;
 3. carte d'orientation de l'île selon ses côtes ;
 4. squelette de rues mêlé, recousu aux jonctions ;
 5. placement global unique des services, de l'eau et des maisons sur ce graphe ;

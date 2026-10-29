@@ -1,6 +1,6 @@
 # Trame mêlée, étape 2 : le réseau routier en graphe — conception
 
-Statut : **validée par Rémi** ; étapes 0 à 2 faites (voir « Avancement » en fin de document).
+Statut : **validée par Rémi** ; étapes 0 à 5 faites (voir « Avancement » en fin de document).
 Suite de `2026-10-29-diagonales-moteur.md`, section « Trame mêlée : conception ».
 
 But de l'étape : que couverture, accès au comptoir et traversées d'aqueduc se calculent sur un
@@ -222,5 +222,41 @@ sur les 15 cas ; test différentiel contre l'ancienne 4-adjacence sur 30 plans a
 (routes sous les emprises, emprises qui débordent), qui échoue bien si l'on fausse le contact.
 Les ensembles renvoyés gardent les clés `"x,y"` ; un losange y aurait la clé `"Lx,y"`.
 
-Reste ouvert : un `Layout` ne sait pas encore porter de losange (`RoadTile` n'a pas de
-forme). Inutile tant qu'aucun moteur n'en pose ; à décider avant l'étape 6.
+**`RoadTile.losange`** (décidé à l'étape 3) : une case de route d'un plan peut être un losange,
+centré sur le coin (x, y). Champ optionnel, grille des moteurs seulement ; l'éditeur n'en pose
+pas et ne sait pas en dessiner. Sans lui, les fonctions qui reçoivent des `RoadTile[]`
+(comptoir, réparation, élagage, eau) n'auraient pu être testées sur aucun losange.
+
+**Étape 3 — `streetGrid` et `planLattice`.** Le `roadAt` d'un moteur est le masque `droite`
+d'un `ReseauRoutier` (`reseauVide(W, H, roadAt)`) ; les losanges passent par `poserLosange`,
+qui tient un compte : à zéro, les parcours sautent la recherche des jonctions. Contact d'une
+emprise (`routesAuContactRect`, ordre historique de `orthoRoadCells` puis losanges), portée
+(`bfsType`), raccordement d'un anneau (`connectRing`), couverture des maisons, élagage ancré
+au comptoir et chemins des sources passent par le graphe. Les tracés à travers le terrain libre
+restent droits ; leur arrêt reconnaît un losange touché par un coin (`losangeAuContact`).
+Panel du golden : 67,8 s contre 66,2 s (+2,5 %).
+
+**Étape 4 — comptoir et nettoyage.** `connectKontor`, `repairRoadConnectivity`,
+`pruneDeadEnds` sur le graphe.
+
+**Étape 5 — `waterPlan`.** Règle prudente : ni conduite ni source sur une case dont un losange
+de route couvre la moitié (`casesSousLosange`).
+
+Golden identique à chaque étape ; suite complète verte. Les branches losange sont testées là
+où une entrée peut en porter (module, `streetGrid`, comptoir, réparation, élagage, eau).
+
+### Ce qui reste
+
+- **Non testé sur des losanges** : les branches losange de `planLattice` (élagage ancré au
+  comptoir, chemins des sources). Aucun moteur n'y pose encore de losange ; elles le seront
+  quand un moteur en posera (étape 6).
+- **Occupation** : `fitsBld`, `fitsHouse` et `stamp` ignorent les losanges. Une maison droite
+  pourrait se poser sur la moitié de case d'un losange. À traiter avec l'étape 6, par le
+  maillage de triangles.
+- **Hors périmètre, oubliés par la conception** : le moteur des commandes (`commande/ilots.ts`,
+  `atteintes` et `routeVersReseau`) a ses propres parcours en 4-adjacence ; de même les moteurs
+  de production (`slotPlan`, `prodPlan`, `localProd`, `prodlayout`). L'éditeur (échelle 2).
+- **Deux écarts au jeu gardés pour la parité** : les graines du noyau de
+  `repairRoadConnectivity` et le test « contre une route » du déplacement d'un consommateur
+  d'eau comptent les 4 cases EN COIN d'une emprise, que le jeu ne raccorde pas. Les corriger
+  change des plans : à faire à part, golden recapturé et écarts mesurés.
