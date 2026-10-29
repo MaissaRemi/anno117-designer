@@ -76,15 +76,8 @@ export function MultiIslandPanel() {
 
   return (
     <div className="pane-full">
-      <h3>🏝 Multi-îles</h3>
-      <p className="muted" style={{ marginTop: 4 }}>
-        Déclare les îles de ta partie et leurs ressources. Le programme assigne les rôles
-        (population / production, contrainte par les ressources déclarées) pour maximiser la
-        population totale.
-      </p>
-
-      <div className="row" style={{ marginTop: 12 }}>
-        <label className="field" style={{ flex: 2 }}>
+      <div className="row">
+        <label className="field" style={{ flex: 2 }} title="Déclare les îles de ta partie et leurs ressources : le programme assigne les rôles (population ou production) pour maximiser la population totale.">
           <span>Ajouter une île</span>
           <select value="" onChange={(e) => { if (e.target.value) addPartyIsland(e.target.value); }}>
             <option value="">— choisir —</option>

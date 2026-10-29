@@ -124,11 +124,6 @@ export function CommandePlanner() {
   return (
     <div className="mode-pane">
       <div className="pane-config">
-        <h3>📋 Commande</h3>
-        <p className="muted" style={{ marginTop: 4 }}>
-          Dis ce que tu veux sur l'île ; le moteur calcule la liste exacte des bâtiments, puis les
-          dispose en quartiers et en chaînes de production.
-        </p>
         {!islandId && <div className="warn">Charge une île d'abord (bouton « Charger une île » en haut).</div>}
 
         <h4>Maisons</h4>
@@ -153,10 +148,6 @@ export function CommandePlanner() {
           </select>
         </div>
         <RoadTypeSelect value={routes} onChange={setRoutes} />
-        <label className="checkbox">
-          <input type="checkbox" checked={institutions} onChange={(e) => setInstitutions(e.target.checked)} />
-          <span>Institutions (vigiles, médecins, puits…)</span>
-        </label>
 
         <h4>Production</h4>
         <input type="search" placeholder="Ajouter un bâtiment de production…" value={recherche}
@@ -180,24 +171,31 @@ export function CommandePlanner() {
             <button type="button" title="Retirer" onClick={() => setProduction((p) => p.filter((_, k) => k !== i))}>✕</button>
           </div>
         ))}
-        <label className="checkbox">
-          <input type="checkbox" checked={completer} onChange={(e) => setCompleter(e.target.checked)} />
-          <span>Compléter les chaînes jusqu'aux matières premières</span>
-        </label>
-        <div className="field">
-          <span>Biens consommés par les maisons</span>
-          <select value={biens} onChange={(e) => setBiens(e.target.value as "importer" | "produire")}>
-            <option value="importer">Importés (le comptoir les reçoit)</option>
-            <option value="produire">Produits sur l'île</option>
-          </select>
-        </div>
-        <div className="field">
-          <span>Main-d'œuvre manquante</span>
-          <select value={mainOeuvre} onChange={(e) => setMainOeuvre(e.target.value as "loger" | "signaler")}>
-            <option value="loger">Loger les ouvriers (maisons ajoutées)</option>
-            <option value="signaler">Seulement la signaler</option>
-          </select>
-        </div>
+        <details className="avance">
+          <summary>Options avancées</summary>
+          <label className="checkbox">
+            <input type="checkbox" checked={institutions} onChange={(e) => setInstitutions(e.target.checked)} />
+            <span>Institutions (vigiles, médecins, puits…)</span>
+          </label>
+          <label className="checkbox">
+            <input type="checkbox" checked={completer} onChange={(e) => setCompleter(e.target.checked)} />
+            <span>Compléter les chaînes jusqu'aux matières premières</span>
+          </label>
+          <div className="field">
+            <span>Biens consommés par les maisons</span>
+            <select value={biens} onChange={(e) => setBiens(e.target.value as "importer" | "produire")}>
+              <option value="importer">Importés (le comptoir les reçoit)</option>
+              <option value="produire">Produits sur l'île</option>
+            </select>
+          </div>
+          <div className="field">
+            <span>Main-d'œuvre manquante</span>
+            <select value={mainOeuvre} onChange={(e) => setMainOeuvre(e.target.value as "loger" | "signaler")}>
+              <option value="loger">Loger les ouvriers (maisons ajoutées)</option>
+              <option value="signaler">Seulement la signaler</option>
+            </select>
+          </div>
+        </details>
 
         <div className="opt-result" style={{ marginTop: 8 }}>
           <b>Devis</b> — {nbBatiments.toLocaleString("fr")} bâtiments, {devis.habitants.toLocaleString("fr")} habitants,

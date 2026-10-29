@@ -82,9 +82,12 @@ interface State {
   setCoverageHighlight: (cells: string[] | null) => void;
 
   // --- navigation UI (session, non persistée) ---
-  uiMode: "editor" | "commande" | "island" | "multi" | "prod";
+  uiMode: "editor" | "plan" | "prod";
+  /** Mode de planification de l'écran Planifier (session, non persisté). */
+  planMode: "commande" | "remplir" | "iles";
   diagnostic: "none" | "coverage" | "audit";
-  setUiMode: (m: "editor" | "commande" | "island" | "multi" | "prod") => void;
+  setUiMode: (m: "editor" | "plan" | "prod") => void;
+  setPlanMode: (m: "commande" | "remplir" | "iles") => void;
   setDiagnostic: (d: "none" | "coverage" | "audit") => void;
 
   /** MONDE courant : Latium (romain) ou Albion (celtique). Les deux n'ont ni les mêmes
@@ -140,6 +143,7 @@ export const useStore = create<State>((set, get) => {
     diagonalBuild: false,
     coverageHighlight: null,
     uiMode: "editor",
+    planMode: "commande",
     diagnostic: "none",
     world: regionOfIsland(persisted?.layout?.grid?.islandId),
     partyIslands: persistedParty.partyIslands,
@@ -339,6 +343,7 @@ export const useStore = create<State>((set, get) => {
 
     setWorld: (w) => set({ world: w }),
     setUiMode: (m) => set({ uiMode: m }),
+    setPlanMode: (m) => set({ planMode: m }),
     setDiagnostic: (d) => set({ diagnostic: d }),
 
     setPartyIslands: (ids) => { set({ partyIslands: ids }); persistParty(); },
