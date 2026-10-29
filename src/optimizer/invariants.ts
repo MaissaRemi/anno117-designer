@@ -157,7 +157,7 @@ export function checkPlan(r: IslandPlanResult, ctx: PlanContext): Violation[] {
     //  - la SOURCE D'AQUEDUC, posee sur un slot montagne pour la meme raison.
     // Premiere version de cette regle : 42 iles sur 55 « en faute », toutes a tort. C'est
     // exactement le faux positif que la confirmation par lecture doit intercepter.
-    const offGridOk = d.placement === "water" || !!d.slotType || d.template === "AqueductProducer";
+    const offGridOk = d.placement === "water" || !!d.slotType || d.template === "AqueductProducerSlot";
     for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
       const x = b.x + i, y = b.y + j;
       if (x < 0 || y < 0 || x >= W || y >= H) { offLand++; continue; }

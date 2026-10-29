@@ -11,6 +11,7 @@ Prerequis : .gamedata/assets_base.xml et .gamedata/texts_french.xml deja extrait
 Lance :  python tools/build_catalog.py
 """
 import json
+import ntpath
 import os
 import re
 import sys
@@ -29,15 +30,19 @@ TEMPLATES = os.path.join(HERE, ".gamedata", "templates.xml")
 OUT_APP = os.path.join(HERE, "src", "data", "catalog.generated.json")
 OUT_RAW = os.path.join(HERE, ".gamedata", "catalog.raw.json")
 
-# Archives graphics a indexer (ordre de priorite pour trouver les .ifo).
-GRAPHICS = [
+# Archives graphics a indexer (ordre de priorite pour trouver les .ifo). Les patchs
+# passent devant : ils remplacent le .ifo de base quand l'emprise a change.
+GRAPHICS = rda.patch_archives(GAME) + [
     "graphics_roman.rda",
     "graphics_celtic.rda",
     "graphics_roman_celtic.rda",
     "graphics_library.rda",
     "graphics_misc.rda",
     "dlc01_graphics.rda",
+    "dlc02_graphics.rda",
     "cdlc01_graphics.rda",
+    "cdlc02_graphics.rda",
+    "cdlc03_graphics.rda",
 ]
 
 # Templates de batiments placables -> categorie app.
@@ -51,10 +56,12 @@ TEMPLATE_CATEGORY = {
     "SlotFactoryBuilding7": "production",
     "ProductionModuleSilo": "production",
     "PublicServiceBuilding": "public",
+    "PublicServiceRitualBuilding": "public",  # temples depuis le patch 200
     # citerne d'aqueduc = service public (besoin 68747/68748 des tiers 3-4) ; la
     # source reste utile au catalogue (slot montagne, posée à la main)
     "AqueductDistributor": "public",
     "AqueductProducer": "public",
+    "AqueductProducerSlot": "public",  # nom du template depuis le patch 200
     "MiniInstitutionBuilding": "public",
     "CityInstitutionBuilding": "public",
     "CityInstitutionBuilding_Marsh": "public",
@@ -62,6 +69,7 @@ TEMPLATE_CATEGORY = {
     # Colisée FINAL (3621, street 250, eau 50u Mandatory) — les assets Monument
     # ci-dessus ne sont que les PHASES de chantier (fondations/murs/arène)
     "MonumentEventBuilding": "public",
+    "HippodromeBuilding": "public",  # Hippodrome FINAL (patch 200), meme role que le Colisee
     "Warehouse": "public",
     "Warehouse_Marsh": "public",
     "HarborWarehouse": "public",
@@ -71,6 +79,20 @@ TEMPLATE_CATEGORY = {
     "OrnamentalBuilding": "ornement",
     "SimpleBuilding": "ornement",
 }
+
+# Mondes que l'app sait planifier. Depuis le patch 200, AssociatedRegions peut lister
+# plusieurs regions (« Roman;Egyptian ») ; on garde la premiere connue de l'app.
+APP_REGIONS = ("Roman", "Celtic")
+
+
+def app_region(raw):
+    """Region de l'app pour une valeur AssociatedRegions (None si absente). Une liste sans
+    region connue reste telle quelle : le batiment ne tombe dans aucun monde de l'app."""
+    if not raw:
+        return raw
+    known = [r for r in raw.split(";") if r in APP_REGIONS]
+    return known[0] if known else raw
+
 
 # Comptoirs / entrepôts : racine du réseau de routes (le réseau doit y être relié).
 ROOT_TEMPLATES = {"Warehouse", "Warehouse_Marsh", "HarborWarehouse", "TradeBuilding", "HarborDepot"}
@@ -178,7 +200,7 @@ def collect_buildings(texts, template_effects):
                     "base": el.findtext("BaseAssetGUID"),
                     "nameInternal": text_of(el, "./Values/Standard/Name"),
                     "oasis": text_of(el, "./Values/Text/OasisId"),
-                    "region": text_of(el, "./Values/Building/AssociatedRegions"),
+                    "region": app_region(text_of(el, "./Values/Building/AssociatedRegions")),
                     "icon": text_of(el, "./Values/Standard/IconFilename"),
                 })
             el.clear()
@@ -195,7 +217,7 @@ def collect_buildings(texts, template_effects):
         name_int = text_of(el, "./Values/Standard/Name")
         oasis = text_of(el, "./Values/Text/OasisId")
         icon = text_of(el, "./Values/Standard/IconFilename")
-        region = text_of(el, "./Values/Building/AssociatedRegions")
+        region = app_region(text_of(el, "./Values/Building/AssociatedRegions"))
         cfg = first_cfg(el)
 
         # Placement terrain : eau/côte si TerrainType marin ou AllowWaterPlacement.
@@ -450,7 +472,7 @@ def to_app_catalog(buildings, product_name):
         if b.get("template") in ROOT_TEMPLATES:
             entry["roadRoot"] = True  # comptoir/entrepôt = racine du réseau de routes
         if b.get("icon"):
-            entry["icon"] = "icons/" + os.path.basename(b["icon"])
+            entry["icon"] = "icons/" + ntpath.basename(b["icon"])  # chemins du jeu en \ : ntpath coupe sur \ et /
         if b.get("radius"):
             entry["radius"] = {"kind": "service", "range": b["radius"]["range"]}
             entry["streetRange"] = b["radius"]["streetRange"]

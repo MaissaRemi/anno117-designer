@@ -110,10 +110,12 @@ export function institutionDefs(region?: string): { defId: string; attrs: Attrs;
   const out: { defId: string; attrs: Attrs; range: number }[] = [];
   for (const [defId, fx] of Object.entries(economy.buildingEffects ?? {})) {
     if (fx.scope !== "street") continue;
-    // uniquement du bénéfice sur les attributs vitaux, et hors besoins de palier
+    // uniquement du bénéfice sur les attributs vitaux, et hors besoins de palier — optionnels
+    // compris : l'Hippodrome n'est posé que sur demande, jamais comme institution
     const helps = VITAL_ATTRS.some((k) => (fx.attrs[k] ?? 0) > 0);
     if (!helps) continue;
-    if (economy.tiers.some((t) => t.services.some((s) => s.building === defId))) continue;
+    const sert = (s: { building: string | null }) => s.building === defId;
+    if (economy.tiers.some((t) => t.services.some(sert) || (t.optionalServices ?? []).some(sert))) continue;
     const reg = economy.buildingRegion?.[defId];
     if (region && reg && reg !== region) continue;
     out.push({ defId, attrs: fx.attrs, range: fx.range });

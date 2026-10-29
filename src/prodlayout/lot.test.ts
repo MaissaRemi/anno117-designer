@@ -13,15 +13,15 @@ describe("buildOrder — arrondis et lot parfait", () => {
     const o = buildOrder(buildChain("g3174", 1, lookup));
     const mill = o.items.find((i) => i.defId === "g3075")!;
     expect(mill.placed).toBe(1);
-    expect(mill.utilisation).toBe(0.5);
+    expect(mill.utilisation).toBe(1 / 3); // moulin à 20 s depuis le patch 200
   });
 
-  it("le lot parfait du pain vaut 2", () => {
-    expect(buildOrder(buildChain("g3174", 1, lookup)).perfectMultiplier).toBe(2);
+  it("le lot parfait du pain vaut 3", () => {
+    expect(buildOrder(buildChain("g3174", 1, lookup)).perfectMultiplier).toBe(3);
   });
 
   it("un lot déjà parfait rend un multiplicateur de 1 et aucun gaspillage", () => {
-    const o = buildOrder(buildChain("g3174", 2, lookup));
+    const o = buildOrder(buildChain("g3174", 3, lookup));
     expect(o.perfectMultiplier).toBe(1);
     for (const i of o.items) expect(i.utilisation).toBe(1);
   });

@@ -29,9 +29,9 @@ describe("buildReport", () => {
   });
 
   it("chiffre la main-d'œuvre par palier, arrondie au supérieur", () => {
-    // 2 boulangeries × 3 + 1 moulin × 3 = 9 Plébéiens (1496) ; 2 fermes × 4 = 8 Liberti (1499)
+    // 2 boulangeries × 3 + 1 moulin × 4 = 10 Plébéiens (1496), le moulin en demande 4 depuis le patch 200 ; 2 fermes × 4 = 8 Liberti (1499)
     const pleb = rep.workforce.find((w) => w.tier === "1496")!;
-    expect(pleb.amount).toBe(9);
+    expect(pleb.amount).toBe(10);
     expect(pleb.name).toBe("Plébéiens");
     const lib = rep.workforce.find((w) => w.tier === "1499")!;
     expect(lib.amount).toBe(8);

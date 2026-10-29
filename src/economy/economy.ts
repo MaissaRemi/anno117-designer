@@ -41,6 +41,11 @@ export interface Tier {
   perHouse: Record<string, number>; // attributs/maison pleine (Money, Happiness, …)
   goods: TierGood[];
   services: TierService[];
+  /**
+   * Besoins déclarés par le jeu mais remplis par un bâtiment posé seulement sur demande
+   * (Hippodrome du DLC 2). Exclus de `services`, de `capacityDefault` et de `perHouse`.
+   */
+  optionalServices?: TierService[];
   // score SupplyWeight par catégorie requis pour MONTER au tier suivant
   // (mécanique d'upgrade réelle, cf. GAME_MECHANICS.md §3)
   upgradeThresholds: Record<string, number>;

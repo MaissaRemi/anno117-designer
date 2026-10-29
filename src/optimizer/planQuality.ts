@@ -29,7 +29,7 @@ const RESIDENCES = new Set(economy.tiers.map((t) => t.residenceId).filter((r): r
  */
 export function roleOf(def: BuildingDef): PlanRole {
   if (RESIDENCES.has(def.id)) return "residence";
-  if (def.roadRoot || def.template === "Warehouse" || def.template === "AqueductProducer") {
+  if (def.roadRoot || def.template === "Warehouse" || def.template === "AqueductProducerSlot") {
     return "infrastructure";
   }
   if (def.slotType || (economy.buildingProd[def.id]?.outputs?.length ?? 0) > 0) return "production";

@@ -1,5 +1,6 @@
 """Extrait + convertit les icones des batiments (DDS 4k -> PNG 64px) vers public/icons/."""
 import json
+import ntpath
 import os
 import sys
 
@@ -18,7 +19,7 @@ SIZE = 64
 
 def candidates(fhd_png):
     # data/ui/fhd/.../icon_x.png  ->  data/ui/4k/.../icon_x_0.dds (+ variantes)
-    base = fhd_png.replace("/fhd/", "/4k/")
+    base = fhd_png.replace("\\", "/").replace("/fhd/", "/4k/")
     stem = base[:-4] if base.lower().endswith(".png") else base
     return [stem + "_0.dds", stem + ".dds", base]
 
@@ -30,12 +31,13 @@ def main():
     for b in buildings:
         ic = b.get("icon")
         if ic:
-            wanted[os.path.basename(ic)] = ic  # png basename -> source fhd path
+            wanted[ntpath.basename(ic)] = ic  # png basename -> source fhd path
     print(f"{len(wanted)} icones a extraire", file=sys.stderr)
 
     fh = open(os.path.join(GAME, "ui.rda"), "rb")
     files = rda.read_index(fh)
-    index = {f.path.replace("\\", "/").lower(): f for f in files}
+    index = {f.path.replace("\\", "/").lower(): (fh, f) for f in files}
+    patched = rda.PatchOverlay(GAME)  # les patchs remplacent aussi des icones
 
     ok = miss = 0
     for png_name, src in wanted.items():
@@ -45,15 +47,14 @@ def main():
             continue
         found = None
         for cand in candidates(src):
-            f = index.get(cand.lower())
-            if f:
-                found = f
+            found = patched.find(cand) or index.get(cand.lower())
+            if found:
                 break
         if not found:
             miss += 1
             continue
         try:
-            data = rda.extract_data(fh, found)
+            data = rda.extract_data(*found)
             im = Image.open(io.BytesIO(data)).convert("RGBA")
             im = im.resize((SIZE, SIZE), Image.LANCZOS)
             im.save(out)

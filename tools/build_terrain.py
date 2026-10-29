@@ -139,6 +139,7 @@ def heights_from_gamedata(root, w: int, h: int):
 def main():
     terrain = {}
     heights_out = {}
+    patched = rda.PatchOverlay(GAME)
     for arc in ARCHIVES:
         path = os.path.join(GAME, arc)
         if not os.path.exists(path):
@@ -148,10 +149,15 @@ def main():
         files = rda.read_index(fh)
         index = {f.path.replace("\\", "/"): f for f in files}
         infos = [p for p in index if p.endswith(".a7minfo") and "/islands/pool/" in p]
+
+        def pick(p):
+            """Version patchee du fichier si un patch le remplace, sinon celle de l'archive."""
+            return patched.find(p) or (fh, index[p])
+
         for info_path in sorted(infos):
             island_id = os.path.basename(info_path)[: -len(".a7minfo")]
             try:
-                info = rda.extract_data(fh, index[info_path])
+                info = rda.extract_data(*pick(info_path))
                 root = parse(info)
                 w, hgt = struct.unpack("<II", root.attr("MapSize"))
                 slots = slots_from_a7minfo(info)
@@ -163,7 +169,7 @@ def main():
             a7m_path = info_path[: -len(".a7minfo")] + ".a7m"
             if a7m_path in index:
                 try:
-                    gd = gamedata_from_a7m(rda.extract_data(fh, index[a7m_path]))
+                    gd = gamedata_from_a7m(rda.extract_data(*pick(a7m_path)))
                     if gd is not None:
                         rivers = rivers_from_gamedata(gd, w, hgt)
                         heights = heights_from_gamedata(gd, w, hgt)

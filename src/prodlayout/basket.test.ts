@@ -45,15 +45,15 @@ describe("balanceBasket", () => {
   it("le lot parfait du pain n'a plus aucun déficit", () => {
     const bal = balanceBasket(
       normalizeBasket([
-        { defId: "g3174", count: 2 },
+        { defId: "g3174", count: 3 },
         { defId: "g3075", count: 1 },
-        { defId: "g2693", count: 2 },
+        { defId: "g2693", count: 3 },
       ]),
       lookup,
     );
     expect(bal.deficits).toEqual([]);
     expect(bal.surplus.map((f) => f.good)).toEqual(["2137"]);
-    expect(toNumber(bal.surplus[0].ratePerMin)).toBe(2);
+    expect(toNumber(bal.surplus[0].ratePerMin)).toBe(3);
   });
 
   it("un moulin de trop laisse un surplus de farine, pas un déficit", () => {

@@ -6,10 +6,11 @@ import { normalizeBasket } from "./basket";
 import { planFromBasket, planProductionLayout } from "./index";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
+// lot parfait du pain depuis le patch 200 (moulin à 20 s) : 3 boulangeries, 1 moulin, 3 fermes
 const pain = normalizeBasket([
-  { defId: "g3174", count: 2 },
+  { defId: "g3174", count: 3 },
   { defId: "g3075", count: 1 },
-  { defId: "g2693", count: 2 },
+  { defId: "g2693", count: 3 },
 ]);
 
 describe("planFromBasket", () => {
@@ -17,9 +18,9 @@ describe("planFromBasket", () => {
     const p = planFromBasket(catalog, pain, { exitSide: "sud" });
     if ("refuse" in p) throw new Error(p.raison);
     const compte = (id: string) => p.layout.buildings.filter((b) => b.defId === id).length;
-    expect(compte("g3174")).toBe(2);
+    expect(compte("g3174")).toBe(3);
     expect(compte("g3075")).toBe(1);
-    expect(compte("g2693")).toBe(2);
+    expect(compte("g2693")).toBe(3);
     expect(compte("g3310")).toBeGreaterThanOrEqual(1);
     // rien d'autre que le panier et des entrepôts
     const attendus = new Set(["g3174", "g3075", "g2693", "g3310"]);

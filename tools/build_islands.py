@@ -6,6 +6,12 @@ Pour chaque île du pool de jeu :
 - masque terre : mapimage.png (rendu top-down carré), seuillage terre/mer,
   redimensionné à la taille réelle de l'île.
 
+ATTENTION (patch 200) : sur 11 îles, le mapimage.png livré est tronqué (bandes
+verticales, moitié manquante) bien que le PNG soit intact. gamemapimage.png n'est pas
+un substitut (cadrage et contraste differents, 9,5 % de cases changees en mediane). Le
+islands.generated.json versionne garde donc les masques de juin 2026 ; ne pas le
+regenerer avant d'avoir une autre source de masque (piste : la HeightMap des .a7m).
+
 Sortie : src/data/islands.generated.json  (masque encodé en RLE).
 Lance : python tools/build_islands.py
 """
