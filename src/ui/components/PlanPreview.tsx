@@ -32,6 +32,11 @@ export interface PlanPreviewProps {
   roadType?: RoadType;
   /** Côté MAXIMAL du rendu, en pixels CSS. La carte s'adapte sinon à la place disponible. */
   size?: number;
+  /**
+   * La grille est le repère DIAGONAL de l'île (`cadreDiagonal.ts`) : la carte est tournée de
+   * 45° pour retrouver l'île à l'endroit. Le survol des portées est alors désactivé.
+   */
+  pivoter45?: boolean;
 }
 
 /** Palette par rang dans la chaîne résidentielle : sombre en bas, or au palier cible. */
@@ -69,7 +74,7 @@ const hexToRgb = (h: string): RGB => [
  */
 const BUFFER = 1024;
 
-export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, roadType, size = 720 }: PlanPreviewProps) {
+export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, roadType, size = 720, pivoter45 = false }: PlanPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLCanvasElement | null>(null);
   const hlRef = useRef<HTMLCanvasElement | null>(null);
@@ -277,20 +282,25 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, roadTyp
     const p = toBuffer(e, rect);
     const gx = Math.floor(((p.x - view.ox) / view.z) / unit);
     const gy = Math.floor(((p.y - view.oy) / view.z) / unit);
-    const idx = gx >= 0 && gy >= 0 && gx < W && gy < H ? hitMap[gy * W + gx] : -1;
+    const idx = !pivoter45 && gx >= 0 && gy >= 0 && gx < W && gy < H ? hitMap[gy * W + gx] : -1;
     setHover((h) => (h === idx ? h : idx));
   };
 
   const legendRange = hoveredRange > 0 ? hoveredRange : null;
   return (
-    <div className="plan-preview-box">
+    <div className="plan-preview-box" style={pivoter45 ? { overflow: "hidden" } : undefined}>
       <canvas
         ref={canvasRef}
         className="plan-preview"
         // Le CSS étire le tampon. Les DEUX bornes (largeur max, hauteur d'écran) sont
         // repliées en une SEULE contrainte de largeur : appliquer un `max-height` en plus
         // d'un `aspect-ratio` laisse le navigateur écraser l'île.
-        style={{ aspectRatio: `${cw} / ${ch}`, maxWidth: `min(${size}px, calc(62vh * ${(cw / ch).toFixed(4)}))` }}
+        // Repère diagonal : +c va vers (1, 1) et +r vers (−1, 1) dans l'île, soit une rotation
+        // de 45° et un facteur √2 ; les coins de la grille tournée sortent du cadre.
+        style={{
+          aspectRatio: `${cw} / ${ch}`, maxWidth: `min(${size}px, calc(62vh * ${(cw / ch).toFixed(4)}))`,
+          ...(pivoter45 ? { transform: "rotate(45deg) scale(1.4142)" } : {}),
+        }}
         onMouseDown={onDown}
         onMouseUp={onUp}
         onMouseMove={onMove}

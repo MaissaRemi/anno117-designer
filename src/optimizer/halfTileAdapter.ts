@@ -96,7 +96,8 @@ export function scaleResultToHalfTile<
     aqueducts?: { x: number; y: number }[];
   },
 >(result: R, halfTile: boolean): R {
-  if (!halfTile) return result;
+  // un plan dans son propre repère (trame diagonale) garde ses coordonnées : il porte sa grille
+  if (!halfTile || (result as { repere?: unknown }).repere) return result;
   return {
     ...result,
     buildings: upscaleBuildings(result.buildings),

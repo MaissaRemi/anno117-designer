@@ -82,6 +82,13 @@ export function reserveKontor(grid: GridShape, def: BuildingDef): KontorReservat
     }
   }
   if (!land || !coast.length) return null;
+  // SUR LA PLUS GRANDE TERRE. `keepMainLandmass` ne garde ensuite que la terre reliée au
+  // comptoir : posé sur un fragment de côte coupé du reste, il condamnait l'île entière.
+  // Mesuré dans le repère diagonal, où la côte s'émiette (une case diagonale exige ses 4 cases
+  // droites) : roman_island_large_03 n'y gardait que le comptoir, aucune maison.
+  const principale = composantePrincipale(grid);
+  const coastMain = coast.filter((c) => principale[c]);
+  if (coastMain.length) coast.splice(0, coast.length, ...coastMain);
   const gx = sumX / land, gy = sumY / land;
   // les cases côtières les plus proches du centre de l'île d'abord (ordre déterministe :
   // distance² entière puis index, donc indépendant de l'ordre de parcours)
@@ -192,6 +199,35 @@ export function reserveKontor(grid: GridShape, def: BuildingDef): KontorReservat
  * rien d'utile ; à leur vraie place, celle de roman_island_medium_01 isolait toute la moitié
  * nord de l'île, et le plan perdait 60 % de ses maisons.
  */
+/** Cases de la plus grande terre d'un seul tenant (ponts sur les rivières compris). */
+function composantePrincipale(grid: GridShape): Uint8Array {
+  const W = grid.w, N = W * grid.h;
+  const relie = (c: number) => grid.usable[c] || routeSeule(grid, c);
+  const comp = new Int32Array(N).fill(-1);
+  let best = -1, bestSize = 0, n = 0;
+  for (let i = 0; i < N; i++) {
+    if (!relie(i) || comp[i] >= 0) continue;
+    const id = n++;
+    let size = 0, fr = [i];
+    comp[i] = id;
+    while (fr.length) {
+      const next: number[] = [];
+      for (const c of fr) {
+        size++;
+        const x = c % W;
+        for (const v of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, c - W, c + W]) {
+          if (v >= 0 && v < N && relie(v) && comp[v] < 0) { comp[v] = id; next.push(v); }
+        }
+      }
+      fr = next;
+    }
+    if (size > bestSize) { bestSize = size; best = id; }
+  }
+  const out = new Uint8Array(N);
+  for (let i = 0; i < N; i++) if (comp[i] === best) out[i] = 1;
+  return out;
+}
+
 export function keepMainLandmass(grid: GridShape, seed?: { x: number; y: number }): GridShape {
   const W = grid.w, H = grid.h, N = W * H;
   const relie = (c: number) => grid.usable[c] || routeSeule(grid, c);
@@ -222,16 +258,18 @@ export function keepMainLandmass(grid: GridShape, seed?: { x: number; y: number 
   // L'ancre du comptoir a ete RETIREE du masque par `reserveKontor` : la lire telle quelle
   // rend -1, et l'on retombait silencieusement sur la plus grande composante — qui n'est pas
   // forcement celle du comptoir. On cherche donc la case utilisable la plus proche.
+  // Parmi les terres au voisinage, la PLUS GRANDE, pas la première trouvée : une case isolée
+  // collée au comptoir passait avant la terre principale à deux cases de là, et le plan ne
+  // gardait qu'elle (mesuré dans le repère diagonal, où la côte s'émiette : 1 case gardée).
   if (seedIdx >= 0) {
+    const taille = new Map<number, number>();
+    for (let i = 0; i < N; i++) if (comp[i] >= 0) taille.set(comp[i], (taille.get(comp[i]) ?? 0) + 1);
     const sx = seedIdx % W, sy = (seedIdx / W) | 0;
-    outer: for (let rad = 0; rad <= 16 && seedComp < 0; rad++) {
-      for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== rad) continue;
-        const x = sx + dx, y = sy + dy;
-        if (x < 0 || y < 0 || x >= W || y >= H) continue;
-        const c = y * W + x;
-        if (comp[c] >= 0) { seedComp = comp[c]; break outer; }
-      }
+    for (let dy = -16; dy <= 16; dy++) for (let dx = -16; dx <= 16; dx++) {
+      const x = sx + dx, y = sy + dy;
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const k = comp[y * W + x];
+      if (k >= 0 && (seedComp < 0 || taille.get(k)! > taille.get(seedComp)!)) seedComp = k;
     }
   }
   const keep = seedComp >= 0 ? seedComp : best;

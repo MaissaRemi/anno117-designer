@@ -34,7 +34,9 @@ export function PlansAuChoix({ plans, choix, onChoix }: Props) {
         return (
           <button key={i} type="button" role="radio" aria-checked={i === choix}
             className={i === choix ? "active" : undefined} onClick={() => onChoix(i)}>
-            <span className="titre">{i === 0 ? "Recommandé" : `Plan ${i + 1}`}</span>
+            <span className="titre">
+              {i === 0 ? "Recommandé" : p.repere ? "Trame diagonale (expérimental)" : `Plan ${i + 1}`}
+            </span>
             <span className="sub">{atouts.length ? atouts.join(" · ") : "—"}</span>
             <span>{p.residents.toLocaleString("fr")} habitants</span>
             <span className="sub">

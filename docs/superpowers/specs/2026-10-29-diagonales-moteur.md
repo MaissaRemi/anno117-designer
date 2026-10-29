@@ -58,6 +58,43 @@ bâtiments à angle droit ; le résultat est reprojeté en blocs 2 × 2.
 - Reste ouvert : la portée le long d'une route elle-même diagonale (hypothèse : une case
   diagonale compte pour un pas, comme une case droite).
 
+### Mesure en jeu des bâtiments diagonaux (30/10/2026)
+
+Une maison 3 × 3 droite fait, posée en diagonale, **2 × 2 cases de route diagonale** (côté 2√2,
+surface 8 cases droites au lieu de 9). La grille diagonale est donc celle des losanges de
+route : tournée de 45°, côté √2.
+
+## Trame diagonale : livrée en expérimental (30/10/2026)
+
+`optimizer/cadreDiagonal.ts` : la grille de l'île vue dans le repère diagonal (une case
+diagonale est constructible si ses 4 cases droites le sont), le catalogue remis à l'échelle
+(emprises et portées euclidiennes ÷ √2, arrondies). Le moteur tourne tel quel dans ce repère.
+Option « Essayer aussi une trame diagonale » : le plan diagonal rejoint les plans au choix,
+l'aperçu le dessine tourné de 45° ; pas de pose dans l'éditeur.
+
+Patriciens, routes pavées, dévotion selon la Foi :
+
+| Île | droit | diagonal |
+|---|---|---|
+| large_07 | 64 691 hab., 1 566 maisons | 72 663 (+12 %), 1 910 |
+| large_03 | 70 281, 1 883 | 87 461 (+24 %), 2 065 |
+| medium_01 | 24 751 | 17 696 (247 maisons rasées vers le comptoir) |
+| small_06 | 8 890 | 5 836 (11 services sans accès au comptoir) |
+
+Correctif au passage (vaut aussi en droit) : `keepMainLandmass` gardait la terre la plus
+PROCHE du comptoir, pas la plus grande — dans le repère diagonal, une case isolée collée au
+comptoir faisait perdre l'île entière.
+
+**Hypothèses à vérifier avant d'aller plus loin** :
+- une case de route diagonale compte pour UN pas de portée (elle avance de √2) : c'est sans
+  doute l'essentiel du gain de large_03 (1 949 maisons au palier contre 1 496) ;
+- comptoir et sources d'aqueduc, d'orientation fixe en jeu, sont posés en biais ; sur les petites
+  îles, l'accès au comptoir est le point faible du plan diagonal.
+
+**Suite** : trame mêlée (une partie droite, une partie diagonale, un seul réseau, une seule
+économie d'île) — comptoir et emplacements restent droits, les quartiers en biais suivent les
+côtes en biais.
+
 ## Ce que coûtent aujourd'hui les raccordements à angle droit
 
 Recensement du 29/10/2026, « Remplir l'île », Patriciens, routes pavées, 23 îles romaines :

@@ -25,6 +25,7 @@ import { regionOfIsland } from "../data/islands";
 // le garde-fou strict y cohabitent, et personne ne réécrit sa propre version du test.
 import { BRUIT_VITAL, populationEffective, severiteVitale, verdictViable } from "./viability";
 import { choisirPlansContrastes, type Critere } from "./plansAuChoix";
+import { catalogueDiagonal, grilleDiagonale, hauteursDiagonales } from "./cadreDiagonal";
 import { pruneDeadEnds } from "./roadCleanup";
 import type { RoadType } from "../engine/roads";
 
@@ -138,6 +139,11 @@ export interface IslandPlanRequest {
    */
   devotionSelonFoi?: boolean;
   /**
+   * Planifier aussi l'île dans le repère diagonal et proposer ce plan parmi les plans au
+   * choix (expérimental, cf. `avecTrameDiagonale`). Double à peu près le temps de calcul.
+   */
+  essayerDiagonale?: boolean;
+  /**
    * LISTE DE VŒUX DE PRODUCTION — ce que l'utilisateur veut voir sur l'île.
    *
    * `workshops` amorce la file de `planLocalProduction`, en unités de BÂTIMENT et non de bien,
@@ -202,6 +208,12 @@ export interface IslandPlanResult {
    * autre critère (`plansAuChoix.ts`). Celui-ci est le recommandé, selon l'objectif demandé.
    */
   alternatives?: IslandPlanResult[];
+  /**
+   * Repère du plan quand il n'est pas celui de l'île : `diagonal` = planifié dans la grille
+   * tournée de 45° (`cadreDiagonal.ts`) ; bâtiments, routes et conduites sont en cases de
+   * cette grille, jointe pour l'affichage.
+   */
+  repere?: { type: "diagonal"; grid: GridShape };
   buildings: PlacedBuilding[]; // résidences + services + sources d'eau
   roads: RoadTile[];
   fields: FieldTile[];
@@ -289,7 +301,51 @@ export function planIsland(
       { islandFertilities: req.islandFertilities }, onProgress,
     );
   }
-  return planIslandImport(req, onProgress);
+  const droit = planIslandImport(req, onProgress);
+  return req.essayerDiagonale ? avecTrameDiagonale(req, droit, onProgress) : droit;
+}
+
+/**
+ * ═══ TRAME DIAGONALE (EXPÉRIMENTAL) ═══════════════════════════════════════════════════
+ *
+ * La même île planifiée dans le repère diagonal (`cadreDiagonal.ts`) : routes et bâtiments à
+ * 45°, aux dimensions mesurées en jeu (maison 3 × 3 → 2 × 2 cases de route diagonale). Le
+ * plan obtenu rejoint les plans au choix ; le plan droit reste le recommandé.
+ *
+ * Hypothèses non vérifiées en jeu, dites au joueur : une case de route diagonale compte pour
+ * un pas de portée (elle en avance de √2) ; comptoir et sources d'aqueduc, d'orientation fixe
+ * en jeu, sont posés tournés eux aussi.
+ */
+function avecTrameDiagonale(
+  req: IslandPlanRequest,
+  droit: IslandPlanResult,
+  onProgress?: (step: number, total: number) => void,
+): IslandPlanResult {
+  const { grid, cadre } = grilleDiagonale(req.grid);
+  const diag = planIslandImport({
+    ...req,
+    grid,
+    catalog: catalogueDiagonal(req.catalog),
+    heights: req.heights ? hauteursDiagonales(req.heights, req.grid, cadre) : undefined,
+  }, onProgress);
+  if (!diag.houses) return droit;
+  const enDiagonale: IslandPlanResult = {
+    ...diag,
+    alternatives: undefined,
+    repere: { type: "diagonal", grid },
+    gaps: [
+      "Trame diagonale (expérimental) : une case de route diagonale est comptée comme un pas de portée,"
+      + " et le comptoir comme les sources d'aqueduc sont posés en biais — à vérifier en jeu",
+      ...diag.gaps,
+    ],
+  };
+  const tous = [droit, ...(droit.alternatives ?? []), enDiagonale];
+  const choix = choisirPlansContrastes(droit, tous);
+  return {
+    ...choix[0].plan,
+    atouts: choix[0].atouts,
+    alternatives: choix.slice(1).map((c) => ({ ...c.plan, atouts: c.atouts })),
+  };
 }
 
 /**

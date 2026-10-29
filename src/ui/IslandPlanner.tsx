@@ -14,6 +14,7 @@ import { regionOfIsland } from "../data/islands";
 import { DieuSelect, type ChoixDevotion } from "./components/DieuSelect";
 import { resumeEffets } from "../economy/dieux";
 import { PlansAuChoix } from "./components/PlansAuChoix";
+import { catalogueDiagonal } from "../optimizer/cadreDiagonal";
 
 interface Props {
   onClose: () => void;
@@ -55,6 +56,7 @@ export function IslandPlanner({ onClose }: Props) {
   const [roadType, setRoadType] = useState<RoadType>("pavee");
   const [localProduction, setLocalProduction] = useState(false);
   const [autoTier, setAutoTier] = useState(false);
+  const [essayerDiagonale, setEssayerDiagonale] = useState(false);
   /** Liste de vœux : ateliers demandés, DANS L'ORDRE — c'est la priorité. */
   const [wishes, setWishes] = useState<{ defId: string; count: number }[]>([]);
   /** Préférence par TYPE d'emplacement (montagne, rivière, marais). */
@@ -88,12 +90,15 @@ export function IslandPlanner({ onClose }: Props) {
     ? (brut.mode === "import" ? [brut, ...(brut.alternatives ?? [])] : [brut])
     : [];
   const result = plans[choix] ?? brut;
+  /** Plan dans le repère diagonal : sa grille, et un catalogue à l'échelle de ce repère. */
+  const diagonal = result?.mode === "import" ? result.repere : undefined;
   const [placeMsg, setPlaceMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const grid = useStore((s) => s.layout.grid);
   const catalog = useStore((s) => s.catalog);
   const lookup = useMemo(() => makeLookup(catalog), [catalog]);
+  const lookupDiagonal = useMemo(() => makeLookup(catalogueDiagonal(catalog)), [catalog]);
   const islandId = useStore((s) => s.layout.grid.islandId);
   const storedProfile = useStore((s) => (islandId ? s.islandProfiles[islandId] : undefined));
   const setIslandProfile = useStore((s) => s.setIslandProfile);
@@ -155,6 +160,7 @@ export function IslandPlanner({ onClose }: Props) {
         roadType,
         localProduction,
         autoTier,
+        ...(essayerDiagonale ? { essayerDiagonale } : {}),
         viability: strictBilan ? "strict" : "indicatif",
         ...(strictBilan && tolerance > 0 ? { tolerance } : {}),
         ...(dieu ? { dieu } : {}),
@@ -347,6 +353,15 @@ export function IslandPlanner({ onClose }: Props) {
                   </span>
                 </span>
               </label>
+              <label className="checkbox" title="Planifie aussi l'île avec routes et bâtiments à 45° (maison 3×3 → 2×2 cases de route diagonale, mesuré en jeu) et propose ce plan parmi les plans au choix. Hypothèses à vérifier : une case de route diagonale compte pour un pas de portée ; comptoir et sources posés en biais. Double le temps de calcul.">
+                <input type="checkbox" checked={essayerDiagonale} onChange={(e) => setEssayerDiagonale(e.target.checked)} />
+                <span>
+                  Essayer aussi une trame diagonale
+                  <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                    Expérimental : proposé parmi les plans au choix.
+                  </span>
+                </span>
+              </label>
               <label className="slider">
                 <span style={{ color: "var(--muted)", fontSize: 12 }}>% maisons au tier</span>
                 <input type="range" min={50} max={100} step={5} value={floor} onChange={(e) => setFloor(parseInt(e.target.value))} />
@@ -423,12 +438,13 @@ export function IslandPlanner({ onClose }: Props) {
         {result && !running && result.buildings.length > 0 && (
           <div className="result-map">
             <PlanPreview
-              grid={grid}
+              grid={diagonal ? diagonal.grid : grid}
               buildings={result.buildings}
               roads={result.roads}
               aqueducts={result.mode === "import" ? result.aqueducts : undefined}
-              lookup={lookup}
+              lookup={diagonal ? lookupDiagonal : lookup}
               roadType={result.mode === "import" ? result.roadType : undefined}
+              pivoter45={!!diagonal}
             />
             {result.mode === "import" && <PlanPreviewLegend tierCounts={result.tierCounts} />}
           </div>
@@ -579,8 +595,13 @@ export function IslandPlanner({ onClose }: Props) {
           </div>
         )}
 
-        {result && !running && result.buildings.length > 0 && (
+        {result && !running && result.buildings.length > 0 && !diagonal && (
           <button className="primary" onClick={place} style={{ marginTop: 12 }}>Placer sur l'île →</button>
+        )}
+        {result && !running && diagonal && (
+          <div className="muted" style={{ marginTop: 12 }}>
+            Trame diagonale : aperçu seulement, la pose dans l'éditeur viendra une fois les règles vérifiées en jeu.
+          </div>
         )}
         {placeMsg && <div className="muted" style={{ marginTop: 6 }}>{placeMsg}</div>}
         </div>
