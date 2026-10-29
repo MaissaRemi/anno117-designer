@@ -3,8 +3,8 @@
 Suite de la refonte (`2026-10-26-refonte-moteur-ile.md`), sur le retour de Rémi après
 essai : services qui « se marchent dessus », maisons illisibles en un bloc jaune, motifs de
 maisons à trouver, corridor d'eau route | aqueduc | route, objectif « maximum de maisons »,
-menu trop chargé. Découpe validée en sept étapes, A à G ; A à F sont faites et fusionnées
-dans `dev`, G (écran « Planifier » unique) reste.
+menu trop chargé. Découpe validée en sept étapes, A à G, toutes faites et fusionnées dans
+`dev`.
 
 Toutes les mesures : Patriciens, grille tuile, sondes hors navigateur (vite-node).
 
@@ -96,10 +96,15 @@ contre 897 sur `small_06`) — ses îlots rigides épousent mal les côtes. Pour
 `planLattice` reste le meilleur moteur. Reste 11 à 17 % de terre libre : franges de côte trop
 étroites pour une maison 3 × 3.
 
-## G — À faire : un seul écran « Planifier »
+## G — Un seul écran « Planifier »
 
-Fusionner Commande, Remplir l'île et Multi-îles ; barre latérale à trois entrées (Éditeur,
-Planifier, Production) ; options avancées repliées, textes courts.
+`src/ui/PlanifierView.tsx` : commutateur Ma commande / Remplir l'île / Plusieurs îles
+(`planMode` du store), barre latérale à trois entrées (Éditeur, Planifier, Production).
+Titres et introductions retirés, options secondaires dans « Options avancées », aides longues
+réduites à une phrase avec le texte complet en infobulle. Aucun comportement ne change.
+
+Reste, hors de G : à la largeur d'un téléphone, la barre du haut déborde (bouton « Charger une
+île » coupé).
 
 ## Hors plan
 
