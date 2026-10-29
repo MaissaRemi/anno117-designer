@@ -3,8 +3,9 @@ import { footprintSize, partieEauPosee, routeSeule } from "../engine/geometry";
 import type { BuildingDef, GridShape, PlacedBuilding, RoadTile, Rotation } from "../model/types";
 import { terrainConvient, type DefLookup } from "../engine/rules";
 import {
-  casesAuContact, estLosange, estRoute, idDeRoute, losangeSur, noeudsLiesDuReseau, reseauDeRoutes,
-  retirerLosange, routeDe, routesAuContactRect, tailleReseau, voisins,
+  casesAuContact, casesSousLosange, coinDe, coutDe, estLosange, estRoute, FileDeNoeuds, idDeRoute, losangeSur,
+  noeudsAuContactRect, noeudsLies, noeudsLiesDuReseau, poserLosange, reseauDeRoutes, retirerLosange, routeDe,
+  routesAuContactRect, tailleReseau, voisins, type ReseauRoutier,
 } from "../engine/reseauRoutier";
 
 /**
@@ -325,6 +326,7 @@ export function connectKontor(
   roads: RoadTile[],
   lookup: DefLookup,
   demolishable: (defId: string) => boolean,
+  opts: OptionsLiaison = {},
 ): KontorPlacement {
   const W = grid.w, H = grid.h, N = W * H;
   const { w, h } = footprintSize(res.def, res.rotation);
@@ -375,6 +377,28 @@ export function connectKontor(
   if (routesAuContactRect(reseau, res.x, res.y, w, h).length) {
     return { building, roads: [], removed: [], connected: true };
   }
+  const MAX_STUB = 60;
+
+  if (opts.diagonales) {
+    // le chemin ne traverse pas l'emprise du comptoir, absente de `buildings`
+    const interdit = new Uint8Array(N);
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const x = res.x + i, y = res.y + j;
+      if (x >= 0 && y >= 0 && x < W && y < H) interdit[y * W + x] = 1;
+    }
+    const t = terrainDeLiaison(grid, reseau, owner, buildings, demolishable, interdit, opts);
+    const departs: { id: number; cout: number }[] = [];
+    noeudsAuContactRect(reseau, res.x, res.y, w, h, (id) => {
+      if (t.posable(id)) departs.push({ id, cout: t.coutEntree(id) });
+    });
+    const chemin = cheminMele(reseau, departs, (n) => estRoute(reseau, n), t.posable, t.coutEntree, MAX_STUB);
+    if (chemin) {
+      const removed = new Set<string>();
+      for (const n of chemin) for (const c of t.casesDe(n)) if (owner[c] >= 0) removed.add(buildings[owner[c]].uid);
+      return { building, roads: chemin.map((n) => routeDe(reseau, n)), removed: [...removed], connected: true };
+    }
+    // aucun chemin, ou deux losanges qui se chevaucheraient : le tracé droit historique
+  }
 
   const passable = (c: number): boolean => {
     if (!grid.usable[c] && !routeSeule(grid, c)) return false; // pont sur une rivière
@@ -399,7 +423,6 @@ export function connectKontor(
     }
     return { building, roads: out, removed: [...removed], connected: true };
   };
-  const MAX_STUB = 60;
   for (let depth = 0; depth < MAX_STUB && frontier.length; depth++) {
     const next: number[] = [];
     for (const c of frontier) {
@@ -450,6 +473,7 @@ export function repairRoadConnectivity(
    * `connectKontor` s'autorise exactement la même chose, et pour la même raison.
    */
   demolishable?: (defId: string) => boolean,
+  opts: OptionsLiaison = {},
 ): {
   roads: RoadTile[]; added: number; dropped: number; orphans: number;
   stranded: PlacedBuilding[];
@@ -525,6 +549,9 @@ export function repairRoadConnectivity(
   // d'eux que l'utilisateur a besoin, pas du nombre de cases de route concernées.
   const strandedIdx = new Set<number>();
   const razedIdx = new Set<number>();
+  const terrain = opts.diagonales
+    ? terrainDeLiaison(grid, reseau, owner, buildings, demolishable, new Uint8Array(N), opts)
+    : null;
   for (let i = 0; i < T; i++) {
     if (!estRoute(reseau, i) || inCore[i] || seen[i]) continue;
     const comp: number[] = [];
@@ -538,11 +565,28 @@ export function repairRoadConnectivity(
       }
       fr = next;
     }
+    let linked = false;
+    if (terrain) {
+      // réseau mêlé : le plus court chemin peut poser des losanges
+      const chemin = cheminMele(
+        reseau, comp.map((id) => ({ id, cout: 0 })), (n) => inCore[n] === 1, terrain.posable, terrain.coutEntree, maxDetour,
+      );
+      if (chemin) {
+        for (const cur of chemin) {
+          if (estRoute(reseau, cur)) continue;
+          for (const c of terrain.casesDe(cur)) if (owner[c] >= 0) razedIdx.add(owner[c]);
+          if (cur < N) roadAt[cur] = 1;
+          else { const t = routeDe(reseau, cur); poserLosange(reseau, t.x, t.y); }
+          extra.push(cur);
+          added++;
+        }
+        linked = true;
+      }
+    }
     // raccrochage : BFS court depuis l'îlot, à travers les cases LIBRES, vers le noyau
     const prev = new Map<number, number>();
     let frontier: number[] = [];
     for (const c of comp) { prev.set(c, -1); frontier.push(c); }
-    let linked = false;
     for (let depth = 0; depth <= maxDetour && frontier.length && !linked; depth++) {
       const next: number[] = [];
       for (const c of frontier) {
@@ -611,4 +655,123 @@ export function repairRoadConnectivity(
     stranded: [...strandedIdx].filter((bi) => !razedIdx.has(bi)).map((bi) => buildings[bi]),
     removed: [...razedIdx].map((bi) => buildings[bi].uid),
   };
+}
+
+// ═══ LIAISONS EN DIAGONALE (trame mêlée, étape 6) ═════════════════════════════════════════
+//
+// Le comptoir et les îlots de route se raccordaient en cases droites seulement : un couloir en
+// biais se traversait en escalier, et le chemin rasait les maisons qu'il croisait. Avec
+// `diagonales`, la liaison se cherche dans le réseau mêlé (`engine/reseauRoutier`) : elle peut
+// poser des losanges de route, longs de √2, là où c'est plus court. Expérimental et désactivé
+// par défaut : l'éditeur, le rendu et la persistance ne savent pas encore dessiner un losange.
+
+/** Options de tracé des liaisons (comptoir, réparation des îlots). */
+export interface OptionsLiaison {
+  /** Tracer aussi en diagonale : le chemin peut poser des losanges de route. */
+  diagonales?: boolean;
+  /** Conduites d'eau : un losange ne se pose pas dessus (règle prudente, question Q3). */
+  aqueducs?: readonly { x: number; y: number }[];
+  /**
+   * Prix d'une case de maison traversée, en longueur de route : 0, le plus court chemin, comme
+   * le tracé droit historique ; plus, un détour qui épargne des maisons.
+   */
+  prixCaseRasee?: number;
+}
+
+/** Ce qu'une liaison peut traverser, et ce que chaque pas lui coûte. */
+function terrainDeLiaison(
+  grid: GridShape,
+  reseau: ReseauRoutier,
+  owner: Int32Array,
+  buildings: PlacedBuilding[],
+  demolishable: ((defId: string) => boolean) | undefined,
+  interdit: Uint8Array,
+  opts: OptionsLiaison,
+) {
+  const { W, N } = reseau;
+  const sousConduite = new Uint8Array(N);
+  for (const a of opts.aqueducs ?? []) if (a.x >= 0 && a.y >= 0 && a.x < W && a.y < grid.h) sousConduite[a.y * W + a.x] = 1;
+  const prix = opts.prixCaseRasee ?? 0;
+  const caseOk = (c: number): boolean => {
+    if (interdit[c] || (!grid.usable[c] && !routeSeule(grid, c))) return false;
+    const o = owner[c];
+    return o < 0 || !!demolishable?.(buildings[o].defId);
+  };
+  const casesDe = (n: number): number[] => {
+    if (n < N) return [n];
+    const out: number[] = [];
+    const { X, Y } = coinDe(reseau, n);
+    casesSousLosange(reseau, X, Y, (c) => out.push(c));
+    return out;
+  };
+  /** Un losange se pose si ses 4 demi-cases sont dans la grille, posables, hors conduite, et s'il
+   *  ne chevauche aucun losange de route (seuls ses voisins par un côté ne le chevauchent pas). */
+  const losangePosable = (n: number): boolean => {
+    if (!opts.diagonales) return false;
+    const { X, Y } = coinDe(reseau, n);
+    if (X < 1 || Y < 1 || X >= reseau.W || Y >= reseau.H) return false;
+    for (const c of casesDe(n)) if (!caseOk(c) || sousConduite[c]) return false;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (reseau.losange[(Y + dy) * (W + 1) + X + dx]) return false;
+    }
+    return true;
+  };
+  const posable = (n: number): boolean => (n < N ? caseOk(n) : estRoute(reseau, n) || losangePosable(n));
+  const coutEntree = (n: number): number => {
+    let rasees = 0;
+    for (const c of casesDe(n)) if (owner[c] >= 0) rasees++;
+    return coutDe(reseau, n) + prix * (n < N ? rasees : rasees / 2);
+  };
+  return { posable, coutEntree, casesDe };
+}
+
+/** Deux losanges se chevauchent s'ils sont centrés sur des coins voisins par un côté de la grille. */
+const losangesSeChevauchent = (reseau: ReseauRoutier, a: number, b: number): boolean => {
+  const p = coinDe(reseau, a), q = coinDe(reseau, b);
+  return Math.abs(p.X - q.X) + Math.abs(p.Y - q.Y) === 1;
+};
+
+/**
+ * Le plus court chemin (Dijkstra) depuis `departs` jusqu'à un nœud voisin d'une `arrivee`, par
+ * les arêtes du réseau mêlé, à travers des nœuds `posable`s, dans une longueur `budget`.
+ * Renvoie les nœuds du chemin, de celui qui touche l'arrivée jusqu'au départ, ou `null` — aussi
+ * quand le chemin poserait deux losanges qui se chevauchent (l'appelant retrace alors en droit).
+ */
+function cheminMele(
+  reseau: ReseauRoutier,
+  departs: { id: number; cout: number }[],
+  arrivee: (n: number) => boolean,
+  posable: (n: number) => boolean,
+  coutEntree: (n: number) => number,
+  budget: number,
+): number[] | null {
+  const dist = new Map<number, number>();
+  const prev = new Map<number, number>();
+  const file = new FileDeNoeuds();
+  for (const { id, cout } of departs) {
+    if ((dist.get(id) ?? Infinity) <= cout) continue;
+    dist.set(id, cout); prev.set(id, -1); file.pousser(cout, id);
+  }
+  while (file.taille) {
+    const [d, c] = file.extraire();
+    if (d > dist.get(c)! + 1e-9) continue; // entrée périmée
+    let atteint = false;
+    noeudsLies(reseau, c, (n) => {
+      if (atteint) return;
+      if (arrivee(n)) { atteint = true; return; }
+      if (!posable(n)) return;
+      const dn = d + coutEntree(n);
+      if (dn > budget + 1e-9 || dn >= (dist.get(n) ?? Infinity) - 1e-9) return;
+      dist.set(n, dn); prev.set(n, c); file.pousser(dn, n);
+    });
+    if (!atteint) continue;
+    const chemin: number[] = [];
+    for (let cur = c; cur >= 0; cur = prev.get(cur)!) chemin.push(cur);
+    const poses = chemin.filter((n) => estLosange(reseau, n) && !estRoute(reseau, n));
+    for (let i = 0; i < poses.length; i++) for (let j = i + 1; j < poses.length; j++) {
+      if (losangesSeChevauchent(reseau, poses[i], poses[j])) return null;
+    }
+    return chemin;
+  }
+  return null;
 }

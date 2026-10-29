@@ -87,7 +87,10 @@ réseau d'eau, un bilan) : seule la géométrie est locale. Étapes restantes :
    liaisons diagonales (étape 6, option), l'occupation des losanges, `commande/ilots.ts` ;
    Q1 tranchée (jonction par recouvrement, portée en longueur), graphe et `cadreDiagonal`
   corrigés : la trame diagonale seule ne gagne plus que sur 5 îles romaines sur 27 (small_05
-  +41 %, small_07 +26 %). Q2 et Q3 restent à vérifier — détail dans la conception ;
+  +41 %, small_07 +26 %). Étape 6 faite derrière l'option `liaisonsDiagonales` (désactivée) :
+  les liaisons diagonales n'apportent rien de mesurable ; un PRIX des maisons rasées dans le
+  tracé du comptoir, lui, donne +1 364 habitants sur 27 îles, aucune en recul — à adopter.
+  Q2 et Q3 restent à vérifier — détail dans la conception ;
 3. carte d'orientation de l'île selon ses côtes ;
 4. squelette de rues mêlé, recousu aux jonctions ;
 5. placement global unique des services, de l'eau et des maisons sur ce graphe ;

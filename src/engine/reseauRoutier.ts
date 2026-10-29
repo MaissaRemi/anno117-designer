@@ -416,7 +416,7 @@ function parcourirDroit(r: ReseauRoutier, p: Parcours, sources: Iterable<number>
 }
 
 /** File de priorité (tas binaire) sur (longueur, ordre d'arrivée). */
-class FileDeNoeuds {
+export class FileDeNoeuds {
   private cles: number[] = [];
   private rangs: number[] = [];
   private ids: number[] = [];

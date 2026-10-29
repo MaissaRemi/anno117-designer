@@ -185,3 +185,60 @@ describe("comptoir et réparation sur le réseau en graphe", () => {
     expect(r.roads).toEqual(routes);
   });
 });
+
+/**
+ * Liaisons en diagonale (trame mêlée, étape 6) : avec `diagonales`, le raccordement peut poser
+ * des losanges là où c'est plus court. Longueur d'un trajet : 1 par case droite, √2 par losange.
+ */
+describe("liaisons en diagonale", () => {
+  const kdef = pickKontorDef(catalog, "Roman")!;
+  const { w, h } = footprintSize(kdef, 0);
+  const g = makeGrid(48, 48);
+  const res = { def: kdef, x: 2, y: 2, rotation: 0 as const, grid: g };
+  // le réseau : une route droite loin en biais du comptoir
+  const y0 = 2 + h + 14, x0 = 2 + w + 14;
+  const reseau = Array.from({ length: 8 }, (_, i) => ({ x: x0 + i, y: y0 }));
+  const longueur = (rs: { losange?: true }[]) => rs.reduce((s, r) => s + (r.losange ? Math.SQRT2 : 1), 0);
+  const chevauchent = (rs: { x: number; y: number; losange?: true }[]) => {
+    const ls = rs.filter((r) => r.losange);
+    return ls.some((a, i) => ls.slice(i + 1).some((b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1));
+  };
+
+  it("le comptoir se raccorde en biais, plus court qu'en équerre, et le réseau est bien atteint", () => {
+    const droit = connectKontor(g, res, [], reseau, lookup, () => false);
+    const mele = connectKontor(g, res, [], reseau, lookup, () => false, { diagonales: true });
+    expect(droit.connected && mele.connected).toBe(true);
+    expect(mele.roads.some((r) => r.losange)).toBe(true);
+    expect(longueur(mele.roads)).toBeLessThan(longueur(droit.roads) - 5);
+    expect(chevauchent(mele.roads)).toBe(false);
+    const layout = { grid: g, buildings: [mele.building], roads: [...reseau, ...mele.roads], fields: [] };
+    expect(rootedRoadSet(layout, lookup).set.has(`${x0},${y0}`)).toBe(true);
+  });
+
+  it("aucun losange sur l'emprise du comptoir ni sur une conduite d'eau", () => {
+    // une conduite en biais coupe le trajet : il la franchit en droit, jamais sous un losange
+    const aqueducs = Array.from({ length: 25 }, (_, k) => ({ x: k, y: 24 - k })); // en travers du trajet
+    const mele = connectKontor(g, res, [], reseau, lookup, () => false, { diagonales: true, aqueducs });
+    expect(mele.connected).toBe(true);
+    const sousConduite = new Set(aqueducs.map((a) => `${a.x},${a.y}`));
+    for (const r of mele.roads.filter((x) => x.losange)) {
+      for (const [x, y] of [[r.x - 1, r.y - 1], [r.x, r.y - 1], [r.x - 1, r.y], [r.x, r.y]]) {
+        expect(sousConduite.has(`${x},${y}`)).toBe(false);
+        expect(x >= 2 && x < 2 + w && y >= 2 && y < 2 + h).toBe(false);
+      }
+    }
+  });
+
+  it("la réparation raccroche un îlot éloigné en biais", () => {
+    const kontor = { uid: "k", defId: kdef.id, x: 2, y: 2, rotation: 0 as const, locked: false };
+    const noyau = Array.from({ length: w }, (_, i) => ({ x: 2 + i, y: 2 + h }));
+    const ilot = [{ x: 2 + w + 12, y: 2 + h + 12 }, { x: 2 + w + 13, y: 2 + h + 12 }];
+    const droit = repairRoadConnectivity(g, [kontor], [...noyau, ...ilot], lookup, 40);
+    const mele = repairRoadConnectivity(g, [kontor], [...noyau, ...ilot], lookup, 40, undefined, { diagonales: true });
+    expect(mele.added).toBeGreaterThan(0);
+    expect(mele.roads.some((r) => r.losange)).toBe(true);
+    expect(longueur(mele.roads.slice(noyau.length + ilot.length))).toBeLessThan(droit.added);
+    const layout = { grid: g, buildings: [kontor], roads: mele.roads, fields: [] };
+    expect(rootedRoadSet(layout, lookup).set.has(`${ilot[0].x},${ilot[0].y}`)).toBe(true);
+  });
+});

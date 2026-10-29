@@ -144,6 +144,13 @@ export interface IslandPlanRequest {
    */
   essayerDiagonale?: boolean;
   /**
+   * LIAISONS EN DIAGONALE (trame mêlée, étape 6, expérimental) : le raccordement du comptoir et
+   * la réparation des îlots de route peuvent poser des losanges de route (`RoadTile.losange`)
+   * là où c'est plus court. Désactivé par défaut : l'éditeur, le rendu et la persistance ne
+   * savent pas encore dessiner un losange.
+   */
+  liaisonsDiagonales?: boolean;
+  /**
    * LISTE DE VŒUX DE PRODUCTION — ce que l'utilisateur veut voir sur l'île.
    *
    * `workshops` amorce la file de `planLocalProduction`, en unités de BÂTIMENT et non de bien,
@@ -1071,6 +1078,7 @@ export function planIslandImport(
       .reference(chain.length - 1).cap;
 
     // --- pose du comptoir + raccordement au réseau produit -----------------------------
+    const liaisons = { diagonales: !!req.liaisonsDiagonales, aqueducs: water?.aqueducts };
     const buildings = [...chosen.buildings];
     const roads: RoadTile[] = [...dist.roads];
     const kontorGaps: string[] = [];
@@ -1134,12 +1142,16 @@ export function planIslandImport(
       if (!fallback) recount();
     };
     if (kontor) {
-      const kp = connectKontor(req.grid, kontor, buildings, roads, lookup, (id) => residenceIds.has(id));
+      const kp = connectKontor(
+        req.grid, kontor, buildings, roads, lookup, (id) => residenceIds.has(id), liaisons,
+      );
       if (kp.connected) {
         // les maisons rasées par le stub sortent du décompte (et de leur palier)
         razeHouses(new Set(kp.removed), [kp.building]);
-        const seen = new Set(roads.map((r) => `${r.x},${r.y}`));
-        for (const r of kp.roads) if (!seen.has(`${r.x},${r.y}`)) { seen.add(`${r.x},${r.y}`); roads.push(r); }
+        // un losange (coin x, y) ne se confond pas avec la case droite (x, y)
+        const cle = (r: RoadTile) => `${r.losange ? "L" : ""}${r.x},${r.y}`;
+        const seen = new Set(roads.map(cle));
+        for (const r of kp.roads) if (!seen.has(cle(r))) { seen.add(cle(r)); roads.push(r); }
       } else {
         // ÉCHEC DU RACCORDEMENT — on pose le comptoir QUAND MÊME.
         //
@@ -1266,7 +1278,7 @@ export function planIslandImport(
     // connecteur a sauté). En jeu, un bâtiment desservi par une route coupée du comptoir est
     // INACTIF. On raccroche ce qui peut l'être et on signale le reste.
     const repair = repairRoadConnectivity(
-      req.grid, buildings, roads, lookup, 24, (id) => residenceIds.has(id),
+      req.grid, buildings, roads, lookup, 24, (id) => residenceIds.has(id), liaisons,
     );
     // Une RÉSIDENCE isolée du comptoir est inactive en jeu : elle n'héberge personne. La
     // laisser au plan gonflait la population annoncée de maisons mortes. Elle tombe donc,

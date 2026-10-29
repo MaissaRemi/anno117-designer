@@ -276,8 +276,38 @@ diagonal de small_06, projeté en losanges, donne les mêmes couvertures en long
 d'origine, √2 par losange) que dans son repère en pas (portées ÷ √2). Golden des plans droits
 identique ; oracles des triangles pour les deux relations.
 
+**Étape 6 — liaisons en diagonale (expérimental, désactivé par défaut).** Option
+`liaisonsDiagonales` de la requête de plan, non exposée dans l'interface : `connectKontor` et
+`repairRoadConnectivity` cherchent leur chemin dans le réseau mêlé (Dijkstra, 1 par case
+droite, √2 par losange, plus `prixCaseRasee` par case de maison traversée) et peuvent poser des
+losanges. Un losange ne se pose que si ses 4 demi-cases sont sur terre, libres ou sur une maison
+démolissable, hors du comptoir et de toute conduite (Q3), sans chevaucher un autre losange ;
+un chemin qui en poserait deux qui se chevauchent est retracé en droit. Sans l'option, les
+deux fonctions gardent leur code historique (golden identique).
+
+Mesure, 27 îles romaines (Patriciens, pavée, Foi, 80 %) :
+
+| Variante | Habitants | Maisons rasées | Services sans accès | Losanges |
+|---|---|---|---|---|
+| Référence : droit, plus court | 1 078 230 | 263 | 31 | 0 |
+| Diagonale, plus court | −145 | 265 | 31 | 39 |
+| Droit, prix 3 par case de maison | **+1 364** | **197** | 31 | 0 |
+| Diagonale, prix 3 par case de maison | +1 364 | 197 | 31 | 20 |
+
+**Les liaisons diagonales n'apportent rien de mesurable** : à prix égal, la population est la
+même qu'en droit. Le gain vient entièrement du PRIX des maisons rasées, que le tracé historique
+ignore (il prend le plus court chemin, à travers les maisons) : 23 îles gagnent, aucune ne perd.
+small_05 (74 maisons rasées, 16 services coupés) ne bouge dans aucune variante : sa cause n'est
+pas le tracé du raccordement. Les liaisons restent une brique pour la trame mêlée, pas un gain
+en soi.
+
 ### Ce qui reste
 
+- **Prix des maisons rasées dans le tracé droit** : +1 364 habitants mesurés, sans losange, donc
+  sans rien à changer dans l'éditeur ; à adopter par défaut (prix à régler), golden recapturé.
+- **small_05** : la cause de ses 74 maisons rasées et 16 services coupés reste à trouver.
+- **Afficher et poser des losanges** : éditeur, rendu, persistance, invariants, moteurs de
+  production lisent tous `RoadTile` sans sa forme ; préalable à toute option losange visible.
 - **Non testé sur des losanges** : les branches losange de `planLattice` (élagage ancré au
   comptoir, chemins des sources). Aucun moteur n'y pose encore de losange ; elles le seront
   quand un moteur en posera (étape 6).
