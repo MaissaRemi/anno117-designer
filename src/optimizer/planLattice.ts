@@ -8,7 +8,7 @@ import { VITAL_ATTRS } from "../economy/attributes";
 import { compileTierEvaluator } from "../economy/needsModel";
 import type { DefLookup } from "../engine/rules";
 import { MAX_RUN, needsWater, planWater, type WaterPlanResult } from "./waterPlan";
-import { makeStreetGrid } from "./streetGrid";
+import { makeStreetGrid, type Footprint } from "./streetGrid";
 import { copiesEnTrop } from "./doublons";
 import { planningRange, type RoadType } from "../engine/roads";
 import {
@@ -315,15 +315,78 @@ export function planLattice(
   const remainingQuota = (d: BuildingDef): number =>
     uniqueCap(d, opts.permits) - (d.uniqueType ? (uniqueUsed.get(d.uniqueType) ?? 0) : 0);
 
+  // ═══ UN GRAND BÂTIMENT NE MURE PAS UNE PARTIE DE L'ÎLE ══════════════════════════════════
+  //
+  // Posé contre le relief, en travers du seul passage d'une zone, un grand service la coupait du
+  // comptoir : rien n'y était plus atteignable, et ce qu'on y posait finissait rasé ou inactif
+  // (mesuré sur roman_island_medium_05 : l'Amphithéâtre mure une bande, 3 services inactifs).
+  // `LES POCHES MURÉES RESTENT VIDES` limite la casse ; ici on évite de créer la poche. Avant de
+  // poser une grande emprise, on simule : la terre constructible encore atteignable depuis le
+  // comptoir réservé (par les routes et les cases libres, jamais à travers un bâtiment) ne doit
+  // pas perdre plus de `PERTE_MAX` cases hors de l'emprise elle-même. Coût mesuré : deux
+  // parcours de l'île par position essayée d'un grand service, quelques secondes par plan au plus.
+  const GRANDE_EMPRISE = 4 * rw * rh;
+  // Réglé sur les 27 îles du Latium : à 3, 6 ou 12 maisons, de bonnes positions étaient écartées
+  // pour de petites pertes et deux îles reculaient ; à 25, seuls les grands murs sont évités —
+  // +1 926 habitants (extralarge_02), aucune île en recul.
+  const PERTE_MAX = 25 * rw * rh;
+  /** Cases constructibles atteignables depuis le comptoir, l'emprise `bloc` posée ; le masque aussi. */
+  const terreAtteignable = (bloc?: Footprint): { n: number; vu: Uint8Array } => {
+    const vu = new Uint8Array(N);
+    const R = opts.reserved!;
+    const dans = (c: number) => {
+      if (!bloc) return false;
+      const x = c % W, y = (c / W) | 0;
+      return x >= bloc.x && x < bloc.x + bloc.w && y >= bloc.y && y < bloc.y + bloc.h;
+    };
+    const passe = (c: number) => (roadAt[c] === 1 || !occ[c]) && !dans(c);
+    let fr: number[] = [];
+    noeudsAuContactRect(reseau, R.x, R.y, R.w, R.h, (c) => {
+      if (c < N && passe(c) && !vu[c]) { vu[c] = 1; fr.push(c); }
+    });
+    let n = 0;
+    while (fr.length) {
+      const next: number[] = [];
+      for (const c of fr) {
+        if (grid.usable[c]) n++;
+        const x = c % W;
+        for (const v of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, c - W, c + W]) {
+          if (v < 0 || v >= N || vu[v] || !passe(v)) continue;
+          vu[v] = 1; next.push(v);
+        }
+      }
+      fr = next;
+    }
+    return { n, vu };
+  };
+
   // pose une copie au plus près de (tx,ty) dans un rayon maxRad (spirale Chebyshev)
   const placeNear = (def: BuildingDef, tx: number, ty: number, maxRad: number, rot: 0 | 1 = 0): boolean => {
     const w = rot ? def.size.h : def.size.w, h = rot ? def.size.w : def.size.h;
+    const verifier = !!opts.reserved && w * h >= GRANDE_EMPRISE;
+    let avant: { n: number; vu: Uint8Array } | null = null;
+    let repli: { x: number; y: number } | null = null;
     for (let r = 0; r <= maxRad; r++) {
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        if (fitsBld(w, h, tx + dx, ty + dy)) { stamp(def, tx + dx, ty + dy, rot); return true; }
+        const x = tx + dx, y = ty + dy;
+        if (!fitsBld(w, h, x, y)) continue;
+        if (verifier) {
+          repli ??= { x, y };
+          avant ??= terreAtteignable();
+          let sous = 0;
+          for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+            const c = (y + j) * W + (x + i);
+            if (avant.vu[c] && grid.usable[c]) sous++;
+          }
+          if (avant.n - terreAtteignable({ x, y, w, h }).n - sous > PERTE_MAX) continue; // murerait une zone
+        }
+        stamp(def, x, y, rot);
+        return true;
       }
     }
+    // aucune position qui ne mure rien : la première qui tenait, comme avant
+    if (repli) { stamp(def, repli.x, repli.y, rot); return true; }
     return false;
   };
 

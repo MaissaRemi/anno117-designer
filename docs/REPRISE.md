@@ -124,17 +124,22 @@ comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/plan
 
 ## La suite, par intérêt
 
-1. **Mieux que laisser les poches vides : ne pas les créer.** Un grand bâtiment posé en
-   travers du seul passage d'une zone la condamne ; le moteur devrait éviter de le poser là.
-   Reste aussi 1 service sans accès (medium_02, une source d'aqueduc barrée par un service).
-   Plus largement : un service sans accès compte encore dans la couverture et le bilan calculés.
-2. ~~Deux écarts « cases en coin »~~ : corrigés (graines du noyau de `repairRoadConnectivity`,
-   déplacement d'un consommateur d'eau). Aucun effet sur le recensement du Latium ni sur le
-   golden ; un test reproduit le cas de la réparation.
-3. **Échec complet du plan diagonal sur extralarge_04** (0 habitant), non expliqué.
-4. Chantiers d'interface : onglet Production à refaire (mode « île de production » de
-   Planifier) ; prix du bilan non réglable ; plan diagonal non posable dans l'éditeur (il ne
-   gagne plus nettement que sur small_07, +26 %).
+1. ~~Ne pas créer de poches~~ : fait (`planLattice`, « UN GRAND BÂTIMENT NE MURE PAS UNE PARTIE
+   DE L'ÎLE ») — une grande emprise qui couperait du comptoir plus de 25 maisons de terre est
+   posée ailleurs. Latium : +1 926 habitants (extralarge_02), aucune île en recul ; seuils 3, 6
+   et 12 essayés, chacun faisait reculer une ou deux îles. Plan diagonal de medium_01 :
+   14 384 → 22 990 habitants.
+2. ~~Deux écarts « cases en coin »~~ : corrigés, sans effet mesuré en Latium.
+3. ~~Plan diagonal d'extralarge_04 à 0 habitant~~ : il loge désormais 2 218 maisons ; l'une
+   des corrections du raccordement ou des poches a levé l'échec, non isolée.
+4. **Un service sans accès compte encore dans la couverture et le bilan** : reporté. Il n'en
+   reste qu'un en Latium (medium_02, une source d'aqueduc barrée par un service) ; le corriger
+   demande de réévaluer chaque maison sans les services inactifs, or `planLattice` n'exporte
+   que le palier atteint, pas la couverture. À reprendre si le recensement d'Albion en montre.
+5. **Île de production** : conception à valider, quatre questions pour Rémi
+   (`docs/superpowers/specs/2026-10-30-ile-de-production-design.md`).
+6. Chantiers d'interface : prix du bilan non réglable ; plan diagonal non posable dans
+   l'éditeur (il ne gagne plus nettement que sur small_07, +26 %).
 
 ## Pièges connus
 

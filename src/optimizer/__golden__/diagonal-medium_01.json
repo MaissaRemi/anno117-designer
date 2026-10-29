@@ -1,60 +1,59 @@
 {
   "recommande": {
     "palier": "1498",
-    "maisons": 407,
-    "habitants": 14384,
-    "maisonsAuPalier": 311,
+    "maisons": 620,
+    "habitants": 22990,
+    "maisonsAuPalier": 539,
     "paliers": {
-      "1496": 63,
-      "1497": 16,
-      "1498": 311,
-      "1499": 17
+      "1498": 539,
+      "1499": 81
     },
-    "batiments": 456,
-    "routes": 1253,
-    "conduites": 357,
+    "batiments": 711,
+    "routes": 2101,
+    "conduites": 380,
     "champs": 0,
     "eau": {
       "sources": 5,
-      "utilisee": 140
+      "utilisee": 190
     },
     "repere": "droit",
     "analyse": {
-      "reseauEnracine": 1251,
-      "batimentsCoupes": 2,
-      "casesCouvertes": 58020,
-      "hachageCouvertures": "781f4ea03296bb2a"
+      "reseauEnracine": 2101,
+      "batimentsCoupes": 0,
+      "casesCouvertes": 108363,
+      "hachageCouvertures": "dc4daf6212543598"
     },
-    "violations": 5,
-    "hachage": "1cd8c08369206fd2"
+    "violations": 3,
+    "hachage": "d47447eb1d33b785"
   },
   "alternatives": [
     {
       "palier": "1498",
-      "maisons": 400,
-      "habitants": 12520,
-      "maisonsAuPalier": 284,
+      "maisons": 662,
+      "habitants": 23914,
+      "maisonsAuPalier": 543,
       "paliers": {
-        "1498": 284,
-        "1499": 116
+        "1497": 18,
+        "1498": 543,
+        "1499": 101
       },
-      "batiments": 449,
-      "routes": 1271,
-      "conduites": 401,
+      "batiments": 733,
+      "routes": 2066,
+      "conduites": 444,
       "champs": 0,
       "eau": {
         "sources": 5,
-        "utilisee": 190
+        "utilisee": 160
       },
       "repere": "droit",
       "analyse": {
-        "reseauEnracine": 1270,
-        "batimentsCoupes": 1,
-        "casesCouvertes": 59865,
-        "hachageCouvertures": "4b77cd0c789f8952"
+        "reseauEnracine": 2066,
+        "batimentsCoupes": 0,
+        "casesCouvertes": 91018,
+        "hachageCouvertures": "e5c06bb6a047e67b"
       },
-      "violations": 4,
-      "hachage": "372cadd2a1568c06"
+      "violations": 3,
+      "hachage": "3491b20759587f59"
     }
   ]
 }
