@@ -43,3 +43,24 @@ describe("élagage des culs-de-sac", () => {
     expect(cles(r.roads)).toEqual(cles(boucle));
   });
 });
+
+describe("élagage des culs-de-sac sur le réseau en graphe", () => {
+  const L = (x: number, y: number): RoadTile => ({ x, y, losange: true });
+
+  it("un losange touché par le coin d'une maison est gardé, la chaîne qui n'en part vers rien tombe", () => {
+    // maison (4,4)-(6,6) ; losange (3,4) : pointe droite (4,4), coin haut-gauche de la maison.
+    // (2,3) et (1,2) prolongent la chaîne en biais vers nulle part.
+    const r = pruneDeadEnds(grid(12, 12), [maison(4, 4)], [L(1, 2), L(2, 3), L(3, 4)], lookup);
+    expect(r.roads).toEqual([L(3, 4)]);
+    expect(r.removed).toBe(2);
+  });
+
+  it("une jonction droite–losange compte comme un voisin : le tronçon qui relie reste", () => {
+    // maison A (0,0)-(2,2) desservie par la route droite y=3 x=0..2 ; la case (3,3) n'en touche
+    // aucune mais la relie, par sa pointe (4,3), au losange (5,3) — lequel touche par sa pointe
+    // (6,3) le coin haut-gauche de la maison B en (6,3).
+    const routes = [...ligne(3, 0, 3), L(5, 3)];
+    const r = pruneDeadEnds(grid(14, 10), [maison(0, 0), maison(6, 3)], routes, lookup);
+    expect(r.removed).toBe(0);
+  });
+});

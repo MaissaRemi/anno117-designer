@@ -2,6 +2,10 @@ import { uid } from "../model/factories";
 import { footprintSize, partieEauPosee, routeSeule } from "../engine/geometry";
 import type { BuildingDef, GridShape, PlacedBuilding, RoadTile, Rotation } from "../model/types";
 import { terrainConvient, type DefLookup } from "../engine/rules";
+import {
+  casesAuContact, estLosange, estRoute, idDeRoute, losangeAuContact, noeudsAuContactDuReseau, reseauDeRoutes,
+  retirerLosange, routeDe, routesAuContactRect, tailleReseau, voisins,
+} from "../engine/reseauRoutier";
 
 /**
  * COMPTOIR (kontor) — racine du réseau de routes et point d'entrée des marchandises.
@@ -328,8 +332,9 @@ export function connectKontor(
     uid: uid("kontor"), defId: res.def.id, x: res.x, y: res.y, rotation: res.rotation, locked: false,
   };
 
-  const roadAt = new Uint8Array(N);
-  for (const r of roads) if (r.x >= 0 && r.y >= 0 && r.x < W && r.y < H) roadAt[r.y * W + r.x] = 1;
+  // le réseau en graphe (`engine/reseauRoutier`) : cases droites, et losanges s'il y en a
+  const reseau = reseauDeRoutes(W, H, roads);
+  const roadAt = reseau.droite;
   // occupation : -1 libre, sinon index du bâtiment occupant
   const owner = new Int32Array(N).fill(-1);
   for (let bi = 0; bi < buildings.length; bi++) {
@@ -366,8 +371,8 @@ export function connectKontor(
       if (xx >= 0 && xx < W && y >= 0 && y < H) perimeter.push(y * W + xx);
     }
   }
-  // déjà raccordé ? (une ligne du peigne longe l'emprise)
-  if (perimeter.some((c) => roadAt[c])) {
+  // déjà raccordé ? (une ligne du peigne longe l'emprise, ou un losange en touche le bord)
+  if (routesAuContactRect(reseau, res.x, res.y, w, h).length) {
     return { building, roads: [], removed: [], connected: true };
   }
 
@@ -383,24 +388,27 @@ export function connectKontor(
     prev[c] = -1;
     frontier.push(c);
   }
+  // remonter le chemin depuis `fin` : poser les routes, noter les bâtiments rasés
+  const chemin = (fin: number): KontorPlacement => {
+    const out: RoadTile[] = [];
+    const removed = new Set<string>();
+    for (let cur = fin; cur >= 0; cur = prev[cur]) {
+      const o = owner[cur];
+      if (o >= 0) removed.add(buildings[o].uid);
+      out.push({ x: cur % W, y: (cur / W) | 0 });
+    }
+    return { building, roads: out, removed: [...removed], connected: true };
+  };
   const MAX_STUB = 60;
   for (let depth = 0; depth < MAX_STUB && frontier.length; depth++) {
     const next: number[] = [];
     for (const c of frontier) {
+      // un losange de route touché par un coin : le réseau diagonal est atteint
+      if (losangeAuContact(reseau, c) >= 0) return chemin(c);
       const x = c % W, y = (c / W) | 0;
       for (const nb of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
         if (nb < 0 || prev[nb] !== -2) continue;
-        if (roadAt[nb]) {
-          // remonter le chemin : poser les routes, noter les bâtiments rasés
-          const out: RoadTile[] = [];
-          const removed = new Set<string>();
-          for (let cur = c; cur >= 0; cur = prev[cur]) {
-            const o = owner[cur];
-            if (o >= 0) removed.add(buildings[o].uid);
-            out.push({ x: cur % W, y: (cur / W) | 0 });
-          }
-          return { building, roads: out, removed: [...removed], connected: true };
-        }
+        if (roadAt[nb]) return chemin(c);
         if (!passable(nb)) continue;
         prev[nb] = c;
         next.push(nb);
@@ -449,8 +457,10 @@ export function repairRoadConnectivity(
   removed: string[];
 } {
   const W = grid.w, H = grid.h, N = W * H;
-  const roadAt = new Uint8Array(N);
-  for (const r of roads) if (r.x >= 0 && r.y >= 0 && r.x < W && r.y < H) roadAt[r.y * W + r.x] = 1;
+  // le réseau en graphe (`engine/reseauRoutier`) ; les tableaux de routes sont indexés par nœud
+  const reseau = reseauDeRoutes(W, H, roads);
+  const roadAt = reseau.droite;
+  const T = tailleReseau(reseau);
   const occ = new Uint8Array(N);
   const owner = new Int32Array(N).fill(-1);
   for (let bi = 0; bi < buildings.length; bi++) {
@@ -463,18 +473,8 @@ export function repairRoadConnectivity(
       if (x >= 0 && y >= 0 && x < W && y < H) { occ[y * W + x] = 1; owner[y * W + x] = bi; }
     }
   }
-  const nb4 = (c: number): number[] => {
-    const x = c % W, y = (c / W) | 0;
-    const out: number[] = [];
-    if (x > 0) out.push(c - 1);
-    if (x < W - 1) out.push(c + 1);
-    if (y > 0) out.push(c - W);
-    if (y < H - 1) out.push(c + W);
-    return out;
-  };
-
   // noyau = composante atteignable depuis les racines (comptoir/entrepôt)
-  const inCore = new Uint8Array(N);
+  const inCore = new Uint8Array(T);
   const seeds: number[] = [];
   for (const b of buildings) {
     const d = lookup(b.defId);
@@ -492,6 +492,10 @@ export function repairRoadConnectivity(
         if (xx >= 0 && xx < W && y >= 0 && y < H && roadAt[y * W + xx]) seeds.push(y * W + xx);
       }
     }
+    // ⚠ Les graines droites ci-dessus comptent aussi les 4 cases EN COIN de l'emprise, que le
+    // jeu ne raccorde pas (cf. `connectKontor`, `rootedRoadSet`). Gardé tel quel : le corriger
+    // change des plans, c'est un changement à mesurer à part (golden de la trame droite).
+    if (reseau.losanges) for (const id of routesAuContactRect(reseau, b.x, b.y, fp.w, fp.h)) if (estLosange(reseau, id)) seeds.push(id);
   }
   if (!seeds.length) return { roads, added: 0, dropped: 0, orphans: 0, stranded: [], removed: [] };
   const grow = (from: number[]) => {
@@ -499,9 +503,7 @@ export function repairRoadConnectivity(
     for (const c of fr) inCore[c] = 1;
     while (fr.length) {
       const next: number[] = [];
-      for (const c of fr) for (const n of nb4(c)) {
-        if (roadAt[n] && !inCore[n]) { inCore[n] = 1; next.push(n); }
-      }
+      for (const c of fr) voisins(reseau, c, (n) => { if (!inCore[n]) { inCore[n] = 1; next.push(n); } });
       fr = next;
     }
   };
@@ -509,22 +511,22 @@ export function repairRoadConnectivity(
 
   // un bâtiment a-t-il déjà un accès sur le réseau enraciné ?
   const servedByCore = new Uint8Array(buildings.length);
-  for (let c = 0; c < N; c++) {
+  for (let c = 0; c < T; c++) {
     if (!inCore[c]) continue;
-    for (const n of nb4(c)) if (owner[n] >= 0) servedByCore[owner[n]] = 1;
+    casesAuContact(reseau, c, (n) => { if (owner[n] >= 0) servedByCore[owner[n]] = 1; });
   }
 
   // îlots : composantes de routes hors noyau, traitées une par une
-  const drop = new Uint8Array(N);
+  const drop = new Uint8Array(T);
   const extra: number[] = [];
-  const seen = new Uint8Array(N);
+  const seen = new Uint8Array(T);
   let added = 0, dropped = 0, orphans = 0;
   // Bâtiments dont le SEUL accès passe par un îlot irrécupérable : inactifs en jeu. C'est
   // d'eux que l'utilisateur a besoin, pas du nombre de cases de route concernées.
   const strandedIdx = new Set<number>();
   const razedIdx = new Set<number>();
-  for (let i = 0; i < N; i++) {
-    if (!roadAt[i] || inCore[i] || seen[i]) continue;
+  for (let i = 0; i < T; i++) {
+    if (!estRoute(reseau, i) || inCore[i] || seen[i]) continue;
     const comp: number[] = [];
     let fr = [i];
     seen[i] = 1;
@@ -532,7 +534,7 @@ export function repairRoadConnectivity(
       const next: number[] = [];
       for (const c of fr) {
         comp.push(c);
-        for (const n of nb4(c)) if (roadAt[n] && !seen[n]) { seen[n] = 1; next.push(n); }
+        voisins(reseau, c, (n) => { if (!seen[n]) { seen[n] = 1; next.push(n); } });
       }
       fr = next;
     }
@@ -544,10 +546,11 @@ export function repairRoadConnectivity(
     for (let depth = 0; depth <= maxDetour && frontier.length && !linked; depth++) {
       const next: number[] = [];
       for (const c of frontier) {
-        for (const n of nb4(c)) {
-          if (prev.has(n)) continue;
+        // au contact de `c` : les cases droites (gauche, droite, haut, bas), puis les losanges
+        noeudsAuContactDuReseau(reseau, c, (n) => {
+          if (linked || prev.has(n)) return;
           if (inCore[n]) {
-            for (let cur = c; cur >= 0 && !roadAt[cur]; cur = prev.get(cur)!) {
+            for (let cur = c; cur >= 0 && !estRoute(reseau, cur); cur = prev.get(cur)!) {
               // la case appartenait à une résidence : elle tombe, tout entière
               if (owner[cur] >= 0) razedIdx.add(owner[cur]);
               roadAt[cur] = 1;
@@ -555,8 +558,10 @@ export function repairRoadConnectivity(
               added++;
             }
             linked = true;
-            break;
+            return;
           }
+          // le raccord se trace en cases droites : un losange hors du noyau ne se traverse pas
+          if (estLosange(reseau, n)) return;
           // les cases de route (y compris d'AUTRES îlots) sont traversables : un îlot peut
           // rejoindre le noyau en passant par un îlot voisin. La mer bloque toujours ; un
           // bâtiment aussi, SAUF s'il est démolissable — une poignée de maisons contre une
@@ -564,11 +569,11 @@ export function repairRoadConnectivity(
           // une rivière se franchit par un pont, comme partout ailleurs dans le moteur
           // (`routeSeule`) : sans cela, une rive bâtie restait coupée du comptoir — mesuré
           // dans le repère diagonal de roman_island_medium_01, 256 maisons rasées
-          if (!grid.usable[n] && !routeSeule(grid, n)) continue;
-          if (occ[n] && !(owner[n] >= 0 && demolishable?.(buildings[owner[n]].defId))) continue;
+          if (!grid.usable[n] && !routeSeule(grid, n)) return;
+          if (occ[n] && !(owner[n] >= 0 && demolishable?.(buildings[owner[n]].defId))) return;
           prev.set(n, c);
           next.push(n);
-        }
+        });
         if (linked) break;
       }
       frontier = next;
@@ -581,10 +586,14 @@ export function repairRoadConnectivity(
     //  - sinon des bâtiments n'ont d'accès QUE par cet îlot → ils seraient inactifs en jeu.
     //    On garde et on signale : supprimer masquerait l'anomalie.
     const served = new Set<number>();
-    for (const c of comp) for (const n of nb4(c)) if (owner[n] >= 0) served.add(owner[n]);
+    for (const c of comp) casesAuContact(reseau, c, (n) => { if (owner[n] >= 0) served.add(owner[n]); });
     const useless = [...served].every((bi) => servedByCore[bi]);
     if (useless) {
-      for (const c of comp) { drop[c] = 1; roadAt[c] = 0; }
+      for (const c of comp) {
+        drop[c] = 1;
+        if (c < N) roadAt[c] = 0;
+        else { const t = routeDe(reseau, c); retirerLosange(reseau, t.x, t.y); }
+      }
       dropped += comp.length;
     } else {
       orphans += comp.length;
@@ -593,9 +602,10 @@ export function repairRoadConnectivity(
   }
   const out: RoadTile[] = [];
   for (const r of roads) {
-    if (r.x < 0 || r.y < 0 || r.x >= W || r.y >= H || !drop[r.y * W + r.x]) out.push(r);
+    const id = idDeRoute(reseau, r);
+    if (id < 0 || !drop[id]) out.push(r);
   }
-  for (const c of extra) out.push({ x: c % W, y: (c / W) | 0 });
+  for (const c of extra) out.push(routeDe(reseau, c));
   return {
     roads: out, added, dropped, orphans,
     stranded: [...strandedIdx].filter((bi) => !razedIdx.has(bi)).map((bi) => buildings[bi]),

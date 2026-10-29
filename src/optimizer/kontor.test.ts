@@ -4,11 +4,11 @@ import { buildIslandGrid } from "../data/islandGrid";
 import { makeGrid } from "../model/factories";
 import type { BuildingDef, GridShape } from "../model/types";
 import { economy } from "../economy/economy";
-import { makeLookup, rootedRoadSet, terrainConvient } from "../engine/rules";
+import { makeLookup, roadConnected, rootedRoadSet, terrainConvient } from "../engine/rules";
 import { footprintSize } from "../engine/geometry";
 import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
-import { keepMainLandmass, pickKontorDef, reserveKontor } from "./kontor";
+import { connectKontor, keepMainLandmass, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -131,5 +131,57 @@ describe("portfolio de moteurs : l'eau est évaluée AVANT de trancher", () => {
       // 0,6 précédent était calé sur un plan qui frôlait 61 %.
       expect(ok / r.water.consumers.length).toBeGreaterThan(0.5);
     }
+  });
+});
+
+/**
+ * Le comptoir sur le réseau en graphe : un réseau en losanges se rejoint par un coin, comme le
+ * vérifie l'analyseur (`rootedRoadSet` à l'échelle 1). Le golden de la trame droite couvre le
+ * reste ; ici, les branches que seuls des losanges empruntent.
+ */
+describe("comptoir et réparation sur le réseau en graphe", () => {
+  const kdef = pickKontorDef(catalog, "Roman")!;
+  const { w, h } = footprintSize(kdef, 0);
+  const RESIDENCE = "g3145"; // Résidence de Patriciens, 3×3
+  const g = makeGrid(34, 20);
+  const kontor = { uid: "k", defId: kdef.id, x: 1, y: 1, rotation: 0 as const, locked: false };
+
+  it("connectKontor trace en droit jusqu'à toucher un losange par un coin", () => {
+    const X = 1 + w + 6, Y = 2;
+    const losange = { x: X, y: Y, losange: true as const };
+    const k = connectKontor(g, { def: kdef, x: 1, y: 1, rotation: 0, grid: g }, [], [losange], lookup, () => false);
+    expect(k.connected).toBe(true);
+    expect(k.roads.length).toBeGreaterThan(0);
+    expect(k.roads.every((r) => !r.losange)).toBe(true);
+    const layout = { grid: g, buildings: [k.building], roads: [losange, ...k.roads], fields: [] };
+    expect(rootedRoadSet(layout, lookup).set.has(`L${X},${Y}`)).toBe(true);
+  });
+
+  it("repairRoadConnectivity raccroche un îlot de losanges au noyau par des cases droites", () => {
+    // noyau : la route droite sous le comptoir, de x = 1 à xFin ; îlot : un losange 2 cases
+    // plus loin, qui dessert une maison par sa pointe droite
+    const y = 1 + h, xFin = w + 3, X = xFin + 4;
+    const routes = [
+      ...Array.from({ length: xFin }, (_, i) => ({ x: 1 + i, y })),
+      { x: X, y, losange: true as const },
+    ];
+    const maisonB = { uid: "m", defId: RESIDENCE, x: X + 1, y, rotation: 0 as const, locked: false };
+    const r = repairRoadConnectivity(g, [kontor, maisonB], routes, lookup);
+    expect(r.added).toBe(2);
+    expect(r.stranded).toEqual([]);
+    const layout = { grid: g, buildings: [kontor, maisonB], roads: r.roads, fields: [] };
+    const { set } = rootedRoadSet(layout, lookup);
+    expect(set.has(`L${X},${y}`)).toBe(true);
+    expect(roadConnected(layout, lookup, maisonB, set)).toBe(true);
+  });
+
+  it("un îlot de losanges déjà joint au noyau par une jonction n'est pas réparé", () => {
+    const y = 1 + h, xFin = w + 3;
+    // losange (xFin + 2, y) : pointe gauche (xFin + 1, y), coin haut-droit de la dernière case
+    const routes = [...Array.from({ length: xFin }, (_, i) => ({ x: 1 + i, y })), { x: xFin + 2, y, losange: true as const }];
+    const r = repairRoadConnectivity(g, [kontor], routes, lookup);
+    expect(r.added).toBe(0);
+    expect(r.dropped).toBe(0);
+    expect(r.roads).toEqual(routes);
   });
 });

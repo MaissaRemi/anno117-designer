@@ -268,7 +268,21 @@ export function losangeAuContact(r: ReseauRoutier, c: number): number {
  * bâtiment droit qui en occupe une s'y raccorde.
  */
 export function casesAuContact(r: Trame, id: number, f: (c: number) => void): void {
-  noeudsAuContact(r, id, (n) => { if (n < r.N) f(n); });
+  if (id >= r.N) { noeudsAuContact(r, id, (n) => { if (n < r.N) f(n); }); return; }
+  const { W, H } = r, x = id % W, y = (id / W) | 0;
+  if (x > 0) f(id - 1);
+  if (x < W - 1) f(id + 1);
+  if (y > 0) f(id - W);
+  if (y < H - 1) f(id + W);
+}
+
+/**
+ * `noeudsAuContact`, sans les losanges candidats quand le réseau n'en porte aucun : pour les
+ * tracés droits qui explorent le terrain libre autour des routes, et ne posent jamais de losange.
+ */
+export function noeudsAuContactDuReseau(r: ReseauRoutier, id: number, f: (id: number) => void): void {
+  if (r.losanges || id >= r.N) { noeudsAuContact(r, id, f); return; }
+  casesAuContact(r, id, f);
 }
 
 /** Les 4 cases droites dont le losange (X, Y) couvre la moitié. */
