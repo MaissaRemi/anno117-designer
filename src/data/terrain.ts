@@ -38,8 +38,10 @@ export interface TerrainSlot {
 interface TerrainEntry {
   slots: TerrainSlot[];
   rivers: string | null; // RLE 1 bit/tuile (même encodage que le masque terre)
-  /** Cases trop raides pour bâtir (montagnes, falaises), RLE ; cf. tools/build_pentes.py. */
-  pentes?: string | null;
+  /** Zones du jeu (AreaIDs × Water, cf. tools/build_terrain.py), RLE, repère des données. */
+  constructible?: string | null; // terre constructible
+  eauConstructible?: string | null; // bande côtière constructible (ports, pêcheurs, salines)
+  relief?: string | null; // terre de l'île non constructible : montagnes, falaises
   hasHeights?: boolean; // hauteurs dispo (dans terrain.heights.generated, chargé à la demande)
   heightScale?: number | null;
 }
@@ -57,16 +59,20 @@ export function riversOf(islandId: string, w: number, h: number): boolean[] | un
   return retourner(decodeMask(t.rivers, w, h), new Array<boolean>(w * h), w, h);
 }
 
+/** Zones constructibles d'une île selon le jeu, repère de l'image ; undefined si absentes. */
+export interface ZonesIle { terre: boolean[]; eau: boolean[]; relief: boolean[] }
+
 /**
- * Cases trop raides pour bâtir (boolean[w*h], repère de l'image), ou undefined.
- *
- * Le masque de terre vient d'une image où la roche est de la terre comme une autre : sans ce
- * masque, les moteurs posaient routes et maisons sur les montagnes.
+ * LE JEU DIT LUI-MÊME OÙ L'ON BÂTIT (AreaIDs × Water dans le gamedata de l'île) : terre
+ * constructible, bande d'eau côtière constructible, relief. Le masque tiré de l'image tenait la
+ * roche pour de la terre ; un masque des pentes calculé depuis les hauteurs ne s'accordait qu'à
+ * 76 % avec celui du jeu sur roman_island_medium_01, et laissait bâtir 4 127 cases interdites.
  */
-export function pentesOf(islandId: string, w: number, h: number): boolean[] | undefined {
+export function zonesOf(islandId: string, w: number, h: number): ZonesIle | undefined {
   const t = terrain[islandId];
-  if (!t || !t.pentes) return undefined;
-  return retourner(decodeMask(t.pentes, w, h), new Array<boolean>(w * h), w, h);
+  if (!t?.constructible || !t.eauConstructible || !t.relief) return undefined;
+  const lire = (rle: string) => retourner(decodeMask(rle, w, h), new Array<boolean>(w * h), w, h);
+  return { terre: lire(t.constructible), eau: lire(t.eauConstructible), relief: lire(t.relief) };
 }
 
 /** Vrai si l'île a des hauteurs extraites (le décodage peut malgré tout échouer côté navigateur). */

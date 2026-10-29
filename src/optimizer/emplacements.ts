@@ -36,8 +36,10 @@ export function posesSurEmplacement(
   // la façade déjà réservée (cf. `facadeDe`) compte comme terre : la même île, réservée ou non,
   // doit rendre la même pose
   const terre = (x: number, y: number) => dedans(x, y) && (grid.usable[y * W + x] || (grid.voies?.[y * W + x] ?? false));
-  const pente = (x: number, y: number) =>
-    dedans(x, y) && !grid.usable[y * W + x] && !(grid.water?.[y * W + x] ?? false) && !(grid.voies?.[y * W + x] ?? false);
+  // le relief du jeu s'il est connu ; sinon ni terre, ni eau, ni façade réservée
+  const pente = (x: number, y: number) => dedans(x, y) && (grid.relief
+    ? grid.relief[y * W + x]
+    : !grid.usable[y * W + x] && !(grid.water?.[y * W + x] ?? false) && !(grid.voies?.[y * W + x] ?? false));
   const cands: { p: PoseEmplacement; acces: number; relief: number; ecart: number }[] = [];
   for (const [w, h, rot] of dims) {
     for (let dy = -TOLERANCE; dy <= TOLERANCE; dy++) for (let dx = -TOLERANCE; dx <= TOLERANCE; dx++) {

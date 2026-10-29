@@ -115,8 +115,10 @@ function drawGrid(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
       const river = grid.rivers?.[i];
       const [sx, sy] = gridToScreen(v, x, y);
       // rivière (argile/ponts) / terre constructible / eau (mer) / hors-zone
-      // ni terre, ni eau : montagne ou falaise (masque des pentes), en gris roche
-      ctx.fillStyle = river ? "#2d5a73" : usable ? "#2b333c" : water ? "#1c3a52" : "#4a4c52";
+      // relief du jeu (montagne, falaise) en gris roche ; l'eau côtière constructible se
+      // distingue de la mer ouverte
+      const relief = grid.relief?.[i];
+      ctx.fillStyle = river ? "#2d5a73" : usable ? "#2b333c" : relief ? "#4a4c52" : water ? "#1c3a52" : "#11161c";
       ctx.fillRect(sx, sy, v.cell, v.cell);
     }
   }
