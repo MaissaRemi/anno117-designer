@@ -363,10 +363,12 @@ export function disposerQuartiers(
         if (trame.routeColonne(i + 1)) poser(x + ILOT.largeur, y + dy);
       }
     }
+    // Un groupe n'efface QUE les routes sous son bâtiment. Effacer tout son intérieur laissait
+    // autour d'un Amphithéâtre ou d'un Temple des bandes sans aucune route, donc sans maison :
+    // mesuré, le quart de la zone de ville restait vide.
     for (const g of groupes) {
-      const { x, y } = trame.coin(g.i, g.j);
-      const w = g.k * ILOT.pasX - 1, h = g.m * ILOT.pasY - 1;
-      for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) r[(y + dy) * W + x + dx] = 0;
+      const t = taille(g.def, g.rot);
+      for (let dy = 0; dy < t.h; dy++) for (let dx = 0; dx < t.w; dx++) r[(g.y + dy) * W + g.x + dx] = 0;
     }
     return r;
   };
@@ -393,26 +395,32 @@ export function disposerQuartiers(
     return out;
   };
   /**
-   * Intérieur d'un groupe pour y loger des maisons : le bâtiment, et les ALLÉES intérieures,
-   * gardées libres. Sans elles, les maisons posées dans les restes d'un groupe coupaient la
-   * colonne d'allée en deux, et les citernes au-delà restaient sèches — mesuré, trois sur
-   * quatre pour 300 Patriciens.
+   * Maisons qui tiennent dans les RESTES d'un groupe : îlot par îlot, comme ailleurs, puisque
+   * les routes de la trame y survivent hors de l'emprise du bâtiment (cf. `routes`). Une maison
+   * de la rangée haute s'appuie sur la route du dessus, celle du bas sur la route du dessous :
+   * il faut qu'un bout de cette route ait survécu au bâtiment. Les allées restent entre les
+   * îlots, donc libres pour l'eau.
    */
-  const occupationGroupe = (gi: number, gj: number, k: number, m: number, bx: number, by: number, bw: number, bh: number) => {
-    const w = k * ILOT.pasX - 1, h = m * ILOT.pasY - 1;
-    const coin = trame.coin(gi, gj);
-    const occ = new Uint8Array(w * h);
-    for (let di = 1; di < k; di++) {
-      if (trame.routeColonne(gi + di)) continue;
-      const x = di * ILOT.pasX - 1;
-      for (let y = 0; y < h; y++) occ[y * w + x] = 1;
+  const maisonsDeGroupe = (
+    gi: number, gj: number, k: number, m: number,
+    bx: number, by: number, bw: number, bh: number, cle: number,
+  ): Maison[] => {
+    const sous = (x: number, y: number) => x >= bx && x < bx + bw && y >= by && y < by + bh;
+    const out: Maison[] = [];
+    for (let dj = 0; dj < m; dj++) for (let di = 0; di < k; di++) {
+      const { x: cx, y: cy } = trame.coin(gi + di, gj + dj);
+      const occ = new Uint8Array(ILOT.largeur * ILOT.hauteur);
+      for (let dy = 0; dy < ILOT.hauteur; dy++) for (let dx = 0; dx < ILOT.largeur; dx++) {
+        if (sous(cx + dx, cy + dy)) occ[dy * ILOT.largeur + dx] = 1;
+      }
+      for (const ms of libres(occ, ILOT.largeur, ILOT.hauteur, cx, cy, cle)) {
+        const ry = ms.y === cy ? cy - 1 : cy + ILOT.hauteur;
+        let route = false;
+        for (let dx = 0; dx < 3; dx++) if (!sous(ms.x + dx, ry) && trame.terre(ms.x + dx, ry)) route = true;
+        if (route) out.push(ms);
+      }
     }
-    for (let dy = 0; dy < bh; dy++) for (let dx = 0; dx < bw; dx++) occ[(by - coin.y + dy) * w + bx - coin.x + dx] = 1;
-    return { occ, w, h, coin };
-  };
-  const occGroupe = (g: Groupe): { occ: Uint8Array; w: number; h: number } => {
-    const t = taille(g.def, g.rot);
-    return occupationGroupe(g.i, g.j, g.k, g.m, g.x, g.y, t.w, t.h);
+    return out;
   };
 
   /** Toutes les maisons de la ville : îlots d'habitation, et restes des îlots de services. */
@@ -428,9 +436,8 @@ export function disposerQuartiers(
       }
     }
     for (const g of groupes) {
-      const { occ, w, h } = occGroupe(g);
-      const coin = trame.coin(g.i, g.j);
-      out.push(...libres(occ, w, h, coin.x, coin.y, trame.cle(g.i, g.j)));
+      const t = taille(g.def, g.rot);
+      out.push(...maisonsDeGroupe(g.i, g.j, g.k, g.m, g.x, g.y, t.w, t.h, trame.cle(g.i, g.j)));
     }
     return out;
   };
@@ -623,8 +630,9 @@ export function disposerQuartiers(
     }
     let apres = 0;
     if (c.groupe) {
-      const { occ, w, h, coin } = occupationGroupe(c.groupe.i, c.groupe.j, c.groupe.k, c.groupe.m, c.x, c.y, c.w, c.h);
-      apres = libres(occ, w, h, coin.x, coin.y, -1).length;
+      const reste = maisonsDeGroupe(c.groupe.i, c.groupe.j, c.groupe.k, c.groupe.m, c.x, c.y, c.w, c.h, -1);
+      apres = reste.length;
+      for (const m of reste) exclues.delete(m.y * W + m.x); // restées en place : toujours là
     } else {
       const k = c.cles[0];
       const { i, j } = trame.ij(k);
