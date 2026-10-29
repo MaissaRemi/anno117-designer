@@ -111,3 +111,28 @@ Reste, hors de G : à la largeur d'un téléphone, la barre du haut déborde (bo
 Les données du dépôt datent de juin ; le jeu installé est au patch 200 (2 329 assets de plus,
 Colisée portée 250 → 420). Réextraction en cours dans une session à part, branche
 `chore/donnees-patch-200`.
+
+## Géométrie des îles corrigée (signalé par Rémi)
+
+**Deux repères superposés sans conversion.** Le masque de terre vient de l'image de l'île
+(`mapimage.png`, ligne 0 en haut) ; emplacements, rivières et hauteurs viennent des données du
+jeu (axe z vers le nord). Tout ce qui vient des données était en miroir vertical : terre des
+hauteurs contre terre de l'image, 40-50 % de recouvrement, 93-95 % une fois l'axe retourné
+(l'identité est la meilleure correspondance sur les 55 îles). Corrigé dans `data/terrain.ts`.
+
+**La roche était constructible.** L'image ne distingue pas la montagne. `tools/build_pentes.py`
+dérive un masque des pentes depuis les hauteurs (relief local ≥ 12 sur 5 × 5 cases, en
+hauteur/16), validé à l'œil sur medium_01, small_06 et large_03. **Heuristique** : le seuil
+est à confirmer en jeu, un sommet plat cerné de pentes reste hors masque.
+
+**Les emplacements sont des endroits prédéfinis.** Mines, carrières et source d'aqueduc se
+posent dessus (`optimizer/emplacements.ts`), orientation face à la terre ; seules l'emprise et
+la façade (réservée à la route) sont bloquées.
+
+**Les rivières se franchissent par un pont** (`routeSeule`, `engine/geometry.ts`).
+
+Conséquences mesurées : les populations baissent, parce que les anciennes comptaient des
+maisons sur la montagne — roman_island_medium_01 en « Remplir l'île », pavé : 756 maisons,
+25 364 habitants ; roman_island_small_06, surtout rocheuse, ne loge plus 300 Patriciens au
+palier. Limite connue : 300 Patriciens sur medium_01 en routes de terre, le Forum reste sec
+(une seule source sert la moitié nord) ; servis en pavé.
