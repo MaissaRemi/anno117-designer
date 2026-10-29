@@ -6,7 +6,7 @@ Tout le travail est sur la branche **`dev`** ; `main` n'a pas été mis à jour 
 ## Remettre le projet en route
 
 ```
-git clone https://github.com/xXRem08Xx/anno117-designer.git
+git clone https://github.com/MaissaRemi/anno117-designer.git
 cd anno117-designer
 git switch dev
 pnpm install
