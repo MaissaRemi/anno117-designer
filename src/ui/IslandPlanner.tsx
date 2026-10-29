@@ -34,7 +34,8 @@ const tiersOfWorld = (world: string) =>
   tiers.filter((t) => t.residenceId && worldOf(t.region) === world)
     .sort((a, b) => b.capacityDefault - a.capacityDefault);
 
-type NeedMode = "auto" | "all";
+/** Choix des services : recette cherchée pour les habitants, pour les maisons, ou tous les services. */
+type NeedMode = "auto" | "maisons" | "all";
 
 /** Paliers de dévotion proposés — ceux de l'échelle du jeu (`economy.patrons`). */
 const DEVOTIONS = [0, 250, 1500, 4500, 25000, 250000];
@@ -144,7 +145,9 @@ export function IslandPlanner({ onClose }: Props) {
     const grid = gridWithObstacles(s.layout.grid, locked, makeLookup(s.catalog));
     const { promise, cancel } = runIslandPlan(
       {
-        catalog: s.catalog, grid, mode, tierGuid, coverageFloor: floor / 100, needMode,
+        catalog: s.catalog, grid, mode, tierGuid, coverageFloor: floor / 100,
+        needMode: needMode === "maisons" ? "auto" : needMode,
+        objectif: needMode === "maisons" ? "maisons" : "habitants",
         exploitSlots,
         roadType,
         localProduction,
@@ -216,12 +219,15 @@ export function IslandPlanner({ onClose }: Props) {
               <span>Services</span>
               <select value={needMode} onChange={(e) => setNeedMode(e.target.value as NeedMode)}>
                 <option value="auto">Recette optimisée (max d'habitants)</option>
+                <option value="maisons">Maximum de maisons (services au mieux)</option>
                 <option value="all">Tous les services (max de bonus par maison)</option>
               </select>
               <span className="muted" style={{ fontSize: 11 }}>
                 {needMode === "auto"
-                  ? "Essaie plusieurs jeux de services et garde celui qui loge le plus de monde. Une recette maigre héberge moins par maison, mais laisse la place à bien plus de maisons."
-                  : "Pose les 12 types de service du palier. Bonus maximal par maison, mais ils mangent ~⅓ de l'île."}
+                  ? "Essaie plusieurs jeux de services et garde celui qui loge le plus de monde."
+                  : needMode === "maisons"
+                    ? "Couvre l'île de maisons reliées à la route. Celles qu'aucun service n'atteint restent à un palier plus bas, mais logent encore du monde."
+                    : "Pose tous les services du palier : bonus maximal par maison, mais ils prennent beaucoup de place."}
               </span>
             </div>
             <RoadTypeSelect value={roadType} onChange={setRoadType} />
