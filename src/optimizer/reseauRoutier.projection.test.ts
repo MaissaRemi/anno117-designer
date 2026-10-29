@@ -8,7 +8,7 @@ import { planningRange } from "../engine/roads";
 import { downscaleGrid } from "./halfTileAdapter";
 import { planIslandImport } from "./islandPlan";
 import { catalogueDiagonal, centreDroit, grilleDiagonale, versDiagonalPoint } from "./cadreDiagonal";
-import { coinDe, creerParcours, estLosange, idLosange, noeudsAuContact, parcourir, reseauVide, voisins } from "../engine/reseauRoutier";
+import { coinDe, creerParcours, estLosange, idLosange, noeudsAuContact, parcourir, poserLosange, reseauVide, voisins } from "../engine/reseauRoutier";
 
 /**
  * PROJECTION D'UN PLAN DIAGONAL DANS LE RÉSEAU COMMUN.
@@ -45,7 +45,7 @@ describe("un plan diagonal projeté dans le réseau commun", () => {
       const p = versDiagonalPoint(cadre, X, Y);
       return cellKey(p.c, p.r);
     };
-    for (const r of plan.roads) reseau.losange[versId(r.x, r.y) - reseau.N] = 1;
+    for (const r of plan.roads) { const { X, Y } = coinDe(reseau, versId(r.x, r.y)); poserLosange(reseau, X, Y); }
     const emprise = (b: (typeof plan.buildings)[number]): number[] => {
       const d = lookupD(b.defId)!;
       return footprintCells(d, b.x, b.y, b.rotation, 1).map((c) => versId(c.x, c.y));

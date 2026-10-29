@@ -11,6 +11,7 @@ import { MAX_RUN, needsWater, planWater, type WaterPlanResult } from "./waterPla
 import { makeStreetGrid } from "./streetGrid";
 import { copiesEnTrop } from "./doublons";
 import { planningRange, type RoadType } from "../engine/roads";
+import { casesAuContact, losangeAuContact, routeDe, routesDuReseau, tailleReseau, voisins } from "../engine/reseauRoutier";
 
 
 export interface LatticeOpts {
@@ -234,7 +235,8 @@ export function planLattice(
     W, H, occ, roadAt, bldAdj, usable: grid.usable, rw, rh, x0, y0, x1, y1, STEPH,
     blockRingInFits: true, reserved: waterGate,
   });
-  const { fitsBld, fitsHouse, orthoRoadCells, touchesRoad, markAdj, layRoad, layRing, connectRing } = sg;
+  const { reseau, fitsBld, fitsHouse, routesAuContact, touchesRoad, markAdj, layRoad, layRing, connectRing } = sg;
+  const T = tailleReseau(reseau);
   for (let y = y0; y <= y1; y += STEPH) for (let x = x0; x <= x1; x++) layRoad(x, y);
   for (let x = x0; x <= x1; x += STEPV) for (let y = y0; y <= y1; y++) layRoad(x, y);
 
@@ -558,23 +560,23 @@ export function planLattice(
   };
   rebuildDemand();
 
-  // couverture d'un type sur la demande : origine couverte ssi case d'emprise
-  // ortho-adjacente à une route atteinte. Renvoie le set d'origines couvertes.
+  // couverture d'un type sur la demande : origine couverte ssi une case de son emprise est au
+  // contact d'une route atteinte — par un côté, ou par un coin pour un losange. Renvoie le set
+  // d'origines couvertes.
   const coveredOrigins = (tc: TypeCov): Uint8Array => {
     const cov = new Uint8Array(N);
-    // pour chaque route atteinte c, les cases-maison adjacentes = voisins ortho de c.
-    // une origine (ox,oy) est couverte si l'un de ces voisins est dans son emprise.
+    // pour chaque route atteinte c, les cases-maison à son contact (`casesAuContact`).
+    // une origine (ox,oy) est couverte si l'une de ces cases est dans son emprise.
     for (const c of tc.reachList) {
-      const cx = c % W, cy = (c / W) | 0;
-      for (const [nx, ny] of [[cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]] as const) {
-        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+      casesAuContact(reseau, c, (n) => {
+        const nx = n % W, ny = (n / W) | 0;
         // origines dont l'emprise rw×rh contient (nx,ny)
         for (let ox = nx - rw + 1; ox <= nx; ox++) for (let oy = ny - rh + 1; oy <= ny; oy++) {
           if (ox < 0 || oy < 0 || ox + rw > W || oy + rh > H) continue;
           const o = oy * W + ox;
           if (demand[o]) cov[o] = 1;
         }
-      }
+      });
     }
     return cov;
   };
@@ -710,8 +712,7 @@ export function planLattice(
     return n;
   };
   if (opts.water) {
-    const roadsNow: RoadTile[] = [];
-    for (let i = 0; i < N; i++) if (roadAt[i]) roadsNow.push({ x: i % W, y: (i / W) | 0 });
+    const roadsNow = routesDuReseau(reseau);
     water = planWater(grid, buildings, roadsNow, lookup, opts.heights, opts.reserved, "volume", true);
     // consommateurs DÉPLACÉS pour être raccordés : sol, registre de portée, adjacence
     for (const m of water.moved ?? []) {
@@ -813,7 +814,7 @@ export function planLattice(
           if (xx >= 0 && xx < W && y >= 0 && y < H) ring.push(y * W + xx);
         }
       }
-      if (ring.some((c) => roadAt[c])) continue; // déjà desservie
+      if (routesAuContact(src.x, src.y, fp.w, fp.h).length) continue; // déjà desservie
       const prev = new Int32Array(N).fill(-2);
       let fr: number[] = [];
       for (const c of ring) if (prev[c] === -2 && passable(c)) { prev[c] = -1; fr.push(c); }
@@ -823,6 +824,8 @@ export function planLattice(
       for (let depth = 0; depth < 200 && fr.length && hit < 0; depth++) {
         const next: number[] = [];
         for (const c of fr) {
+          // un losange de route touché par un coin : le chemin s'arrête là
+          if (losangeAuContact(reseau, c) >= 0) { hit = c; break; }
           for (const n of [c % W > 0 ? c - 1 : -1, c % W < W - 1 ? c + 1 : -1,
             c >= W ? c - W : -1, c < N - W ? c + W : -1]) {
             if (n < 0 || prev[n] !== -2 || !passable(n)) continue;
@@ -1019,8 +1022,24 @@ export function planLattice(
 
   // ═══ PHASE élagage routes : adjacentes aux bâtiments + chemins maison→service ═══
   const pruneRoads = (): RoadTile[] => {
-    const keep = new Uint8Array(N);
+    // indexé par NŒUD du réseau : cases droites, puis losanges
+    const keep = new Uint8Array(T);
     for (let i = 0; i < N; i++) if (roadAt[i] && bldAdj[i]) keep[i] = 1;
+    if (reseau.losanges) {
+      // un losange touche un bâtiment par un coin : `bldAdj` ne le sait pas, l'emprise si
+      const bati = new Uint8Array(N);
+      for (const b of buildings) {
+        const fp = footprintSize(lookup(b.defId)!, b.rotation);
+        for (let j = 0; j < fp.h; j++) for (let i = 0; i < fp.w; i++) {
+          const x = b.x + i, y = b.y + j;
+          if (x >= 0 && y >= 0 && x < W && y < H) bati[y * W + x] = 1;
+        }
+      }
+      for (let i = N; i < T; i++) {
+        if (!reseau.losange[i - N]) continue;
+        casesAuContact(reseau, i, (c) => { if (bati[c]) keep[i] = 1; });
+      }
+    }
     // LE CHEMIN D'UNE SOURCE RESTE ENTIER. Il traverse le relief et ne touche la source qu'à un
     // bout : `bldAdj` n'en gardait que la première case, et la source perdait son accès
     // (mesuré sur roman_island_small_06 avec les données du patch 200 : un chemin de 8 cases
@@ -1028,9 +1047,9 @@ export function planLattice(
     for (const c of routesDesSources) if (roadAt[c]) keep[c] = 1;
     const housesPlaced = buildings.filter((b) => resIdSet.has(b.defId));
     const chainKept = new Map<string, Uint8Array>();
-    for (const t of types) chainKept.set(t.def.id, new Uint8Array(N));
+    for (const t of types) chainKept.set(t.def.id, new Uint8Array(T));
     for (const hb of housesPlaced) {
-      const anchors = orthoRoadCells(hb.x, hb.y, rw, rh);
+      const anchors = routesAuContact(hb.x, hb.y, rw, rh);
       for (const t of types) {
         const ck = chainKept.get(t.def.id)!;
         for (const a of anchors) {
@@ -1061,59 +1080,36 @@ export function planLattice(
     // toucher `roadAt`, donc aucune maison ne s'y est posée.
     const R = opts.reserved;
     if (R) {
-      const rootRing: number[] = [];
-      for (let i = 0; i < R.w; i++) {
-        for (const yy of [R.y - 1, R.y + R.h]) {
-          const x = R.x + i;
-          if (yy >= 0 && yy < H && x >= 0 && x < W) rootRing.push(yy * W + x);
-        }
-      }
-      for (let j = 0; j < R.h; j++) {
-        for (const xx of [R.x - 1, R.x + R.w]) {
-          const y = R.y + j;
-          if (xx >= 0 && xx < W && y >= 0 && y < H) rootRing.push(y * W + xx);
-        }
-      }
-      const roots = rootRing.filter((c) => roadAt[c]);
+      // les routes au contact du comptoir : ses racines
+      const roots = routesAuContact(R.x, R.y, R.w, R.h);
       if (roots.length) {
-        const nb4 = (c: number): number[] => {
-          const x = c % W, y = (c / W) | 0;
-          const out: number[] = [];
-          if (x > 0) out.push(c - 1);
-          if (x < W - 1) out.push(c + 1);
-          if (y > 0) out.push(c - W);
-          if (y < H - 1) out.push(c + W);
-          return out;
-        };
         // chemins sur le peigne COMPLET, élaguées comprises, depuis l'anneau du comptoir
-        const parent = new Int32Array(N).fill(-2);
+        const parent = new Int32Array(T).fill(-2);
         let fr: number[] = [...roots];
         for (const c of roots) parent[c] = -1;
         while (fr.length) {
           const next: number[] = [];
           for (const c of fr) {
-            for (const n of nb4(c)) {
-              if (roadAt[n] && parent[n] === -2) { parent[n] = c; next.push(n); }
-            }
+            voisins(reseau, c, (n) => { if (parent[n] === -2) { parent[n] = c; next.push(n); } });
           }
           fr = next;
         }
-        // ce que `keep` relie DÉJÀ à la racine
-        const rooted = new Uint8Array(N);
+        // ce que `keep` relie DÉJÀ à la racine (`keep` ne retient que des routes)
+        const rooted = new Uint8Array(T);
         const growRooted = (from: number[]) => {
           let f = from.filter((c) => keep[c] && !rooted[c]);
           for (const c of f) rooted[c] = 1;
           while (f.length) {
             const next: number[] = [];
             for (const c of f) {
-              for (const n of nb4(c)) if (keep[n] && !rooted[n]) { rooted[n] = 1; next.push(n); }
+              voisins(reseau, c, (n) => { if (keep[n] && !rooted[n]) { rooted[n] = 1; next.push(n); } });
             }
             f = next;
           }
         };
         for (const c of roots) keep[c] = 1; // l'accès du comptoir n'est jamais élagué
         growRooted(roots);
-        for (let i = 0; i < N; i++) {
+        for (let i = 0; i < T; i++) {
           if (!keep[i] || rooted[i] || parent[i] === -2) continue;
           // remonter vers la racine en restituant, jusqu'à retomber sur du déjà relié
           const path: number[] = [];
@@ -1125,7 +1121,7 @@ export function planLattice(
     }
 
     const roads: RoadTile[] = [];
-    for (let i = 0; i < N; i++) if (keep[i]) roads.push({ x: i % W, y: (i / W) | 0 });
+    for (let i = 0; i < T; i++) if (keep[i]) roads.push(routeDe(reseau, i));
     return roads;
   };
 

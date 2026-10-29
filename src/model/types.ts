@@ -92,6 +92,11 @@ export interface RoadTile {
   x: number;
   y: number;
   gen?: boolean; // true = route générée par l'optimiseur (remplaçable au re-calcul)
+  /**
+   * Case de route DIAGONALE : le losange centré sur le coin (x, y) de la grille (cf.
+   * `engine/reseauRoutier.ts`). Grille des moteurs seulement ; l'éditeur n'en pose pas encore.
+   */
+  losange?: true;
 }
 
 /** Tuile de conduite d'aqueduc (réseau d'eau, distinct des routes). */

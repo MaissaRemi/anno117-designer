@@ -1,4 +1,5 @@
 import type { BuildingDef } from "../model/types";
+import { losangeAuContact, reseauVide, routesAuContactRect, tailleReseau, voisins } from "../engine/reseauRoutier";
 
 /**
  * Primitives de grille/rue des moteurs de placement — partagées entre planLattice et packPlan
@@ -11,6 +12,13 @@ import type { BuildingDef } from "../model/types";
  * en place) ; les 2 divergences sont des OPTIONS (`blockRingInFits`, `reserved`),
  * pas des forks. Les corps sont COPIÉS À L'IDENTIQUE des moteurs → comportement
  * inchangé (garanti par le golden snapshot de planLattice).
+ *
+ * LE RÉSEAU EN GRAPHE (trame mêlée, `engine/reseauRoutier.ts`). `roadAt` est le masque des
+ * cases droites d'un `ReseauRoutier` exposé en `reseau` ; ses losanges s'y posent par
+ * `poserLosange`. Contact d'une emprise, portée et raccordement d'un anneau passent par le
+ * graphe ; sans losange, ils visitent les mêmes cases dans le même ordre qu'avant (golden de la
+ * trame droite). Les routes que le moteur TRACE à travers le terrain libre restent droites :
+ * seul leur arrêt — « le réseau est atteint » — reconnaît aussi un losange touché par un coin.
  */
 export interface StreetGridParams {
   W: number;
@@ -32,7 +40,10 @@ export interface StreetGridParams {
   reserved?: Uint8Array;
 }
 
-/** TypeCov minimal commun (le défunt packPlan y ajoutait `covered`). */
+/**
+ * TypeCov minimal commun (le défunt packPlan y ajoutait `covered`). `reach` et `parent` sont
+ * indexés par NŒUD du réseau (cases droites puis losanges, `tailleReseau`).
+ */
 export interface ReachState {
   def: BuildingDef;
   range: number;
@@ -45,7 +56,8 @@ export type Footprint = { x: number; y: number; w: number; h: number };
 
 export function makeStreetGrid(p: StreetGridParams) {
   const { W, H, occ, roadAt, bldAdj, usable, rw, rh, x0, y0, x1, y1, STEPH, reserved } = p;
-  const N = W * H;
+  const reseau = reseauVide(W, H, roadAt);
+  const T = tailleReseau(reseau);
 
   const fitsBld = (w: number, h: number, x: number, y: number): boolean => {
     if (x < 0 || y < 0 || x + w > W || y + h > H) return false;
@@ -68,19 +80,10 @@ export function makeStreetGrid(p: StreetGridParams) {
     return true;
   };
 
-  const orthoRoadCells = (x: number, y: number, w: number, h: number): number[] => {
-    const out: number[] = [];
-    for (let i = 0; i < w; i++) {
-      if (y - 1 >= 0 && roadAt[(y - 1) * W + (x + i)]) out.push((y - 1) * W + (x + i));
-      if (y + h < H && roadAt[(y + h) * W + (x + i)]) out.push((y + h) * W + (x + i));
-    }
-    for (let j = 0; j < h; j++) {
-      if (x - 1 >= 0 && roadAt[(y + j) * W + (x - 1)]) out.push((y + j) * W + (x - 1));
-      if (x + w < W && roadAt[(y + j) * W + (x + w)]) out.push((y + j) * W + (x + w));
-    }
-    return out;
-  };
-  const touchesRoad = (x: number, y: number): boolean => orthoRoadCells(x, y, rw, rh).length > 0;
+  // routes au contact d'une emprise : par un côté (ordre historique), puis losanges en pointe
+  const routesAuContact = (x: number, y: number, w: number, h: number): number[] =>
+    routesAuContactRect(reseau, x, y, w, h);
+  const touchesRoad = (x: number, y: number): boolean => routesAuContact(x, y, rw, rh).length > 0;
 
   const markAdj = (x: number, y: number, w: number, h: number) => {
     for (let i = 0; i < w; i++) {
@@ -122,12 +125,13 @@ export function makeStreetGrid(p: StreetGridParams) {
     while (fr.length) {
       const next: number[] = [];
       for (const c of fr) {
-        const x = c % W, y = (c / W) | 0;
-        for (const nb of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
-          if (nb < 0 || !roadAt[nb] || seen.has(nb)) continue;
-          if (!ringSet.has(nb)) return; // connecté au réseau
+        let relie = false;
+        voisins(reseau, c, (nb) => {
+          if (relie || seen.has(nb)) return;
+          if (!ringSet.has(nb)) { relie = true; return; } // connecté au réseau
           seen.add(nb); next.push(nb);
-        }
+        });
+        if (relie) return;
       }
       fr = next;
     }
@@ -138,6 +142,12 @@ export function makeStreetGrid(p: StreetGridParams) {
     for (let depth = 0; depth < maxDepth && frontier.length; depth++) {
       const next: number[] = [];
       for (const c of frontier) {
+        // un losange touché par un coin : le réseau diagonal est atteint
+        if (!roadAt[c] && losangeAuContact(reseau, c) >= 0) {
+          let cur = c;
+          while (cur >= 0 && !roadAt[cur]) { roadAt[cur] = 1; cur = prev.get(cur)!; }
+          return;
+        }
         const cx = c % W, cy = (c / W) | 0;
         for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
           const px = cx + dx, py = cy + dy;
@@ -157,17 +167,18 @@ export function makeStreetGrid(p: StreetGridParams) {
     }
   };
 
-  // BFS multi-source le long des routes depuis toutes les copies d'un type.
+  // BFS multi-source le long des routes depuis toutes les copies d'un type : portée en nœuds.
   const bfsType = (tc: ReachState, placements: Map<string, Footprint[]>) => {
-    tc.reach = new Uint8Array(N);
+    // sans losange, aucun nœud au-delà des cases droites : des tableaux de la taille d'avant
+    const n = reseau.losanges ? T : W * H;
+    tc.reach = new Uint8Array(n);
     tc.reachList = [];
-    tc.parent = new Int32Array(N).fill(-2);
-    const dist = new Int32Array(N).fill(-1);
+    tc.parent = new Int32Array(n).fill(-2);
     let frontier: number[] = [];
     for (const pl of placements.get(tc.def.id) ?? []) {
-      for (const c of orthoRoadCells(pl.x, pl.y, pl.w, pl.h)) {
-        if (dist[c] >= 0) continue;
-        dist[c] = 1; tc.parent[c] = -1; tc.reach[c] = 1;
+      for (const c of routesAuContact(pl.x, pl.y, pl.w, pl.h)) {
+        if (tc.reach[c]) continue;
+        tc.parent[c] = -1; tc.reach[c] = 1;
         tc.reachList.push(c); frontier.push(c);
       }
     }
@@ -175,12 +186,11 @@ export function makeStreetGrid(p: StreetGridParams) {
     while (frontier.length && d < tc.range) {
       const next: number[] = [];
       for (const c of frontier) {
-        const x = c % W, y = (c / W) | 0;
-        for (const nb of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, y > 0 ? c - W : -1, y < H - 1 ? c + W : -1]) {
-          if (nb < 0 || !roadAt[nb] || dist[nb] >= 0) continue;
-          dist[nb] = d + 1; tc.parent[nb] = c; tc.reach[nb] = 1;
+        voisins(reseau, c, (nb) => {
+          if (tc.reach[nb]) return;
+          tc.parent[nb] = c; tc.reach[nb] = 1;
           tc.reachList.push(nb); next.push(nb);
-        }
+        });
       }
       frontier = next; d++;
     }
@@ -203,5 +213,5 @@ export function makeStreetGrid(p: StreetGridParams) {
     return { buildSAT, rectSum };
   };
 
-  return { fitsBld, fitsHouse, orthoRoadCells, touchesRoad, markAdj, layRoad, layRing, connectRing, bfsType, makeSAT };
+  return { reseau, fitsBld, fitsHouse, routesAuContact, touchesRoad, markAdj, layRoad, layRing, connectRing, bfsType, makeSAT };
 }

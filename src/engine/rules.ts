@@ -25,7 +25,8 @@ import {
   estRoute,
   noeudsAuContactDeCase,
   parcourir,
-  reseauDeCases,
+  idDeRoute,
+  reseauDeRoutes,
   trameDe,
   type Parcours,
   type ReseauRoutier,
@@ -56,6 +57,15 @@ const cleDeNoeud = (t: Trame, id: number): string => {
   const { X, Y } = coinDe(t, id);
   return `L${X},${Y}`;
 };
+
+/** Les clés de toutes les routes du plan (échelle 1) ; une case hors de la grille garde `"x,y"`. */
+function clesDesRoutes(layout: Layout): Set<string> {
+  const t = trameDe(layout.grid.w, layout.grid.h);
+  return new Set(layout.roads.map((c) => {
+    const id = idDeRoute(t, c);
+    return id < 0 ? cellKey(c.x, c.y) : cleDeNoeud(t, id);
+  }));
+}
 
 export function makeLookup(catalog: Catalog): DefLookup {
   const map = new Map(catalog.map((d) => [d.id, d]));
@@ -176,7 +186,7 @@ export function rootedRoadSet(
 }
 
 function rootedRoadSetEnNoeuds(layout: Layout, lookup: DefLookup): { set: Set<string>; hasRoot: boolean } {
-  const r = reseauDeCases(layout.grid.w, layout.grid.h, layout.roads);
+  const r = reseauDeRoutes(layout.grid.w, layout.grid.h, layout.roads);
   const seeds: number[] = [];
   for (const b of layout.buildings) {
     const def = lookup(b.defId);
@@ -185,7 +195,7 @@ function rootedRoadSetEnNoeuds(layout: Layout, lookup: DefLookup): { set: Set<st
       noeudsAuContactDeCase(r, c.x, c.y, (n) => { if (estRoute(r, n)) seeds.push(n); });
     }
   }
-  if (seeds.length === 0) return { set: new Set(layout.roads.map((c) => cellKey(c.x, c.y))), hasRoot: false };
+  if (seeds.length === 0) return { set: clesDesRoutes(layout), hasRoot: false };
   const p = creerParcours(r);
   parcourir(r, p, seeds);
   return { set: new Set(p.atteints.map((id) => cleDeNoeud(r, id))), hasRoot: true };
@@ -205,9 +215,9 @@ export function roadConnected(
   const def = lookup(b.defId);
   if (!def) return false;
   if (!def.needsRoad || def.roadRoot) return true;
-  const roads = rootSet ?? new Set(layout.roads.map((r) => cellKey(r.x, r.y)));
-  if (roads.size === 0) return false;
   const scale = gridScale(layout.grid);
+  const roads = rootSet ?? (scale === 1 ? clesDesRoutes(layout) : new Set(layout.roads.map((r) => cellKey(r.x, r.y))));
+  if (roads.size === 0) return false;
   if (scale === 1) {
     const t = trameDe(layout.grid.w, layout.grid.h);
     for (const c of footprintCells(def, b.x, b.y, b.rotation, 1)) {
@@ -413,7 +423,7 @@ export function computeRadiusCoverage(
     const useStreet = !opts.euclidean && def.streetRange && def.streetRange > 0 && roads.size > 0;
     if (useStreet && scale === 1) {
       if (!enNoeuds) {
-        const r = reseauDeCases(layout.grid.w, layout.grid.h, layout.roads);
+        const r = reseauDeRoutes(layout.grid.w, layout.grid.h, layout.roads);
         enNoeuds = { r, p: creerParcours(r) };
       }
       result.set(b.uid, couvertureEnNoeuds(layout, def, b, enNoeuds));
