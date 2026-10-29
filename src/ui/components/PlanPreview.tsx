@@ -37,6 +37,9 @@ export interface PlanPreviewProps {
 /** Palette par rang dans la chaîne résidentielle : sombre en bas, or au palier cible. */
 const TIER_RAMP = ["#4a5568", "#5b7fa8", "#3fa796", "#c9a227", "#e8c547"];
 const COL_SEA: RGB = [8, 14, 24];
+/** Facteur de luminosité du contour d'un bâtiment. */
+const EDGE_SHADE = 0.55;
+const shade = (c: RGB, k: number): RGB => [Math.round(c[0] * k), Math.round(c[1] * k), Math.round(c[2] * k)];
 const COL_LAND: RGB = [30, 34, 40];
 const COL_ROAD: RGB = [96, 100, 108];
 const COL_AQUA: RGB = [64, 176, 208];
@@ -128,7 +131,14 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, roadTyp
       if (!def) continue;
       const col = def.roadRoot ? COL_ROOT : (colorOfResidence.get(b.defId) ?? COL_SERVICE);
       const { w, h } = footprintSize(def, b.rotation, cpt);
-      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) put(b.x + i, b.y + j, col);
+      // CHAQUE BÂTIMENT SE DÉTACHE DE SES VOISINS. Sans contour, huit maisons d'un îlot se
+      // fondaient en un seul bloc de couleur. On assombrit le bord droit et le bord bas : deux
+      // voisins collés partagent ainsi un trait d'un pixel, et non deux.
+      const bord = shade(col, EDGE_SHADE);
+      const contour = w >= 3 && h >= 3;
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+        put(b.x + i, b.y + j, contour && (i === w - 1 || j === h - 1) ? bord : col);
+      }
     }
     const off = document.createElement("canvas");
     off.width = W; off.height = H;
