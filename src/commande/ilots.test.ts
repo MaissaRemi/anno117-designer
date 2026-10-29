@@ -149,3 +149,14 @@ describe("services sans doublons", () => {
     }
   });
 });
+
+describe("corridors d'eau", () => {
+  // Un corridor ajoute une voie libre entre deux routes : sans ponts, la ville serait coupée en
+  // bandes et chaque bande perdrait le comptoir. On les force sur une ville moyenne.
+  it("forcés : la voie reste libre, les ponts gardent toute la ville reliée au comptoir", () => {
+    const p = disposerQuartiers(grille("roman_island_medium_01"),
+      { region: "Roman", maisons: [{ tierGuid: PATRICIENS, maisons: 300 }], routes: "pavee" }, catalog, lookup, { corridors: 2 });
+    expect(verifierPlan(p)).toEqual({ chevauchements: 0, horsTerre: 0, hasRoot: true, coupes: [] });
+    expect(p.maisonsParPalier[PATRICIENS]).toBe(300);
+  });
+});
