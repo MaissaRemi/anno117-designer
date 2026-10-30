@@ -49,8 +49,8 @@ Détail et mesures : `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`, 
   au palier, bilan, argent), présentés en cartes (`optimizer/plansAuChoix.ts`).
 - **Trame diagonale expérimentale** (`optimizer/cadreDiagonal.ts`) : l'île planifiée dans la
   grille tournée de 45°, proposée parmi les plans au choix (option avancée). Une fois la portée
-  comptée en longueur, elle ne gagne plus que sur quelques îles en biais (small_05 +41 %,
-  small_07 +26 %) et perd ailleurs (−4 à −44 %).
+  comptée en longueur et le raccordement au comptoir corrigé, elle ne gagne plus nettement que
+  sur small_07 (+26 %).
 - **Maillage de triangles** (`optimizer/maillageTriangles.ts`) : 4 triangles par case, socle
   commun aux trames droite et diagonale (étape 1 de la trame mêlée).
 
@@ -126,7 +126,8 @@ comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/plan
   `bilanIndicatif` : celtic_island_large_07, branche ROMANISÉE (Nobles), sans hauteurs, passe
   de 14 400 à 12 301 habitants affichés ; la recette qui l'emportait devait son bilan à huit
   services (versions d'Albion) d'un quartier muré, inactifs en jeu — piste la plus probable,
-  non isolée. Recensement d'Albion, branche celte et branche romanisée à part : à faire. Les poches laissées vides peuvent déclencher l'invariant `terre-vide`.
+  non isolée ; avec les réglages du recensement (hauteurs, pavée, Foi), cette île ne recule pas.
+  Les poches laissées vides peuvent déclencher l'invariant `terre-vide`.
 
 ## La suite, par intérêt
 
