@@ -11,7 +11,7 @@ cd anno117-designer
 git switch dev
 pnpm install
 pnpm dev          # application sur http://localhost:5173
-pnpm test         # ~540 tests, 1 min 45 ; pnpm test:fast écarte les balayages lourds
+pnpm test         # ~515 tests, 1 min 45 ; pnpm test:fast écarte les balayages lourds
 ```
 
 Machine actuelle : Windows, projet dans `C:\Users\rem34\Projects\anno117-designer`, jeu dans
@@ -149,8 +149,9 @@ plusieurs à la fois, posés par le moteur de « Ma commande ».
 - **Retirés** : l'onglet Production hors île (`ProdLayoutView`, `planProductionLayout`,
   `buildChain`, `prodlayout/lot.ts` et `report.ts`) et le recuit de `optimizer/prodPlan.ts`. La
   répartition sur plusieurs îles pose ses îles de production avec le nouveau moteur, TOUS leurs
-  biens au lieu du seul principal. `optimizer/anneal.ts` n'est plus appelé par l'application
-  (ses tests restent).
+  biens au lieu du seul principal. L'ancien optimiseur à recuit qu'il utilisait
+  (`optimizer/greedy.ts`, `anneal.ts`, `score.ts`, 558 lignes, et leurs tests) est retiré aussi :
+  plus rien ne l'appelait. Seul reste son format de sortie, `OptimizeResult`.
 - **Deux défauts corrigés au passage**, trouvés par le test sur six vraies îles
   (`commande/ileDeProduction.test.ts`, trois du Latium, trois d'Albion dont une par branche) :
   la production de la commande posait l'ENTREPÔT ROMAIN en Albion (`prodlayout` ignorait le
@@ -171,7 +172,10 @@ plusieurs à la fois, posés par le moteur de « Ma commande ».
 4. **Un service sans accès compte encore dans la couverture et le bilan** : reporté. Il n'en
    reste qu'un en Latium (medium_02, une source d'aqueduc barrée par un service) et aucun en
    Albion ; le corriger demande de réévaluer chaque maison sans les services inactifs, or
-   `planLattice` n'exporte que le palier atteint, pas la couverture.
+   `planLattice` n'exporte que le palier atteint, pas la couverture. Réévalué le 30/10/2026 :
+   les parcelles ne gardent qu'un masque de services par TYPE (union des copies) ; retirer une
+   copie coupée demande de recalculer la portée par copie, puis palier, capacité et attributs
+   des maisons touchées. Chantier réel pour un seul service sur 27 îles : laissé en l'état.
 5. ~~Île de production~~ : faite (voir la section ci-dessus). Restent à vérifier en jeu :
    l'addition des bonus de productivité (dieu + saisie).
 6. ~~Prix du bilan non réglable~~ : curseur dans les options avancées de « Remplir l'île »

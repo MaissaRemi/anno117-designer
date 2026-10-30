@@ -2,31 +2,6 @@ import { describe, expect, it } from "vitest";
 import { makeBuildingDef, makeGrid } from "../model/factories";
 import type { GridShape, Layout } from "../model/types";
 import { canPlace, makeLookup, validateLayout } from "./rules";
-import { decode, makeDecoder } from "../optimizer/greedy";
-import { DEFAULT_WEIGHTS, type OptimizeRequest } from "../optimizer/types";
-
-// --- Vérification AVANT/APRÈS audit : basculer needsRoad change la sortie ---
-describe("audit needsRoad — avant/après", () => {
-  function roadsFor(needsRoad: boolean): number {
-    const def = makeBuildingDef({ id: "b", name: "B", size: { w: 3, h: 3 }, needsRoad });
-    const req: OptimizeRequest = {
-      catalog: [def], grid: makeGrid(20, 20), lockedBuildings: [], existingRoads: [],
-      existingFields: [], items: [{ defId: "b", qty: 10 }], weights: { ...DEFAULT_WEIGHTS }, timeMs: 300,
-    };
-    const dec = makeDecoder(req);
-    const out = decode(req, dec, new Array(10).fill("b"), 0);
-    expect(out.buildings.length).toBeGreaterThan(0); // posés dans les 2 cas
-    return out.roads.length;
-  }
-
-  it("AVANT (needsRoad=false) : aucune route générée", () => {
-    expect(roadsFor(false)).toBe(0);
-  });
-
-  it("APRÈS (needsRoad=true, correction d'audit) : des routes apparaissent", () => {
-    expect(roadsFor(true)).toBeGreaterThan(0);
-  });
-});
 
 // --- Bâtiments côtiers : terre vs eau ---
 describe("placement terre / eau", () => {

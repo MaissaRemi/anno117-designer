@@ -95,7 +95,7 @@ export function multiIslandPlan(req: MultiIslandRequest): MultiIslandResult {
   const role: Record<string, Role> = {};
   const producedGoods: Record<string, string[]> = {};
   const popResult: Record<string, IslandPlanResult> = {};
-  const prodPlan: Record<string, ResultatCommande> = {};
+  const prodResult: Record<string, ResultatCommande> = {};
 
   // 1. analyse population des îles non épinglées prod/unused (réutilise planIslandImport via
   //    l'adaptateur ½-tuile : downscale grille → moteurs en tuiles → upscale ×2 du résultat,
@@ -162,7 +162,7 @@ export function multiIslandPlan(req: MultiIslandRequest): MultiIslandResult {
         objectif: goods.map((good) => ({ good, parMinute: basket[good] || 10 })),
         ...(isl.profile.fertilities.length ? { fertilites: isl.profile.fertilities } : {}),
       }, req.catalog, lookup, { heights: isl.heights });
-      prodPlan[isl.islandId] = scaleResultToHalfTile(resumer(p), halfTile);
+      prodResult[isl.islandId] = scaleResultToHalfTile(resumer(p), halfTile);
     }
   }
 
@@ -175,7 +175,7 @@ export function multiIslandPlan(req: MultiIslandRequest): MultiIslandResult {
       residents: r === "population" ? popResult[id]?.residents : undefined,
       importGoods: r === "population" ? popResult[id]?.importGoods : undefined,
       producedGoods: r === "production" ? (producedGoods[id] ?? []) : undefined,
-      plan: r === "population" ? popResult[id] : prodPlan[id],
+      plan: r === "population" ? popResult[id] : prodResult[id],
     };
   });
   const totalPopulation = assignments
