@@ -7,7 +7,6 @@ import { planIsland } from "../optimizer/islandPlan";
 import { planifierCommande, resumer } from "../commande/planifier";
 import { nouvelleConfiguration, nouvelleIle, type IleDuMonde } from "./configuration";
 import { calculerMonde, type Executeurs } from "./calcul";
-import { goodName } from "../economy/economy";
 
 /**
  * UN VRAI MONDE, DE BOUT EN BOUT : une île principale du Latium (Patriciens, tous les services),
@@ -48,12 +47,6 @@ describe("calculer un monde", () => {
     const r = await calculerMonde(c, { catalog, executeurs, parallelisme: 1 });
     const principale = r.iles.find((i) => i.role === "principale")!;
     const prod = r.iles.filter((i) => i.role === "production");
-    console.log(JSON.stringify({
-      bilan: r.bilan, principale: { hab: principale.habitants, arg: principale.argent, biens: principale.consomme.length },
-      prod: prod.map((i) => ({ cle: c.iles.find((x) => x.cle === i.cle)!.ileId, hab: i.habitants, aff: i.affecte.length, manques: i.manques.length })),
-      deficits: r.deficits.map((d) => `${goodName(d.good)} ${d.parMinute} : ${d.raison}`), flux: r.flux.length,
-      manques: prod.map((i) => i.manques),
-    }));
 
     expect(principale.habitants).toBeGreaterThan(0);
     expect(prod.length).toBeGreaterThan(0);
