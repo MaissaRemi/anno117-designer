@@ -1,11 +1,10 @@
 import { hasHeights, heightsOf } from "../data/terrain";
 import { planIsland, type IslandPlanRequest, type IslandPlanResult } from "./islandPlan";
-import type { ProdPlanResult } from "./prodPlan";
 import { downscaleGrid, scaleResultToHalfTile } from "./halfTileAdapter";
 
 export type IslandPlanMsg =
   | { type: "progress"; step: number; total: number }
-  | { type: "done"; result: IslandPlanResult | ProdPlanResult }
+  | { type: "done"; result: IslandPlanResult }
   | { type: "error"; message: string };
 
 self.onmessage = async (e: MessageEvent<IslandPlanRequest>) => {

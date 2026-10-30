@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-import ecoJson from "../data/economy.generated.json";
 import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef } from "../model/types";
 import { normalizeBasket } from "./basket";
-import { planFromBasket, planProductionLayout } from "./index";
+import { planFromBasket } from "./index";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 // lot parfait du pain depuis le patch 200 (moulin à 20 s) : 3 boulangeries, 1 moulin, 3 fermes
@@ -125,36 +124,5 @@ describe("planFromBasket", () => {
     );
     if ("refuse" in p) throw new Error(p.raison);
     expect(p.advisories).toContainEqual({ defId: "g2957", slotType: "coastal" });
-  });
-});
-
-describe("planProductionLayout — la porte historique reste tolérante", () => {
-  // Ce balayage est l'instrument qui manquait. Les tests partaient TOUS de la boulangerie,
-  // donc aucun ne voyait que la cible par DÉFAUT de l'onglet Production échouait — comme
-  // pour l'Amphithéâtre avant lui, c'est le navigateur qui l'a trouvé. 177 ms pour couvrir
-  // les deux mondes : il n'y a aucune raison de s'en priver.
-  const eco = ecoJson as { buildingProd: Record<string, { outputs?: unknown[] }> };
-  const isProd = (id: string) => (eco.buildingProd[id]?.outputs?.length ?? 0) > 0;
-
-  for (const monde of ["Roman", "Celtic"] as const) {
-    it(`aucune cible ${monde} ne lance — un plan et ses manques, jamais une exception`, () => {
-      const cibles = catalog.filter((d) => isProd(d.id) && (!d.region || d.region === monde));
-      expect(cibles.length).toBeGreaterThan(20); // sans quoi le test passerait à vide
-      const ko: string[] = [];
-      for (const t of cibles) {
-        try {
-          const p = planProductionLayout(catalog, t.id, 1);
-          if (!p.layout.buildings.length) ko.push(`${t.id} ${t.name} :: plan vide`);
-        } catch (e) {
-          ko.push(`${t.id} ${t.name} :: ${(e as Error).message}`);
-        }
-      }
-      expect(ko).toEqual([]);
-    });
-  }
-
-  it("remonte les manques dans gaps plutôt que de les taire", () => {
-    const p = planProductionLayout(catalog, "g3174", 1);
-    expect(Array.isArray(p.gaps)).toBe(true);
   });
 });

@@ -1,8 +1,7 @@
 import type { IslandPlanRequest, IslandPlanResult } from "./islandPlan";
-import type { ProdPlanResult } from "./prodPlan";
 import type { IslandPlanMsg } from "./islandPlanWorker";
 
-export type AnyIslandPlanResult = IslandPlanResult | ProdPlanResult;
+export type AnyIslandPlanResult = IslandPlanResult;
 
 /** Lance le planificateur d'île dans un Web Worker (UI non bloquée). */
 export function runIslandPlan(

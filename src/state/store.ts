@@ -82,12 +82,12 @@ interface State {
   setCoverageHighlight: (cells: string[] | null) => void;
 
   // --- navigation UI (session, non persistée) ---
-  uiMode: "editor" | "plan" | "prod";
+  uiMode: "editor" | "plan";
   /** Mode de planification de l'écran Planifier (session, non persisté). */
-  planMode: "commande" | "remplir" | "iles";
+  planMode: "commande" | "remplir" | "production" | "iles";
   diagnostic: "none" | "coverage" | "audit";
-  setUiMode: (m: "editor" | "plan" | "prod") => void;
-  setPlanMode: (m: "commande" | "remplir" | "iles") => void;
+  setUiMode: (m: "editor" | "plan") => void;
+  setPlanMode: (m: "commande" | "remplir" | "production" | "iles") => void;
   setDiagnostic: (d: "none" | "coverage" | "audit") => void;
 
   /** MONDE courant : Latium (romain) ou Albion (celtique). Les deux n'ont ni les mêmes

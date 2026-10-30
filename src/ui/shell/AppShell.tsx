@@ -3,7 +3,6 @@ import { NavRail } from "./NavRail";
 import { TopBar } from "../TopBar";
 import { EditorView } from "../EditorView";
 import { PlanifierView } from "../PlanifierView";
-import { ProdLayoutView } from "../ProdLayoutView";
 
 /** Coquille de l'application : nav latérale + barre du haut + contenu du mode courant. */
 export function AppShell() {
@@ -16,7 +15,6 @@ export function AppShell() {
         <div className="mode-content">
           {uiMode === "editor" && <EditorView />}
           {uiMode === "plan" && <PlanifierView />}
-          {uiMode === "prod" && <ProdLayoutView />}
         </div>
       </div>
     </div>

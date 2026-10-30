@@ -4,7 +4,7 @@ import { canProduce } from "../economy/resources";
 import { makeLookup } from "../engine/rules";
 import { downscaleGrid, scaleResultToHalfTile } from "./halfTileAdapter";
 import { planIslandImport, type ImportGood, type IslandPlanResult } from "./islandPlan";
-import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
+import { planifierCommande, resumer, type ResultatCommande } from "../commande/planifier";
 import { regionOfIsland } from "../data/islands";
 import { economy, worldOf } from "../economy/economy";
 
@@ -39,7 +39,7 @@ export interface Assignment {
   residents?: number;
   importGoods?: ImportGood[];
   producedGoods?: string[];
-  plan?: IslandPlanResult | ProdPlanResult;
+  plan?: IslandPlanResult | ResultatCommande;
 }
 
 export interface MultiIslandResult {
@@ -95,7 +95,7 @@ export function multiIslandPlan(req: MultiIslandRequest): MultiIslandResult {
   const role: Record<string, Role> = {};
   const producedGoods: Record<string, string[]> = {};
   const popResult: Record<string, IslandPlanResult> = {};
-  const prodPrimaryPlan: Record<string, ProdPlanResult> = {};
+  const prodPlan: Record<string, ResultatCommande> = {};
 
   // 1. analyse population des îles non épinglées prod/unused (réutilise planIslandImport via
   //    l'adaptateur ½-tuile : downscale grille → moteurs en tuiles → upscale ×2 du résultat,
@@ -148,19 +148,21 @@ export function multiIslandPlan(req: MultiIslandRequest): MultiIslandResult {
     else role[id] = (popResult[id]?.residents ?? 0) > 0 ? "population" : "unused";
   }
 
-  // 5. placement optionnel : bien PRIMAIRE (plus forte demande) de chaque île prod
+  // 5. placement optionnel : chaque île de production, avec TOUS ses biens au débit demandé,
+  //    par le moteur de l'île de production (commande + objectif)
   if (req.mode === "place") {
+    const lookup = makeLookup(req.catalog);
     for (const isl of req.islands) {
       if (role[isl.islandId] !== "production") continue;
       const goods = producedGoods[isl.islandId];
       if (!goods?.length) continue;
-      const primary = goods[0];
       const halfTile = (isl.grid.cellsPerTile ?? 1) === 2;
-      const p = planIslandProduction(
-        req.catalog, downscaleGrid(isl.grid), makeLookup(req.catalog), primary, basket[primary] || 10,
-        { islandFertilities: isl.profile.fertilities },
-      );
-      prodPrimaryPlan[isl.islandId] = scaleResultToHalfTile(p, halfTile);
+      const p = planifierCommande(downscaleGrid(isl.grid), {
+        region: regionOf(isl.islandId), maisons: [],
+        objectif: goods.map((good) => ({ good, parMinute: basket[good] || 10 })),
+        ...(isl.profile.fertilities.length ? { fertilites: isl.profile.fertilities } : {}),
+      }, req.catalog, lookup, { heights: isl.heights });
+      prodPlan[isl.islandId] = scaleResultToHalfTile(resumer(p), halfTile);
     }
   }
 
@@ -173,7 +175,7 @@ export function multiIslandPlan(req: MultiIslandRequest): MultiIslandResult {
       residents: r === "population" ? popResult[id]?.residents : undefined,
       importGoods: r === "population" ? popResult[id]?.importGoods : undefined,
       producedGoods: r === "production" ? (producedGoods[id] ?? []) : undefined,
-      plan: r === "population" ? popResult[id] : prodPrimaryPlan[id],
+      plan: r === "population" ? popResult[id] : prodPlan[id],
     };
   });
   const totalPopulation = assignments

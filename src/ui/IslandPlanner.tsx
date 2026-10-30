@@ -6,7 +6,6 @@ import { PRIX_DU_BILAN } from "../optimizer/prixDuBilan";
 import { gridWithObstacles } from "../optimizer/halfTileAdapter";
 import { makeLookup } from "../engine/rules";
 import { producibleGoods as producibleGoodsSet } from "../economy/resources";
-import { ResourceSelector } from "./ResourceSelector";
 import { RunPanel } from "./components/RunPanel";
 import { PlanPreview, PlanPreviewLegend } from "./components/PlanPreview";
 import { RoadTypeSelect } from "./components/RoadTypeSelect";
@@ -51,7 +50,6 @@ export function IslandPlanner({ onClose }: Props) {
   useEffect(() => {
     if (!targetTiers.some((t) => t.guid === tierGuid)) setTierGuid(targetTiers[0]?.guid ?? "");
   }, [targetTiers, tierGuid]);
-  const [mode, setMode] = useState<"population" | "production">("population");
   const [needMode, setNeedMode] = useState<NeedMode>("auto");
   const [exploitSlots, setExploitSlots] = useState(false);
   const [roadType, setRoadType] = useState<RoadType>("pavee");
@@ -78,13 +76,6 @@ export function IslandPlanner({ onClose }: Props) {
   // dévotion suit par défaut la Foi du plan, comme en jeu (`economy/dieux.ts`).
   const [dieu, setDieu] = useState("");
   const [devotion, setDevotion] = useState<ChoixDevotion>("foi");
-  const [prodGood, setProdGood] = useState(() => {
-    const first = Object.keys(economy.producers)
-      .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
-      .sort((a, b) => a.name.localeCompare(b.name))[0];
-    return first?.guid ?? "";
-  });
-  const [prodRate, setProdRate] = useState(10);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ step: number; total: number } | null>(null);
   const [brut, setBrut] = useState<AnyIslandPlanResult | null>(null);
@@ -105,18 +96,8 @@ export function IslandPlanner({ onClose }: Props) {
   const lookupDiagonal = useMemo(() => makeLookup(catalogueDiagonal(catalog)), [catalog]);
   const islandId = useStore((s) => s.layout.grid.islandId);
   const storedProfile = useStore((s) => (islandId ? s.islandProfiles[islandId] : undefined));
-  const setIslandProfile = useStore((s) => s.setIslandProfile);
   const effProfile = storedProfile ?? { fertilities: [], mountainSlots: 0 };
   const islandRegion = regionOfIsland(islandId);
-
-  const producibleGoodsList = useMemo(() => {
-    const set = producibleGoodsSet(effProfile, islandRegion);
-    return Object.keys(economy.producers)
-      .filter((g) => set.has(g))
-      .map((g) => ({ guid: g, name: economy.goodNames[g] || g }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effProfile.fertilities.join(","), islandRegion]);
 
   /**
    * Ateliers proposables : du monde de l'île, hors emplacement de terrain, et dont le bien
@@ -157,7 +138,7 @@ export function IslandPlanner({ onClose }: Props) {
     const grid = gridWithObstacles(s.layout.grid, locked, makeLookup(s.catalog));
     const { promise, cancel } = runIslandPlan(
       {
-        catalog: s.catalog, grid, mode, tierGuid, coverageFloor: floor / 100,
+        catalog: s.catalog, grid, tierGuid, coverageFloor: floor / 100,
         needMode: needMode === "maisons" ? "auto" : needMode,
         objectif: needMode === "maisons" ? "maisons" : "habitants",
         exploitSlots,
@@ -173,9 +154,6 @@ export function IslandPlanner({ onClose }: Props) {
         ...(wishes.length || Object.keys(slotWish).length
           ? { wanted: { workshops: wishes, slots: slotWish } }
           : {}),
-        ...(mode === "production"
-          ? { productionGood: prodGood, productionRate: prodRate, islandFertilities: effProfile.fertilities.length ? effProfile.fertilities : undefined }
-          : {}),
       },
       (step, total) => setProgress({ step, total }),
     );
@@ -188,7 +166,7 @@ export function IslandPlanner({ onClose }: Props) {
 
   const place = () => {
     if (!result) return;
-    const coverage = result.mode === "import" ? result.coverageMin / 100 : result.prodsCovered / Math.max(1, result.prodsTotal);
+    const coverage = result.coverageMin / 100;
     applyOptimization({
       buildings: result.buildings, roads: result.roads, fields: result.fields,
       aqueducts: result.mode === "import" ? result.aqueducts : undefined,
@@ -235,15 +213,6 @@ export function IslandPlanner({ onClose }: Props) {
       <div className="pane-config">
         {noIsland && <div className="warn">Charge une île d'abord (bouton « Charger une île » en haut).</div>}
 
-        <div className="field">
-          <span>Archetype d'île</span>
-          <select value={mode} onChange={(e) => setMode(e.target.value as "population" | "production")}>
-            <option value="population">🏠 Population (import des biens)</option>
-            <option value="production">🏭 Production (export, main-d'œuvre locale)</option>
-          </select>
-        </div>
-
-        {mode === "population" && (
           <>
             <div className="field">
               <span>Tier-cible</span>
@@ -409,28 +378,6 @@ export function IslandPlanner({ onClose }: Props) {
               )}
             </details>
           </>
-        )}
-
-        {mode === "production" && (
-          <>
-            <div className="field">
-              <span>Bien à produire</span>
-              <select value={prodGood} onChange={(e) => setProdGood(e.target.value)}>
-                {producibleGoodsList.map((g) => <option key={g.guid} value={g.guid}>{g.name}</option>)}
-              </select>
-            </div>
-            <div className="field">
-              <span>Débit (u/min)</span>
-              <input type="number" min={0.5} step={0.5} value={prodRate} onChange={(e) => setProdRate(parseFloat(e.target.value) || 1)} />
-            </div>
-            {islandId && (
-              <div className="field">
-                <span>Ressources de l'île <span className="muted">(contraignent les biens produisibles)</span></span>
-                <ResourceSelector value={effProfile} onChange={(p) => setIslandProfile(islandId, p)} />
-              </div>
-            )}
-          </>
-        )}
 
         <RunPanel running={running} progress={progress} error={error}
           actions={[{ label: running ? "Calcul…" : "Calculer", primary: true, onClick: run, disabled: !tierGuid || noIsland }]} />
@@ -586,26 +533,6 @@ export function IslandPlanner({ onClose }: Props) {
               </>
             )}
             {result.gaps.length > 0 && <div className="warn">⚠ Trous : {result.gaps.join(" · ")}</div>}
-          </div>
-        )}
-
-        {result && !running && result.mode === "production" && (
-          <div className="opt-result">
-            <div style={{ marginBottom: 6 }}>
-              <b>{result.ratePerMin.toLocaleString("fr")}/min · {economy.goodNames[result.good] || result.good}</b> · {result.prodsTotal} prods · {result.houses} maisons ouvrières
-            </div>
-            <div style={{ marginBottom: 6 }}>
-              🚚 Entrepôts : {result.warehousesPlaced} · <b style={{ color: color((100 * result.prodsCovered) / Math.max(1, result.prodsTotal)) }}>{result.prodsCovered}/{result.prodsTotal}</b> prods couvertes
-            </div>
-            <div style={{ marginBottom: 6 }}>
-              💰 profit export <b style={{ color: result.exportNet >= 0 ? "#8bc34a" : "#ff8a85" }}>{result.exportNet >= 0 ? "+" : ""}{result.exportNet.toLocaleString("fr")}/min</b> · posés {result.placed}/{result.requested}
-            </div>
-            <b>👷 Population requise</b>
-            <ul className="bilan">{Object.entries(result.solution.populationByTier).filter(([, p]) => p > 0).map(([t, p]) => <li key={t}>{tiers.find((x) => x.guid === t)?.name ?? t} : {Math.ceil(p).toLocaleString("fr")}</li>)}</ul>
-            {result.requiredFertilities.length > 0 && (
-              <div style={{ marginBottom: 6 }}>🌱 Fertilités : {result.requiredFertilities.map((f) => <span key={f.guid} style={{ color: f.available ? "#8bc34a" : "#ff8a85" }}>{f.available ? "✓" : "✗"} {f.name} </span>)}</div>
-            )}
-            {result.gaps.length > 0 && <div className="warn">⚠ {result.gaps.join(" · ")}</div>}
           </div>
         )}
 

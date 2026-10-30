@@ -11,7 +11,7 @@ cd anno117-designer
 git switch dev
 pnpm install
 pnpm dev          # application sur http://localhost:5173
-pnpm test         # ~480 tests, 1 min 45 ; pnpm test:fast écarte les balayages lourds
+pnpm test         # ~540 tests, 1 min 45 ; pnpm test:fast écarte les balayages lourds
 ```
 
 Machine actuelle : Windows, projet dans `C:\Users\rem34\Projects\anno117-designer`, jeu dans
@@ -129,6 +129,35 @@ comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/plan
   non isolée ; avec les réglages du recensement (hauteurs, pavée, Foi), cette île ne recule pas.
   Les poches laissées vides peuvent déclencher l'invariant `terre-vide`.
 
+## Île de production : faite (30/10/2026)
+
+Conception validée par Rémi, réponses consignées en fin de
+`docs/superpowers/specs/2026-10-30-ile-de-production-design.md`. Planifier a un quatrième
+mode, **« Île de production »** (`ui/ProductionPlanner.tsx`) : des biens et leur débit,
+plusieurs à la fois, posés par le moteur de « Ma commande ».
+
+- **Objectif dans la commande** (`Commande.objectif`, `commande/nomenclature.ts`) : toutes les
+  chaînes en un seul `solve` (une chaîne partagée est cumulée avant l'arrondi), main-d'œuvre
+  logée, débit posé par bien (`planifierCommande`, `ObjectifPose`).
+- **Productivité** : dieu + saisie du joueur (recherche, objets ; une valeur globale et une par
+  atelier), ADDITIONNÉES — hypothèse à confirmer en jeu. La saisie vaut aussi pour les biens
+  des maisons.
+- **Sur l'île, sinon importé**, avec la raison au rapport : aucun producteur dans ce monde,
+  fertilité ou gisement non déclaré (`Commande.fertilites`), emplacements de montagne ou de
+  rivière trop peu nombreux (`Commande.emplacements`, comptés sur la carte ; répartis au
+  prorata, l'excédent importé). Le marais ne borne rien. Mécanisme : `SolveOptions.plafonds`.
+- **Retirés** : l'onglet Production hors île (`ProdLayoutView`, `planProductionLayout`,
+  `buildChain`, `prodlayout/lot.ts` et `report.ts`) et le recuit de `optimizer/prodPlan.ts`. La
+  répartition sur plusieurs îles pose ses îles de production avec le nouveau moteur, TOUS leurs
+  biens au lieu du seul principal. `optimizer/anneal.ts` n'est plus appelé par l'application
+  (ses tests restent).
+- **Deux défauts corrigés au passage**, trouvés par le test sur six vraies îles
+  (`commande/ileDeProduction.test.ts`, trois du Latium, trois d'Albion dont une par branche) :
+  la production de la commande posait l'ENTREPÔT ROMAIN en Albion (`prodlayout` ignorait le
+  template `Warehouse_Marsh` ; prédicat partagé dans `model/entrepot.ts`) — cela touchait aussi
+  « Ma commande » en Albion ; et un lot trop grand pour la terre libre d'une petite île n'était
+  pas recoupé.
+
 ## La suite, par intérêt
 
 1. ~~Ne pas créer de poches~~ : fait (`planLattice`, « UN GRAND BÂTIMENT NE MURE PAS UNE PARTIE
@@ -143,8 +172,8 @@ comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/plan
    reste qu'un en Latium (medium_02, une source d'aqueduc barrée par un service) et aucun en
    Albion ; le corriger demande de réévaluer chaque maison sans les services inactifs, or
    `planLattice` n'exporte que le palier atteint, pas la couverture.
-5. **Île de production** : conception à valider, quatre questions pour Rémi
-   (`docs/superpowers/specs/2026-10-30-ile-de-production-design.md`).
+5. ~~Île de production~~ : faite (voir la section ci-dessus). Restent à vérifier en jeu :
+   l'addition des bonus de productivité (dieu + saisie).
 6. ~~Prix du bilan non réglable~~ : curseur dans les options avancées de « Remplir l'île »
    (indicatif seulement, 0 à 20 %, 6 % par défaut).
 7. **Plan diagonal non posable dans l'éditeur** : reporté. L'éditeur (demi-cases) ne sait

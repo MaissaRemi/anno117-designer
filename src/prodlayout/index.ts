@@ -1,41 +1,22 @@
 import type { BuildingDef, Layout, PlacedBuilding } from "../model/types";
-import { balanceBasket, normalizeBasket, type Advisory, type Balance, type Basket } from "./basket";
-import { buildChain, eco, type ChainResult } from "./chain";
+import { balanceBasket, type Advisory, type Balance, type Basket } from "./basket";
 import type { ExitPoint, ExitSide } from "./exit";
-import { buildOrder, type Order } from "./lot";
 import type { PackResult } from "./pack";
-import { buildReport, type Report } from "./report";
 import { searchBox, type BoxSpec } from "./search";
 import { direUnmet, type PlanRefus } from "./unmet";
 import { pickWarehouseDef } from "../model/entrepot";
 
 /**
- * BLUEPRINTS DE PRODUCTION — les deux portes du module.
+ * BLUEPRINTS DE PRODUCTION — la porte du module.
  *
- * `planFromBasket` est la porte de fond : une commande LIBRE de bâtiments, posée
- * telle quelle. `planProductionLayout` en est un cas particulier — elle déplie une chaîne
- * en panier, puis passe par la même porte. Un seul chemin de placement, donc aucune
- * divergence possible entre les deux.
+ * `planFromBasket` pose une commande LIBRE de bâtiments, telle quelle. C'est elle que la
+ * production de la commande (`commande/production.ts`) appelle, lot par lot. L'ancienne porte
+ * `planProductionLayout` (une chaîne dépliée, pour l'onglet Production hors île) a été retirée
+ * avec l'onglet, le 30/10/2026, au profit de l'île de production.
  *
  * Le résultat porte un `Layout` STANDARD, en grille TUILE (`cellsPerTile` absent) : c'est
  * ce qui permet à `src/render/draw.ts` et `exportImage.ts` de le dessiner sans adaptateur.
  */
-
-export interface LayoutPlan {
-  layout: Layout;
-  chain: ChainResult;
-  order: Order;
-  report: Report;
-  box: { w: number; h: number };
-  tiles: { buildings: number; fields: number; roads: number };
-  efficiency: number;
-  gaps: string[];
-}
-
-export interface PlanOptions {
-  /** GUID des biens que l'utilisateur choisit d'importer plutôt que de produire. */
-  imported?: ReadonlySet<string>;
-}
 
 export interface BasketPlanOptions {
   /** Bord par lequel la route sortira rejoindre le comptoir de l'île. */
@@ -132,59 +113,5 @@ export function planFromBasket(
     served: true,
     exit: packed.exit,
     advisories: packed.advisories,
-  };
-}
-
-/**
- * Déplie une chaîne de production en panier, puis passe par `planFromBasket`.
- *
- * Le récapitulatif reste celui de la chaîne : elle a un bien CIBLE, ce qu'un panier libre
- * n'a pas. Les deux vues du même plan cohabitent donc, plutôt que d'en appauvrir une.
- *
- * `exitSide: "sud"` n'est pas arbitraire — l'épine du squelette longe l'entrepôt par en
- * dessous, donc c'est le bord que la voirie atteint au meilleur prix.
- *
- * Cette porte reste TOLÉRANTE : elle rend toujours un plan, et liste ses manques dans
- * `gaps`. Le verdict strict appartient à `planFromBasket`, où l'appelant a demandé un
- * refus chiffré. Les avoir confondus a fait afficher une erreur à la place du plan dans
- * l'onglet Production — trouvé dans le navigateur, comme le défaut de l'Amphithéâtre
- * avant lui, et pour la même raison : les tests partaient tous de la boulangerie.
- */
-export function planProductionLayout(
-  catalog: BuildingDef[],
-  targetDefId: string,
-  count: number,
-  opts: PlanOptions = {},
-): LayoutPlan {
-  const byId = new Map(catalog.map((d) => [d.id, d]));
-  const lookup = (id: string) => byId.get(id);
-
-  const chain = buildChain(targetDefId, count, lookup, opts.imported);
-  const order = buildOrder(chain);
-  const basket = normalizeBasket(order.items.map((i) => ({ defId: i.defId, count: i.placed })));
-
-  const warehouse = pickWarehouse(catalog, eco.buildingRegion[targetDefId]);
-  const packed = searchBox(
-    {
-      items: basket.lines.map((l) => ({ defId: l.defId, count: l.count })),
-      warehouseDefId: warehouse.id,
-      lookup,
-    },
-    { mode: "auto" },
-    "sud",
-  );
-
-  const nom = (id: string) => lookup(id)?.name ?? id;
-  const extras = packed.placements.filter((p) => p.defId === warehouse.id);
-
-  return {
-    layout: toLayout(packed),
-    chain,
-    order,
-    report: buildReport(chain, order, lookup, [{ defId: warehouse.id, count: extras.length }]),
-    box: { w: packed.w, h: packed.h },
-    tiles: packed.tiles,
-    efficiency: packed.efficiency,
-    gaps: [...chain.gaps, ...packed.unmet.map((u) => direUnmet(u, nom))],
   };
 }

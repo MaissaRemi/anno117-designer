@@ -30,7 +30,7 @@ describe("multiIslandPlan", () => {
     });
     for (const a of r.assignments) {
       const plan = a.plan;
-      if (a.role !== "population" || !plan || plan.mode !== "import") continue;
+      if (a.role !== "population" || !plan || !("mode" in plan)) continue;
       const t = economy.tiers.find((x) => x.guid === plan.tierGuid)!;
       expect(worldOf(t.region)).toBe(worldOf(regionOfIsland(a.islandId)));
     }

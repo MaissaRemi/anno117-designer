@@ -109,4 +109,27 @@ describe("objectif de production", () => {
     expect(ouvriers(biere).map((g) => tierByGuid(g)!.name)).toContain("Forgerons");
     expect(ouvriers(pain).map((g) => tierByGuid(g)!.name)).toContain("Mercators");
   });
+
+  // Repris du balayage de l'ancien onglet Production : les tests partaient tous du pain, et
+  // c'est le navigateur qui trouvait les biens qui faisaient lever une exception.
+  for (const region of ["Roman", "Celtic"]) {
+    it(`aucun bien de ${region} ne lève : des bâtiments, ou un import et sa raison`, () => {
+      const biens = Object.keys(economy.producers).filter((g) => economy.producers[g].some((id) => {
+        const r = lookup(id)?.region;
+        return !r || worldOf(r) === worldOf(region);
+      }));
+      expect(biens.length).toBeGreaterThan(20); // sans quoi le test passerait à vide
+      const ko: string[] = [];
+      for (const good of biens) {
+        try {
+          const n = devis({ region, objectif: [{ good, parMinute: 2 }] });
+          const prod = n.lignes.filter((l) => l.role === "production").length;
+          if (!prod && !n.imports.some((m) => m.good === good)) ko.push(`${good} :: ni posé ni importé`);
+        } catch (e) {
+          ko.push(`${good} :: ${(e as Error).message}`);
+        }
+      }
+      expect(ko).toEqual([]);
+    });
+  }
 });

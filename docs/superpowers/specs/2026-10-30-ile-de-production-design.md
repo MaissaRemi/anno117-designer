@@ -1,6 +1,6 @@
 # Île de production : conception
 
-Statut : **validée par Rémi le 30/10/2026** (réponses en fin de document).
+Statut : **validée par Rémi le 30/10/2026 et réalisée** (réponses en fin de document ; bilan dans `docs/REPRISE.md`, « Île de production »).
 
 Diagnostic de départ (`plans/2026-10-29-portees-motifs-eau.md`, « Onglet Production ») : l'onglet
 Production calcule une chaîne par ratios exacts puis un plan compact HORS de toute île — ni

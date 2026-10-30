@@ -13,7 +13,6 @@ import { footprintSize } from "../engine/geometry";
 import { candidateRecipes } from "./recipes";
 import { analyzeCoverage, type CoverageReport } from "../economy/coverage";
 import { planLattice, type LatticeResult } from "./planLattice";
-import { planIslandProduction, type ProdPlanResult } from "./prodPlan";
 import { blockMountains, needsWater, planWater, type WaterConsumerReport, type WaterPlanResult } from "./waterPlan";
 import { connectKontor, keepMainLandmass, pickKontorDef, repairRoadConnectivity, reserveKontor } from "./kontor";
 import { planSlots, type ExploitedSlot } from "./slotPlan";
@@ -34,9 +33,7 @@ import type { RoadType } from "../engine/roads";
 export interface IslandPlanRequest {
   catalog: BuildingDef[];
   grid: GridShape;
-  /** Archetype d'île : population (défaut, mode import) ou production (export). */
-  mode?: "population" | "production";
-  tierGuid: string; // tier-cible (ex Patriciens) — mode population
+  tierGuid: string; // tier-cible (ex Patriciens)
   coverageFloor?: number; // 0..1, défaut 1 (seuil pour le flag feasible)
   /** Choix des services à poser :
    *  - "auto" (défaut) : RECHERCHE DE RECETTE — on énumère les sous-ensembles minimaux
@@ -59,9 +56,6 @@ export interface IslandPlanRequest {
    *  posés tant que le bilan d'attributs de l'île reste positif — le surplus de Santé et
    *  d'Argent est exactement le budget qu'ils dépensent. Défaut false. */
   localProduction?: boolean;
-  /** Mode production : bien cible (GUID) + débit u/min. */
-  productionGood?: string;
-  productionRate?: number;
   /** Fertilités/gisements disponibles sur l'île (GUIDs) — vide = toutes supposées OK. */
   islandFertilities?: string[];
   /** Hauteurs quantifiées de l'île (q = h/16, mer < 0) — pente des aqueducs.
@@ -295,21 +289,13 @@ export interface IslandPlanResult {
 const goodName = (g: string): string => economy.goodNames[g] || g;
 
 /**
- * Point d'entrée UNIQUE du plan d'île : dispatch par archetype (population/import
- * vs production/export) + validation des paramètres. Le worker n'est qu'un shim.
+ * Point d'entrée UNIQUE du plan d'île. Le worker n'est qu'un shim. L'île de production a son
+ * propre écran, sur le moteur de la commande (`commande/`, objectif de production).
  */
 export function planIsland(
   req: IslandPlanRequest,
   onProgress?: (step: number, total: number) => void,
-): IslandPlanResult | ProdPlanResult {
-  if (req.mode === "production") {
-    if (!req.productionGood || !req.productionRate) throw new Error("Bien et débit cibles requis.");
-    return planIslandProduction(
-      req.catalog, req.grid, makeLookup(req.catalog),
-      req.productionGood, req.productionRate,
-      { islandFertilities: req.islandFertilities }, onProgress,
-    );
-  }
+): IslandPlanResult {
   const droit = planIslandImport(req, onProgress);
   return req.essayerDiagonale ? avecTrameDiagonale(req, droit, onProgress) : droit;
 }
