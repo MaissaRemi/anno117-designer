@@ -163,6 +163,29 @@ plusieurs à la fois, posés par le moteur de « Ma commande ».
   « Ma commande » en Albion ; et un lot trop grand pour la terre libre d'une petite île n'était
   pas recoupé.
 
+## Planification d'un monde : EN COURS (étape 1 faite le 30/10/2026)
+
+Le projet que Rémi veut vraiment : planifier TOUTES les îles d'une partie, des deux provinces
+(les besoins complets des Patriciens passent par l'Albion, ceux des Nobles par le Latium).
+Conception validée, réponses de Rémi incluses :
+`docs/superpowers/specs/2026-10-30-planification-globale-design.md`.
+
+- **Étape 1, faite** : onglet **« Monde »** dans la colonne de gauche (`ui/MondeView.tsx`).
+  Configurations nommées, enregistrées dans IndexedDB (`monde/stockage.ts`, repli en mémoire),
+  exportables et importables en JSON. Assistant en grande fenêtre (`ui/monde/AssistantMonde.tsx`) :
+  nom, îles reconnues à leur forme (vignettes terre / relief / rivière / eau côtière, filtre par
+  province et taille, rotation des vignettes), fertilités par île groupées comme en jeu
+  (`monde/fertilites.ts`, tirées des données), propriété (à moi, achetable, adversaire, inconnue).
+  Modèle et validation : `monde/configuration.ts`.
+- **Étape 2, à faire** : îles principales (tous les services ; objectifs argent, habitants ou
+  maisons — l'objectif « argent » est à ajouter à `planIslandImport`), mines sur les
+  emplacements laissés libres par les aqueducs, demande de biens.
+- **Étape 3** : répartition de la production sur les autres îles à moi (moteur de l'île de
+  production), flux entre îles en u/min (sans navires), bilan du monde ; remplace « Plusieurs
+  îles ». **Étape 4** : suggestions d'achat et recalcul incrémental.
+- Au passage : la fenêtre modale partagée reprenait le focus à chaque rendu (un champ de saisie
+  le perdait à chaque frappe) ; corrigé dans `ui/Modal.tsx`.
+
 ## La suite, par intérêt
 
 1. ~~Ne pas créer de poches~~ : fait (`planLattice`, « UN GRAND BÂTIMENT NE MURE PAS UNE PARTIE

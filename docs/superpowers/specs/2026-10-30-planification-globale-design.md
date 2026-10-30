@@ -1,6 +1,6 @@
 # Planification globale d'un monde : conception
 
-Statut : **proposée, en attente de validation par Rémi.** Aucun code écrit.
+Statut : **validée par Rémi le 30/10/2026** (réponses en fin de document). Étape 1 en cours.
 
 Demande de Rémi (30/10/2026), reformulée : un outil qui planifie TOUTES les îles d'une partie
 sur le long terme, pour un monde « durable et complexe où tout fonctionne ». Il dit combien
@@ -181,3 +181,20 @@ interface IleDuMonde {
 5. **Où placer l'onglet** : dans la barre de gauche à côté d'Éditeur et Planifier (« Monde »),
    ou comme un mode de Planifier ?
 6. **Première version sans navires** (flux en u/min seulement) : d'accord ?
+
+## 9. Réponses de Rémi (30/10/2026)
+
+1. **Objectif des îles principales** : trois au choix pour commencer — le maximum de gains
+   (argent), le maximum d'habitants, le maximum de maisons. D'autres réglages viendront.
+   L'objectif « argent » n'existe pas encore dans `planIslandImport` (il sait « habitants » et
+   « maisons ») : à ajouter à l'étape 2.
+2. **Biens entre provinces** : oui, dans les deux sens, « c'est tout l'intérêt ». Le temps de
+   trajet dépend du navire, du vent, de la cargaison et des objets équipés ; il est IGNORÉ en
+   régime établi : la production d'un aller-retour arrive en une fois, la mise en place est plus
+   lente mais le débit à terme est le même. Une configuration couvre donc les deux provinces.
+3. **Les îles peuvent apparaître tournées.** Première version : reconnaissance visuelle, c'est à
+   l'utilisateur de voir si l'île est tournée. Piste pour plus tard : reconnaître les îles sur une
+   capture de la mini-carte.
+4. **Le nouvel outil remplace « Plusieurs îles »** (à l'étape 3, quand il sait faire mieux).
+5. **L'onglet va dans la colonne de gauche**, sous Planifier : « Monde ».
+6. **Première version sans navires** : flux en u/min. Les navires plus tard.

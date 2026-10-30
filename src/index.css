@@ -369,3 +369,48 @@ details.avance label.checkbox { display: flex; align-items: flex-start; gap: 6px
 .panel-head .world-switch { margin-top: 0; flex-direction: row; border-top: none; padding: 0; gap: 4px; }
 .panel-head .world-switch button { height: 26px; padding: 0 12px; font-size: 12px; border-color: var(--line); }
 
+
+/* ---- onglet Monde (planification globale) ---- */
+.monde-vue { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: var(--sp-3); gap: var(--sp-2); }
+.monde-barre { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.monde-barre h3 { margin: 0 var(--sp-2) 0 0; font-size: 15px; }
+.monde-contenu { flex: 1; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: var(--sp-3); min-height: 0; }
+.monde-liste { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.monde-carte { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; height: auto; padding: 8px 10px; text-align: left; background: var(--s2); border: 1px solid var(--line); border-radius: var(--r-md); }
+.monde-carte.active { border-color: var(--accent); background: var(--accent-soft); }
+.monde-detail { overflow-y: auto; min-height: 0; }
+.monde-detail h4, .monde-selection h4, .monde-propriete h4 { margin: var(--sp-3) 0 var(--sp-2); font-size: 13px; }
+.monde-fiches { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 6px; }
+.monde-ligne { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--r-sm); background: var(--s2); border: 1px solid transparent; margin-bottom: 4px; cursor: default; }
+.monde-ligne.active { border-color: var(--accent); }
+.monde-selection .monde-ligne { cursor: pointer; }
+.monde-ligne-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.monde-ligne-texte .muted { overflow: hidden; text-overflow: ellipsis; }
+.monde-province { margin: 8px 0 4px; }
+.modal.monde { width: 96vw; height: 92vh; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+.monde-tete { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+.monde-tete h3 { margin: 0; }
+.monde-etapes { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.monde-etapes button { height: 28px; font-size: 12px; background: transparent; border-color: var(--line); }
+.monde-etapes li.active button { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.monde-etapes li.faite button { color: var(--t); }
+.monde-corps { flex: 1; min-height: 0; overflow: hidden; margin: var(--sp-3) 0; display: flex; flex-direction: column; }
+.monde-nom { max-width: 520px; }
+.monde-nom input { font-size: 15px; height: 36px; }
+.monde-colonnes { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--sp-3); }
+.monde-catalogue { display: flex; flex-direction: column; min-height: 0; }
+.monde-filtres { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.monde-filtres .world-switch { margin: 0; flex-direction: row; border: none; padding: 0; gap: 4px; }
+.monde-filtres input[type="search"] { flex: 1; min-width: 160px; }
+.island-grid.monde-grille { flex: 1; max-height: none; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); }
+.monde-grille .island-thumb { width: 112px; height: 112px; }
+.island-card.choisie { border-color: var(--accent); background: var(--accent-soft); }
+.monde-selection { overflow-y: auto; min-height: 0; padding-right: 4px; }
+.monde-fiche { margin-top: var(--sp-3); padding: var(--sp-2); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--s1); }
+.monde-fertilites { margin-bottom: 8px; }
+.monde-fertilites > div { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.chip-bouton { height: 24px; padding: 0 8px; font-size: 12px; border-radius: 12px; background: var(--s2); border: 1px solid var(--line); }
+.chip-bouton.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.monde-propriete { overflow-y: auto; min-height: 0; }
+.monde-propriete .world-switch { margin: 0; flex-direction: row; border: none; padding: 0; gap: 4px; }
+.monde-propriete .world-switch button { height: 26px; font-size: 12px; padding: 0 8px; }

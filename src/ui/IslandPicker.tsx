@@ -1,44 +1,11 @@
-import { useEffect, useMemo, useRef } from "react";
-import { decodeMask, islands, regionOfIsland, WORLDS, worldLabel, type Island } from "../data/islands";
+import { useMemo } from "react";
+import { islands, regionOfIsland, WORLDS, worldLabel } from "../data/islands";
 import { useStore } from "../state/store";
 import { Modal } from "./Modal";
+import { IslandThumb } from "./components/IslandThumb";
 
 interface Props {
   onClose: () => void;
-}
-
-function IslandThumb({ island, size = 64 }: { island: Island; size?: number }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const ctx = ref.current?.getContext("2d");
-    if (!ctx) return;
-    const { w, h } = island.size;
-    const mask = decodeMask(island.mask, w, h);
-    ctx.clearRect(0, 0, size, size);
-    const scale = size / Math.max(w, h);
-    const ox = (size - w * scale) / 2;
-    const oy = (size - h * scale) / 2;
-    // échantillonnage : 1 px de sortie
-    const img = ctx.createImageData(size, size);
-    for (let py = 0; py < size; py++) {
-      for (let px = 0; px < size; px++) {
-        const gx = Math.floor((px - ox) / scale);
-        const gy = Math.floor((py - oy) / scale);
-        const land = gx >= 0 && gy >= 0 && gx < w && gy < h && mask[gy * w + gx];
-        const o = (py * size + px) * 4;
-        if (land) {
-          img.data[o] = 124;
-          img.data[o + 1] = 179;
-          img.data[o + 2] = 66;
-          img.data[o + 3] = 255;
-        } else {
-          img.data[o + 3] = 0;
-        }
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-  }, [island, size]);
-  return <canvas ref={ref} width={size} height={size} className="island-thumb" />;
 }
 
 export function IslandPicker({ onClose }: Props) {

@@ -4,6 +4,7 @@ import { WORLDS } from "../../data/islands";
 const ITEMS = [
   { id: "editor", label: "Éditeur", icon: "🗺" },
   { id: "plan", label: "Planifier", icon: "📐" },
+  { id: "monde", label: "Monde", icon: "🌍" },
 ] as const;
 
 /** Barre de navigation latérale : modes de l'application + bascule de MONDE. */

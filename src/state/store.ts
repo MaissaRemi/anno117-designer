@@ -82,11 +82,11 @@ interface State {
   setCoverageHighlight: (cells: string[] | null) => void;
 
   // --- navigation UI (session, non persistée) ---
-  uiMode: "editor" | "plan";
+  uiMode: "editor" | "plan" | "monde";
   /** Mode de planification de l'écran Planifier (session, non persisté). */
   planMode: "commande" | "remplir" | "production" | "iles";
   diagnostic: "none" | "coverage" | "audit";
-  setUiMode: (m: "editor" | "plan") => void;
+  setUiMode: (m: "editor" | "plan" | "monde") => void;
   setPlanMode: (m: "commande" | "remplir" | "production" | "iles") => void;
   setDiagnostic: (d: "none" | "coverage" | "audit") => void;
 
