@@ -1,5 +1,8 @@
 import { islandById, regionOfIsland, type WorldRegion } from "../data/islands";
-import { economy } from "../economy/economy";
+import { economy, tierByGuid, worldOf } from "../economy/economy";
+import { dieuParId } from "../economy/dieux";
+import type { RoadType } from "../engine/roads";
+import type { ResultatMonde } from "./calcul";
 
 /**
  * ═══ CONFIGURATION D'UN MONDE ═════════════════════════════════════════════════════════
@@ -35,7 +38,25 @@ export interface IleDuMonde {
   /** Fertilités et gisements (GUIDs). `null` : inconnues. */
   fertilites: string[] | null;
   role: RoleIle;
+  /** Île principale : palier visé (GUID). Absent : le plus haut de sa province (`palierParDefaut`). */
+  palier?: string;
+  /** Dieu tutélaire de l'île (`Patron.id`). */
+  dieu?: string;
 }
+
+/** Ce que maximisent les îles principales. */
+export type ObjectifPrincipale = "argent" | "habitants" | "maisons";
+export const LIBELLES_OBJECTIF: Record<ObjectifPrincipale, string> = {
+  argent: "Le maximum de gains", habitants: "Le maximum d'habitants", maisons: "Le maximum de maisons",
+};
+
+export interface ReglagesMonde {
+  objectif: ObjectifPrincipale;
+  routes: RoadType;
+  /** Productivité de la recherche et des objets, en points, pour tous les ateliers. */
+  productiviteGlobale: number;
+}
+export const reglagesParDefaut = (): ReglagesMonde => ({ objectif: "argent", routes: "pavee", productiviteGlobale: 0 });
 
 export interface ConfigurationMonde {
   version: 1;
@@ -44,7 +65,16 @@ export interface ConfigurationMonde {
   creeLe: string;
   modifieLe: string;
   iles: IleDuMonde[];
+  reglages: ReglagesMonde;
+  /** Dernier calcul. Il décrit la configuration telle qu'elle était à `resultat.calculeLe`. */
+  resultat?: ResultatMonde;
 }
+
+/** Paliers résidentiels d'une province, du plus dense au moins dense. */
+export const paliersDeLaProvince = (province: string) =>
+  economy.tiers.filter((t) => t.residenceId && worldOf(t.region) === worldOf(province))
+    .sort((a, b) => b.capacityDefault - a.capacityDefault);
+export const palierParDefaut = (province: string): string => paliersDeLaProvince(province)[0]?.guid ?? "";
 
 let compteur = 0;
 /** Identifiant court, unique dans la session (horodatage + compteur). */
@@ -54,7 +84,7 @@ export const nouvelId = (prefixe: string): string =>
 export function nouvelleConfiguration(nom: string, maintenant = new Date()): ConfigurationMonde {
   const t = maintenant.toISOString();
   // le nom peut être vide le temps de l'assistant ; la normalisation lui donne un défaut
-  return { version: 1, id: nouvelId("monde"), nom: nom.trim(), creeLe: t, modifieLe: t, iles: [] };
+  return { version: 1, id: nouvelId("monde"), nom: nom.trim(), creeLe: t, modifieLe: t, iles: [], reglages: reglagesParDefaut() };
 }
 
 export function nouvelleIle(ileId: string): IleDuMonde {
@@ -94,8 +124,24 @@ export function normaliserConfiguration(brut: unknown): ConfigurationMonde | nul
       propriete: PROPRIETES.includes(r.propriete as Propriete) ? (r.propriete as Propriete) : "inconnue",
       fertilites: fertilites === null ? null : [...new Set(fertilites)],
       role: ROLES.includes(r.role as RoleIle) ? (r.role as RoleIle) : "auto",
+      ...(estChaine(r.palier) && worldOf(tierByGuid(r.palier)?.region ?? "") === worldOf(regionOfIsland(r.ileId)) && tierByGuid(r.palier)?.residenceId
+        ? { palier: r.palier } : {}),
+      ...(estChaine(r.dieu) && dieuParId(r.dieu) ? { dieu: r.dieu } : {}),
     });
   }
+  const g = (c.reglages && typeof c.reglages === "object" ? c.reglages : {}) as Record<string, unknown>;
+  const defaut = reglagesParDefaut();
+  const reglages: ReglagesMonde = {
+    objectif: g.objectif === "habitants" || g.objectif === "maisons" || g.objectif === "argent" ? g.objectif : defaut.objectif,
+    routes: g.routes === "terre" || g.routes === "pavee" || g.routes === "marbre" ? g.routes : defaut.routes,
+    productiviteGlobale: typeof g.productiviteGlobale === "number" && Number.isFinite(g.productiviteGlobale)
+      ? Math.max(-90, Math.min(500, g.productiviteGlobale)) : 0,
+  };
+  // le résultat d'un calcul n'est gardé que s'il a sa forme : un fichier abîmé ne doit pas
+  // faire tomber l'écran qui l'affiche
+  const res = c.resultat as Partial<ResultatMonde> | undefined;
+  const resultat = res && typeof res === "object" && Array.isArray(res.iles) && Array.isArray(res.flux)
+    && Array.isArray(res.deficits) && res.bilan && typeof res.bilan === "object" ? (res as ResultatMonde) : undefined;
   return {
     version: 1,
     id: c.id,
@@ -103,5 +149,7 @@ export function normaliserConfiguration(brut: unknown): ConfigurationMonde | nul
     creeLe: estChaine(c.creeLe) ? c.creeLe : maintenant,
     modifieLe: estChaine(c.modifieLe) ? c.modifieLe : maintenant,
     iles,
+    reglages,
+    ...(resultat ? { resultat } : {}),
   };
 }

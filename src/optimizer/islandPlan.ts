@@ -109,7 +109,7 @@ export interface IslandPlanRequest {
    * sur roman_island_small_01, 244 maisons sur 677 retombaient Liberti, et leur malus de rang
    * de cité creusait à lui seul la sécurité incendie (−709). À égalité, la population départage.
    */
-  objectif?: "habitants" | "maisons";
+  objectif?: "habitants" | "maisons" | "argent";
   /**
    * PRIX DU BILAN, en indicatif : part de la population retirée, pour COMPARER les plans, par
    * point de déficit vital par maison (le pire des quatre attributs). 0 = la population seule.
@@ -416,7 +416,7 @@ interface RegleDeBilan {
   verdict: (attrs: Record<string, number>, houses: number) => boolean;
   /** Ce que les comparateurs classent : population (ou maisons au palier cible, selon
    *  l'objectif), escomptée du risque en strict. */
-  classer: (residents: number, attrs: Record<string, number>, houses: number, auPalier: number) => number;
+  classer: (residents: number, attrs: Record<string, number>, houses: number, auPalier: number, argent: number) => number;
 }
 
 // PRIX DU BILAN par défaut : `prixDuBilan.ts`, léger, que l'interface importe aussi.
@@ -431,13 +431,17 @@ function regleDeBilan(req: IslandPlanRequest): RegleDeBilan {
   // `viable`, aurait préféré un plan bridé à un plan conforme à l'option.
   const tol = strict ? Math.max(0, req.tolerance ?? 0) : 0;
   const parMaisons = req.objectif === "maisons";
+  const parArgent = req.objectif === "argent";
   const prix = Math.max(0, req.prixDuBilan ?? PRIX_DU_BILAN);
   return {
     strict,
     verdict: (attrs, houses) => verdictViable(attrs, houses, tol),
-    classer: (residents, attrs, houses, auPalier) => {
+    classer: (residents, attrs, houses, auPalier, argent) => {
       const pop = strict ? populationEffective(residents, attrs, houses, tol)
         : residents * Math.max(0, 1 - prix * Math.max(0, severiteVitale(attrs, houses) - BRUIT_VITAL));
+      // L'ARGENT, escompté du même risque que la population (planification d'un monde : « le
+      // maximum de gains »). Les habitants départagent.
+      if (parArgent) return (residents > 0 ? (argent * pop) / residents : argent) + pop / 1e7;
       if (!parMaisons) return pop;
       // Les maisons au palier cible d'abord, escomptées du même risque que la population — en
       // strict comme au prix du bilan ; les habitants ne font que départager (aucune île n'en
@@ -479,8 +483,8 @@ function balayerPaliers(
   for (let i = 0; i < ladder.length; i++) {
     onProgress?.(i + 1, ladder.length);
     const r = planIslandImport({ ...req, tierGuid: ladder[i].guid, autoTier: false });
-    const pr = regle.classer(r.residents, r.attrsTotal, r.houses, r.fullyCovered);
-    const pb = best ? regle.classer(best.residents, best.attrsTotal, best.houses, best.fullyCovered) : -1;
+    const pr = regle.classer(r.residents, r.attrsTotal, r.houses, r.fullyCovered, r.money.net);
+    const pb = best ? regle.classer(best.residents, best.attrsTotal, best.houses, best.fullyCovered, best.money.net) : -1;
     const wins = !best
       || (r.feasible !== best.feasible ? r.feasible
         : pr !== pb ? pr > pb
@@ -745,8 +749,8 @@ export function planIslandImport(
     // 20 904 habitants contre un plan de 4 992 pour trois centièmes de point par maison.
     // La population est donc ESCOMPTÉE du risque qu'elle porte (cf. `populationEffective`),
     // ce qui laisse les plans sains strictement inchangés et rend la comparaison continue.
-    const pa = regle.classer(a.residents, a.attrsTotal, a.cand.houses, a.tierCounts[req.tierGuid] ?? 0);
-    const pb = regle.classer(b.residents, b.attrsTotal, b.cand.houses, b.tierCounts[req.tierGuid] ?? 0);
+    const pa = regle.classer(a.residents, a.attrsTotal, a.cand.houses, a.tierCounts[req.tierGuid] ?? 0, a.houseMoney);
+    const pb = regle.classer(b.residents, b.attrsTotal, b.cand.houses, b.tierCounts[req.tierGuid] ?? 0, b.houseMoney);
     const close = Math.abs(pa - pb) <= 0.02 * Math.max(pa, pb, 1);
     if (!close) return pa > pb;
     // INDICATIF : à population quasi égale, le bilan le plus sain l'emporte. C'est le seul
@@ -1682,8 +1686,8 @@ export function planIslandImport(
     if (a.feasible !== b.feasible) return a.feasible;
     // Même escompte continu que le pré-tri : le drapeau reste juste et s'affiche, mais il ne
     // décide plus seul d'un facteur quatre de population.
-    const pa = regle.classer(a.residents, a.attrsTotal, a.houses, a.fullyCovered);
-    const pb = regle.classer(b.residents, b.attrsTotal, b.houses, b.fullyCovered);
+    const pa = regle.classer(a.residents, a.attrsTotal, a.houses, a.fullyCovered, a.money.net);
+    const pb = regle.classer(b.residents, b.attrsTotal, b.houses, b.fullyCovered, b.money.net);
     // Même départage qu'au pré-tri en indicatif : à 2 % près, le plan au bilan le plus sain.
     // La bande rend la comparaison non transitive, sans conséquence ici — elle ne sert qu'à
     // un balayage linéaire de trois ou quatre finalistes.

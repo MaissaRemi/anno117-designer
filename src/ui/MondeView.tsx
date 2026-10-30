@@ -1,17 +1,29 @@
 import { useEffect, useRef, useState } from "react";
+import { useStore } from "../state/store";
 import { islandById, WORLDS } from "../data/islands";
-import { LIBELLES_PROPRIETE, nouvelleConfiguration, provinceDe, type ConfigurationMonde } from "../monde/configuration";
+import { dieux, nomDuDieu } from "../economy/dieux";
+import {
+  LIBELLES_OBJECTIF, LIBELLES_PROPRIETE, nouvelleConfiguration, palierParDefaut, paliersDeLaProvince, provinceDe,
+  type ConfigurationMonde, type IleDuMonde, type ObjectifPrincipale,
+} from "../monde/configuration";
 import { fertilitesLisibles } from "../monde/fertilites";
 import { depotMondes, lireExport, type DepotMondes } from "../monde/stockage";
+import { calculerMonde, type Executeurs } from "../monde/calcul";
+import { runIslandPlan } from "../optimizer/runIslandPlan";
+import { runPlanifier } from "../commande/runPlanifier";
 import { AssistantMonde, type EtapeAssistant } from "./monde/AssistantMonde";
+import { ResultatMondeVue } from "./monde/ResultatMondeVue";
 import { IslandThumb } from "./components/IslandThumb";
+import { RoadTypeSelect } from "./components/RoadTypeSelect";
 
 /**
  * ONGLET MONDE — la planification globale d'une partie.
  *
- * Étape 1 de la conception (`docs/superpowers/specs/2026-10-30-planification-globale-design.md`) :
- * les configurations, leur création par l'assistant, la fiche des îles. Le calcul (îles
- * principales, répartition de la production, flux, achats) viendra sur ces données.
+ * Conception : `docs/superpowers/specs/2026-10-30-planification-globale-design.md`. Les
+ * configurations et leur assistant (étape 1) ; les rôles des îles, les réglages et le calcul du
+ * monde (étapes 2 et 3, `monde/calcul.ts`) : îles principales, production répartie sur les
+ * autres îles à moi, flux entre îles, bilan. Les moteurs tournent dans des Web Workers, en
+ * parallèle.
  */
 
 type Assistant = { c: ConfigurationMonde; nouvelle: boolean; etape: EtapeAssistant };
@@ -34,7 +46,12 @@ export function MondeView() {
   const [ouverte, setOuverte] = useState<string | null>(null);
   const [assistant, setAssistant] = useState<Assistant | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [calcul, setCalcul] = useState<{ texte: string } | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
+  const annulations = useRef(new Set<() => void>());
+  useEffect(() => () => { for (const a of annulations.current) a(); }, []);
+  const catalog = useStore((s) => s.catalog);
 
   const recharger = async (d: DepotMondes) => setListe(await d.lister());
   useEffect(() => {
@@ -62,6 +79,41 @@ export function MondeView() {
   };
 
   const c = liste.find((x) => x.id === ouverte);
+  const modifier = (f: (c: ConfigurationMonde) => ConfigurationMonde) => {
+    if (c) void enregistrer({ ...f(c), modifieLe: new Date().toISOString() });
+  };
+  const modifierIle = (cle: string, f: (i: IleDuMonde) => IleDuMonde) =>
+    modifier((x) => ({ ...x, iles: x.iles.map((i) => (i.cle === cle ? f(i) : i)) }));
+
+  /** Un moteur dans un Web Worker, annulable si l'on quitte l'onglet. */
+  const enWorker = <T,>(lancer: () => { promise: Promise<T>; cancel: () => void }) => {
+    const { promise, cancel } = lancer();
+    annulations.current.add(cancel);
+    return promise.finally(() => annulations.current.delete(cancel));
+  };
+  const calculer = async () => {
+    if (!c) return;
+    setErreur(null);
+    setCalcul({ texte: "Îles principales…" });
+    const executeurs: Executeurs = {
+      principale: (req) => enWorker(() => runIslandPlan(req)),
+      production: (req) => enWorker(() => runPlanifier(req)),
+    };
+    try {
+      const resultat = await calculerMonde(c, {
+        catalog, executeurs,
+        parallelisme: Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 4) - 1)),
+        onProgres: (texte) => setCalcul({ texte }),
+      });
+      await enregistrer({ ...c, resultat });
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCalcul(null);
+    }
+  };
+  const nbPrincipales = c?.iles.filter((i) => i.propriete === "moi" && i.role === "principale").length ?? 0;
+  const perime = !!c?.resultat && c.modifieLe > c.resultat.calculeLe;
 
   return (
     <div className="monde-vue">
@@ -104,6 +156,21 @@ export function MondeView() {
                 <button type="button" onClick={() => telecharger(c.nom, c)}>Exporter</button>
                 <button type="button" className="btn-ghost" onClick={() => void supprimer(c)}>Supprimer</button>
               </div>
+              <div className="monde-reglages">
+                <label className="field">
+                  <span>Les îles principales visent</span>
+                  <select value={c.reglages.objectif} onChange={(e) => modifier((x) => ({ ...x, reglages: { ...x.reglages, objectif: e.target.value as ObjectifPrincipale } }))}>
+                    {(Object.keys(LIBELLES_OBJECTIF) as ObjectifPrincipale[]).map((o) => <option key={o} value={o}>{LIBELLES_OBJECTIF[o]}</option>)}
+                  </select>
+                </label>
+                <RoadTypeSelect value={c.reglages.routes} onChange={(t) => modifier((x) => ({ ...x, reglages: { ...x.reglages, routes: t } }))} />
+                <label className="field" title="Recherche et objets : points de pourcentage ajoutés à la productivité de tous les ateliers, en plus du dieu de l'île.">
+                  <span>Productivité (recherche, objets)</span>
+                  <input type="number" step={5} value={c.reglages.productiviteGlobale}
+                    onChange={(e) => modifier((x) => ({ ...x, reglages: { ...x.reglages, productiviteGlobale: Number(e.target.value) || 0 } }))} />
+                </label>
+              </div>
+
               {WORLDS.map((w) => {
                 const iles = c.iles.filter((i) => provinceDe(i) === w.region);
                 if (!iles.length) return null;
@@ -112,12 +179,32 @@ export function MondeView() {
                     <h4>{w.label} · {iles.length} île(s)</h4>
                     <div className="monde-fiches">
                       {iles.map((i) => (
-                        <div key={i.cle} className="monde-ligne">
+                        <div key={i.cle} className={`monde-ligne${i.propriete === "moi" && i.role === "principale" ? " principale" : ""}`}>
                           <IslandThumb island={islandById(i.ileId)!} size={56} />
                           <div className="monde-ligne-texte">
                             <b>{i.libelle ?? nomCourt(i.ileId)}</b>
                             <span className="muted">{i.libelle ? `${nomCourt(i.ileId)} · ` : ""}{LIBELLES_PROPRIETE[i.propriete]}</span>
                             <span className="muted">{fertilitesLisibles(i)}</span>
+                            {i.propriete === "moi" && (
+                              <div className="monde-roles">
+                                <select value={i.role === "principale" ? "principale" : "production"} aria-label="Rôle"
+                                  onChange={(e) => modifierIle(i.cle, (x) => ({ ...x, role: e.target.value === "principale" ? "principale" : "auto" }))}>
+                                  <option value="principale">Île principale</option>
+                                  <option value="production">Île de production</option>
+                                </select>
+                                {i.role === "principale" && (
+                                  <select value={i.palier ?? palierParDefaut(w.region)} aria-label="Palier visé"
+                                    onChange={(e) => modifierIle(i.cle, (x) => ({ ...x, palier: e.target.value }))}>
+                                    {paliersDeLaProvince(w.region).map((t) => <option key={t.guid} value={t.guid}>{t.name}</option>)}
+                                  </select>
+                                )}
+                                <select value={i.dieu ?? ""} aria-label="Dieu tutélaire"
+                                  onChange={(e) => modifierIle(i.cle, (x) => ({ ...x, dieu: e.target.value || undefined }))}>
+                                  <option value="">Sans dieu</option>
+                                  {dieux().map((d) => <option key={d.id} value={d.id}>{nomDuDieu(d)}</option>)}
+                                </select>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -126,9 +213,17 @@ export function MondeView() {
                 );
               })}
               {!c.iles.length && <p className="muted">Aucune île : ouvre « Îles et fertilités ».</p>}
-              <p className="muted" style={{ marginTop: 12 }}>
-                Prochaine étape de l'outil : choisir les îles principales et lancer le calcul (production répartie sur tes autres îles, flux entre îles, bilan du monde).
-              </p>
+
+              <div className="monde-barre" style={{ marginTop: 12 }}>
+                <button type="button" className="primary" disabled={!!calcul || !nbPrincipales} onClick={() => void calculer()}>
+                  {calcul ? "Calcul en cours…" : "Calculer le monde"}
+                </button>
+                {calcul && <span className="muted">{calcul.texte}</span>}
+                {!calcul && !nbPrincipales && <span className="muted">Choisis au moins une île principale parmi tes îles.</span>}
+              </div>
+              {erreur && <div className="warn">Le calcul a échoué : {erreur}</div>}
+              {perime && !calcul && <div className="warn">La configuration a changé depuis ce calcul : relance-le pour le mettre à jour.</div>}
+              {c.resultat && <ResultatMondeVue c={c} r={c.resultat} />}
             </>
           )}
         </section>

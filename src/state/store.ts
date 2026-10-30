@@ -84,10 +84,10 @@ interface State {
   // --- navigation UI (session, non persistée) ---
   uiMode: "editor" | "plan" | "monde";
   /** Mode de planification de l'écran Planifier (session, non persisté). */
-  planMode: "commande" | "remplir" | "production" | "iles";
+  planMode: "commande" | "remplir" | "production";
   diagnostic: "none" | "coverage" | "audit";
   setUiMode: (m: "editor" | "plan" | "monde") => void;
-  setPlanMode: (m: "commande" | "remplir" | "production" | "iles") => void;
+  setPlanMode: (m: "commande" | "remplir" | "production") => void;
   setDiagnostic: (d: "none" | "coverage" | "audit") => void;
 
   /** MONDE courant : Latium (romain) ou Albion (celtique). Les deux n'ont ni les mêmes
@@ -97,11 +97,8 @@ interface State {
   setWorld: (w: WorldRegion) => void;
 
   // --- config de partie (îles + profils de ressources, persistés à part) ---
-  partyIslands: string[];
+  /** Fertilités déclarées par île (« Remplir l'île », île de production). */
   islandProfiles: Record<string, ResourceProfile>;
-  setPartyIslands: (ids: string[]) => void;
-  addPartyIsland: (id: string) => void;
-  removePartyIsland: (id: string) => void;
   setIslandProfile: (id: string, profile: ResourceProfile) => void;
 
   lookup: () => (id: string) => BuildingDef | undefined;
@@ -128,7 +125,8 @@ export const useStore = create<State>((set, get) => {
 
   function persistParty(): void {
     const s = get();
-    saveParty({ partyIslands: s.partyIslands, islandProfiles: s.islandProfiles } satisfies PartyState);
+    // `partyIslands` servait à l'outil « Plusieurs îles », remplacé par l'onglet Monde
+    saveParty({ partyIslands: [], islandProfiles: s.islandProfiles } satisfies PartyState);
   }
 
   return {
@@ -146,7 +144,6 @@ export const useStore = create<State>((set, get) => {
     planMode: "commande",
     diagnostic: "none",
     world: regionOfIsland(persisted?.layout?.grid?.islandId),
-    partyIslands: persistedParty.partyIslands,
     islandProfiles: persistedParty.islandProfiles,
     past: [],
     future: [],
@@ -346,15 +343,6 @@ export const useStore = create<State>((set, get) => {
     setPlanMode: (m) => set({ planMode: m }),
     setDiagnostic: (d) => set({ diagnostic: d }),
 
-    setPartyIslands: (ids) => { set({ partyIslands: ids }); persistParty(); },
-    addPartyIsland: (id) => {
-      set((s) => (s.partyIslands.includes(id) ? s : { partyIslands: [...s.partyIslands, id] }));
-      persistParty();
-    },
-    removePartyIsland: (id) => {
-      set((s) => ({ partyIslands: s.partyIslands.filter((x) => x !== id) }));
-      persistParty();
-    },
     setIslandProfile: (id, profile) => {
       set((s) => ({ islandProfiles: { ...s.islandProfiles, [id]: profile } }));
       persistParty();

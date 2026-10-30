@@ -18,12 +18,12 @@ const LOURDS = [
   "src/optimizer/workforce.test.ts",
   "src/optimizer/kontor.test.ts",
   "src/optimizer/waterFeasible.test.ts",
-  "src/optimizer/multiIslandPlan.test.ts",
   "src/optimizer/planLattice.test.ts",
   "src/optimizer/bilanIndicatif.test.ts",
   "src/optimizer/trameDroite.golden.test.ts",
   "src/optimizer/reseauRoutier.projection.test.ts",
   "src/commande/ileDeProduction.test.ts",
+  "src/monde/calcul.test.ts",
 ];
 
 export default defineConfig(({ mode }) => ({

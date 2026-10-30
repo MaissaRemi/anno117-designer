@@ -167,10 +167,9 @@ label { font-size: 13px; }
 .mode-pane { flex: 1; display: flex; min-height: 0; }
 .pane-config { width: 380px; flex-shrink: 0; border-right: 1px solid var(--line); background: var(--s1); overflow-y: auto; padding: var(--sp-4); }
 .pane-result { flex: 1; overflow-y: auto; padding: var(--sp-4); }
-.pane-full { flex: 1; overflow-y: auto; padding: var(--sp-4); }
 /* ---- écran Planifier : commutateur de mode + panneau du mode ---- */
 .plan-view { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.plan-view > .mode-pane, .plan-view > .pane-full { flex: 1; min-height: 0; }
+.plan-view > .mode-pane { flex: 1; min-height: 0; }
 .plan-switch {
   display: flex; flex-wrap: wrap; flex-shrink: 0; margin: var(--sp-3) var(--sp-4);
   border: 1px solid var(--line); border-radius: var(--r-md); background: var(--s1); overflow: hidden;
@@ -254,7 +253,6 @@ details.avance label.checkbox { display: flex; align-items: flex-start; gap: 6px
 }
 .chip-opt { padding: 7px 10px; font-size: 13px; cursor: pointer; }
 .chip-opt:hover, .chip-opt.hl { background: var(--accent-soft); }
-.rs-slots { display: flex; align-items: center; gap: 8px; margin-top: var(--sp-2); font-size: 13px; color: var(--t2); }
 
 /* ---- RunPanel ---- */
 .run-panel { margin-top: var(--sp-3); }
@@ -312,10 +310,6 @@ details.avance label.checkbox { display: flex; align-items: flex-start; gap: 6px
 .island-thumb { width: 64px; height: 64px; background: #11151a; border-radius: 4px; }
 .island-name { font-size: 11px; text-align: center; line-height: 1.2; }
 
-/* ---- party board (multi-îles) ---- */
-.party-card { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--sp-3); margin-bottom: var(--sp-3); }
-.party-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-2); }
-.party-head b { font-size: 14px; }
 
 /* ---- audit (liste) ---- */
 .audit-list { max-height: 60vh; overflow-y: auto; margin: var(--sp-2) 0; display: flex; flex-direction: column; gap: 4px; }
@@ -414,3 +408,22 @@ details.avance label.checkbox { display: flex; align-items: flex-start; gap: 6px
 .monde-propriete { overflow-y: auto; min-height: 0; }
 .monde-propriete .world-switch { margin: 0; flex-direction: row; border: none; padding: 0; gap: 4px; }
 .monde-propriete .world-switch button { height: 26px; font-size: 12px; padding: 0 8px; }
+.monde-reglages { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end; margin: var(--sp-2) 0; }
+.monde-reglages .field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); margin: 0; }
+.monde-roles { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.monde-roles select { height: 26px; font-size: 12px; }
+.monde-ligne.principale { border-color: var(--accent); }
+.monde-resultat { margin-top: var(--sp-3); }
+.monde-bilan { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.monde-bilan > div { display: flex; flex-direction: column; padding: 8px 12px; border-radius: var(--r-md); background: var(--s2); min-width: 120px; }
+.monde-bilan b { font-size: 18px; }
+.monde-bilan .manque b { color: var(--warn); }
+.monde-iles-resultat { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: var(--sp-2); }
+.monde-carte-ile { padding: 8px 10px; border-radius: var(--r-md); background: var(--s2); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; }
+.monde-carte-ile.principale { border-color: var(--accent); }
+.monde-carte-ile details ul { margin: 4px 0 0 16px; padding: 0; }
+.warn-texte { color: var(--warn); font-size: 12px; cursor: pointer; }
+.monde-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.monde-table th { text-align: left; color: var(--muted); font-weight: 500; padding: 3px 8px 3px 0; }
+.monde-table td { padding: 3px 8px 3px 0; vertical-align: top; }
+.monde-route { padding: 6px 8px; border-radius: var(--r-sm); background: var(--s2); margin-bottom: 4px; font-size: 13px; }

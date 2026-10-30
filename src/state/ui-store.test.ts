@@ -7,7 +7,7 @@ describe("store — uiMode/diagnostic", () => {
     s().setUiMode("plan"); expect(s().uiMode).toBe("plan");
     s().setUiMode("editor"); expect(s().uiMode).toBe("editor");
     expect(s().planMode).toBe("commande");
-    s().setPlanMode("iles"); expect(s().planMode).toBe("iles");
+    s().setPlanMode("production"); expect(s().planMode).toBe("production");
     s().setPlanMode("commande");
     s().setDiagnostic("coverage"); expect(s().diagnostic).toBe("coverage");
     s().setDiagnostic("none"); expect(s().diagnostic).toBe("none");

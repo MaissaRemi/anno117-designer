@@ -1,6 +1,6 @@
 # Planification globale d'un monde : conception
 
-Statut : **validée par Rémi le 30/10/2026** (réponses en fin de document). Étape 1 en cours.
+Statut : **validée par Rémi le 30/10/2026** (réponses en fin de document). Étapes 1 à 3 faites ; bilan dans `docs/REPRISE.md`.
 
 Demande de Rémi (30/10/2026), reformulée : un outil qui planifie TOUTES les îles d'une partie
 sur le long terme, pour un monde « durable et complexe où tout fonctionne ». Il dit combien

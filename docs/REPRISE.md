@@ -163,7 +163,7 @@ plusieurs à la fois, posés par le moteur de « Ma commande ».
   « Ma commande » en Albion ; et un lot trop grand pour la terre libre d'une petite île n'était
   pas recoupé.
 
-## Planification d'un monde : EN COURS (étape 1 faite le 30/10/2026)
+## Planification d'un monde : EN COURS (étapes 1 à 3 faites le 30/10/2026)
 
 Le projet que Rémi veut vraiment : planifier TOUTES les îles d'une partie, des deux provinces
 (les besoins complets des Patriciens passent par l'Albion, ceux des Nobles par le Latium).
@@ -177,12 +177,34 @@ Conception validée, réponses de Rémi incluses :
   province et taille, rotation des vignettes), fertilités par île groupées comme en jeu
   (`monde/fertilites.ts`, tirées des données), propriété (à moi, achetable, adversaire, inconnue).
   Modèle et validation : `monde/configuration.ts`.
-- **Étape 2, à faire** : îles principales (tous les services ; objectifs argent, habitants ou
-  maisons — l'objectif « argent » est à ajouter à `planIslandImport`), mines sur les
-  emplacements laissés libres par les aqueducs, demande de biens.
-- **Étape 3** : répartition de la production sur les autres îles à moi (moteur de l'île de
-  production), flux entre îles en u/min (sans navires), bilan du monde ; remplace « Plusieurs
-  îles ». **Étape 4** : suggestions d'achat et recalcul incrémental.
+- **Étapes 2 et 3, faites** (`monde/calcul.ts`, `monde/repartition.ts`, écran
+  `ui/monde/ResultatMondeVue.tsx`). Dans la fiche : objectif des îles principales (gains,
+  habitants, maisons — objectif `argent` ajouté à `planIslandImport`), routes, productivité
+  saisie ; rôle, palier et dieu de chaque île à moi. « Calculer le monde » :
+  1. îles principales en parallèle (Web Workers) : tous les services, mines sur les emplacements
+     libres si le gisement est coché ;
+  2. demande totale moins les mines, répartie sur les autres îles à moi par estimation (devis à
+     moins d'1 ms) avec trois budgets par île — terre (65 %), côte (12 % de la bande d'eau,
+     mesuré), emplacements de montagne et de rivière partagés — en rebouclant sur les besoins
+     des ouvriers et les matières qu'une île doit faire venir ;
+  3. pose réelle des îles de production en parallèle, un rattrapage pour ce qui n'a pas tenu ;
+  4. flux entre îles (u/min, sans navires), déficits avec leur raison, bilan.
+  Mesuré (test `monde/calcul.test.ts`, une île principale Patriciens sur roman_island_medium_01,
+  deux îles de production au Latium, deux en Albion) : ~30 000 habitants, la Bière et les autres
+  biens d'Albion partent vers l'île romaine ; 41 s sans parallélisme, ~20 s dans l'application.
+  « Plusieurs îles » est retiré (multiIslandPlan, son worker, `MultiIslandPanel`,
+  `ResourceSelector`).
+- **Limites connues** : l'argent des îles de production n'est pas compté ; l'estimation de terre
+  est optimiste pour les fermes et les bâtiments à aire libre (le rattrapage compense en
+  partie) ; les ouvriers de haut palier des ateliers de luxe consomment des biens de luxe, ce qui
+  est juste mais alourdit la demande ; **défaut de pose côtière en Albion** — aucun ramasseur de
+  coques ne se pose sur les îles d'Albion testées, et le cueilleur de salicorne ou le ramasseur
+  de coquillages bien moins qu'au Latium (2 à 4 % de la bande d'eau contre 11 à 15 %). À
+  examiner : profondeur de la bande d'eau constructible en Albion, ou `partieEau` de ces
+  bâtiments. Touche aussi « Ma commande » et l'île de production.
+- **Étape 4, à faire** : suggestions d'achat (les déficits « plus de place » ou « aucune île ne
+  peut » pointent déjà les îles achetables à proposer) et recalcul incrémental (empreinte par
+  île).
 - Au passage : la fenêtre modale partagée reprenait le focus à chaque rendu (un champ de saisie
   le perdait à chaque frappe) ; corrigé dans `ui/Modal.tsx`.
 
