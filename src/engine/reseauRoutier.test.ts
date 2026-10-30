@@ -119,7 +119,7 @@ describe("réseau routier : arêtes du graphe et contact d'un bâtiment", () => 
     g.droite[idDroite(g, 2, 5)] = 1;
     poserLosange(g, 4, 6); // recouvre la case (3, 5) : jonction
     poserLosange(g, 5, 5); // voisin de (4, 6) par un côté
-    poserLosange(g, 6, 6); // voisin de (5, 5) par un côté ; pointe contre pointe avec (4, 6)
+    poserLosange(g, 6, 6); // voisin de (5, 5) par un côté ; pointe contre pointe avec (4, 6) : pas relié (Q2)
     g.droite[idDroite(g, 6, 4)] = 1; // touche la pointe (6, 5) de (5, 5), sans recouvrement : pas reliée
     const L46 = idLosange(g, 4, 6), L55 = idLosange(g, 5, 5), L66 = idLosange(g, 6, 6);
     expect(lister((f) => voisins(g, idDroite(g, 3, 5), f))).toEqual([idDroite(g, 2, 5), L46]);
@@ -129,6 +129,25 @@ describe("réseau routier : arêtes du graphe et contact d'un bâtiment", () => 
     // une maison, elle, se raccorde à cette pointe : la case (6, 4) est servie par le losange (5, 5)
     expect(lister((f) => casesAuContact(g, L55, f))).toContain(idDroite(g, 6, 4));
     expect(lister((f) => casesAuContact(g, idDroite(g, 0, 0), f))).toEqual([idDroite(g, 1, 0), idDroite(g, 0, 1)]);
+  });
+
+  it("un V ouvert : les deux bas se touchent par une pointe, pas reliés ; une route droite horizontale les relie (Q2)", () => {
+    // Règle vérifiée en jeu par Rémi (30/10/2026) : deux routes qui se touchent par un coin ne
+    // se relient qu'en traçant une route de l'autre orientation entre les deux cases.
+    const g = reseauVide(10, 10);
+    for (const [X, Y] of [[2, 2], [3, 3], [5, 3], [6, 2]]) poserLosange(g, X, Y); // (3,3) et (5,3) : pointe (4,3)
+    const relies = (a: number, b: number) => {
+      const vus = new Set([a]);
+      const file = [a];
+      while (file.length) voisins(g, file.shift()!, (v) => { if (!vus.has(v)) { vus.add(v); file.push(v); } });
+      return vus.has(b);
+    };
+    const gauche = idLosange(g, 2, 2), droite = idLosange(g, 6, 2);
+    expect(relies(gauche, droite)).toBe(false);
+    // la route droite de la ligne 3 entre dans chacun des deux losanges du bas
+    g.droite[idDroite(g, 3, 3)] = 1;
+    g.droite[idDroite(g, 4, 3)] = 1;
+    expect(relies(gauche, droite)).toBe(true);
   });
 });
 

@@ -182,7 +182,11 @@ la pointe sont-ils reliés, ou le jeu pose-t-il des demi-cases de raccord (les �
 
 **Q2 — Pointe contre pointe.** Deux losanges qui ne se touchent que par une pointe (deux
 routes diagonales parallèles décalées) sont-ils reliés ? Hypothèse : non, comme deux cases
-droites en coin.
+droites en coin. **Réponse de Rémi (30/10/2026) : non, pas reliés.** Pour relier deux routes
+qui se touchent par un coin, il faut tracer une route dans l'autre orientation : deux bras
+diagonaux d'un V dont les losanges du bas se touchent par une pointe se relient par une route
+DROITE horizontale entre ces deux losanges (jonction par recouvrement, règle de Q1). C'est ce
+que fait déjà le graphe.
 
 **Q3 — Aqueduc et route diagonale.** Une conduite droite peut-elle franchir une route en
 biais ? Si oui, sur combien de cases doit-elle aller tout droit ? **Réponse de Rémi

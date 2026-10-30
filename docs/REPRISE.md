@@ -92,7 +92,9 @@ Ce qui en reste, utilisable :
 Q3 tranchée par Rémi (30/10/2026) : **un aqueduc peut croiser une route en biais**. La règle
 prudente de `waterPlan` (aucune conduite sous un losange) reste en place, faute de savoir sur
 combien de cases la conduite doit aller tout droit pour franchir ; sans effet tant qu'aucun
-losange n'est posé. Q2 (deux losanges qui ne se touchent que par une pointe) reste à vérifier.
+losange n'est posé. Q2 tranchée aussi : deux losanges qui ne se touchent que par une pointe ne
+sont PAS reliés ; on les relie par une route de l'autre orientation (une route droite
+horizontale entre les deux bas d'un V). Le graphe le faisait déjà.
 
 ## Raccordement au comptoir : corrigé
 

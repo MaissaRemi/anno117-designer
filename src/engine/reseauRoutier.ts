@@ -19,7 +19,7 @@
  *    route droite ENTRE dans la route en biais : sa dernière case est la case entière de la
  *    bande diagonale, la précédente est à moitié sous le pavage (captures de Rémi, Q1).
  * Deux routes qui ne se touchent que par un point ne sont pas reliées : deux cases droites en
- * coin (comportement établi des moteurs), deux losanges pointe contre pointe (hypothèse, Q2),
+ * coin (comportement établi des moteurs), deux losanges pointe contre pointe (confirmé en jeu, Q2),
  * une case droite contre la pointe d'un losange.
  *
  * CONTACT D'UN BÂTIMENT (bâtiment – route), une autre relation : par un côté à une route de
