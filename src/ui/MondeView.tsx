@@ -91,8 +91,8 @@ export function MondeView() {
     annulations.current.add(cancel);
     return promise.finally(() => annulations.current.delete(cancel));
   };
-  const calculer = async () => {
-    if (!c) return;
+  const calculer = async (cfg: ConfigurationMonde | undefined = c) => {
+    if (!cfg) return;
     setErreur(null);
     setCalcul({ texte: "Îles principales…" });
     const executeurs: Executeurs = {
@@ -100,18 +100,30 @@ export function MondeView() {
       production: (req) => enWorker(() => runPlanifier(req)),
     };
     try {
-      const resultat = await calculerMonde(c, {
-        catalog, executeurs,
+      const resultat = await calculerMonde(cfg, {
+        catalog, executeurs, precedent: cfg.resultat,
         parallelisme: Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 4) - 1)),
         onProgres: (texte) => setCalcul({ texte }),
       });
-      await enregistrer({ ...c, resultat });
+      await enregistrer({ ...cfg, resultat });
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e));
     } finally {
       setCalcul(null);
     }
   };
+  /** Suggestion acceptée : l'île passe à moi, en île de production, et l'on recalcule — les îles
+   *  inchangées sont reprises du calcul précédent. */
+  const acheter = (cle: string) => {
+    if (!c) return;
+    const cfg: ConfigurationMonde = {
+      ...c, modifieLe: new Date().toISOString(),
+      iles: c.iles.map((i) => (i.cle === cle ? { ...i, propriete: "moi" as const, role: "auto" as const } : i)),
+    };
+    void enregistrer(cfg).then(() => calculer(cfg));
+  };
+  /** Suggestion refusée : l'île n'est pas à vendre, on ne la proposera plus. */
+  const refuser = (cle: string) => modifierIle(cle, (i) => ({ ...i, propriete: "indisponible" }));
   const nbPrincipales = c?.iles.filter((i) => i.propriete === "moi" && i.role === "principale").length ?? 0;
   const perime = !!c?.resultat && c.modifieLe > c.resultat.calculeLe;
 
@@ -215,7 +227,7 @@ export function MondeView() {
               {!c.iles.length && <p className="muted">Aucune île : ouvre « Îles et fertilités ».</p>}
 
               <div className="monde-barre" style={{ marginTop: 12 }}>
-                <button type="button" className="primary" disabled={!!calcul || !nbPrincipales} onClick={() => void calculer()}>
+                <button type="button" className="primary" disabled={!!calcul || !nbPrincipales} onClick={() => void calculer(c)}>
                   {calcul ? "Calcul en cours…" : "Calculer le monde"}
                 </button>
                 {calcul && <span className="muted">{calcul.texte}</span>}
@@ -223,7 +235,7 @@ export function MondeView() {
               </div>
               {erreur && <div className="warn">Le calcul a échoué : {erreur}</div>}
               {perime && !calcul && <div className="warn">La configuration a changé depuis ce calcul : relance-le pour le mettre à jour.</div>}
-              {c.resultat && <ResultatMondeVue c={c} r={c.resultat} />}
+              {c.resultat && <ResultatMondeVue c={c} r={c.resultat} occupe={!!calcul} onAcheter={acheter} onRefuser={refuser} />}
             </>
           )}
         </section>

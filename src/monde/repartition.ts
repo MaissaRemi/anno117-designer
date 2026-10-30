@@ -186,3 +186,60 @@ export function repartir(
 }
 
 export const nomDuBien = (g: string): string => goodName(g);
+
+// ─── SUGGESTIONS D'ACHAT ────────────────────────────────────────────────────────────────
+
+export interface SuggestionAchat {
+  cle: string;
+  /** Ce que l'île couvrirait de ce qui manque, bien par bien. */
+  couvre: BienDebit[];
+  /** u/min couverts, et part du manque total. */
+  total: number;
+  part: number;
+  /** Ce qu'elle réclamerait en retour : matières qu'elle ne produit pas, biens de ses ouvriers. */
+  enRetour: number;
+  /** Fertilités non renseignées : estimée sans fertilité, donc peut-être sous-estimée. */
+  fertilitesInconnues: boolean;
+}
+
+/**
+ * Les îles à acheter qui couvriraient le plus de ce qui manque — choisies l'une après l'autre :
+ * la deuxième est jugée sur ce que la première laisse, pour proposer des achats COMPLÉMENTAIRES
+ * plutôt que trois îles qui couvrent les mêmes biens.
+ *
+ * Jugées sur leur GAIN NET : ce qu'elles couvriraient, moins ce qu'elles réclameraient en
+ * retour. Une île sans fertilité qui ferait des tuniques en important tout son lin couvre peu,
+ * et coûte presque autant qu'elle rapporte.
+ */
+export function suggererAchats(
+  manque: Record<string, number>,
+  candidates: { ile: IleProductrice; fertilitesInconnues: boolean }[],
+  o: OptionsRepartition,
+  max = 3,
+): SuggestionAchat[] {
+  const total = Object.values(manque).reduce((a, b) => a + b, 0);
+  if (total <= EPS) return [];
+  const reste = { ...manque };
+  const restantes = [...candidates];
+  const out: SuggestionAchat[] = [];
+  while (out.length < max && restantes.length) {
+    let meilleure: { k: number; couvre: BienDebit[]; somme: number; enRetour: number } | null = null;
+    for (let k = 0; k < restantes.length; k++) {
+      const cand = restantes[k];
+      const couvre = repartir(reste, [cand.ile], o).affectation[cand.ile.cle] ?? [];
+      const somme = couvre.reduce((a, b) => a + b.parMinute, 0);
+      if (somme <= 0.05) continue;
+      const enRetour = besoinsDuDevis(devisIle(cand.ile, couvre, o)).reduce((a, b) => a + b.parMinute, 0);
+      if (somme - enRetour > 0.05 && (!meilleure || somme - enRetour > meilleure.somme - meilleure.enRetour)) meilleure = { k, couvre, somme, enRetour };
+    }
+    if (!meilleure) break;
+    const { k, couvre, somme, enRetour } = meilleure;
+    const cand = restantes.splice(k, 1)[0];
+    for (const b of couvre) reste[b.good] = Math.max(0, (reste[b.good] ?? 0) - b.parMinute);
+    out.push({
+      cle: cand.ile.cle, couvre, total: Math.round(somme * 100) / 100, part: somme / total,
+      enRetour: Math.round(enRetour * 100) / 100, fertilitesInconnues: cand.fertilitesInconnues,
+    });
+  }
+  return out;
+}

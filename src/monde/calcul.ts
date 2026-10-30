@@ -7,14 +7,14 @@ import type { CommandeRequete } from "../commande/planifierWorker";
 import type { ResultatCommande } from "../commande/planifier";
 import { palierParDefaut, provinceDe, type ConfigurationMonde, type IleDuMonde } from "./configuration";
 import {
-  besoinsDuDevis, devisIle, fertilitesPourMoteur, nomDuBien, repartir,
-  type BienDebit, type IleProductrice, type OptionsRepartition,
+  besoinsDuDevis, devisIle, fertilitesPourMoteur, nomDuBien, repartir, suggererAchats,
+  type BienDebit, type IleProductrice, type OptionsRepartition, type SuggestionAchat,
 } from "./repartition";
 
 /**
  * ═══ CALCULER UN MONDE ════════════════════════════════════════════════════════════════
  *
- * Étapes 2 et 3 de la planification globale (`docs/superpowers/specs/2026-10-30-planification-
+ * Étapes 2 à 4 de la planification globale (`docs/superpowers/specs/2026-10-30-planification-
  * globale-design.md`) :
  *
  *  1. ÎLES PRINCIPALES, en parallèle : des maisons, tous les services, l'objectif du joueur
@@ -26,7 +26,12 @@ import {
  *  3. POSE RÉELLE des îles de production, en parallèle (moteur de l'île de production) ; ce qui
  *     n'a pas tenu est réparti une fois de plus sur les îles qui ont encore de la place.
  *  4. FLUX entre îles (u/min, sans navires : en régime établi, la cargaison d'un aller-retour
- *     arrive en une fois, le débit à terme est le même) et BILAN du monde.
+ *     arrive en une fois, le débit à terme est le même), BILAN, et SUGGESTIONS D'ACHAT pour ce
+ *     qui manque.
+ *
+ * RECALCUL INCRÉMENTAL : chaque île porte l'EMPREINTE de ses entrées. Avec le calcul précédent,
+ * une île dont l'empreinte n'a pas changé est reprise telle quelle — acheter une île ne relance
+ * pas les îles principales, de loin les plus longues.
  *
  * Les moteurs tournent par des `Executeurs` : des Web Workers dans l'application, des appels
  * directs dans les tests.
@@ -48,6 +53,8 @@ export interface PlanPose {
 export interface IleCalculee {
   cle: string;
   role: "principale" | "production" | "inutilisee";
+  /** Empreinte des entrées qui ont produit ce plan (recalcul incrémental). */
+  empreinte?: string;
   plan?: PlanPose;
   habitants: number;
   maisons: number;
@@ -73,12 +80,19 @@ export interface ResultatMonde {
   flux: Flux[];
   deficits: Deficit[];
   bilan: { habitants: number; argent: number; maisons: number; surplus: BienDebit[] };
+  /** Îles achetables qui couvriraient le plus de ce qui manque. */
+  suggestions?: SuggestionAchat[];
+  /** Îles reprises du calcul précédent, et îles recalculées. */
+  reutilisees?: number;
+  recalculees?: number;
   avertissements: string[];
 }
 
 export interface OptionsCalcul {
   catalog: BuildingDef[];
   executeurs: Executeurs;
+  /** Le calcul précédent de cette configuration : ses îles inchangées sont reprises. */
+  precedent?: ResultatMonde;
   /** Nombre de moteurs lancés en même temps. */
   parallelisme?: number;
   onProgres?: (texte: string) => void;
@@ -105,14 +119,9 @@ async function parallele<T>(taches: (() => Promise<T>)[], n: number): Promise<T[
   return out;
 }
 
-const terreDe = (g: GridShape) => {
+const compter = (l: readonly boolean[] | undefined, g: GridShape) => {
   let n = 0;
-  for (const u of g.usable) if (u) n++;
-  return (g.cellsPerTile ?? 1) === 2 ? Math.round(n / 4) : n;
-};
-const coteDe = (g: GridShape) => {
-  let n = 0;
-  for (const w of g.water ?? []) if (w) n++;
+  for (const u of l ?? []) if (u) n++;
   return (g.cellsPerTile ?? 1) === 2 ? Math.round(n / 4) : n;
 };
 const emplacementsDe = (g: GridShape) => {
@@ -123,6 +132,26 @@ const emplacementsDe = (g: GridShape) => {
 const plan = (r: { buildings: Layout["buildings"]; roads: Layout["roads"]; fields: Layout["fields"]; aqueducts?: Layout["aqueducts"]; roadType?: Layout["roadType"] }): PlanPose =>
   ({ buildings: r.buildings, roads: r.roads, fields: r.fields, aqueducts: r.aqueducts ?? [], roadType: r.roadType });
 
+/** Une île en île de production : ce que la répartition et la pose savent d'elle. */
+export function versProductrice(i: IleDuMonde, g: GridShape): IleProductrice {
+  return {
+    cle: i.cle, region: provinceDe(i), fertilites: fertilitesPourMoteur(i.fertilites),
+    emplacements: emplacementsDe(g), terre: compter(g.usable, g), cote: compter(g.water, g),
+    ...(i.dieu ? { dieu: i.dieu } : {}),
+  };
+}
+
+/** Ce qu'une pose d'île de production rend, qu'elle vienne d'un moteur ou du calcul précédent. */
+interface PoseProduction {
+  plan?: PlanPose;
+  habitants: number;
+  maisons: number;
+  objectif: { good: string; parMinute: number; pose: number }[];
+  consomme: BienDebit[];
+  manques: string[];
+  avertissements: string[];
+}
+
 export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Promise<ResultatMonde> {
   const lookup = makeLookup(o.catalog);
   const n = o.parallelisme ?? 4;
@@ -132,51 +161,58 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
   const principales = miennes.filter((i) => i.role === "principale");
   const autres = miennes.filter((i) => i.role !== "principale");
   const grilles = new Map<string, GridShape>();
-  for (const i of miennes) {
+  for (const i of c.iles) {
     const g = buildIslandGrid(i.ileId);
     if (g) grilles.set(i.cle, g);
   }
   if (!principales.length) avertissements.push("Aucune île principale : choisis-en au moins une parmi tes îles");
+  const avant = new Map((o.precedent?.iles ?? []).filter((i) => i.empreinte).map((i) => [`${i.cle}|${i.empreinte}`, i]));
+  let reutilisees = 0, recalculees = 0;
+  const reglagesProd = { routes: c.reglages.routes, productiviteGlobale: c.reglages.productiviteGlobale };
 
   // ─── 1. ÎLES PRINCIPALES ────────────────────────────────────────────────────────────
   let faites = 0;
-  const resPrincipales = await parallele(principales.map((ile) => async () => {
+  const principalesCalculees = await parallele(principales.map((ile) => async (): Promise<IleCalculee> => {
     const f = ile.fertilites;
+    const tierGuid = ile.palier ?? palierParDefaut(provinceDe(ile));
+    const empreinte = JSON.stringify({ i: ile.ileId, tierGuid, f, d: ile.dieu, o: c.reglages.objectif, r: c.reglages.routes });
+    const reprise = avant.get(`${ile.cle}|${empreinte}`);
+    if (reprise?.role === "principale") {
+      reutilisees++;
+      progres(`Île principale ${++faites}/${principales.length} reprise du calcul précédent`);
+      return reprise;
+    }
     const r = await o.executeurs.principale({
-      catalog: o.catalog, grid: grilles.get(ile.cle)!, tierGuid: ile.palier ?? palierParDefaut(provinceDe(ile)),
+      catalog: o.catalog, grid: grilles.get(ile.cle)!, tierGuid,
       coverageFloor: 0.8, needMode: "all", objectif: c.reglages.objectif, roadType: c.reglages.routes,
       // une mine ne se pose que sur un gisement déclaré : sans fertilité cochée, aucune
       exploitSlots: !!f?.length, ...(f?.length ? { islandFertilities: f } : {}),
       ...(ile.dieu ? { dieu: ile.dieu } : {}), devotionSelonFoi: true,
     });
+    recalculees++;
     progres(`Île principale ${++faites}/${principales.length} calculée`);
-    return r;
+    const produit = new Map<string, number>();
+    for (const e of r.exploited) if (e.served) produit.set(e.good, (produit.get(e.good) ?? 0) + e.perMin);
+    return {
+      cle: ile.cle, role: "principale", empreinte, plan: plan(r), habitants: r.residents, maisons: r.houses,
+      argent: r.money.net, palier: r.tierName, produit: versListe(produit),
+      consomme: r.importGoods.map((b) => ({ good: b.good, parMinute: b.perMin })), affecte: [],
+      manques: [...r.gaps], avertissements: f === null ? ["Fertilités inconnues : aucune mine posée"] : [],
+    };
   }), n);
 
   const demandeVilles = new Map<string, number>();
   const mines = new Map<string, number>();
-  const iles: IleCalculee[] = principales.map((ile, k) => {
-    const r = resPrincipales[k];
-    const consomme = r.importGoods.map((b) => ({ good: b.good, parMinute: b.perMin }));
-    const produit = new Map<string, number>();
-    for (const e of r.exploited) if (e.served) produit.set(e.good, (produit.get(e.good) ?? 0) + e.perMin);
-    ajouter(demandeVilles, consomme);
-    for (const [g, v] of produit) mines.set(g, (mines.get(g) ?? 0) + v);
-    return {
-      cle: ile.cle, role: "principale", plan: plan(r), habitants: r.residents, maisons: r.houses,
-      argent: r.money.net, palier: r.tierName, produit: versListe(produit), consomme, affecte: [],
-      manques: [...r.gaps], avertissements: ile.fertilites === null ? ["Fertilités inconnues : aucune mine posée"] : [],
-    };
-  });
+  for (const i of principalesCalculees) {
+    ajouter(demandeVilles, i.consomme);
+    ajouter(mines, i.produit);
+  }
+  const iles: IleCalculee[] = [...principalesCalculees];
 
   // ─── 2. RÉPARTITION, EN REBOUCLANT SUR LES BESOINS DES ÎLES DE PRODUCTION ───────────
-  const productrices: IleProductrice[] = autres.filter((i) => grilles.has(i.cle)).map((i) => ({
-    cle: i.cle, region: provinceDe(i), fertilites: fertilitesPourMoteur(i.fertilites),
-    emplacements: emplacementsDe(grilles.get(i.cle)!), terre: terreDe(grilles.get(i.cle)!), cote: coteDe(grilles.get(i.cle)!),
-    ...(i.dieu ? { dieu: i.dieu } : {}),
-  }));
+  const productrices = autres.filter((i) => grilles.has(i.cle)).map((i) => versProductrice(i, grilles.get(i.cle)!));
   for (const i of autres) if (i.fertilites === null) avertissements.push(`${nomIle(i)} : fertilités inconnues, traitée comme sans fertilité`);
-  const opts: OptionsRepartition = { catalog: o.catalog, lookup, routes: c.reglages.routes, productiviteGlobale: c.reglages.productiviteGlobale };
+  const opts: OptionsRepartition = { catalog: o.catalog, lookup, ...reglagesProd };
   const net = (m: Map<string, number>) => {
     const d: Record<string, number> = {};
     for (const [g, v] of m) { const r = v - (mines.get(g) ?? 0); if (r > 0.005) d[g] = r; }
@@ -200,10 +236,26 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
 
   // ─── 3. POSE RÉELLE, PUIS UN RATTRAPAGE ─────────────────────────────────────────────
   const affectation = new Map(Object.entries(rep.affectation));
+  const empreinteProd = (p: IleProductrice) => JSON.stringify({
+    i: c.iles.find((x) => x.cle === p.cle)!.ileId, f: p.fertilites, d: p.dieu, ...reglagesProd, a: affectation.get(p.cle),
+  });
+  const empreintes = new Map<string, string>();
   const poser = async (cles: string[]) => {
     let k = 0;
-    const res = await parallele(cles.map((cle) => async () => {
+    const res = await parallele(cles.map((cle) => async (): Promise<readonly [string, PoseProduction]> => {
       const p = productrices.find((x) => x.cle === cle)!;
+      const empreinte = empreinteProd(p);
+      empreintes.set(cle, empreinte);
+      const reprise = avant.get(`${cle}|${empreinte}`);
+      if (reprise?.role === "production") {
+        reutilisees++;
+        progres(`Île de production ${++k}/${cles.length} reprise du calcul précédent`);
+        return [cle, {
+          plan: reprise.plan, habitants: reprise.habitants, maisons: reprise.maisons, consomme: reprise.consomme,
+          manques: reprise.manques, avertissements: reprise.avertissements,
+          objectif: reprise.affecte.map((a) => ({ ...a, pose: reprise.produit.find((x) => x.good === a.good)?.parMinute ?? 0 })),
+        }] as const;
+      }
       const r = await o.executeurs.production({
         grid: grilles.get(cle)!, catalog: o.catalog,
         commande: {
@@ -213,8 +265,22 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
           ...(p.dieu ? { dieu: p.dieu } : {}),
         },
       });
+      recalculees++;
       progres(`Île de production ${++k}/${cles.length} posée`);
-      return [cle, r] as const;
+      // LES BESOINS SUIVENT CE QUI EST POSÉ. Le devis chiffre les biens des ouvriers et les
+      // matières à faire venir pour TOUT l'objectif ; une île qui n'en pose que le tiers n'en
+      // consomme que le tiers. Les compter en entier creusait le manque du monde : acheter une
+      // île dont la côte refuse les marais salants l'augmentait au lieu de le réduire.
+      const demande = r.objectif.reduce((s, ob) => s + ob.parMinute, 0);
+      const part = demande > 0 ? Math.min(1, r.objectif.reduce((s, ob) => s + ob.pose, 0) / demande) : 1;
+      const consomme = new Map<string, number>();
+      for (const b of r.nomenclature.biens) if (b.source === "import") consomme.set(b.good, (consomme.get(b.good) ?? 0) + b.parMinute * part);
+      for (const b of r.imports) consomme.set(b.good, (consomme.get(b.good) ?? 0) + b.parMinute * part);
+      return [cle, {
+        plan: plan(r), habitants: r.habitants, maisons: Object.values(r.maisonsParPalier).reduce((a, b) => a + b, 0),
+        objectif: r.objectif.map((ob) => ({ good: ob.good, parMinute: ob.parMinute, pose: ob.pose })),
+        consomme: versListe(consomme), manques: r.manques, avertissements: r.avertissements,
+      }] as const;
     }), n);
     return new Map(res);
   };
@@ -250,19 +316,15 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
       iles.push({ cle: i.cle, role: "inutilisee", habitants: 0, maisons: 0, produit: [], consomme: [], affecte: [], manques: [], avertissements: [] });
       continue;
     }
-    const consomme = new Map<string, number>();
-    for (const b of r.nomenclature.biens) if (b.source === "import") consomme.set(b.good, (consomme.get(b.good) ?? 0) + b.parMinute);
-    for (const b of r.imports) consomme.set(b.good, (consomme.get(b.good) ?? 0) + b.parMinute);
     iles.push({
-      cle: i.cle, role: "production", plan: plan(r), habitants: r.habitants,
-      maisons: Object.values(r.maisonsParPalier).reduce((a, b) => a + b, 0),
+      cle: i.cle, role: "production", empreinte: empreintes.get(i.cle), plan: r.plan, habitants: r.habitants, maisons: r.maisons,
       produit: r.objectif.filter((ob) => ob.pose > 0).map((ob) => ({ good: ob.good, parMinute: ob.pose })),
-      consomme: versListe(consomme), affecte: affectation.get(i.cle) ?? [],
+      consomme: r.consomme, affecte: affectation.get(i.cle) ?? [],
       manques: r.manques, avertissements: r.avertissements,
     });
   }
 
-  // ─── 4. FLUX ENTRE ÎLES ET BILAN ────────────────────────────────────────────────────
+  // ─── 4. FLUX ENTRE ÎLES, BILAN, SUGGESTIONS D'ACHAT ─────────────────────────────────
   const offre = new Map<string, Map<string, number>>(); // bien → île → u/min
   const besoin = new Map<string, Map<string, number>>();
   const noter = (t: Map<string, Map<string, number>>, cle: string, l: BienDebit[]) => {
@@ -306,10 +368,19 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
     const reste = producteurs.reduce((s, p) => s + p[1], 0);
     if (reste > 0.05) surplus.set(good, reste);
   }
-  deficits.sort((a, b) => b.parMinute - a.parMinute);
-  for (const d of deficits) if (!d.raison) d.raison = `${nomDuBien(d.good)} : production posée insuffisante`;
+  deficits.sort((a, b) => b.parMinute - a.parMinute || nomDuBien(a.good).localeCompare(nomDuBien(b.good)));
 
-  const principalesArgent = iles.reduce((s, i) => s + (i.argent ?? 0), 0);
+  // Ce qui manque, les îles qu'on pourrait acheter le couvriraient-elles ? Jamais celle d'un
+  // adversaire ; une île aux fertilités inconnues est estimée sans fertilité, et le dit.
+  const achetables = c.iles.filter((i) => (i.propriete === "achetable" || i.propriete === "inconnue") && grilles.has(i.cle));
+  const suggestions = deficits.length && achetables.length
+    ? suggererAchats(
+      Object.fromEntries(deficits.map((d) => [d.good, d.parMinute])),
+      achetables.map((i) => ({ ile: versProductrice(i, grilles.get(i.cle)!), fertilitesInconnues: i.fertilites === null })),
+      opts,
+    )
+    : [];
+
   if (iles.some((i) => i.role === "production")) avertissements.push("L'argent des îles de production (impôts des ouvriers, entretien) n'est pas encore compté");
   return {
     calculeLe: new Date().toISOString(),
@@ -318,10 +389,13 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
     deficits,
     bilan: {
       habitants: Math.round(iles.reduce((s, i) => s + i.habitants, 0)),
-      argent: Math.round(principalesArgent),
+      argent: Math.round(iles.reduce((s, i) => s + (i.argent ?? 0), 0)),
       maisons: iles.reduce((s, i) => s + i.maisons, 0),
       surplus: versListe(surplus),
     },
+    suggestions,
+    reutilisees,
+    recalculees,
     avertissements,
   };
 }

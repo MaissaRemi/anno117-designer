@@ -17,7 +17,16 @@ const fr = (v: number) => v.toLocaleString("fr", { maximumFractionDigits: 2 });
 const nomCourt = (ileId: string) => (islandById(ileId)?.name ?? ileId).replace(/ \((Roman|Celtic)\)$/, "");
 const ROLES: Record<IleCalculee["role"], string> = { principale: "Île principale", production: "Île de production", inutilisee: "Sans production" };
 
-export function ResultatMondeVue({ c, r }: { c: ConfigurationMonde; r: ResultatMonde }) {
+interface Props {
+  c: ConfigurationMonde;
+  r: ResultatMonde;
+  /** Un calcul tourne : les boutons d'achat attendent. */
+  occupe: boolean;
+  onAcheter: (cle: string) => void;
+  onRefuser: (cle: string) => void;
+}
+
+export function ResultatMondeVue({ c, r, occupe, onAcheter, onRefuser }: Props) {
   const nomDe = (cle: string) => {
     const i = c.iles.find((x) => x.cle === cle);
     return i ? i.libelle ?? nomCourt(i.ileId) : cle;
@@ -34,6 +43,11 @@ export function ResultatMondeVue({ c, r }: { c: ConfigurationMonde; r: ResultatM
     }
     return [...m.values()].sort((a, b) => b.total - a.total);
   }, [r.flux]);
+  // une île refusée (« Pas possible ») ou achetée depuis le calcul ne se propose plus
+  const suggestions = (r.suggestions ?? []).filter((s) => {
+    const p = c.iles.find((x) => x.cle === s.cle)?.propriete;
+    return p === "achetable" || p === "inconnue";
+  });
 
   return (
     <div className="monde-resultat">
@@ -44,13 +58,52 @@ export function ResultatMondeVue({ c, r }: { c: ConfigurationMonde; r: ResultatM
         <div><b>{routes.length}</b><span className="muted">routes commerciales</span></div>
         <div className={r.deficits.length ? "manque" : ""}><b>{r.deficits.length}</b><span className="muted">bien(s) en manque</span></div>
       </div>
-      <p className="muted">Calculé le {new Date(r.calculeLe).toLocaleString("fr")}. Sans navires : les flux sont des débits en régime établi.</p>
+      <p className="muted">
+        Calculé le {new Date(r.calculeLe).toLocaleString("fr")}
+        {r.reutilisees ? ` · ${r.reutilisees} île(s) reprise(s) du calcul précédent, ${r.recalculees ?? 0} recalculée(s)` : ""}.
+        Sans navires : les flux sont des débits en régime établi.
+      </p>
       {r.avertissements.map((a) => <div key={a} className="warn">{a}</div>)}
 
       <h4>Îles</h4>
       <div className="monde-iles-resultat">
         {r.iles.map((i) => <CarteIle key={i.cle} c={c} i={i} nom={nomDe(i.cle)} />)}
       </div>
+
+      {suggestions.length > 0 && (
+        <>
+          <h4>Îles à acheter</h4>
+          <p className="muted">Pour ce qui manque, ces îles couvriraient le plus — chacune jugée sur ce que les précédentes laissent.</p>
+          {suggestions.map((s) => {
+            const ile = c.iles.find((x) => x.cle === s.cle)!;
+            return (
+              <div key={s.cle} className="monde-suggestion">
+                <div className="monde-barre">
+                  <b>{nomDe(s.cle)}</b>
+                  <span className="muted">
+                    {ile.propriete === "achetable" ? "achetable" : "propriétaire inconnu"} · couvrirait {fr(s.total)} u/min,
+                    {" "}{Math.round(s.part * 100)} % du manque
+                  </span>
+                </div>
+                <div className="muted">{s.couvre.map((b) => `${goodName(b.good)} ${fr(b.parMinute)}`).join(" · ")}</div>
+                {s.enRetour > 0.05 && <div className="muted">En retour, elle réclamerait ~{fr(s.enRetour)} u/min (matières qu'elle ne produit pas, biens de ses ouvriers).</div>}
+                {s.fertilitesInconnues && <div className="muted">Fertilités inconnues : estimée sans fertilité, peut-être davantage.</div>}
+                <div className="monde-barre" style={{ marginTop: 4 }}>
+                  <button type="button" className="primary" disabled={occupe} onClick={() => onAcheter(s.cle)}>Je l'achète</button>
+                  <button type="button" disabled={occupe} onClick={() => onRefuser(s.cle)}>Pas possible</button>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {r.deficits.length > 0 && !suggestions.length && c.iles.some((i) => i.propriete === "achetable" || i.propriete === "inconnue") && (
+        <p className="muted">
+          Aucune île achetable ne réduirait le manque : chacune réclamerait plus (matières qu'elle ne produit pas, biens de
+          ses ouvriers) qu'elle ne produirait. Si tu connais leurs fertilités, renseigne-les : l'estimation en dépend.
+        </p>
+      )}
 
       {r.deficits.length > 0 && (
         <>

@@ -427,3 +427,4 @@ details.avance label.checkbox { display: flex; align-items: flex-start; gap: 6px
 .monde-table th { text-align: left; color: var(--muted); font-weight: 500; padding: 3px 8px 3px 0; }
 .monde-table td { padding: 3px 8px 3px 0; vertical-align: top; }
 .monde-route { padding: 6px 8px; border-radius: var(--r-sm); background: var(--s2); margin-bottom: 4px; font-size: 13px; }
+.monde-suggestion { padding: 8px 10px; border-radius: var(--r-md); background: var(--accent-soft); border: 1px solid var(--accent); margin-bottom: 6px; }

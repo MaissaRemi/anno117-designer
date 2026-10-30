@@ -163,7 +163,7 @@ plusieurs à la fois, posés par le moteur de « Ma commande ».
   « Ma commande » en Albion ; et un lot trop grand pour la terre libre d'une petite île n'était
   pas recoupé.
 
-## Planification d'un monde : EN COURS (étapes 1 à 3 faites le 30/10/2026)
+## Planification d'un monde : étapes 1 à 4 faites (30/10/2026)
 
 Le projet que Rémi veut vraiment : planifier TOUTES les îles d'une partie, des deux provinces
 (les besoins complets des Patriciens passent par l'Albion, ceux des Nobles par le Latium).
@@ -202,9 +202,25 @@ Conception validée, réponses de Rémi incluses :
   de coquillages bien moins qu'au Latium (2 à 4 % de la bande d'eau contre 11 à 15 %). À
   examiner : profondeur de la bande d'eau constructible en Albion, ou `partieEau` de ces
   bâtiments. Touche aussi « Ma commande » et l'île de production.
-- **Étape 4, à faire** : suggestions d'achat (les déficits « plus de place » ou « aucune île ne
-  peut » pointent déjà les îles achetables à proposer) et recalcul incrémental (empreinte par
-  île).
+- **Étape 4, faite** :
+  - **suggestions d'achat** (`suggererAchats`, `monde/repartition.ts`) : pour ce qui manque, les
+    îles achetables ou inconnues (jamais celles d'un adversaire) qui couvriraient le plus,
+    choisies l'une après l'autre (achats complémentaires), jugées sur leur GAIN NET — ce qu'elles
+    couvriraient moins ce qu'elles réclameraient en retour (matières qu'elles ne produisent pas,
+    biens de leurs ouvriers). « Je l'achète » : l'île passe à moi et le monde est recalculé.
+    « Pas possible » : elle passe en adversaire et ne revient plus. Si aucune ne vaut l'achat,
+    l'écran le dit ;
+  - **recalcul incrémental** : chaque île porte l'empreinte de ses entrées ; une île inchangée est
+    reprise du calcul précédent. Acheter une île ne relance pas les îles principales ;
+  - **les besoins d'une île de production suivent ce qu'elle a vraiment posé** (biens des
+    ouvriers, matières) : les compter pour tout l'objectif creusait le manque.
+  Tests rapides de l'orchestration avec des moteurs factices : `monde/orchestration.test.ts`.
+- **Défaut ouvert, prioritaire pour la qualité des mondes** : les MARAIS SALANTS ne se posent sur
+  aucune île testée (même la grande côte de roman_island_medium_01), donc aucun garum ; et les
+  ramasseurs de coques sur aucune île d'Albion. Une chaîne n'est comptée posée qu'à hauteur de
+  son maillon le plus faible : tout le garum tombe à zéro. Piste : `partieEau` de ces bâtiments
+  (eau en L pour les marais salants : 5 × 4 dans une emprise 9 × 5) ou la bande d'eau
+  constructible, à vérifier dans les fichiers du jeu.
 - Au passage : la fenêtre modale partagée reprenait le focus à chaque rendu (un champ de saisie
   le perdait à chaque frappe) ; corrigé dans `ui/Modal.tsx`.
 
