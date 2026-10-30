@@ -1,9 +1,9 @@
 import type { BuildingDef } from "../model/types";
 import type { DefLookup } from "../engine/rules";
-import { cityStatusAttrs, economy, residentialChainExtended, tierByGuid, worldOf, goodName, type Tier } from "../economy/economy";
+import { cityStatusAttrs, economy, pickProducerInWorld, residentialChainExtended, tierByGuid, worldOf, goodName, type Tier } from "../economy/economy";
 import { devotionDeFoi, dieuParId, effetsDuDieu, nomDuDieu, productiviteDuDieu } from "../economy/dieux";
 import { compileTierEvaluator } from "../economy/needsModel";
-import { solve } from "../economy/solve";
+import { prodRatePerMin, solve } from "../economy/solve";
 import { workforceGrant } from "../economy/workforce";
 import { institutionDefs, SHRINE_TYPE } from "../economy/attributes";
 import { candidateRecipes } from "../optimizer/recipes";
@@ -79,6 +79,48 @@ export interface Commande {
    * (`economy/dieux.ts`). Un nombre fige un état de partie, une île encore jeune par exemple.
    */
   devotion?: number;
+  /**
+   * OBJECTIF DE PRODUCTION de l'île : des biens et leur débit (u/min). Leurs chaînes sont
+   * déroulées par ratios exacts jusqu'aux matières premières, en UN calcul — une chaîne partagée
+   * par deux biens est cumulée avant l'arrondi. Conception :
+   * `docs/superpowers/specs/2026-10-30-ile-de-production-design.md`.
+   */
+  objectif?: { good: string; parMinute: number }[];
+  /**
+   * PRODUCTIVITÉ SAISIE, en points de pourcentage : recherche et objets, absents des données
+   * extraites. `globale` vaut pour tous les ateliers, `parAtelier` s'y ajoute. Les deux
+   * s'ADDITIONNENT au bonus du dieu (hypothèse à confirmer en jeu). Vaut pour toute production
+   * calculée : objectif et biens des maisons.
+   */
+  productivite?: { globale?: number; parAtelier?: Record<string, number> };
+  /** Fertilités et gisements déclarés de l'île (GUIDs). Absent ou vide : tous supposés présents. */
+  fertilites?: string[];
+  /**
+   * Emplacements de terrain de l'île, par type (`mountain`, `river`…). Absent : non bornés.
+   * Rempli par `planifierCommande` depuis la carte de l'île.
+   */
+  emplacements?: Record<string, number>;
+}
+
+/** Emplacements dont le manque borne une exploitation. Le marais ne borne rien : ses
+ *  productions se posent aussi hors marais (`CanBePlacedOnNonMarsh`, GAME_MECHANICS §12). */
+const EMPLACEMENTS_LIMITANTS = new Set(["mountain", "river"]);
+
+/** Un bien de l'objectif : demandé, et ce que l'île en produit (le reste est importé). */
+export interface LigneObjectif {
+  good: string;
+  nom: string;
+  parMinute: number;
+  produit: number;
+  /** Bâtiments de sa chaîne SUR L'ÎLE, du producteur aux matières premières. */
+  chaine: string[];
+}
+
+export interface ImportObjectif {
+  good: string;
+  nom: string;
+  parMinute: number;
+  raison: string;
 }
 
 export type RoleLigne = "residence" | "ouvriers" | "service" | "institution" | "production" | "comptoir";
@@ -109,6 +151,9 @@ export interface Nomenclature {
   foi: number;
   /** Le dieu de l'île et ce qu'il rend à cette dévotion. */
   dieu?: { nom: string; devotion: number; productivitePct: number; ateliers: number; residence: Record<string, number> };
+  /** Objectif de production : bien par bien, et ce qui part à l'import, avec sa raison. */
+  objectif: LigneObjectif[];
+  imports: ImportObjectif[];
   avertissements: string[];
 }
 
@@ -227,6 +272,90 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
     commande.devotion ?? devotionDeFoi(foiDe(m));
   const effetsDe = (m: Map<string, number>) => (dieu ? effetsDuDieu(dieu, devotionDe(m)) : undefined);
 
+  // ─── PRODUCTIVITÉ : DIEU + SAISIE DU JOUEUR ─────────────────────────────────────────
+  const saisie = commande.productivite;
+  const pctSaisi = (id: string) => (saisie?.globale ?? 0) + (saisie?.parAtelier?.[id] ?? 0);
+  const productiviteDe = (m: Map<string, number>): Record<string, number> | undefined => {
+    const duDieu = dieu ? productiviteDuDieu(dieu, devotionDe(m)) : {};
+    if (!saisie) return Object.keys(duDieu).length ? duDieu : undefined;
+    const out: Record<string, number> = {};
+    for (const id of Object.keys(economy.buildingProd)) {
+      const pct = ((duDieu[id] ?? 1) - 1) * 100 + pctSaisi(id);
+      // −90 % au plus : une productivité nulle rendrait le compte d'ateliers infini
+      if (pct) out[id] = 1 + Math.max(-90, pct) / 100;
+    }
+    return out;
+  };
+
+  // ─── OBJECTIF DE PRODUCTION : SUR L'ÎLE, SINON IMPORTÉ ──────────────────────────────
+  const demandeObjectif: Record<string, number> = {};
+  for (const o of commande.objectif ?? []) {
+    if (!(o.parMinute > 0)) continue;
+    if (!economy.goodNames[o.good] && !economy.producers[o.good]) { avertissements.push(`Bien inconnu : ${o.good}`); continue; }
+    demandeObjectif[o.good] = (demandeObjectif[o.good] ?? 0) + o.parMinute;
+  }
+  const avecObjectif = Object.keys(demandeObjectif).length > 0;
+  // Fertilité ou gisement non déclaré : le bien s'importe en entier.
+  const declarees = commande.fertilites?.length ? new Set(commande.fertilites) : null;
+  const sansFertilite = new Map<string, string>(); // bien → fertilité manquante
+  if (declarees) {
+    for (const good of Object.keys(economy.producers)) {
+      const id = pickProducerInWorld(good, monde);
+      const f = id ? economy.buildingProd[id]?.fertility : undefined;
+      if (f && !declarees.has(f)) sansFertilite.set(good, f);
+    }
+  }
+  const plafondsFertilite: Record<string, number> = Object.fromEntries([...sansFertilite.keys()].map((g) => [g, 0]));
+  const emplacementCourt = new Map<string, string>(); // bien → type d'emplacement insuffisant
+  const optsObjectif = (productivity: Record<string, number> | undefined, plafonds: Record<string, number>) => ({
+    includeProduction: true, includeServices: false, includeWorkforce: false, capacities: {},
+    region: commande.region, strictWorld: true, productivity, plafonds,
+  });
+  /**
+   * Chaînes de l'objectif. Un premier calcul dit combien d'exploitations de montagne et de
+   * rivière il faudrait ; si l'île en a moins, les emplacements sont répartis au prorata, chaque
+   * bien plafonné à ce que ses exploitations produisent, et l'on recalcule — l'excédent s'importe.
+   */
+  const produireObjectif = (productivity: Record<string, number> | undefined) => {
+    const plafonds = { ...plafondsFertilite };
+    emplacementCourt.clear();
+    let s = solve([], optsObjectif(productivity, plafonds), demandeObjectif);
+    if (commande.emplacements) {
+      const parType = new Map<string, string[]>();
+      for (const id of Object.keys(s.productionCounts)) {
+        const t = lookup(id)?.slotType;
+        if (t && EMPLACEMENTS_LIMITANTS.has(t)) parType.set(t, [...(parType.get(t) ?? []), id]);
+      }
+      let rogne = false;
+      for (const [t, ids] of parType) {
+        const dispo = Math.max(0, commande.emplacements[t] ?? 0);
+        const total = ids.reduce((a, id) => a + s.productionCounts[id], 0);
+        if (total <= dispo) continue;
+        rogne = true;
+        // au prorata, puis au plus fort reste ; ids triés pour rester déterministe
+        const tries = [...ids].sort();
+        const parts = tries.map((id) => (s.productionCounts[id] * dispo) / total);
+        const alloc = parts.map(Math.floor);
+        let reste = dispo - alloc.reduce((a, b) => a + b, 0);
+        for (const k of parts.map((_, k) => k).sort((a, b) => (parts[b] - alloc[b]) - (parts[a] - alloc[a]) || a - b)) {
+          if (reste-- <= 0) break;
+          alloc[k]++;
+        }
+        tries.forEach((id, k) => {
+          const p = economy.buildingProd[id];
+          const good = p.outputs[0].good;
+          // un rien sous le débit exact : l'arrondi au supérieur ne doit pas rendre un emplacement
+          plafonds[good] = alloc[k] * prodRatePerMin(p, good) * (productivity?.[id] ?? 1) * (1 - 1e-9);
+          emplacementCourt.set(good, t);
+        });
+      }
+      if (rogne) s = solve([], optsObjectif(productivity, plafonds), demandeObjectif);
+    }
+    return { s, plafonds };
+  };
+  let objectifCalc: ReturnType<typeof produireObjectif> | undefined;
+  let prodObjectif: Record<string, number> = {};
+
   // ─── PRODUCTION : PANIER, COMPLÉTION, BIENS DES MAISONS ─────────────────────────────
   const production = new Map<string, { nombre: number; raison: string }>();
   const ajouterProd = (defId: string, nombre: number, raison: string) => {
@@ -261,7 +390,8 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
       {
         includeProduction: produire, includeServices: false, includeWorkforce: false, capacities: caps,
         region: commande.region, strictWorld: true,
-        productivity: dieu ? productiviteDuDieu(dieu, devotionDe(m)) : undefined,
+        productivity: productiviteDe(m),
+        plafonds: plafondsFertilite,
       },
     );
   };
@@ -311,11 +441,16 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
         });
       sol = biensDe(toutes);
       prodBesoins = produire ? sol.productionCounts : {};
+      if (avecObjectif) {
+        objectifCalc = produireObjectif(productiviteDe(toutes));
+        prodObjectif = objectifCalc.s.productionCounts;
+      }
 
       const charge: Record<string, number> = {};
       const facturer = (defId: string, n: number) => { if (n > 0) charge[defId] = (charge[defId] ?? 0) + n; };
       for (const [id, p] of production) facturer(id, p.nombre);
       for (const [id, n] of Object.entries(prodBesoins)) facturer(id, n);
+      for (const [id, n] of Object.entries(prodObjectif)) facturer(id, n);
       for (const l of [...lignesServices, ...lignesInstitutions]) facturer(l.defId, l.nombre);
       demande = {};
       for (const [id, n] of Object.entries(charge)) {
@@ -386,12 +521,20 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
   for (const [id, p] of production) {
     lignes.push({ defId: id, nom: nom(id), nombre: p.nombre, role: "production", raison: p.raison, emprise: empriseDe(lookup(id)!) });
   }
-  for (const [id, n] of Object.entries(prodBesoins)) {
+  const nomsObjectif = Object.keys(demandeObjectif).map((g) => goodName(g)).join(", ");
+  for (const id of new Set([...Object.keys(prodBesoins), ...Object.keys(prodObjectif)])) {
+    const n = (prodBesoins[id] ?? 0) + (prodObjectif[id] ?? 0);
     if (!n) continue;
     const d = lookup(id);
     if (!d) { avertissements.push(`Producteur absent du catalogue : ${id}`); continue; }
-    const dope = fxFinal?.ateliers.includes(id) ? ` (+${fxFinal.productivitePct} % ${nomDuDieu(dieu!)})` : "";
-    lignes.push({ defId: id, nom: d.name, nombre: n, role: "production", raison: `biens des maisons${dope}`, emprise: empriseDe(d) });
+    const bonus: string[] = [];
+    if (fxFinal?.ateliers.includes(id) && fxFinal.productivitePct) bonus.push(`+${fxFinal.productivitePct} % ${nomDuDieu(dieu!)}`);
+    if (pctSaisi(id)) bonus.push(`${pctSaisi(id) > 0 ? "+" : ""}${pctSaisi(id)} % saisis`);
+    const pourquoi = [prodBesoins[id] ? "biens des maisons" : "", prodObjectif[id] ? `objectif (${nomsObjectif})` : ""].filter(Boolean).join(" ; ");
+    lignes.push({
+      defId: id, nom: d.name, nombre: n, role: "production",
+      raison: pourquoi + (bonus.length ? ` (${bonus.join(", ")})` : ""), emprise: empriseDe(d),
+    });
   }
   if (kontor) {
     lignes.push({ defId: kontor.id, nom: kontor.name, nombre: 1, role: "comptoir", raison: "racine du réseau, entrée des imports", emprise: empriseDe(kontor) });
@@ -431,7 +574,43 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
     avertissements.push(`La commande demande ~${total} cases pour ${commande.terre} de terre constructible`);
   }
 
+  // ─── OBJECTIF : PRODUIT SUR L'ÎLE, IMPORTÉ, ET POURQUOI ─────────────────────────────
+  const objectif: LigneObjectif[] = [];
+  const imports: ImportObjectif[] = [];
+  if (objectifCalc) {
+    const { s, plafonds } = objectifCalc;
+    for (const [good, v] of Object.entries(s.imports)) {
+      if (!(v > 1e-9)) continue;
+      const f = sansFertilite.get(good);
+      const t = emplacementCourt.get(good);
+      const raison = !pickProducerInWorld(good, monde) ? "aucun bâtiment de ce monde ne le produit"
+        : f ? `${economy.fertilities[f] ?? f} non déclaré(e) sur l'île`
+          : t ? `pas assez d'emplacements de ${t === "mountain" ? "montagne" : t === "river" ? "rivière" : t} (${commande.emplacements?.[t] ?? 0})`
+            : "cycle de production";
+      imports.push({ good, nom: goodName(good), parMinute: Math.round(v * 100) / 100, raison });
+    }
+    imports.sort((a, b) => b.parMinute - a.parMinute || a.good.localeCompare(b.good));
+    for (const [good, v] of Object.entries(demandeObjectif)) {
+      const chaine: string[] = [];
+      const visiter = (g: string, pile: Set<string>) => {
+        if (plafonds[g] === 0 || pile.has(g)) return;
+        const id = pickProducerInWorld(g, monde);
+        if (!id || !prodObjectif[id]) return;
+        if (!chaine.includes(id)) chaine.push(id);
+        pile.add(g);
+        for (const inp of economy.buildingProd[id]?.inputs ?? []) visiter(inp.good, pile);
+        pile.delete(g);
+      };
+      visiter(good, new Set());
+      const importe = Math.min(v, s.imports[good] ?? 0);
+      objectif.push({ good, nom: goodName(good), parMinute: v, produit: Math.round((v - importe) * 100) / 100, chaine });
+      if (v - importe <= 1e-9) avertissements.push(`${goodName(good)} ne peut pas être produit sur cette île : il sera importé`);
+    }
+  }
+
   return {
+    objectif,
+    imports,
     lignes,
     habitants,
     paliers,

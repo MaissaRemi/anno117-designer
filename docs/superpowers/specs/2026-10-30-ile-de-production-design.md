@@ -1,6 +1,6 @@
 # Île de production : conception
 
-Statut : **proposée, en attente de validation par Rémi.** Aucun code écrit.
+Statut : **validée par Rémi le 30/10/2026** (réponses en fin de document).
 
 Diagnostic de départ (`plans/2026-10-29-portees-motifs-eau.md`, « Onglet Production ») : l'onglet
 Production calcule une chaîne par ratios exacts puis un plan compact HORS de toute île — ni
@@ -66,3 +66,27 @@ outils) doit être entièrement posé, servi et relié au comptoir, avec le déb
    les saisir à la main.
 4. **Les matières premières** : produites sur l'île, ou importées quand l'île n'a pas
    l'emplacement ou la fertilité ? Aujourd'hui `completerProduction` produit tout.
+
+## 5. Réponses de Rémi (30/10/2026) et ce qu'elles changent
+
+1. **Plusieurs biens à la fois.** L'objectif est une liste (bien, débit) ; toutes les chaînes
+   passent par UN seul calcul (`solve` avec une demande exogène), donc une chaîne partagée est
+   cumulée avant l'arrondi.
+2. **L'onglet Production hors île est retiré**, avec le mode « production » du recuit
+   (`optimizer/prodPlan.ts`). La répartition sur plusieurs îles, qui posait le bien principal
+   d'une île de production avec ce recuit, passe au nouveau moteur — avec TOUS les biens de
+   l'île au lieu du seul principal.
+3. **Productivité : dieu + recherche + objets.** Recherche et objets ne sont pas dans les
+   données extraites : saisie du joueur, en points de pourcentage, une valeur pour tous les
+   ateliers et une par atelier. Les bonus sont ADDITIONNÉS avec celui du dieu (+50 % du dieu et
+   +20 % saisis = ×1,7). C'est une hypothèse, à confirmer en jeu par Rémi. La saisie vaut aussi
+   pour les biens des maisons.
+4. **Matières premières : sur l'île, sinon importées.** Un bien part à l'import, et le rapport
+   dit pourquoi, quand :
+   - aucun bâtiment de ce monde ne le produit ;
+   - sa fertilité ou son gisement n'est pas déclaré sur l'île (déclaration du joueur ; aucune
+     déclaration = tout supposé présent, comme ailleurs dans l'application) ;
+   - l'île n'a pas assez d'emplacements de montagne ou de rivière : ce qui tient est produit,
+     le reste importé. Les productions de marais ne sont jamais limitées
+     (`CanBePlacedOnNonMarsh`).
+   Une place qui manque sur la terre reste un MANQUE du plan, pas un import.

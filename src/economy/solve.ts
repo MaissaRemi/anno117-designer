@@ -40,6 +40,12 @@ export interface SolveOptions {
    * produit : un moulin plus rapide moud plus de grain, pas moins par sac de farine.
    */
   productivity?: Record<string, number>;
+  /**
+   * PLAFOND DE PRODUCTION par bien (GUID → unités/min produites sur l'île au plus). Ce qui le
+   * dépasse part à l'IMPORT ; 0 importe tout. C'est ainsi que l'île de production importe une
+   * matière dont elle n'a ni la fertilité ni assez d'emplacements (`commande/nomenclature.ts`).
+   */
+  plafonds?: Record<string, number>;
 }
 
 export interface TierProfile {
@@ -228,8 +234,17 @@ export function solve(targets: PopTarget[], opts: SolveOptions, extraDemand: Ext
     const imports: Record<string, number> = {};
     if (opts.includeProduction) {
       const stack = new Set<string>();
-      const requireGood = (good: string, ratePerMin: number, region?: string) => {
-        if (ratePerMin <= 0 || stack.has(good)) return;
+      const produit: Record<string, number> = {};
+      const requireGood = (good: string, demande: number, region?: string) => {
+        if (demande <= 0 || stack.has(good)) return;
+        let ratePerMin = demande;
+        const plafond = opts.plafonds?.[good];
+        if (plafond !== undefined) {
+          ratePerMin = Math.min(demande, Math.max(0, plafond - (produit[good] ?? 0)));
+          if (demande > ratePerMin) imports[good] = (imports[good] || 0) + demande - ratePerMin;
+          if (ratePerMin <= 0) return;
+          produit[good] = (produit[good] ?? 0) + ratePerMin;
+        }
         const defId = opts.strictWorld && opts.region
           ? pickProducerInWorld(good, worldOf(opts.region))
           : pickProducer(good, region);
