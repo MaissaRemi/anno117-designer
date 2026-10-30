@@ -708,7 +708,7 @@ export function repairRoadConnectivity(
 export interface OptionsLiaison {
   /** Tracer aussi en diagonale : le chemin peut poser des losanges de route. */
   diagonales?: boolean;
-  /** Conduites d'eau : un losange ne se pose pas dessus (règle prudente, question Q3). */
+  /** Conduites d'eau : un losange ne se pose pas dessus (règle prudente, cf. Q3 dans `waterPlan`). */
   aqueducs?: readonly { x: number; y: number }[];
   /**
    * Prix d'une case de maison traversée, en longueur de route (défaut `PRIX_CASE_RASEE`) : 0,

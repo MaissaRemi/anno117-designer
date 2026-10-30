@@ -262,8 +262,8 @@ describe("planWater", () => {
 
 describe("planWater et les routes diagonales", () => {
   // Une route en biais d'un bord à l'autre, en losanges (k, 140 − k) : chaque case de la
-  // diagonale x + y = 139 en est à moitié couverte. Règle prudente tant que le jeu n'a pas
-  // tranché (question Q3) : une conduite n'entre pas sous un losange de route.
+  // diagonale x + y = 139 en est à moitié couverte. Le jeu permet de croiser (Q3), mais la forme
+  // du franchissement n'est pas connue : règle prudente, une conduite n'entre pas sous un losange.
   const enBiais = Array.from({ length: 141 }, (_, k) => ({ x: k, y: 140 - k, losange: true as const }));
 
   it("une conduite ne franchit pas une route diagonale", () => {

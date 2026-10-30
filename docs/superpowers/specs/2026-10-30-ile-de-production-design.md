@@ -79,7 +79,7 @@ outils) doit être entièrement posé, servi et relié au comptoir, avec le déb
 3. **Productivité : dieu + recherche + objets.** Recherche et objets ne sont pas dans les
    données extraites : saisie du joueur, en points de pourcentage, une valeur pour tous les
    ateliers et une par atelier. Les bonus sont ADDITIONNÉS avec celui du dieu (+50 % du dieu et
-   +20 % saisis = ×1,7). C'est une hypothèse, à confirmer en jeu par Rémi. La saisie vaut aussi
+   +20 % saisis = ×1,7) — confirmé en jeu par Rémi le 30/10/2026. La saisie vaut aussi
    pour les biens des maisons.
 4. **Matières premières : sur l'île, sinon importées.** Un bien part à l'import, et le rapport
    dit pourquoi, quand :

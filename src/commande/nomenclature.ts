@@ -89,7 +89,7 @@ export interface Commande {
   /**
    * PRODUCTIVITÉ SAISIE, en points de pourcentage : recherche et objets, absents des données
    * extraites. `globale` vaut pour tous les ateliers, `parAtelier` s'y ajoute. Les deux
-   * s'ADDITIONNENT au bonus du dieu (hypothèse à confirmer en jeu). Vaut pour toute production
+   * s'ADDITIONNENT au bonus du dieu (confirmé en jeu par Rémi, 30/10/2026). Vaut pour toute production
    * calculée : objectif et biens des maisons.
    */
   productivite?: { globale?: number; parAtelier?: Record<string, number> };

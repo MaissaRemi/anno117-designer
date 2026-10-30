@@ -179,10 +179,10 @@ export function planWater(
   const reseau = reseauDeRoutes(W, H, roads);
   const roadAt = reseau.droite;
   // CONDUITE ET ROUTE DIAGONALE. Une conduite droite franchit une route droite à angle droit
-  // (l'arche enjambe) ; franchir une route en biais, le jeu le permet-il, et sur combien de
-  // cases ? Pas encore vérifié en jeu (question Q3 de la conception du réseau en graphe). En
-  // attendant, règle prudente : aucune conduite ni source sur une case dont un losange de route
-  // couvre la moitié.
+  // (l'arche enjambe). Une route en biais aussi, d'après Rémi en jeu (question Q3, 30/10/2026),
+  // mais sur combien de cases droites, on ne le sait pas. Règle prudente gardée, sans effet
+  // tant qu'aucun losange n'est posé : aucune conduite ni source sur une case dont un losange de
+  // route couvre la moitié.
   const sousLosange = new Uint8Array(N);
   if (reseau.losanges) {
     for (let k = 0; k < reseau.losange.length; k++) {

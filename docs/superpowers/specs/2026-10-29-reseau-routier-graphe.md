@@ -185,7 +185,9 @@ routes diagonales parallèles décalées) sont-ils reliés ? Hypothèse : non, c
 droites en coin.
 
 **Q3 — Aqueduc et route diagonale.** Une conduite droite peut-elle franchir une route en
-biais ? Si oui, sur combien de cases doit-elle aller tout droit ?
+biais ? Si oui, sur combien de cases doit-elle aller tout droit ? **Réponse de Rémi
+(30/10/2026) : oui, elle peut la croiser.** Le nombre de cases droites exigé n'est pas précisé ;
+la règle prudente reste en place tant qu'aucun losange n'est posé.
 
 Seule Q1 bloque l'étape 6 et la portée à travers une jonction ; les étapes 0 à 5 peuvent
 avancer avec la règle géométrique ci-dessus et un test qui la fige, à corriger après réponse.

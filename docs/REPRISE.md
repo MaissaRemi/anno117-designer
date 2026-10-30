@@ -89,8 +89,10 @@ Ce qui en reste, utilisable :
   (désactivée : elles n'apportent rien de mesurable, et l'éditeur ne sait pas dessiner un
   losange — `RoadTile.losange`).
 
-Q2 (deux losanges pointe contre pointe) et Q3 (aqueduc et route en biais) restent à vérifier en
-jeu ; sans effet tant qu'aucun losange n'est posé.
+Q3 tranchée par Rémi (30/10/2026) : **un aqueduc peut croiser une route en biais**. La règle
+prudente de `waterPlan` (aucune conduite sous un losange) reste en place, faute de savoir sur
+combien de cases la conduite doit aller tout droit pour franchir ; sans effet tant qu'aucun
+losange n'est posé. Q2 (deux losanges qui ne se touchent que par une pointe) reste à vérifier.
 
 ## Raccordement au comptoir : corrigé
 
@@ -140,7 +142,7 @@ plusieurs à la fois, posés par le moteur de « Ma commande ».
   chaînes en un seul `solve` (une chaîne partagée est cumulée avant l'arrondi), main-d'œuvre
   logée, débit posé par bien (`planifierCommande`, `ObjectifPose`).
 - **Productivité** : dieu + saisie du joueur (recherche, objets ; une valeur globale et une par
-  atelier), ADDITIONNÉES — hypothèse à confirmer en jeu. La saisie vaut aussi pour les biens
+  atelier), ADDITIONNÉES — confirmé en jeu par Rémi. La saisie vaut aussi pour les biens
   des maisons.
 - **Sur l'île, sinon importé**, avec la raison au rapport : aucun producteur dans ce monde,
   fertilité ou gisement non déclaré (`Commande.fertilites`), emplacements de montagne ou de
@@ -176,8 +178,8 @@ plusieurs à la fois, posés par le moteur de « Ma commande ».
    les parcelles ne gardent qu'un masque de services par TYPE (union des copies) ; retirer une
    copie coupée demande de recalculer la portée par copie, puis palier, capacité et attributs
    des maisons touchées. Chantier réel pour un seul service sur 27 îles : laissé en l'état.
-5. ~~Île de production~~ : faite (voir la section ci-dessus). Restent à vérifier en jeu :
-   l'addition des bonus de productivité (dieu + saisie).
+5. ~~Île de production~~ : faite (voir la section ci-dessus). L'addition des bonus de
+   productivité (dieu + saisie) est confirmée en jeu.
 6. ~~Prix du bilan non réglable~~ : curseur dans les options avancées de « Remplir l'île »
    (indicatif seulement, 0 à 20 %, 6 % par défaut).
 7. **Plan diagonal non posable dans l'éditeur** : reporté. L'éditeur (demi-cases) ne sait
