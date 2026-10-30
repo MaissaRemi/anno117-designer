@@ -8,6 +8,7 @@ import { normalizeBasket, type BasketLine } from "../prodlayout/basket";
 import { EXIT_SIDES } from "../prodlayout/exit";
 import { direUnmet } from "../prodlayout/unmet";
 import { planSlots } from "../optimizer/slotPlan";
+import { estEntrepot } from "../optimizer/kontor";
 import { distancesDeCroissance, type LignePosee } from "./disposition";
 
 /**
@@ -221,7 +222,7 @@ export function disposerProduction(
       for (const b of layout.buildings) {
         const nb: PlacedBuilding = { ...b, uid: uid("prod"), x: b.x + c.x, y: b.y + c.y };
         out.buildings.push(nb);
-        if (lookup(b.defId)?.template === "Warehouse") out.entrepots++;
+        if (estEntrepot(lookup(b.defId))) out.entrepots++;
         else compter(b.defId);
       }
       for (const f of layout.fields) out.fields.push({ ...f, x: f.x + c.x, y: f.y + c.y });
@@ -242,20 +243,17 @@ export function disposerProduction(
     const variantes: BasketPlan[] = [];
     let refus = "";
     for (const side of EXIT_SIDES) {
-      const r = planFromBasket(catalog, normalizeBasket(lot), { exitSide: side });
+      const r = planFromBasket(catalog, normalizeBasket(lot), { exitSide: side, region: opts.region });
       if ("refuse" in r) refus = r.raison || r.nonServis.map((u) => direUnmet(u, nom)).join(" · ");
       else variantes.push(r);
     }
-    if (variantes.length) {
-      if (!poserBlueprint(variantes)) {
-        out.manques.push(`Aucune place libre sur l'île pour : ${lot.map((l) => `${l.count} × ${nom(l.defId)}`).join(", ")}`);
-      }
-      return;
-    }
-    // Refusé : le plus souvent un seul entrepôt ne dessert pas tout. On coupe en deux.
+    if (variantes.length && poserBlueprint(variantes)) return;
+    // Refusé, le plus souvent parce qu'un seul entrepôt ne dessert pas tout ; ou trop grand pour
+    // la terre libre d'une petite île. On coupe en deux : chaque moitié a son entrepôt.
     const moities = profondeur < DECOUPE_MAX ? couper(lot) : null;
     if (moities) { for (const m of moities) traiterLot(m, profondeur + 1); return; }
-    out.manques.push(`Blueprint impossible (${lot.map((l) => nom(l.defId)).join(", ")}) : ${refus}`);
+    if (variantes.length) out.manques.push(`Aucune place libre sur l'île pour : ${lot.map((l) => `${l.count} × ${nom(l.defId)}`).join(", ")}`);
+    else out.manques.push(`Blueprint impossible (${lot.map((l) => nom(l.defId)).join(", ")}) : ${refus}`);
   };
   for (const lot of lotsDeProduction(reste)) traiterLot(lot, 0);
 
@@ -273,7 +271,7 @@ export function disposerProduction(
     for (const b of sp.buildings) {
       out.buildings.push(b);
       marquer(b);
-      if (lookup(b.defId)?.template === "Warehouse") out.entrepots++;
+      if (estEntrepot(lookup(b.defId))) out.entrepots++;
       else compter(b.defId);
     }
     poserRoutes(sp.roads);

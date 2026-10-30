@@ -7,6 +7,7 @@ import type { PackResult } from "./pack";
 import { buildReport, type Report } from "./report";
 import { searchBox, type BoxSpec } from "./search";
 import { direUnmet, type PlanRefus } from "./unmet";
+import { pickWarehouseDef } from "../model/entrepot";
 
 /**
  * BLUEPRINTS DE PRODUCTION — les deux portes du module.
@@ -40,6 +41,11 @@ export interface BasketPlanOptions {
   /** Bord par lequel la route sortira rejoindre le comptoir de l'île. */
   exitSide: ExitSide;
   box?: BoxSpec;
+  /**
+   * Région de l'île : fixe l'entrepôt. Sans elle, la région du premier bâtiment du panier — or
+   * un bâtiment commun aux deux mondes n'en a pas, et l'entrepôt romain se retrouvait en Albion.
+   */
+  region?: string;
 }
 
 export interface BasketPlan {
@@ -55,12 +61,9 @@ export interface BasketPlan {
   advisories: Advisory[];
 }
 
-/** Entrepôt canonique de la région : template `Warehouse`, plus petit GUID. */
+/** Entrepôt canonique de la région : plus petit GUID, templates des deux mondes (`model/entrepot.ts`). */
 export function pickWarehouse(catalog: BuildingDef[], region?: string): BuildingDef {
-  const all = catalog
-    .filter((d) => d.template === "Warehouse")
-    .sort((a, b) => (a.guid ?? 0) - (b.guid ?? 0));
-  const found = (region ? all.find((d) => d.region === region) : undefined) ?? all[0];
+  const found = pickWarehouseDef(catalog, region);
   if (!found) throw new Error("Aucun entrepôt dans le catalogue.");
   return found;
 }
@@ -99,7 +102,7 @@ export function planFromBasket(
   const byId = new Map(catalog.map((d) => [d.id, d]));
   const lookup = (id: string) => byId.get(id);
   const nom = (id: string) => lookup(id)?.name ?? id;
-  const warehouse = pickWarehouse(catalog, lookup(basket.lines[0].defId)?.region);
+  const warehouse = pickWarehouse(catalog, opts.region ?? basket.lines.map((l) => lookup(l.defId)?.region).find(Boolean));
 
   const packed = searchBox(
     {

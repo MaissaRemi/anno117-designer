@@ -3,7 +3,7 @@ import type { DefLookup } from "../engine/rules";
 import { rootedRoadSet, roadConnected } from "../engine/rules";
 import { planQuality, type PlanQuality } from "../optimizer/planQuality";
 import { pruneDeadEnds } from "../optimizer/roadCleanup";
-import type { Commande } from "./nomenclature";
+import type { Commande, ImportObjectif, LigneObjectif } from "./nomenclature";
 import type { DispositionOpts, LignePosee, PlanQuartiers } from "./disposition";
 import { disposerQuartiers } from "./ilots";
 import { disposerProduction, type PlanProduction } from "./production";
@@ -17,6 +17,12 @@ import { disposerProduction, type PlanProduction } from "./production";
  * qui dit, ligne par ligne, ce qui était demandé et ce qui est posé.
  */
 
+/** Un bien de l'objectif, et le débit que le plan POSÉ en tire. */
+export interface ObjectifPose extends LigneObjectif {
+  /** Débit posé : le produit sur l'île, réduit par le maillon de sa chaîne le moins posé. */
+  pose: number;
+}
+
 export interface PlanCommande {
   layout: Layout;
   quartiers: PlanQuartiers;
@@ -25,10 +31,20 @@ export interface PlanCommande {
   lignes: LignePosee[];
   /** Usage du sol de toute l'île constructible. */
   qualite: PlanQuality;
+  /** Objectif de production (île de production) : demandé, produit, posé ; et les imports. */
+  objectif: ObjectifPose[];
+  imports: ImportObjectif[];
   /** Tout est posé, servi, et relié au comptoir. */
   servi: boolean;
   manques: string[];
   avertissements: string[];
+}
+
+/** Emplacements de terrain de l'île, par type. */
+export function compterEmplacements(grid: GridShape): Record<string, number> {
+  const n: Record<string, number> = {};
+  for (const s of grid.slots ?? []) n[s.type] = (n[s.type] ?? 0) + 1;
+  return n;
 }
 
 export function planifierCommande(
@@ -38,6 +54,8 @@ export function planifierCommande(
   lookup: DefLookup,
   opts: DispositionOpts = {},
 ): PlanCommande {
+  // L'objectif de production se borne aux emplacements de l'île : ce qui n'y tient pas s'importe.
+  if (commande.objectif?.length && !commande.emplacements) commande = { ...commande, emplacements: compterEmplacements(grid) };
   const q = disposerQuartiers(grid, commande, catalog, lookup, opts);
   const W = grid.w;
   const lignesProd = q.nomenclature.lignes
@@ -90,10 +108,22 @@ export function planifierCommande(
     manques.push("Aucun comptoir : le réseau routier n'a pas de racine");
   }
 
+  const posee = new Map(p.lignes.map((l) => [l.defId, l]));
+  const objectif: ObjectifPose[] = q.nomenclature.objectif.map((o) => {
+    let part = 1;
+    for (const id of o.chaine) {
+      const l = posee.get(id);
+      if (l && l.demande > 0) part = Math.min(part, l.pose / l.demande);
+    }
+    return { ...o, pose: Math.round(o.produit * part * 100) / 100 };
+  });
+
   return {
     layout,
     quartiers: q,
     production: p,
+    objectif,
+    imports: q.nomenclature.imports,
     lignes: [...q.lignes, ...p.lignes],
     qualite: planQuality(layout, grid, lookup),
     servi: manques.length === 0,
@@ -122,6 +152,8 @@ export interface ResultatCommande {
   viable: boolean;
   nomenclature: PlanQuartiers["nomenclature"];
   production: { blueprints: number; entrepots: number };
+  objectif: ObjectifPose[];
+  imports: ImportObjectif[];
   qualite: PlanQuality;
   zone: number;
 }
@@ -143,6 +175,8 @@ export function resumer(p: PlanCommande): ResultatCommande {
     viable: p.quartiers.viable,
     nomenclature: p.quartiers.nomenclature,
     production: { blueprints: p.production.blueprints, entrepots: p.production.entrepots },
+    objectif: p.objectif,
+    imports: p.imports,
     qualite: p.qualite,
     zone: p.quartiers.zone.cases,
   };

@@ -2,6 +2,7 @@ import type { BuildingDef, GridShape, Layout } from "../model/types";
 import type { DefLookup } from "../engine/rules";
 import { footprintSize } from "../engine/geometry";
 import { economy } from "../economy/economy";
+import { estEntrepot } from "./kontor";
 
 /**
  * ═══ QUALITÉ D'UN PLAN : CE QUE LE SOL DEVIENT ════════════════════════════════════════
@@ -29,7 +30,7 @@ const RESIDENCES = new Set(economy.tiers.map((t) => t.residenceId).filter((r): r
  */
 export function roleOf(def: BuildingDef): PlanRole {
   if (RESIDENCES.has(def.id)) return "residence";
-  if (def.roadRoot || def.template === "Warehouse" || def.template === "AqueductProducerSlot") {
+  if (def.roadRoot || estEntrepot(def) || def.template === "AqueductProducerSlot") {
     return "infrastructure";
   }
   if (def.slotType || (economy.buildingProd[def.id]?.outputs?.length ?? 0) > 0) return "production";

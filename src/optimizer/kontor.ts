@@ -284,26 +284,8 @@ export function keepMainLandmass(grid: GridShape, seed?: { x: number; y: number 
   return { ...grid, usable };
 }
 
-/**
- * ENTREPÔT DE L'ÎLE, du bon monde.
- *
- * Albion ne nomme pas son entrepôt comme le Latium : ses trois niveaux portent le template
- * `Warehouse_Marsh` (« Warehouse Roman Celtic 01/02/03 ») là où le Latium utilise `Warehouse`.
- * Les deux appelants ne cherchaient que `Warehouse` : ils ne trouvaient donc JAMAIS la version
- * celtique et retombaient sur l'entrepôt romain, non constructible sur Albion. `prodPlan`
- * faisait pire encore, en codant `region === "Roman"` en dur quelle que soit l'île.
- *
- * Détecté par l'invariant `monde-unique` : « 11 bâtiment(s) d'un autre monde que l'île
- * (Entrepôt) » sur celtic_island_large_07, avec exploitations et production locale.
- */
-const WAREHOUSE_TPLS = ["Warehouse", "Warehouse_Marsh"];
-
-export function pickWarehouseDef(catalog: BuildingDef[], region?: string): BuildingDef | undefined {
-  const all = catalog.filter((d) => WAREHOUSE_TPLS.includes(d.template ?? ""));
-  // niveau 1 d'abord : le plus petit GUID du monde voulu
-  const mine = all.filter((d) => !region || d.region === region).sort((a, b) => (a.guid ?? 0) - (b.guid ?? 0));
-  return mine[0] ?? all.sort((a, b) => (a.guid ?? 0) - (b.guid ?? 0))[0];
-}
+// Entrepôt de l'île, du bon monde : `model/entrepot.ts` (partagé avec `prodlayout`).
+export { estEntrepot, pickWarehouseDef } from "../model/entrepot";
 
 export interface KontorPlacement {
   building: PlacedBuilding;
