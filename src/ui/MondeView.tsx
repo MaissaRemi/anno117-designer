@@ -9,6 +9,8 @@ import {
 import { fertilitesLisibles } from "../monde/fertilites";
 import { depotMondes, lireExport, type DepotMondes } from "../monde/stockage";
 import { calculerMonde, type Executeurs } from "../monde/calcul";
+import { configurationDepuisPartie, joueursDeLaPartie, lirePartie, type PartieLue } from "../monde/sauvegarde/partie";
+import { Modal } from "./Modal";
 import { runIslandPlan } from "../optimizer/runIslandPlan";
 import { runPlanifier } from "../commande/runPlanifier";
 import { AssistantMonde, type EtapeAssistant } from "./monde/AssistantMonde";
@@ -27,6 +29,7 @@ import { RoadTypeSelect } from "./components/RoadTypeSelect";
  */
 
 type Assistant = { c: ConfigurationMonde; nouvelle: boolean; etape: EtapeAssistant };
+type ChoixJoueur = { nom: string; partie: PartieLue; joueurs: ReturnType<typeof joueursDeLaPartie> };
 
 const dateCourte = (iso: string) => new Date(iso).toLocaleString("fr", { dateStyle: "short", timeStyle: "short" });
 const nomCourt = (ileId: string) => (islandById(ileId)?.name ?? ileId).replace(/ \((Roman|Celtic)\)$/, "");
@@ -48,6 +51,7 @@ export function MondeView() {
   const [message, setMessage] = useState<string | null>(null);
   const [calcul, setCalcul] = useState<{ texte: string } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [choixJoueur, setChoixJoueur] = useState<ChoixJoueur | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
   const annulations = useRef(new Set<() => void>());
   useEffect(() => () => { for (const a of annulations.current) a(); }, []);
@@ -70,8 +74,29 @@ export function MondeView() {
     if (ouverte === c.id) setOuverte(null);
     await recharger(depot);
   };
+  /** Une partie lue devient une configuration : îles, fertilités, propriétaires, rotation. */
+  const creerDepuisPartie = async (nom: string, p: PartieLue, moi?: number) => {
+    const c = configurationDepuisPartie(nom, p, moi);
+    await enregistrer(c);
+    const aMoi = c.iles.filter((i) => i.propriete === "moi").length;
+    setMessage(`Sauvegarde importée : ${c.iles.length} îles, dont ${aMoi} à toi. Choisis tes îles principales dans la fiche.`
+      + (p.inconnues.length ? ` ${p.inconnues.length} île(s) absente(s) du catalogue, ignorée(s) : ${p.inconnues.join(", ")}.` : ""));
+  };
   const importer = async (f: File) => {
     if (!depot) return;
+    if (/\.a8s$/i.test(f.name)) {
+      setMessage("Lecture de la sauvegarde…");
+      try {
+        const partie = await lirePartie(new Uint8Array(await f.arrayBuffer()));
+        const nom = f.name.replace(/\.a8s$/i, "").trim() || "Partie importée";
+        const joueurs = joueursDeLaPartie(partie);
+        if (joueurs.length > 1) { setMessage(null); setChoixJoueur({ nom, partie, joueurs }); }
+        else await creerDepuisPartie(nom, partie, joueurs[0]?.guid);
+      } catch (e) {
+        setMessage(`Sauvegarde illisible : ${e instanceof Error ? e.message : String(e)}`);
+      }
+      return;
+    }
     const lues = lireExport(await f.text());
     for (const c of lues) await depot.enregistrer(c);
     await recharger(depot);
@@ -134,8 +159,11 @@ export function MondeView() {
         <button type="button" className="primary" onClick={() => setAssistant({ c: nouvelleConfiguration(""), nouvelle: true, etape: 0 })}>
           + Nouvelle planification
         </button>
-        <button type="button" onClick={() => fichier.current?.click()}>Importer…</button>
-        <input ref={fichier} type="file" accept=".json,application/json" hidden
+        <button type="button" onClick={() => fichier.current?.click()}
+          title="Une configuration exportée (.json), ou une sauvegarde du jeu (.a8s) : ses îles, leurs fertilités et leurs propriétaires">
+          Importer…
+        </button>
+        <input ref={fichier} type="file" accept=".json,application/json,.a8s" hidden
           onChange={(e) => { const f = e.target.files?.[0]; if (f) void importer(f); e.target.value = ""; }} />
       </div>
       {depot && !depot.persistant && (
@@ -192,7 +220,7 @@ export function MondeView() {
                     <div className="monde-fiches">
                       {iles.map((i) => (
                         <div key={i.cle} className={`monde-ligne${i.propriete === "moi" && i.role === "principale" ? " principale" : ""}`}>
-                          <IslandThumb island={islandById(i.ileId)!} size={56} />
+                          <IslandThumb island={islandById(i.ileId)!} size={56} rotation={(i.rotation ?? 0) * 90} />
                           <div className="monde-ligne-texte">
                             <b>{i.libelle ?? nomCourt(i.ileId)}</b>
                             <span className="muted">{i.libelle ? `${nomCourt(i.ileId)} · ` : ""}{LIBELLES_PROPRIETE[i.propriete]}</span>
@@ -240,6 +268,24 @@ export function MondeView() {
           )}
         </section>
       </div>
+
+      {choixJoueur && (
+        <Modal onClose={() => setChoixJoueur(null)}>
+          <h3>Partie à plusieurs : quel joueur es-tu ?</h3>
+          <p className="muted">Les îles de ce joueur seront à toi ; celles des autres, comptées comme adversaires.</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {choixJoueur.joueurs.map((j) => (
+              <button key={j.guid} type="button" onClick={() => {
+                const x = choixJoueur;
+                setChoixJoueur(null);
+                void creerDepuisPartie(x.nom, x.partie, j.guid);
+              }}>
+                {j.libelle} · {j.iles} île(s)
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
 
       {assistant && (
         <AssistantMonde initiale={assistant.c} nouvelle={assistant.nouvelle} etape={assistant.etape}

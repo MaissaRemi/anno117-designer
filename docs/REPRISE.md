@@ -239,6 +239,30 @@ Conception validée, réponses de Rémi incluses :
 - Au passage : la fenêtre modale partagée reprenait le focus à chaque rendu (un champ de saisie
   le perdait à chaque frappe) ; corrigé dans `ui/Modal.tsx`.
 
+## Import d'une sauvegarde `.a8s` : fait (04/11/2026)
+
+« Importer… » dans l'onglet Monde accepte une sauvegarde du jeu (`Documents/Anno 117 - Pax
+Romana/accounts/<compte>/<profil>/*.a8s`) et en fait une configuration : toutes les îles des deux
+provinces, leurs fertilités et gisements, leur propriétaire (à moi, adversaire, achetable), leur
+rotation et leur position. Lue dans le navigateur en ~150 ms (`monde/sauvegarde/`) :
+- `rda.ts` : l'archive RDA 2.2. Chaque fichier d'une sauvegarde est un flux zlib SUIVI de 12
+  octets (un flux vide puis la taille décompressée), que Chrome refuse : `fichierDeSauvegarde`
+  les retire et contrôle la taille ;
+- `filedb.ts` : le format FileDB v3, lu en ne gardant que les branches utiles (80 Mo de données) ;
+- `partie.ts` : `MetaGameManager/GameSessions` (une session par province, elle-même un FileDB),
+  `MapTemplate/TemplateElement/Element` (fichier de l'île = id du catalogue, `Rotation90`,
+  `Position`, fertilités tirées), `AreaInfo` (zone `(129 + rang de l'élément) × 64 + n° de
+  session` : `OwnerProfile`, fertilités actuelles). Propriétaires lus dans assets.xml :
+  41, 600069, 600070, 42 = joueurs humains 1 à 4 ; 31099… = rivaux. Partie à plusieurs : l'import
+  demande quel joueur on est. Comptoirs tiers et décors ignorés ; les îles de campagne, absentes
+  du catalogue, sont signalées.
+- Les 13 profils de sauvegarde de Rémi se lisent ; test sur Maximilia Maxima
+  (`partie.test.ts`, sauté si la sauvegarde n'est pas sur la machine).
+- **À vérifier en jeu** : le SENS de la rotation. Les vignettes sont tournées de `Rotation90 × 90°`
+  dans le sens horaire ; si l'île apparaît en miroir de la minimap, c'est l'autre sens.
+- Pas encore lus : l'activation des emplacements de mine (`MineSlotActivation`), les réglages de
+  la partie (`gamesetup.a7s`), les noms des villes.
+
 ## La suite, par intérêt
 
 1. ~~Ne pas créer de poches~~ : fait (`planLattice`, « UN GRAND BÂTIMENT NE MURE PAS UNE PARTIE

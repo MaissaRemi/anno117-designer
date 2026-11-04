@@ -42,6 +42,10 @@ export interface IleDuMonde {
   palier?: string;
   /** Dieu tutélaire de l'île (`Patron.id`). */
   dieu?: string;
+  /** Rotation dans la partie, en quarts de tour (lue dans une sauvegarde). */
+  rotation?: number;
+  /** Position sur la carte de sa province, en cases (lue dans une sauvegarde). */
+  position?: { x: number; y: number };
 }
 
 /** Ce que maximisent les îles principales. */
@@ -101,6 +105,9 @@ const estChaine = (v: unknown): v is string => typeof v === "string";
  * ramenées à leur défaut, les îles absentes du catalogue et les fertilités inconnues retirées :
  * une configuration enregistrée avant une mise à jour des données reste lisible.
  */
+const positionValide = (p: unknown): p is { x: number; y: number } =>
+  !!p && typeof p === "object" && Number.isFinite((p as { x: unknown }).x) && Number.isFinite((p as { y: unknown }).y);
+
 export function normaliserConfiguration(brut: unknown): ConfigurationMonde | null {
   if (!brut || typeof brut !== "object") return null;
   const c = brut as Record<string, unknown>;
@@ -127,6 +134,8 @@ export function normaliserConfiguration(brut: unknown): ConfigurationMonde | nul
       ...(estChaine(r.palier) && worldOf(tierByGuid(r.palier)?.region ?? "") === worldOf(regionOfIsland(r.ileId)) && tierByGuid(r.palier)?.residenceId
         ? { palier: r.palier } : {}),
       ...(estChaine(r.dieu) && dieuParId(r.dieu) ? { dieu: r.dieu } : {}),
+      ...(Number.isInteger(r.rotation) ? { rotation: (((r.rotation as number) % 4) + 4) % 4 } : {}),
+      ...(positionValide(r.position) ? { position: { x: r.position.x, y: r.position.y } } : {}),
     });
   }
   const g = (c.reglages && typeof c.reglages === "object" ? c.reglages : {}) as Record<string, unknown>;
