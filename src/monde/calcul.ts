@@ -58,7 +58,7 @@ export interface IleCalculee {
   plan?: PlanPose;
   habitants: number;
   maisons: number;
-  /** Argent net par minute (îles principales). */
+  /** Argent net par minute : impôts moins entretien. */
   argent?: number;
   palier?: string;
   /** Production : l'objectif posé. Principale : ses mines. */
@@ -146,6 +146,7 @@ interface PoseProduction {
   plan?: PlanPose;
   habitants: number;
   maisons: number;
+  argent: number;
   objectif: { good: string; parMinute: number; pose: number }[];
   consomme: BienDebit[];
   manques: string[];
@@ -251,7 +252,8 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
         reutilisees++;
         progres(`Île de production ${++k}/${cles.length} reprise du calcul précédent`);
         return [cle, {
-          plan: reprise.plan, habitants: reprise.habitants, maisons: reprise.maisons, consomme: reprise.consomme,
+          plan: reprise.plan, habitants: reprise.habitants, maisons: reprise.maisons, argent: reprise.argent ?? 0,
+          consomme: reprise.consomme,
           manques: reprise.manques, avertissements: reprise.avertissements,
           objectif: reprise.affecte.map((a) => ({ ...a, pose: reprise.produit.find((x) => x.good === a.good)?.parMinute ?? 0 })),
         }] as const;
@@ -278,6 +280,7 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
       for (const b of r.imports) consomme.set(b.good, (consomme.get(b.good) ?? 0) + b.parMinute * part);
       return [cle, {
         plan: plan(r), habitants: r.habitants, maisons: Object.values(r.maisonsParPalier).reduce((a, b) => a + b, 0),
+        argent: r.argent.net,
         objectif: r.objectif.map((ob) => ({ good: ob.good, parMinute: ob.parMinute, pose: ob.pose })),
         consomme: versListe(consomme), manques: r.manques, avertissements: r.avertissements,
       }] as const;
@@ -318,7 +321,7 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
     }
     iles.push({
       cle: i.cle, role: "production", empreinte: empreintes.get(i.cle), plan: r.plan, habitants: r.habitants, maisons: r.maisons,
-      produit: r.objectif.filter((ob) => ob.pose > 0).map((ob) => ({ good: ob.good, parMinute: ob.pose })),
+      argent: r.argent, produit: r.objectif.filter((ob) => ob.pose > 0).map((ob) => ({ good: ob.good, parMinute: ob.pose })),
       consomme: r.consomme, affecte: affectation.get(i.cle) ?? [],
       manques: r.manques, avertissements: r.avertissements,
     });
@@ -381,7 +384,6 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
     )
     : [];
 
-  if (iles.some((i) => i.role === "production")) avertissements.push("L'argent des îles de production (impôts des ouvriers, entretien) n'est pas encore compté");
   return {
     calculeLe: new Date().toISOString(),
     iles,

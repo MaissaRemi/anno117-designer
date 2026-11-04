@@ -53,7 +53,7 @@ export function ResultatMondeVue({ c, r, occupe, onAcheter, onRefuser }: Props) 
     <div className="monde-resultat">
       <div className="monde-bilan">
         <div><b>{fr(r.bilan.habitants)}</b><span className="muted">habitants</span></div>
-        <div><b>{fr(r.bilan.argent)}</b><span className="muted">argent / min (îles principales)</span></div>
+        <div><b>{fr(r.bilan.argent)}</b><span className="muted">argent / min</span></div>
         <div><b>{fr(r.bilan.maisons)}</b><span className="muted">maisons</span></div>
         <div><b>{routes.length}</b><span className="muted">routes commerciales</span></div>
         <div className={r.deficits.length ? "manque" : ""}><b>{r.deficits.length}</b><span className="muted">bien(s) en manque</span></div>

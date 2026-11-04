@@ -953,7 +953,7 @@ function disposer(
   const insts = types.filter((t) => t.institution).map((t) => ({ id: t.def.id, fx: effectOf(t.def.id) }));
 
   // ─── PALIER DE CHAQUE MAISON, SELON LES SERVICES ACTIFS ─────────────────────────────
-  type Option = { guid: string; defId: string; cap: number; attrs: Record<string, number> };
+  type Option = { guid: string; defId: string; cap: number; money: number; attrs: Record<string, number> };
   const evaluer = (actifs: typeof services, quelles: typeof maisonB) => {
     const couvParType = new Map<string, Uint8Array>();
     for (const s of actifs) {
@@ -983,7 +983,7 @@ function disposer(
           if ((e.fx.minTier ?? 0) && (t.rank ?? 0) < (e.fx.minTier ?? 0)) continue;
           for (const [a, v] of Object.entries(e.fx.attrs)) attrs[a] = (attrs[a] ?? 0) + v;
         }
-        return { guid: t.guid, defId: t.residenceId, cap: r.cap, attrs };
+        return { guid: t.guid, defId: t.residenceId, cap: r.cap, money: r.money, attrs };
       }).filter((o): o is Option => !!o);
       return { uid: b.uid, opts: options };
     });
@@ -1120,6 +1120,7 @@ function disposer(
   // ─── COMPTES ────────────────────────────────────────────────────────────────────────
   const maisonsParPalier: Record<string, number> = {};
   let habitants = 0;
+  let impots = 0;
   const somme: Record<string, number> = {};
   for (const k of VITAL_ATTRS) somme[k] = 0;
   for (const b of buildings) {
@@ -1128,6 +1129,7 @@ function disposer(
     maisonsParPalier[o.guid] = (maisonsParPalier[o.guid] ?? 0) + 1;
     // le dieu ajoute ses habitants à CHAQUE maison, à la dévotion du devis (sa Foi)
     habitants += o.cap + Math.max(0, nom.dieu?.residence.Population ?? 0);
+    impots += o.money;
     for (const k of VITAL_ATTRS) somme[k] += o.attrs[k] ?? 0;
   }
   const nMaisons = Object.values(maisonsParPalier).reduce((a, b) => a + b, 0);
@@ -1171,6 +1173,7 @@ function disposer(
     lignes,
     habitants,
     maisonsParPalier,
+    impots: Math.round(impots),
     bilan,
     viable: verdictViable(bilan, nMaisons, 0),
     zone: { usable: zone, cases: zoneCases, passes: tours + 1 },

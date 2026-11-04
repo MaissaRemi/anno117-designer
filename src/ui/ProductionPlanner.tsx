@@ -227,6 +227,10 @@ export function ProductionPlanner() {
                     : <span style={{ color: "#ffcc66" }}>⚠ Production posée en partie</span>}
                   {" · "}{result.habitants.toLocaleString("fr")} ouvriers logés
                   {" · "}{result.production.entrepots} entrepôt(s)
+                  {" · "}
+                  <span title={`impôts ${result.argent.impots.toLocaleString("fr")}, entretien ${result.argent.entretien.toLocaleString("fr")}`}>
+                    {result.argent.net.toLocaleString("fr")} argent/min
+                  </span>
                 </div>
                 <table className="muted" style={{ fontSize: "0.85em", width: "100%", marginBottom: 6 }}>
                   <thead><tr><th style={{ textAlign: "left" }}>Bien</th><th>demandé</th><th>sur l'île</th><th>posé</th></tr></thead>

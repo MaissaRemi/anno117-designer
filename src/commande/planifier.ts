@@ -7,6 +7,13 @@ import type { Commande, ImportObjectif, LigneObjectif } from "./nomenclature";
 import type { DispositionOpts, LignePosee, PlanQuartiers } from "./disposition";
 import { disposerQuartiers } from "./ilots";
 import { disposerProduction, type PlanProduction } from "./production";
+import { upkeepOf } from "../economy/economy";
+
+/** L'entretien se compte sur les bâtiments réellement posés, comme pour une île principale. */
+function argentDe(impots: number, buildings: Layout["buildings"]): Argent {
+  const entretien = Math.round(buildings.reduce((s, b) => s + upkeepOf(b.defId), 0));
+  return { impots, entretien, net: impots - entretien };
+}
 
 /**
  * ═══ PLANIFIER UNE COMMANDE : LA PORTE D'ENTRÉE ═══════════════════════════════════════
@@ -23,6 +30,8 @@ export interface ObjectifPose extends LigneObjectif {
   pose: number;
 }
 
+export interface Argent { impots: number; entretien: number; net: number }
+
 export interface PlanCommande {
   layout: Layout;
   quartiers: PlanQuartiers;
@@ -34,6 +43,8 @@ export interface PlanCommande {
   /** Objectif de production (île de production) : demandé, produit, posé ; et les imports. */
   objectif: ObjectifPose[];
   imports: ImportObjectif[];
+  /** Argent par minute : impôts des maisons, entretien de TOUS les bâtiments posés. */
+  argent: Argent;
   /** Tout est posé, servi, et relié au comptoir. */
   servi: boolean;
   manques: string[];
@@ -124,6 +135,7 @@ export function planifierCommande(
     production: p,
     objectif,
     imports: q.nomenclature.imports,
+    argent: argentDe(q.impots ?? 0, layout.buildings),
     lignes: [...q.lignes, ...p.lignes],
     qualite: planQuality(layout, grid, lookup),
     servi: manques.length === 0,
@@ -150,6 +162,7 @@ export interface ResultatCommande {
   maisonsParPalier: Record<string, number>;
   bilan: Record<string, number>;
   viable: boolean;
+  argent: Argent;
   nomenclature: PlanQuartiers["nomenclature"];
   production: { blueprints: number; entrepots: number };
   objectif: ObjectifPose[];
@@ -173,6 +186,7 @@ export function resumer(p: PlanCommande): ResultatCommande {
     maisonsParPalier: p.quartiers.maisonsParPalier,
     bilan: p.quartiers.bilan,
     viable: p.quartiers.viable,
+    argent: p.argent,
     nomenclature: p.quartiers.nomenclature,
     production: { blueprints: p.production.blueprints, entrepots: p.production.entrepots },
     objectif: p.objectif,

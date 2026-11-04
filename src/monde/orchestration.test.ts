@@ -33,6 +33,7 @@ function factices() {
       return {
         objectif: (req.commande.objectif ?? []).map((ob) => ({ ...ob, nom: "", produit: ob.parMinute, pose: ob.parMinute, chaine: [] })),
         nomenclature: { biens: [] }, imports: [], habitants: 100, maisonsParPalier: { x: 5 },
+        argent: { impots: 80, entretien: 30, net: 50 },
         buildings: [], roads: [], fields: [], aqueducts: [], manques: [], avertissements: [],
       } as unknown as ResultatCommande;
     },
@@ -61,7 +62,10 @@ describe("orchestration du calcul d'un monde", () => {
     const albion = c.iles[2].cle, principale = c.iles[0].cle;
     expect(r.flux).toContainEqual(expect.objectContaining({ de: albion, vers: principale, good: BIERE, parMinute: 4 }));
     expect(r.flux.filter((f) => f.good === PAIN && f.vers === principale).reduce((s, f) => s + f.parMinute, 0)).toBeCloseTo(10, 1);
-    expect(r.bilan).toMatchObject({ habitants: 1200, argent: 500 });
+    // l'argent des îles de production compte : 50 par île posée, en plus des 500 de la principale
+    const posees = r.iles.filter((i) => i.role === "production").length;
+    expect(posees).toBe(2);
+    expect(r.bilan).toMatchObject({ habitants: 1200, argent: 500 + 50 * posees });
     expect(r.suggestions).toEqual([]);
   });
 

@@ -38,6 +38,12 @@ export interface PlanQuartiers {
   lignes: LignePosee[];
   habitants: number;
   maisonsParPalier: Record<string, number>;
+  /**
+   * Impôts des maisons par minute : pour chacune, l'argent (`Money`) des besoins remplis à son
+   * palier — biens supposés importés, services qui la couvrent vraiment. Même modèle que le
+   * palier et la capacité (`compileTierEvaluator`).
+   */
+  impots?: number;
   /** Bilan de l'île par attribut vital, rang de cité compris — indicatif. */
   bilan: Record<string, number>;
   viable: boolean;

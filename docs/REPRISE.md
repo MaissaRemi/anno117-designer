@@ -194,7 +194,15 @@ Conception validée, réponses de Rémi incluses :
   biens d'Albion partent vers l'île romaine ; 41 s sans parallélisme, ~20 s dans l'application.
   « Plusieurs îles » est retiré (multiIslandPlan, son worker, `MultiIslandPanel`,
   `ResourceSelector`).
-- **Limites connues** : l'argent des îles de production n'est pas compté ; l'estimation de terre
+- **Argent des îles de production compté (04/11/2026)** : impôts des maisons d'ouvriers (le
+  `Money` des besoins remplis au palier de chaque maison, par le même évaluateur que sa capacité :
+  biens supposés importés, services qui la couvrent vraiment) moins l'entretien de TOUS les
+  bâtiments posés (`ResultatCommande.argent`, `commande/planifier.ts`). Il entre dans le bilan du
+  monde et s'affiche dans « Île de production ». Vérifié : 8 maisons de Plébéiens × 17 (somme
+  des `Money` de leurs biens dans les données) = 136. Une île de production est souvent en perte
+  (amphores sur roman_island_medium_01 : −9/min) : c'est attendu, l'entretien des ateliers dépasse
+  les impôts de quelques ouvriers.
+- **Limites connues** : l'estimation de terre
   est optimiste pour les fermes et les bâtiments à aire libre (le rattrapage compense en
   partie) ; les ouvriers de haut palier des ateliers de luxe consomment des biens de luxe, ce qui
   est juste mais alourdit la demande.
