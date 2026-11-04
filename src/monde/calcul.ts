@@ -5,7 +5,7 @@ import { tierByGuid } from "../economy/economy";
 import type { IslandPlanRequest, IslandPlanResult } from "../optimizer/islandPlan";
 import type { CommandeRequete } from "../commande/planifierWorker";
 import type { ResultatCommande } from "../commande/planifier";
-import { palierParDefaut, provinceDe, type ConfigurationMonde, type IleDuMonde } from "./configuration";
+import { FACTEUR_CONSOMMATION, FACTEUR_ENTRETIEN, palierParDefaut, provinceDe, type ConfigurationMonde, type IleDuMonde } from "./configuration";
 import {
   besoinsDuDevis, devisIle, fertilitesPourMoteur, nomDuBien, repartir, suggererAchats,
   type BienDebit, type IleProductrice, type OptionsRepartition, type SuggestionAchat,
@@ -182,14 +182,20 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
   if (!principales.length) avertissements.push("Aucune île principale : choisis-en au moins une parmi tes îles");
   const avant = new Map((o.precedent?.iles ?? []).filter((i) => i.empreinte).map((i) => [`${i.cle}|${i.empreinte}`, i]));
   let reutilisees = 0, recalculees = 0;
-  const reglagesProd = { routes: c.reglages.routes, productiviteGlobale: c.reglages.productiviteGlobale };
+  // RÉGLAGES DE LA PARTIE. Les données extraites sont au cran Faible : la consommation multiplie
+  // les biens des maisons, l'entretien l'argent d'entretien et la main-d'œuvre des bâtiments.
+  const kConso = FACTEUR_CONSOMMATION[c.reglages.consommation] ?? 1;
+  const kEntretien = FACTEUR_ENTRETIEN[c.reglages.entretien] ?? 1;
+  const reglagesProd = {
+    routes: c.reglages.routes, productiviteGlobale: c.reglages.productiviteGlobale, consommation: kConso, facteurEntretien: kEntretien,
+  };
 
   // ─── 1. ÎLES PRINCIPALES ────────────────────────────────────────────────────────────
   let faites = 0;
   const principalesCalculees = await parallele(principales.map((ile) => async (): Promise<IleCalculee> => {
     const f = ile.fertilites;
     const tierGuid = ile.palier ?? palierParDefaut(provinceDe(ile));
-    const empreinte = JSON.stringify({ i: ile.ileId, tierGuid, f, d: ile.dieu, o: c.reglages.objectif, r: c.reglages.routes, e: ile.emplacementsInactifs });
+    const empreinte = JSON.stringify({ i: ile.ileId, tierGuid, f, d: ile.dieu, o: c.reglages.objectif, r: c.reglages.routes, e: ile.emplacementsInactifs, k: kConso, m: kEntretien });
     const reprise = avant.get(`${ile.cle}|${empreinte}`);
     if (reprise?.role === "principale") {
       reutilisees++;
@@ -209,8 +215,10 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
     for (const e of r.exploited) if (e.served) produit.set(e.good, (produit.get(e.good) ?? 0) + e.perMin);
     return {
       cle: ile.cle, role: "principale", empreinte, plan: plan(r), habitants: r.residents, maisons: r.houses,
-      argent: r.money.net, palier: r.tierName, produit: versListe(produit),
-      consomme: r.importGoods.map((b) => ({ good: b.good, parMinute: b.perMin })), affecte: [],
+      // L'île principale est posée par le moteur au cran Faible ; ses imports et son entretien
+      // suivent les réglages de la partie (la main-d'œuvre de ses services, non : limite connue)
+      argent: Math.round(r.money.gross - r.money.upkeep * kEntretien), palier: r.tierName, produit: versListe(produit),
+      consomme: r.importGoods.map((b) => ({ good: b.good, parMinute: b.perMin * kConso })), affecte: [],
       manques: [...r.gaps], avertissements: f === null ? ["Fertilités inconnues : aucune mine posée"] : [],
     };
   }), n);
@@ -239,7 +247,7 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
     const suivante = new Map(demandeVilles);
     for (const p of productrices) {
       const a = rep.affectation[p.cle];
-      if (a?.length) ajouter(suivante, besoinsDuDevis(devisIle(p, a, opts)));
+      if (a?.length) ajouter(suivante, besoinsDuDevis(devisIle(p, a, opts), kConso));
     }
     const ecart = [...new Set([...suivante.keys(), ...demande.keys()])]
       .reduce((s, g) => s + Math.abs((suivante.get(g) ?? 0) - (demande.get(g) ?? 0)), 0);
@@ -279,6 +287,7 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
           fertilites: p.fertilites,
           ...(c.reglages.productiviteGlobale ? { productivite: { globale: c.reglages.productiviteGlobale } } : {}),
           ...(p.dieu ? { dieu: p.dieu } : {}),
+          ...(kEntretien !== 1 ? { facteurEntretien: kEntretien } : {}),
         },
       });
       recalculees++;
@@ -290,11 +299,11 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
       const demande = r.objectif.reduce((s, ob) => s + ob.parMinute, 0);
       const part = demande > 0 ? Math.min(1, r.objectif.reduce((s, ob) => s + ob.pose, 0) / demande) : 1;
       const consomme = new Map<string, number>();
-      for (const b of r.nomenclature.biens) if (b.source === "import") consomme.set(b.good, (consomme.get(b.good) ?? 0) + b.parMinute * part);
+      for (const b of r.nomenclature.biens) if (b.source === "import") consomme.set(b.good, (consomme.get(b.good) ?? 0) + b.parMinute * part * kConso);
       for (const b of r.imports) consomme.set(b.good, (consomme.get(b.good) ?? 0) + b.parMinute * part);
       return [cle, {
         plan: plan(r), habitants: r.habitants, maisons: Object.values(r.maisonsParPalier).reduce((a, b) => a + b, 0),
-        argent: r.argent.net,
+        argent: Math.round(r.argent.impots - r.argent.entretien * kEntretien),
         objectif: r.objectif.map((ob) => ({ good: ob.good, parMinute: ob.parMinute, pose: ob.pose })),
         consomme: versListe(consomme), manques: r.manques, avertissements: r.avertissements,
       }] as const;

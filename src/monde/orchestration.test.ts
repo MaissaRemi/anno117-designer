@@ -45,6 +45,8 @@ const ile = (ileId: string, extra: Partial<IleDuMonde>): IleDuMonde => ({ ...nou
 
 function monde(...iles: IleDuMonde[]): ConfigurationMonde {
   const c = nouvelleConfiguration("Orchestration");
+  // réglages de la partie au cran Faible : les chiffres des moteurs factices passent tels quels
+  c.reglages = { ...c.reglages, consommation: "faible", entretien: "faible" };
   c.iles = iles;
   return c;
 }
@@ -67,6 +69,23 @@ describe("orchestration du calcul d'un monde", () => {
     expect(posees).toBe(2);
     expect(r.bilan).toMatchObject({ habitants: 1200, argent: 500 + 50 * posees });
     expect(r.suggestions).toEqual([]);
+  });
+
+  it("les réglages de la partie : consommation ×1,25, entretien ×1,22 au cran Moyen", async () => {
+    const { executeurs } = factices();
+    const c = monde(
+      ile("roman_island_medium_01", { role: "principale" }),
+      ile("roman_island_large_03", { fertilites: [] }),
+      ile("celtic_island_large_02", { fertilites: [ORGE] }),
+    );
+    c.reglages = { ...c.reglages, consommation: "moyen", entretien: "moyen" };
+    const r = await calculerMonde(c, { catalog, executeurs });
+    const principale = r.iles.find((i) => i.role === "principale")!;
+    expect(principale.consomme).toContainEqual({ good: BIERE, parMinute: 5 });
+    // principale : 600 d'impôts − 100 × 1,22 ; production : 80 − 30 × 1,22 (arrondi) par île
+    expect(principale.argent).toBe(478);
+    expect(r.iles.filter((i) => i.role === "production").every((i) => i.argent === 43)).toBe(true);
+    expect(r.flux.filter((f) => f.good === BIERE).reduce((s, f) => s + f.parMinute, 0)).toBeCloseTo(5, 1);
   });
 
   it("le calcul suivant reprend les îles inchangées, et ne recalcule que ce qui a changé", async () => {

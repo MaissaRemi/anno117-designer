@@ -3,7 +3,7 @@ import { useStore } from "../state/store";
 import { islandById, WORLDS } from "../data/islands";
 import { dieux, nomDuDieu } from "../economy/dieux";
 import {
-  LIBELLES_OBJECTIF, LIBELLES_PROPRIETE, nouvelleConfiguration, palierParDefaut, paliersDeLaProvince, provinceDe,
+  CRANS, LIBELLES_CRAN, LIBELLES_OBJECTIF, LIBELLES_PROPRIETE, type Cran, nouvelleConfiguration, palierParDefaut, paliersDeLaProvince, provinceDe,
   type ConfigurationMonde, type IleDuMonde, type ObjectifPrincipale,
 } from "../monde/configuration";
 import { fertilitesLisibles } from "../monde/fertilites";
@@ -208,6 +208,18 @@ export function MondeView() {
                   <span>Productivité (recherche, objets)</span>
                   <input type="number" step={5} value={c.reglages.productiviteGlobale}
                     onChange={(e) => modifier((x) => ({ ...x, reglages: { ...x.reglages, productiviteGlobale: Number(e.target.value) || 0 } }))} />
+                </label>
+                <label className="field" title="Réglage de la partie : Faible ×1, Moyen ×1,25, Élevé ×1,5 sur les biens consommés par les maisons. Lu dans la sauvegarde à l'import.">
+                  <span>Consommation (partie)</span>
+                  <select value={c.reglages.consommation} onChange={(e) => modifier((x) => ({ ...x, reglages: { ...x.reglages, consommation: e.target.value as Cran } }))}>
+                    {CRANS.map((k) => <option key={k} value={k}>{LIBELLES_CRAN[k]}</option>)}
+                  </select>
+                </label>
+                <label className="field" title="Réglage de la partie : Faible ×1, Moyen ×1,22, Élevé ×1,4 sur l'argent d'entretien et la main-d'œuvre des bâtiments. Lu dans la sauvegarde à l'import.">
+                  <span>Entretien (partie)</span>
+                  <select value={c.reglages.entretien} onChange={(e) => modifier((x) => ({ ...x, reglages: { ...x.reglages, entretien: e.target.value as Cran } }))}>
+                    {CRANS.map((k) => <option key={k} value={k}>{LIBELLES_CRAN[k]}</option>)}
+                  </select>
                 </label>
               </div>
 

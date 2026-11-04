@@ -60,13 +60,27 @@ export const LIBELLES_OBJECTIF: Record<ObjectifPrincipale, string> = {
   argent: "Le maximum de gains", habitants: "Le maximum d'habitants", maisons: "Le maximum de maisons",
 };
 
+/** Cran d'un réglage de partie (`datasets.xml` : Low 0, Medium 1, High 2). */
+export type Cran = "faible" | "moyen" | "eleve";
+export const CRANS: readonly Cran[] = ["faible", "moyen", "eleve"];
+export const LIBELLES_CRAN: Record<Cran, string> = { faible: "Faible", moyen: "Moyen", eleve: "Élevé" };
+/** `DifficultySettings/NeedConsumption/ConsumptionFactor` : les biens consommés par les maisons. */
+export const FACTEUR_CONSOMMATION: Record<Cran, number> = { faible: 1, moyen: 1.25, eleve: 1.5 };
+/** `DifficultySettings/Maintenance/MaintenancePercentage` : argent ET main-d'œuvre d'entretien. */
+export const FACTEUR_ENTRETIEN: Record<Cran, number> = { faible: 1, moyen: 1.22, eleve: 1.4 };
+
 export interface ReglagesMonde {
   objectif: ObjectifPrincipale;
   routes: RoadType;
   /** Productivité de la recherche et des objets, en points, pour tous les ateliers. */
   productiviteGlobale: number;
+  /** Réglages de la partie (lus dans une sauvegarde) ; défaut : Moyen, le préréglage standard. */
+  consommation: Cran;
+  entretien: Cran;
 }
-export const reglagesParDefaut = (): ReglagesMonde => ({ objectif: "argent", routes: "pavee", productiviteGlobale: 0 });
+export const reglagesParDefaut = (): ReglagesMonde => ({
+  objectif: "argent", routes: "pavee", productiviteGlobale: 0, consommation: "moyen", entretien: "moyen",
+});
 
 export interface ConfigurationMonde {
   version: 1;
@@ -153,6 +167,8 @@ export function normaliserConfiguration(brut: unknown): ConfigurationMonde | nul
     routes: g.routes === "terre" || g.routes === "pavee" || g.routes === "marbre" ? g.routes : defaut.routes,
     productiviteGlobale: typeof g.productiviteGlobale === "number" && Number.isFinite(g.productiviteGlobale)
       ? Math.max(-90, Math.min(500, g.productiviteGlobale)) : 0,
+    consommation: CRANS.includes(g.consommation as Cran) ? (g.consommation as Cran) : defaut.consommation,
+    entretien: CRANS.includes(g.entretien as Cran) ? (g.entretien as Cran) : defaut.entretien,
   };
   // le résultat d'un calcul n'est gardé que s'il a sa forme : un fichier abîmé ne doit pas
   // faire tomber l'écran qui l'affiche

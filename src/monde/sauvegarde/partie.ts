@@ -1,6 +1,6 @@
 import { economy } from "../../economy/economy";
 import { islandById } from "../../data/islands";
-import { nouvelleConfiguration, nouvelId, type ConfigurationMonde, type IleDuMonde, type Propriete } from "../configuration";
+import { CRANS, nouvelleConfiguration, nouvelId, type ConfigurationMonde, type Cran, type IleDuMonde, type Propriete } from "../configuration";
 import { extraireRda, fichierDeSauvegarde, lireIndexRda } from "./rda";
 import { attribut, attributs, chemin, enfant, enfants, entier, entier64Texte, entiers32, filtreChemins, lireFileDb, texteUtf16, type NoeudFileDb } from "./filedb";
 
@@ -55,6 +55,8 @@ export interface IleLue {
 
 export interface PartieLue {
   iles: IleLue[];
+  /** Réglages de la partie (`gamesetup.a7s`), quand ils sont lus. */
+  reglages?: { consommation: Cran; entretien: Cran };
   /** Îles de la sauvegarde absentes de notre catalogue (hors comptoirs tiers et décors). */
   inconnues: string[];
 }
@@ -114,6 +116,22 @@ export function ilesDeLaSession(session: NoeudFileDb, numeroSession: number): { 
   return { iles, inconnues };
 }
 
+/**
+ * Réglages de la partie qui changent l'économie, dans `GameSetupManager/Setup…/value@id`. Les
+ * numéros de cran viennent de `datasets.xml` : DCNeedConsumption et DCMaintenance, Low 0,
+ * Medium 1, High 2. Les impôts (`SetupTaxes`, `LandTaxFactor` ×1 / ×1,5 / ×2) ne sont PAS lus :
+ * leur effet sur l'argent des maisons n'est pas établi.
+ */
+export function reglagesDeLaPartie(racine: NoeudFileDb): { consommation: Cran; entretien: Cran } | undefined {
+  const gm = enfant(racine, "GameSetupManager");
+  const cran = (nom: string) => {
+    const id = entier(attribut(chemin(gm, nom, "value"), "id"));
+    return id !== undefined && id >= 0 && id <= 2 ? CRANS[id] : undefined;
+  };
+  const consommation = cran("SetupNeedConsumption"), entretien = cran("SetupMaintenance");
+  return consommation && entretien ? { consommation, entretien } : undefined;
+}
+
 /** Lit une sauvegarde `.a8s` entière. */
 export async function lirePartie(sauvegarde: Uint8Array): Promise<PartieLue> {
   const index = await lireIndexRda(sauvegarde);
@@ -138,6 +156,11 @@ export async function lirePartie(sauvegarde: Uint8Array): Promise<PartieLue> {
     out.inconnues.push(...r.inconnues);
   }
   if (!out.iles.length) throw new Error("Aucune île reconnue dans cette sauvegarde");
+  const setup = index.find((x) => x.chemin.replace(/\\/g, "/").split("/").pop() === "gamesetup.a7s");
+  if (setup) {
+    const r = reglagesDeLaPartie(lireFileDb(await fichierDeSauvegarde(await extraireRda(sauvegarde, setup))));
+    if (r) out.reglages = r;
+  }
   return out;
 }
 
@@ -149,6 +172,7 @@ export async function lirePartie(sauvegarde: Uint8Array): Promise<PartieLue> {
 export function configurationDepuisPartie(nom: string, p: PartieLue, moi = PROFIL_JOUEUR): ConfigurationMonde {
   const proprieteDe = (x: number | undefined): Propriete => (x === undefined ? "achetable" : x === moi ? "moi" : "indisponible");
   const c = nouvelleConfiguration(nom);
+  if (p.reglages) c.reglages = { ...c.reglages, ...p.reglages };
   c.iles = p.iles.map((i): IleDuMonde => ({
     cle: nouvelId("ile"),
     ileId: i.ileId,

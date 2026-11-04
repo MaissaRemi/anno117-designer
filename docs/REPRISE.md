@@ -260,8 +260,30 @@ rotation et leur position. Lue dans le navigateur en ~150 ms (`monde/sauvegarde/
   (`partie.test.ts`, sauté si la sauvegarde n'est pas sur la machine).
 - **À vérifier en jeu** : le SENS de la rotation. Les vignettes sont tournées de `Rotation90 × 90°`
   dans le sens horaire ; si l'île apparaît en miroir de la minimap, c'est l'autre sens.
-- Pas encore lus : l'activation des emplacements de mine (`MineSlotActivation`), les réglages de
-  la partie (`gamesetup.a7s`), les noms des villes.
+- **Emplacements inactifs** (05/11/2026) : chaque emplacement du terrain porte son `ObjectId`
+  (`tools/extraire_ids_emplacements.py`, 727 emplacements). L'import lit `MineSlotActivation` :
+  les « Slot … » de montagne, rivière et marais sont des objets de carte ALÉATOIRES, activés selon
+  le réglage de matières premières ; les « Fixed Slot … » le sont toujours (`ActivateAll`). Un
+  emplacement inactif est retiré de l'île dans le calcul du monde (`sansEmplacementsInactifs`) —
+  ni mine ni source. Grande 05 d'Albion dans Maximilia : 2 emplacements de montagne tirés sur 6
+  activés, ses deux gisements. **À confirmer en jeu** : qu'un emplacement inactif n'accepte pas
+  non plus de source d'aqueduc.
+- **Réglages de la partie** (05/11/2026), lus dans `gamesetup.a7s` et réglables dans la fiche :
+  - consommation (`DifficultySettings/NeedConsumption/ConsumptionFactor`) : Faible ×1, Moyen
+    ×1,25, Élevé ×1,5 sur les biens des maisons ;
+  - entretien (`MaintenancePercentage` 100 / 122 / 140) : argent d'entretien ET main-d'œuvre de
+    chaque bâtiment (`Commande.facteurEntretien`) ;
+  - crans dans `datasets.xml` : Low 0, Medium 1, High 2. Défaut d'une configuration : Moyen.
+  - Les DONNÉES EXTRAITES SONT AU CRAN FAIBLE : dans une partie standard (Moyen), les outils d'une
+    île (« Remplir l'île », « Île de production ») sous-estiment de 25 % la consommation et de
+    22 % la main-d'œuvre et l'entretien. Seul le calcul du monde applique les réglages.
+  - Limite : la main-d'œuvre des services des îles PRINCIPALES reste au cran Faible (cascade
+    interne au moteur d'île).
+  - Impôts NON appliqués : `SetupTaxes` porte un `LandTaxFactor` (Spare ×1, Medium ×1,5, Plenty
+    ×2) dont l'effet sur l'argent des maisons n'est pas établi. Maximilia est en « Spare » : si
+    une maison de Plébéiens y rapporte 17 (somme des `Money` de ses besoins), nos valeurs sont
+    celles du cran Spare.
+- Pas encore lus : les noms des villes.
 - **Mis de côté par Rémi (04/11/2026)** : reconnaître les îles sur une CAPTURE DE LA MINIMAP,
   quand on ne peut pas importer la sauvegarde. Faisable sans apprentissage : terre / eau par la
   couleur, une silhouette par île, comparée aux masques du catalogue dans les 4 rotations, à

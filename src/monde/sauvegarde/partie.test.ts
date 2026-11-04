@@ -43,7 +43,11 @@ describe.skipIf(!existsSync(SAUVEGARDE))("import d'une vraie sauvegarde (Maximil
     // à moi : 7 au Latium, 3 en Albion
     expect(p.iles.filter((i) => i.proprietaire === 41).length).toBe(10);
 
+    // réglages de la partie (préréglage Facile) : consommation et entretien au cran Faible
+    expect(p.reglages).toEqual({ consommation: "faible", entretien: "faible" });
+
     const c = normaliserConfiguration(configurationDepuisPartie("Maximilia Maxima 1", p))!;
+    expect(c.reglages).toMatchObject({ consommation: "faible", entretien: "faible" });
     expect(c.iles.length).toBe(40);
     expect(c.iles.filter((i) => i.propriete === "moi").length).toBe(10);
     expect(c.iles.find((i) => i.ileId === "celtic_island_large_05")).toMatchObject({ propriete: "achetable", rotation: 1 });

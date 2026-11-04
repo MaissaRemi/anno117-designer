@@ -93,6 +93,12 @@ export interface Commande {
    * calculée : objectif et biens des maisons.
    */
   productivite?: { globale?: number; parAtelier?: Record<string, number> };
+  /**
+   * Réglage d'entretien de la partie : multiplie la MAIN-D'ŒUVRE de chaque bâtiment (assets :
+   * `DifficultySettings/Maintenance`, `MaintenancePercentage` 100 / 122 / 140 sur chaque bien de
+   * main-d'œuvre). Les données extraites sont au cran Faible (100 %). Défaut 1.
+   */
+  facteurEntretien?: number;
   /** Fertilités et gisements déclarés de l'île (GUIDs). Absent ou vide : tous supposés présents. */
   fertilites?: string[];
   /**
@@ -454,7 +460,7 @@ export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup:
       for (const l of [...lignesServices, ...lignesInstitutions]) facturer(l.defId, l.nombre);
       demande = {};
       for (const [id, n] of Object.entries(charge)) {
-        for (const w of economy.buildingWorkforce[id] ?? []) demande[w.tier] = (demande[w.tier] ?? 0) + n * w.amount;
+        for (const w of economy.buildingWorkforce[id] ?? []) demande[w.tier] = (demande[w.tier] ?? 0) + n * w.amount * (commande.facteurEntretien ?? 1);
       }
       offre = { ...offreComptoir };
       for (const [g, pop] of Object.entries(residentsDe(toutes))) {

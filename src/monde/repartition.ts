@@ -37,6 +37,10 @@ export interface OptionsRepartition {
   lookup: DefLookup;
   routes: RoadType;
   productiviteGlobale: number;
+  /** Facteur de consommation des maisons (réglage de la partie). Défaut 1. */
+  consommation?: number;
+  /** Facteur d'entretien : main-d'œuvre des bâtiments (réglage de la partie). Défaut 1. */
+  facteurEntretien?: number;
 }
 
 /**
@@ -70,6 +74,7 @@ export function devisIle(ile: IleProductrice, objectif: BienDebit[], o: OptionsR
     fertilites: ile.fertilites, emplacements: ile.emplacements,
     ...(o.productiviteGlobale ? { productivite: { globale: o.productiviteGlobale } } : {}),
     ...(ile.dieu ? { dieu: ile.dieu } : {}),
+    ...(o.facteurEntretien && o.facteurEntretien !== 1 ? { facteurEntretien: o.facteurEntretien } : {}),
   }, o.catalog, o.lookup);
 }
 
@@ -78,9 +83,10 @@ export const terreDuDevis = (n: Nomenclature): number => n.surface.production + 
 
 /** Ce qu'il faut AUSSI fournir à l'île pour qu'elle tienne son objectif : les biens de ses
  *  ouvriers et les matières premières qu'elle ne peut pas produire. */
-export function besoinsDuDevis(n: Nomenclature): BienDebit[] {
+export function besoinsDuDevis(n: Nomenclature, consommation = 1): BienDebit[] {
   const m = new Map<string, number>();
-  for (const b of n.biens) if (b.source === "import" && b.parMinute > 0) m.set(b.good, (m.get(b.good) ?? 0) + b.parMinute);
+  // les biens des maisons ouvrières suivent le réglage de consommation ; les matières, non
+  for (const b of n.biens) if (b.source === "import" && b.parMinute > 0) m.set(b.good, (m.get(b.good) ?? 0) + b.parMinute * consommation);
   for (const i of n.imports) m.set(i.good, (m.get(i.good) ?? 0) + i.parMinute);
   return [...m].map(([good, parMinute]) => ({ good, parMinute }));
 }
@@ -231,7 +237,7 @@ export function suggererAchats(
       const couvre = repartir(reste, [cand.ile], o).affectation[cand.ile.cle] ?? [];
       const somme = couvre.reduce((a, b) => a + b.parMinute, 0);
       if (somme <= 0.05) continue;
-      const enRetour = besoinsDuDevis(devisIle(cand.ile, couvre, o)).reduce((a, b) => a + b.parMinute, 0);
+      const enRetour = besoinsDuDevis(devisIle(cand.ile, couvre, o), o.consommation).reduce((a, b) => a + b.parMinute, 0);
       if (somme - enRetour > 0.05 && (!meilleure || somme - enRetour > meilleure.somme - meilleure.enRetour)) meilleure = { k, couvre, somme, enRetour };
     }
     if (!meilleure) break;
