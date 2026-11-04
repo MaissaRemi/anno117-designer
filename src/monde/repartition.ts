@@ -52,11 +52,13 @@ export const fertilitesPourMoteur = (f: string[] | null): string[] => (f && f.le
 const REMPLISSAGE = 0.65;
 /**
  * Part de la bande d'eau côtière que couvrent vraiment les parties dans l'eau des bâtiments
- * côtiers. Mesuré le 30/10/2026 en posant 80 exemplaires : 14 et 15 % (cabanes de pêcheur sur
- * roman_island_large_03 et medium_01), 11 % (escargotières, 12 % bancs d'huîtres) ; l'Albion
- * pose bien moins (2 à 4 %, aucun ramasseur de coques : défaut de pose côtière ouvert).
+ * côtiers, PAR PROVINCE. Mesuré le 04/11/2026 en posant 80 exemplaires, après la lecture des
+ * quais (`partieQuai`) : au Latium 14 % (cabanes de pêcheur, escargotières), 7 % (marais
+ * salants) ; en Albion 5,6 % (salicorne), 4,3 % (coquillages), 1,7 % (coques). Les côtiers
+ * d'Albion sont longs le long du rivage (6 à 7 cases) : une côte découpée en accueille peu. La
+ * bande d'eau, elle, est aussi profonde dans les deux provinces (9 cases et plus).
  */
-const COTE_UTILE = 0.12;
+const COTE_UTILE: Record<string, number> = { Roman: 0.12, Celtic: 0.05 };
 /** Emplacements dont le nombre borne une exploitation (le marais ne borne rien). */
 const LIMITANTS = ["mountain", "river"] as const;
 const EPS = 1e-6;
@@ -103,7 +105,7 @@ export function repartir(
   // Les compter bien par bien laissait deux mines se disputer les mêmes emplacements de montagne
   // et remplissait une côte deux fois.
   const cap = new Map(iles.map((i) => [i.cle, i.terre * REMPLISSAGE - (dejaPris[i.cle] ?? 0)]));
-  const cote = new Map(iles.map((i) => [i.cle, i.cote * COTE_UTILE]));
+  const cote = new Map(iles.map((i) => [i.cle, i.cote * (COTE_UTILE[i.region] ?? COTE_UTILE.Roman)]));
   const places = new Map(iles.map((i) => [i.cle, Object.fromEntries(LIMITANTS.map((t) => [t, i.emplacements[t] ?? 0])) as Record<string, number>]));
   const aff = new Map<string, Map<string, number>>();
   const utilisee: Record<string, number> = {};

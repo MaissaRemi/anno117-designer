@@ -32,7 +32,20 @@ export function footprintSize(def: BuildingDef, rot: Rotation, scale = 1): { w: 
 export function partieEauPosee(
   def: BuildingDef, rot: Rotation, scale = 1,
 ): { x: number; y: number; w: number; h: number } | undefined {
-  const e = def.partieEau;
+  return zonePosee(def, def.partieEau, rot, scale);
+}
+
+/** Le quai d'un bâtiment côtier posé avec `rot` (cf. `partieQuai`), même repère que l'eau. */
+export function partieQuaiPosee(
+  def: BuildingDef, rot: Rotation, scale = 1,
+): { x: number; y: number; w: number; h: number }[] | undefined {
+  if (!def.partieQuai || isDiagonal(rot)) return undefined;
+  return def.partieQuai.map((r) => zonePosee(def, r, rot, scale)!);
+}
+
+function zonePosee(
+  def: BuildingDef, e: { x: number; y: number; w: number; h: number } | undefined, rot: Rotation, scale: number,
+): { x: number; y: number; w: number; h: number } | undefined {
   if (!e || isDiagonal(rot)) return undefined;
   const W = def.size.w, H = def.size.h;
   const r = rot === 90 ? { x: H - (e.y + e.h), y: e.x, w: e.h, h: e.w }

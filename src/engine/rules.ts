@@ -16,6 +16,7 @@ import {
   neighbors8,
   orthoNeighbors,
   partieEauPosee,
+  partieQuaiPosee,
 } from "./geometry";
 import { planningRange, porteeDeTrajet } from "./roads";
 import {
@@ -123,6 +124,11 @@ export function canPlace(
  * à terre, côté quai ; tout autre bâtiment a chaque case selon son terrain de pose. Exiger toute
  * l'emprise dans l'eau, comme avant, rendait la Cabane de pêcheur (7 colonnes dans l'eau sur 8)
  * impossible à poser contre une côte.
+ *
+ * Avec un QUAI connu (`partieQuai`), seul le quai doit être à terre ; le reste de l'emprise, ni
+ * quai ni eau, peut être à terre ou sur l'eau constructible. Exiger la terre partout hors de
+ * l'eau demandait aux marais salants et au ramasseur de coques une colonne de terre AU LARGE,
+ * derrière leur partie dans l'eau : ils ne se posaient nulle part.
  */
 export function terrainConvient(
   grid: Layout["grid"], def: BuildingDef, x: number, y: number, rot: Rotation, scale: number,
@@ -134,8 +140,13 @@ export function terrainConvient(
   }
   const ex = x + eau.x, ey = y + eau.y;
   const dansEau = (cx: number, cy: number) => cx >= ex && cx < ex + eau.w && cy >= ey && cy < ey + eau.h;
+  const quai = partieQuaiPosee(def, rot, scale);
+  const dansQuai = (cx: number, cy: number) =>
+    !quai || quai.some((q) => cx >= x + q.x && cx < x + q.x + q.w && cy >= y + q.y && cy < y + q.y + q.h);
   for (const c of footprintCells(def, x, y, rot, scale)) {
-    if (dansEau(c.x, c.y) ? !isWater(grid, c.x, c.y) : !isUsable(grid, c.x, c.y)) return false;
+    if (dansEau(c.x, c.y)) { if (!isWater(grid, c.x, c.y)) return false; }
+    else if (dansQuai(c.x, c.y)) { if (!isUsable(grid, c.x, c.y)) return false; }
+    else if (!isUsable(grid, c.x, c.y) && !isWater(grid, c.x, c.y)) return false;
   }
   for (let j = 0; j < eau.h; j++) for (let i = 0; i < eau.w; i++) if (!isWater(grid, ex + i, ey + j)) return false;
   return true;

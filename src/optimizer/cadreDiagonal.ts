@@ -135,5 +135,6 @@ export function catalogueDiagonal(catalog: BuildingDef[]): BuildingDef[] {
     ...(d.freeArea ? { freeArea: { radius: enDiagonale(d.freeArea.radius), area: Math.max(1, Math.round(d.freeArea.area / 2)) } } : {}),
     ...(d.field ? { field: { ...d.field, tiles: Math.max(1, Math.round(d.field.tiles / 2)) } } : {}),
     partieEau: undefined,
+    partieQuai: undefined,
   }));
 }

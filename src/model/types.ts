@@ -42,6 +42,15 @@ export interface BuildingDef {
    * déborder de l'emprise : un chantier naval exige de l'eau au-delà de ses murs.
    */
   partieEau?: { x: number; y: number; w: number; h: number };
+  /**
+   * Bâtiment côtier : le QUAI (`QuayArea` du `.ifo`), qui doit être à terre, en rectangles
+   * (le polygone n'est pas toujours un rectangle : celui du ramasseur de coques est en U) ; même
+   * repère que `partieEau`. Le reste de l'emprise, ni quai ni eau, peut être à terre ou dans
+   * l'eau : chez les marais salants et le ramasseur de coques, il est au large, derrière la partie
+   * dans l'eau. Absent (données plus anciennes, merveilles) : tout ce qui n'est pas dans l'eau
+   * est à terre. Extrait par `tools/extraire_quais.py`.
+   */
+  partieQuai?: { x: number; y: number; w: number; h: number }[];
   transporterRange?: number; // prod : distance-rue max vers un entrepôt (défaut 30)
   template?: string; // template du jeu (SlotFactoryBuilding7 = mines, Warehouse…)
   freeArea?: { radius: number; area: number }; // prod ∝ cases libres dans le rayon

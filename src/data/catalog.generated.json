@@ -114,7 +114,27 @@
       "kind": "service",
       "range": 22
     },
-    "streetRange": 26
+    "streetRange": 26,
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 10,
+        "h": 2
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "w": 3,
+        "h": 4
+      },
+      {
+        "x": 0,
+        "y": 6,
+        "w": 10,
+        "h": 2
+      }
+    ]
   },
   {
     "id": "g29340",
@@ -143,7 +163,27 @@
       "kind": "service",
       "range": 22
     },
-    "streetRange": 26
+    "streetRange": 26,
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 10,
+        "h": 2
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "w": 3,
+        "h": 4
+      },
+      {
+        "x": 0,
+        "y": 6,
+        "w": 10,
+        "h": 2
+      }
+    ]
   },
   {
     "id": "g15833",
@@ -2838,7 +2878,15 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40
+    "transporterRange": 40,
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 6
+      }
+    ]
   },
   {
     "id": "g3174",
@@ -3143,7 +3191,15 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40
+    "transporterRange": 40,
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 3
+      }
+    ]
   },
   {
     "id": "g2956",
@@ -3183,7 +3239,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 4
+      }
+    ]
   },
   {
     "id": "g145229",
@@ -4087,7 +4151,27 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 1
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "w": 2,
+        "h": 2
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "w": 3,
+        "h": 1
+      }
+    ]
   },
   {
     "id": "g2699",
@@ -4281,7 +4365,15 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40
+    "transporterRange": 40,
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 5
+      }
+    ]
   },
   {
     "id": "g31756",
@@ -5822,7 +5914,15 @@
       ],
       "inputs": []
     },
-    "transporterRange": 80
+    "transporterRange": 80,
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 5
+      }
+    ]
   },
   {
     "id": "g5980",
@@ -6485,7 +6585,15 @@
       ],
       "inputs": []
     },
-    "transporterRange": 80
+    "transporterRange": 80,
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 6
+      }
+    ]
   },
   {
     "id": "g10929",
@@ -6525,7 +6633,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 6
+      }
+    ]
   },
   {
     "id": "g5278",
@@ -6566,7 +6682,27 @@
       ],
       "inputs": []
     },
-    "transporterRange": 40
+    "transporterRange": 40,
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 1
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "w": 2,
+        "h": 5
+      },
+      {
+        "x": 0,
+        "y": 6,
+        "w": 4,
+        "h": 1
+      }
+    ]
   },
   {
     "id": "g8431",
@@ -6606,7 +6742,15 @@
         }
       ],
       "inputs": []
-    }
+    },
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 6
+      }
+    ]
   },
   {
     "id": "g2795",
@@ -8808,7 +8952,15 @@
       "h": 7
     },
     "roadRoot": true,
-    "icon": "icons/icon_3d_harbour_kontor.png"
+    "icon": "icons/icon_3d_harbour_kontor.png",
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 7
+      }
+    ]
   },
   {
     "id": "g7037",
@@ -8832,7 +8984,15 @@
       "h": 7
     },
     "roadRoot": true,
-    "icon": "icons/icon_3d_harbour_kontor.png"
+    "icon": "icons/icon_3d_harbour_kontor.png",
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 7
+      }
+    ]
   },
   {
     "id": "g3403",
@@ -8856,7 +9016,15 @@
       "h": 7
     },
     "roadRoot": true,
-    "icon": "icons/icon_3d_harbour_kontor.png"
+    "icon": "icons/icon_3d_harbour_kontor.png",
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 7
+      }
+    ]
   },
   {
     "id": "g7038",
@@ -8880,7 +9048,15 @@
       "h": 7
     },
     "roadRoot": true,
-    "icon": "icons/icon_3d_harbour_kontor.png"
+    "icon": "icons/icon_3d_harbour_kontor.png",
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 7
+      }
+    ]
   },
   {
     "id": "g3406",
@@ -8904,7 +9080,15 @@
       "h": 7
     },
     "roadRoot": true,
-    "icon": "icons/icon_3d_harbour_kontor.png"
+    "icon": "icons/icon_3d_harbour_kontor.png",
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 7
+      }
+    ]
   },
   {
     "id": "g7039",
@@ -8928,7 +9112,15 @@
       "h": 7
     },
     "roadRoot": true,
-    "icon": "icons/icon_3d_harbour_kontor.png"
+    "icon": "icons/icon_3d_harbour_kontor.png",
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 7
+      }
+    ]
   },
   {
     "id": "g6726",
@@ -9441,7 +9633,21 @@
     },
     "placement": "water",
     "roadRoot": true,
-    "icon": "icons/icon_3d_harbour_trading_pier.png"
+    "icon": "icons/icon_3d_harbour_trading_pier.png",
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 2
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "w": 4,
+        "h": 4
+      }
+    ]
   },
   {
     "id": "g31611",
@@ -9466,7 +9672,21 @@
     },
     "placement": "water",
     "roadRoot": true,
-    "icon": "icons/icon_3d_harbour_trading_pier.png"
+    "icon": "icons/icon_3d_harbour_trading_pier.png",
+    "partieQuai": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 2
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "w": 4,
+        "h": 4
+      }
+    ]
   },
   {
     "id": "g71266",

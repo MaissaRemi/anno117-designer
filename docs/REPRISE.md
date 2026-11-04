@@ -197,11 +197,7 @@ Conception validée, réponses de Rémi incluses :
 - **Limites connues** : l'argent des îles de production n'est pas compté ; l'estimation de terre
   est optimiste pour les fermes et les bâtiments à aire libre (le rattrapage compense en
   partie) ; les ouvriers de haut palier des ateliers de luxe consomment des biens de luxe, ce qui
-  est juste mais alourdit la demande ; **défaut de pose côtière en Albion** — aucun ramasseur de
-  coques ne se pose sur les îles d'Albion testées, et le cueilleur de salicorne ou le ramasseur
-  de coquillages bien moins qu'au Latium (2 à 4 % de la bande d'eau contre 11 à 15 %). À
-  examiner : profondeur de la bande d'eau constructible en Albion, ou `partieEau` de ces
-  bâtiments. Touche aussi « Ma commande » et l'île de production.
+  est juste mais alourdit la demande.
 - **Étape 4, faite** :
   - **suggestions d'achat** (`suggererAchats`, `monde/repartition.ts`) : pour ce qui manque, les
     îles achetables ou inconnues (jamais celles d'un adversaire) qui couvriraient le plus,
@@ -215,12 +211,23 @@ Conception validée, réponses de Rémi incluses :
   - **les besoins d'une île de production suivent ce qu'elle a vraiment posé** (biens des
     ouvriers, matières) : les compter pour tout l'objectif creusait le manque.
   Tests rapides de l'orchestration avec des moteurs factices : `monde/orchestration.test.ts`.
-- **Défaut ouvert, prioritaire pour la qualité des mondes** : les MARAIS SALANTS ne se posent sur
-  aucune île testée (même la grande côte de roman_island_medium_01), donc aucun garum ; et les
-  ramasseurs de coques sur aucune île d'Albion. Une chaîne n'est comptée posée qu'à hauteur de
-  son maillon le plus faible : tout le garum tombe à zéro. Piste : `partieEau` de ces bâtiments
-  (eau en L pour les marais salants : 5 × 4 dans une emprise 9 × 5) ou la bande d'eau
-  constructible, à vérifier dans les fichiers du jeu.
+- **Pose côtière corrigée (04/11/2026)** : les MARAIS SALANTS ne se posaient sur aucune île
+  (donc aucun garum) ni le ramasseur de coques en Albion. Cause, lue dans les `.ifo` du jeu : un
+  bâtiment côtier a TROIS zones — le quai (`QuayArea`, à terre), la partie dans l'eau
+  (`WaterBlocker`) et le reste de l'emprise, ni l'un ni l'autre. Le moteur exigeait la terre
+  partout hors de l'eau, donc une colonne de terre AU LARGE derrière l'eau de ces deux
+  bâtiments. Désormais `partieQuai` (rectangles, forme exacte du polygone : le quai des coques
+  est en U) doit être à terre, et le reste peut être terre ou eau constructible
+  (`terrainConvient`). Extrait par `tools/extraire_quais.py` (20 bâtiments sur 22 ; le phare et
+  la statue de Zeus n'ont pas de quai), et par `tools/build_catalog.py` aux prochaines
+  extractions. Comptoirs et quais pleins inchangés (quai et eau couvrent toute l'emprise).
+  Mesuré sur 80 demandés : marais salants 0 → 17 (roman_island_large_03), escargotières 15 → 20,
+  salicorne 7 → 17, coques 0 → 3 sur celtic_island_large_02 (positions possibles ×10 à ×20 sur
+  les autres îles d'Albion). L'Albion reste en dessous : ses côtiers sont longs le long du rivage
+  (6 à 7 cases), une côte découpée en accueille peu — la bande d'eau, elle, est aussi profonde
+  qu'au Latium. Budget de côte de la répartition par province : 12 % Latium, 5 % Albion. Test :
+  `commande/cotiers.test.ts`. Hypothèse non vérifiée en jeu : le reste de l'emprise accepte
+  indifféremment terre et eau constructible.
 - Au passage : la fenêtre modale partagée reprenait le focus à chaque rendu (un champ de saisie
   le perdait à chaque frappe) ; corrigé dans `ui/Modal.tsx`.
 

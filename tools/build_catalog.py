@@ -19,6 +19,7 @@ import xml.etree.ElementTree as ET
 
 sys.path.insert(0, os.path.dirname(__file__))
 import rda_extract as rda
+from extraire_quais import cases_du_polygone  # noqa: E402
 from game_defaults import CYCLE_TIME_DEFAULT
 
 GAME = os.environ.get("ANNO_GAME_DIR", r"F:\Anno 117 - Pax Romana\maindata")
@@ -419,6 +420,13 @@ def parse_ifo_size(data):
                         "x": round(min(wx) - min(xs)), "y": round(min(wz) - min(zs)),
                         "w": max(1, round(max(wx) - min(wx))), "h": max(1, round(max(wz) - min(wz))),
                     }
+                    # le QUAI, a terre, sous sa forme exacte (cf. tools/extraire_quais.py) : le
+                    # reste de l'emprise, ni quai ni eau, peut etre au large
+                    qa = root.find("./QuayArea")
+                    if qa is not None:
+                        quai = cases_du_polygone(qa, min(xs), min(zs), w, h)
+                        if quai:
+                            size["quai"] = quai
             return size
     # repli : Extents (demi-taille du mesh, ×2) si pas de BuildBlocker
     ext = root.find("./BoundingBox/Extents")
@@ -447,8 +455,11 @@ def resolve_sizes(buildings):
         size = parse_ifo_size(data)
         if size:
             eau = size.pop("eau", None)
+            quai = size.pop("quai", None)
             if eau:
                 b["partieEau"] = eau
+                if quai:
+                    b["partieQuai"] = quai
             b["size"] = size
             ok += 1
     print(f"  tailles resolues : {ok}/{len(buildings)}", file=sys.stderr)
@@ -485,6 +496,8 @@ def to_app_catalog(buildings, product_name):
         }
         if b.get("partieEau"):
             entry["partieEau"] = b["partieEau"]
+        if b.get("partieQuai"):
+            entry["partieQuai"] = b["partieQuai"]
         if b.get("placement") == "water":
             entry["placement"] = "water"  # se pose sur l'eau/la côte (port, pêcherie…)
         if b.get("template") in ROOT_TEMPLATES:
