@@ -262,6 +262,13 @@ rotation et leur position. Lue dans le navigateur en ~150 ms (`monde/sauvegarde/
   dans le sens horaire ; si l'île apparaît en miroir de la minimap, c'est l'autre sens.
 - Pas encore lus : l'activation des emplacements de mine (`MineSlotActivation`), les réglages de
   la partie (`gamesetup.a7s`), les noms des villes.
+- **Mis de côté par Rémi (04/11/2026)** : reconnaître les îles sur une CAPTURE DE LA MINIMAP,
+  quand on ne peut pas importer la sauvegarde. Faisable sans apprentissage : terre / eau par la
+  couleur, une silhouette par île, comparée aux masques du catalogue dans les 4 rotations, à
+  échelle commune ; l'utilisateur valide puis coche les fertilités. Inconnues : icônes posées sur
+  la minimap, brouillard, couleurs des propriétaires, minimap droite ou en losange. Pour mesurer
+  la fiabilité avant de bâtir l'écran : des captures de la minimap de Maximilia Maxima, dont la
+  sauvegarde donne la vérité (îles, rotations, positions) — et le sens de la rotation au passage.
 
 ## La suite, par intérêt
 
