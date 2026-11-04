@@ -119,6 +119,12 @@ export function entier(d: Uint8Array | undefined): number | undefined {
   }
 }
 
+/** Un entier 64 bits signé, en texte (il ne tient pas dans un nombre JavaScript). */
+export function entier64Texte(d: Uint8Array | undefined): string | undefined {
+  if (!d || d.length < 8) return undefined;
+  return new DataView(d.buffer, d.byteOffset, 8).getBigInt64(0, true).toString();
+}
+
 /** Une suite d'entiers 32 bits little-endian. */
 export function entiers32(d: Uint8Array | undefined): number[] {
   if (!d) return [];

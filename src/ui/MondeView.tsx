@@ -225,6 +225,11 @@ export function MondeView() {
                             <b>{i.libelle ?? nomCourt(i.ileId)}</b>
                             <span className="muted">{i.libelle ? `${nomCourt(i.ileId)} · ` : ""}{LIBELLES_PROPRIETE[i.propriete]}</span>
                             <span className="muted">{fertilitesLisibles(i)}</span>
+                            {!!i.emplacementsInactifs?.length && (
+                              <span className="muted" title="Emplacements que le générateur de carte n'a pas activés dans ta partie : ni mine ni source d'aqueduc">
+                                {i.emplacementsInactifs.length} emplacement(s) absent(s) de la partie
+                              </span>
+                            )}
                             {i.propriete === "moi" && (
                               <div className="monde-roles">
                                 <select value={i.role === "principale" ? "principale" : "production"} aria-label="Rôle"

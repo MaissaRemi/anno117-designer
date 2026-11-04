@@ -19,7 +19,7 @@ export function buildIslandGrid(id: string): GridShape | undefined {
   const water = zones ? upscale2x(zones.eau, tw, th) : usable.map((land) => !land);
   const relief = zones ? upscale2x(zones.relief, tw, th) : undefined;
   const rivers = riversT ? upscale2x(riversT, tw, th) : undefined;
-  const slots = slotsOf(id).map((s) => ({ type: s.type, x: Math.round(s.x) * 2, y: Math.round(s.y) * 2 }));
+  const slots = slotsOf(id).map((s) => ({ type: s.type, x: Math.round(s.x) * 2, y: Math.round(s.y) * 2, ...(s.id ? { id: s.id } : {}) }));
   return {
     w: tw * 2, h: th * 2, usable, water, relief, rivers,
     slots: slots.length ? slots : undefined, islandId: id, cellsPerTile: 2,

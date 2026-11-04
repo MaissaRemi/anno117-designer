@@ -120,6 +120,8 @@ export interface GridSlot {
   type: string; // "mountain" | "river" | "marsh"
   x: number;
   y: number;
+  /** `ObjectId` du jeu (texte, 64 bits) : relie l'emplacement à une sauvegarde. */
+  id?: string;
 }
 
 /** Grille de forme libre : masque des cases utilisables. */

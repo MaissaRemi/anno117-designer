@@ -153,6 +153,19 @@ interface PoseProduction {
   avertissements: string[];
 }
 
+/**
+ * L'île telle qu'elle est DANS LA PARTIE : sans les emplacements que le générateur de carte n'a
+ * pas activés (lus dans une sauvegarde). Données du jeu : les « Slot … » de montagne, rivière et
+ * marais sont des objets de carte aléatoires, activés selon le réglage de matières premières ;
+ * les « Fixed Slot … » le sont toujours (`ActivateAll`).
+ */
+export function sansEmplacementsInactifs(g: GridShape, inactifs: readonly string[] | undefined): GridShape {
+  if (!inactifs?.length || !g.slots) return g;
+  const hors = new Set(inactifs);
+  const slots = g.slots.filter((s) => !s.id || !hors.has(s.id));
+  return { ...g, slots: slots.length ? slots : undefined };
+}
+
 export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Promise<ResultatMonde> {
   const lookup = makeLookup(o.catalog);
   const n = o.parallelisme ?? 4;
@@ -164,7 +177,7 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
   const grilles = new Map<string, GridShape>();
   for (const i of c.iles) {
     const g = buildIslandGrid(i.ileId);
-    if (g) grilles.set(i.cle, g);
+    if (g) grilles.set(i.cle, sansEmplacementsInactifs(g, i.emplacementsInactifs));
   }
   if (!principales.length) avertissements.push("Aucune île principale : choisis-en au moins une parmi tes îles");
   const avant = new Map((o.precedent?.iles ?? []).filter((i) => i.empreinte).map((i) => [`${i.cle}|${i.empreinte}`, i]));
@@ -176,7 +189,7 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
   const principalesCalculees = await parallele(principales.map((ile) => async (): Promise<IleCalculee> => {
     const f = ile.fertilites;
     const tierGuid = ile.palier ?? palierParDefaut(provinceDe(ile));
-    const empreinte = JSON.stringify({ i: ile.ileId, tierGuid, f, d: ile.dieu, o: c.reglages.objectif, r: c.reglages.routes });
+    const empreinte = JSON.stringify({ i: ile.ileId, tierGuid, f, d: ile.dieu, o: c.reglages.objectif, r: c.reglages.routes, e: ile.emplacementsInactifs });
     const reprise = avant.get(`${ile.cle}|${empreinte}`);
     if (reprise?.role === "principale") {
       reutilisees++;
@@ -238,7 +251,8 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
   // ─── 3. POSE RÉELLE, PUIS UN RATTRAPAGE ─────────────────────────────────────────────
   const affectation = new Map(Object.entries(rep.affectation));
   const empreinteProd = (p: IleProductrice) => JSON.stringify({
-    i: c.iles.find((x) => x.cle === p.cle)!.ileId, f: p.fertilites, d: p.dieu, ...reglagesProd, a: affectation.get(p.cle),
+    i: c.iles.find((x) => x.cle === p.cle)!.ileId, e: c.iles.find((x) => x.cle === p.cle)!.emplacementsInactifs,
+    f: p.fertilites, d: p.dieu, ...reglagesProd, a: affectation.get(p.cle),
   });
   const empreintes = new Map<string, string>();
   const poser = async (cles: string[]) => {

@@ -2,7 +2,7 @@ import { economy } from "../../economy/economy";
 import { islandById } from "../../data/islands";
 import { nouvelleConfiguration, nouvelId, type ConfigurationMonde, type IleDuMonde, type Propriete } from "../configuration";
 import { extraireRda, fichierDeSauvegarde, lireIndexRda } from "./rda";
-import { attribut, attributs, chemin, enfant, enfants, entier, entiers32, filtreChemins, lireFileDb, texteUtf16, type NoeudFileDb } from "./filedb";
+import { attribut, attributs, chemin, enfant, enfants, entier, entier64Texte, entiers32, filtreChemins, lireFileDb, texteUtf16, type NoeudFileDb } from "./filedb";
 
 /**
  * IMPORT D'UNE SAUVEGARDE `.a8s` — les îles de la partie, leurs fertilités, leur propriétaire.
@@ -49,6 +49,8 @@ export interface IleLue {
   fertilites: string[];
   /** GUID du profil propriétaire ; absent : personne. */
   proprietaire?: number;
+  /** Emplacements (`ObjectId`) que le générateur de carte n'a pas activés : absents de la partie. */
+  emplacementsInactifs: string[];
 }
 
 export interface PartieLue {
@@ -93,11 +95,19 @@ export function ilesDeLaSession(session: NoeudFileDb, numeroSession: number): { 
     const tirees = attributs(enfant(el, "FertilitiesPerAreaIndex"), "#8000").filter((_, i) => i % 2 === 1).flatMap(entiers32);
     const zone = zones.get((129 + rang) * 64 + numeroSession);
     const guids = zone?.fertilites.length ? zone.fertilites : tirees;
+    // `MineSlotActivation` alterne ObjectId (64 bits) et booléen d'activation
+    const activ = attributs(enfant(el, "MineSlotActivation"), "#8000");
+    const emplacementsInactifs: string[] = [];
+    for (let k = 0; k + 1 < activ.length; k += 2) {
+      const id = entier64Texte(activ[k]);
+      if (id && !entier(activ[k + 1])) emplacementsInactifs.push(id);
+    }
     iles.push({
       ileId,
       rotation: ((entier(attribut(el, "Rotation90")) ?? 0) % 4 + 4) % 4,
       position: { x, y },
       fertilites: [...new Set(guids.map(String))].filter((g) => g in economy.fertilities),
+      emplacementsInactifs,
       ...(zone?.proprietaire !== undefined ? { proprietaire: zone.proprietaire } : {}),
     });
   });
@@ -147,6 +157,7 @@ export function configurationDepuisPartie(nom: string, p: PartieLue, moi = PROFI
     role: "auto",
     rotation: i.rotation,
     position: i.position,
+    ...(i.emplacementsInactifs.length ? { emplacementsInactifs: i.emplacementsInactifs } : {}),
   }));
   return c;
 }

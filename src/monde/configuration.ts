@@ -46,6 +46,12 @@ export interface IleDuMonde {
   rotation?: number;
   /** Position sur la carte de sa province, en cases (lue dans une sauvegarde). */
   position?: { x: number; y: number };
+  /**
+   * Emplacements (montagne, rivière, marais) que le générateur de carte n'a pas activés dans la
+   * partie, par `ObjectId` (lus dans une sauvegarde) : retirés de l'île pour le calcul — ni mine,
+   * ni source d'aqueduc. Absent : tous présents.
+   */
+  emplacementsInactifs?: string[];
 }
 
 /** Ce que maximisent les îles principales. */
@@ -136,6 +142,8 @@ export function normaliserConfiguration(brut: unknown): ConfigurationMonde | nul
       ...(estChaine(r.dieu) && dieuParId(r.dieu) ? { dieu: r.dieu } : {}),
       ...(Number.isInteger(r.rotation) ? { rotation: (((r.rotation as number) % 4) + 4) % 4 } : {}),
       ...(positionValide(r.position) ? { position: { x: r.position.x, y: r.position.y } } : {}),
+      ...(Array.isArray(r.emplacementsInactifs) && r.emplacementsInactifs.some(estChaine)
+        ? { emplacementsInactifs: [...new Set(r.emplacementsInactifs.filter(estChaine))] } : {}),
     });
   }
   const g = (c.reglages && typeof c.reglages === "object" ? c.reglages : {}) as Record<string, unknown>;

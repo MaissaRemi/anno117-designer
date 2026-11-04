@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { configurationDepuisPartie, joueursDeLaPartie, lirePartie, type PartieLue } from "./partie";
 import { normaliserConfiguration } from "../configuration";
+import { sansEmplacementsInactifs } from "../calcul";
+import { buildIslandGrid } from "../../data/islandGrid";
+import type { GridShape } from "../../model/types";
 
 /**
  * Sur une vraie sauvegarde de Rémi, si elle est sur la machine (sinon le test est sauté : les
@@ -45,6 +48,13 @@ describe.skipIf(!existsSync(SAUVEGARDE))("import d'une vraie sauvegarde (Maximil
     expect(c.iles.filter((i) => i.propriete === "moi").length).toBe(10);
     expect(c.iles.find((i) => i.ileId === "celtic_island_large_05")).toMatchObject({ propriete: "achetable", rotation: 1 });
     expect(c.iles.find((i) => i.ileId === "celtic_island_large_07")!.propriete).toBe("indisponible");
+    // emplacements : Grande 05 d'Albion a 6 emplacements de montagne tirés au hasard, 2 activés
+    // (ses deux gisements, argent et fer) ; les 6 fixes et les 8 de marais le sont tous
+    expect(l05.emplacementsInactifs.length).toBe(4);
+    const grille = buildIslandGrid("celtic_island_large_05")!;
+    const montagnes = (g: GridShape) => (g.slots ?? []).filter((x) => x.type === "mountain").length;
+    expect(montagnes(grille)).toBe(12);
+    expect(montagnes(sansEmplacementsInactifs(grille, l05.emplacementsInactifs))).toBe(8);
     console.log(`sauvegarde lue en ${Math.round(duree)} ms`);
   }, 60_000);
 });
@@ -53,10 +63,10 @@ describe("partie à plusieurs", () => {
   const partie: PartieLue = {
     inconnues: [],
     iles: [
-      { ileId: "roman_island_medium_01", rotation: 0, position: { x: 0, y: 0 }, fertilites: [], proprietaire: 41 },
-      { ileId: "roman_island_large_03", rotation: 2, position: { x: 9, y: 9 }, fertilites: ["2209"], proprietaire: 600070 },
-      { ileId: "celtic_island_large_02", rotation: 1, position: { x: 5, y: 5 }, fertilites: [], proprietaire: 31101 },
-      { ileId: "celtic_island_medium_01", rotation: 3, position: { x: 1, y: 1 }, fertilites: [] },
+      { ileId: "roman_island_medium_01", rotation: 0, position: { x: 0, y: 0 }, fertilites: [], proprietaire: 41, emplacementsInactifs: [] },
+      { ileId: "roman_island_large_03", rotation: 2, position: { x: 9, y: 9 }, fertilites: ["2209"], proprietaire: 600070, emplacementsInactifs: [] },
+      { ileId: "celtic_island_large_02", rotation: 1, position: { x: 5, y: 5 }, fertilites: [], proprietaire: 31101, emplacementsInactifs: [] },
+      { ileId: "celtic_island_medium_01", rotation: 3, position: { x: 1, y: 1 }, fertilites: [], emplacementsInactifs: [] },
     ],
   };
 

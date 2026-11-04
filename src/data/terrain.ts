@@ -33,6 +33,8 @@ export interface TerrainSlot {
   type: string; // "mountain" | "river" | "marsh" | "blocker"
   x: number;
   y: number;
+  /** `ObjectId` de l'emplacement (64 bits, en texte) : une sauvegarde dit s'il est activé. */
+  id?: string;
 }
 
 interface TerrainEntry {
