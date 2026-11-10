@@ -74,10 +74,11 @@ archives `.rda` du jeu (`list`, `get`, `dump`) pour aller vérifier une règle d
 `tools/filedb.py` lit le format FileDB (îles, sauvegardes). Sauvegardes de Rémi :
 `Documents/Anno 117 - Pax Romana/accounts/<compte>/<profil>/*.a8s`.
 
-Outils installés pour Claude Code (10/11/2026) : **Graphify** (`/graphify .` construit le graphe
-de connaissances du dépôt dans `graphify-out/`) ; **Ponytail** à installer par Rémi
-(`claude plugin marketplace add DietrichGebert/ponytail`, puis
-`claude plugin install ponytail@ponytail`).
+Outils installés pour Claude Code (10/11/2026, portée utilisateur) : **Graphify** 0.9.105
+(`pip install graphifyy` + `graphify install` ; `/graphify .` construit le graphe de
+connaissances du dépôt dans `graphify-out/`) et **Ponytail** 5.3.3 (plugin
+`ponytail@ponytail`, place de marché `DietrichGebert/ponytail` : écrire moins de code ; commandes
+`/ponytail`, `/ponytail-review`, `/ponytail-audit`…). Actifs à la session suivante.
 
 ## Conventions du dépôt
 
