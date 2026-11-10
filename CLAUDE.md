@@ -8,7 +8,12 @@ sauvegarde dans `src/monde`, données du jeu extraites dans `src/data`.
 
 @docs/REPRISE.md
 
-À lire au besoin :
+À lire au besoin (convention `.claude/` par thème) :
+- architecture, modules et flux de données : `.claude/architecture.md` ;
+- décisions structurantes et leur raison : `.claude/decisions.md` ;
+- conventions du dépôt : `.claude/conventions.md` ;
+- repère de chaque fonction exportée : `.claude/functions-index.md` (généré par
+  `python tools/gen_functions_index.py`) ;
 - feuille de route : `.claude/ROADMAP.md` ;
 - mécanique du jeu, règles prouvées et questions ouvertes : `.claude/GAME_MECHANICS.md` ;
 - conceptions et plans datés : `docs/superpowers/` (archives ; `.claude/AUDIT-*`, `PROGRESS.md`

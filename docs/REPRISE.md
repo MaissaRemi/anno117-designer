@@ -80,6 +80,28 @@ connaissances du dépôt dans `graphify-out/`) et **Ponytail** 5.3.3 (plugin
 `ponytail@ponytail`, place de marché `DietrichGebert/ponytail` : écrire moins de code ; commandes
 `/ponytail`, `/ponytail-review`, `/ponytail-audit`…). Actifs à la session suivante.
 
+## Analyser le projet (pour un nouveau modèle)
+
+Dans l'ordre, du plus court au plus détaillé :
+1. ce document (objectifs, état, suite) ;
+2. `.claude/architecture.md` : modules, flux de données, workers, tests, outils, code en sommeil ;
+3. `.claude/decisions.md` (pourquoi) et `.claude/conventions.md` (comment écrire ici) ;
+4. `.claude/functions-index.md` : chaque export avec sa ligne et sa centralité (régénérer par
+   `python tools/gen_functions_index.py`) ;
+5. `.claude/GAME_MECHANICS.md` : règles du jeu prouvées ([FICHIERS], [IN-GAME]) et ouvertes ;
+6. le **graphe Graphify** (`graphify-out/`, non versionné, à reconstruire sur une autre
+   machine par `/graphify .` dans Claude Code, ~5 min et ~0,8 M de jetons pour les documents) :
+   `graphify-out/GRAPH_REPORT.md` (nœuds centraux, communautés, liens surprenants),
+   `graphify query "question"`, `graphify explain "Symbole"`, `graphify path "A" "B"`,
+   `graphify-out/wiki/` (un article par communauté). Pour que le code se mette à jour seul après
+   chaque commit (analyse AST gratuite), lancer une fois `graphify hook install` ;
+   `graphify claude install` ajoute au `CLAUDE.md` du projet la consigne de consulter le graphe
+   (tous deux à lancer par Rémi : le mode automatique refuse ces réglages persistants). Un
+   document modifié demande `/graphify . --update`. `.graphifyignore` écarte l'index généré et les copies de travail.
+   Angle mort connu : un catalogue passé en paramètre aux moteurs ne crée pas de lien d'analyse ;
+   `.claude/architecture.md` pose ces liens. Les nœuds de données se désignent par leur
+   identifiant (`src_data_catalog_generated`), pas par le nom du fichier.
+
 ## Conventions du dépôt
 
 - Échanges avec Rémi en français. Le dépôt est **en français** : commentaires, documentation,

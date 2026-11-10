@@ -1,0 +1,5 @@
+# Exclus du graphe Graphify (voir .claude/architecture.md)
+# index genere depuis le code : l'analyse AST le couvre deja
+.claude/functions-index.md
+# copies de travail
+.claude/worktrees/
