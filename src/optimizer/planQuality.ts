@@ -1,6 +1,7 @@
 import type { BuildingDef, GridShape, Layout } from "../model/types";
 import type { DefLookup } from "../engine/rules";
 import { footprintSize } from "../engine/geometry";
+import { planningRange, type RoadType } from "../engine/roads";
 import { economy } from "../economy/economy";
 import { estEntrepot } from "./kontor";
 
@@ -106,5 +107,98 @@ export function planQuality(
       aqueducts: at("aqueducts"),
       free: pctOf(tiles[0]),
     },
+  };
+}
+
+/**
+ * ═══ REGROUPEMENT ET ESPACEMENT DES SERVICES ═══════════════════════════════════════════
+ *
+ * Exigence de Rémi (`.claude/exigences.md`) : peu de copies d'un même service, espacées selon
+ * sa portée, et pas de « pâtés ». Le nombre d'habitants ne la voit pas : mesuré le 2026-11-10,
+ * 74 à 90 % des services de « Remplir l'île » étaient dans un pâté, et « Ma commande » répétait
+ * la Tour de guet tous les 9 pas pour une portée qui en permet 46 — tous les tests au vert.
+ */
+export interface Regroupement {
+  /** Nombre de services du plan. */
+  services: number;
+  /** Part (0..100) des services dans un PÂTÉ : trois services ou plus dont les emprises sont à
+   *  une case ou moins l'une de l'autre (collées, ou séparées par une seule case de route). */
+  enPate: number;
+  /** Taille du plus gros pâté. */
+  plusGros: number;
+  /** Pour chaque type posé au moins deux fois, le plus serré d'abord. */
+  parService: {
+    defId: string;
+    nom: string;
+    copies: number;
+    /** Distance médiane (L1, de centre à centre) d'une copie à sa plus proche voisine du même type. */
+    voisin: number;
+    /** Espacement que la portée permet : `2 × (portée − détour du peigne)`, la formule des moteurs. */
+    permis: number;
+    /** `voisin / permis`. Sous 1, les copies sont plus serrées que la portée ne le demande. */
+    rapport: number;
+  }[];
+  /** Le plus petit `rapport` ; 1 si aucun type n'est posé deux fois. */
+  espacement: number;
+}
+
+/** Détour moyen sur le peigne de rues, retiré à la portée (`planLattice.effR`, `nomenclature`). */
+const DETOUR_PEIGNE = 7;
+
+/** Mesure le regroupement des services d'un plan. Fonction pure, comme `planQuality`. */
+export function regroupement(
+  plan: Pick<Layout, "buildings">,
+  lookup: DefLookup,
+  roadType?: RoadType,
+): Regroupement {
+  const svc = plan.buildings.flatMap((b) => {
+    const d = lookup(b.defId);
+    if (!d || roleOf(d) !== "service") return [];
+    return [{ d, x: b.x, y: b.y, ...footprintSize(d, b.rotation) }];
+  });
+  const n = svc.length;
+
+  // pâtés : composantes de services à une case ou moins l'un de l'autre
+  const chef = svc.map((_, i) => i);
+  const racine = (i: number): number => (chef[i] === i ? i : (chef[i] = racine(chef[i])));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const a = svc[i], b = svc[j];
+    const dx = Math.max(a.x - (b.x + b.w), b.x - (a.x + a.w), 0);
+    const dy = Math.max(a.y - (b.y + b.h), b.y - (a.y + a.h), 0);
+    if (Math.max(dx, dy) <= 1) chef[racine(i)] = racine(j);
+  }
+  const tailles = new Map<number, number>();
+  for (let i = 0; i < n; i++) tailles.set(racine(i), (tailles.get(racine(i)) ?? 0) + 1);
+  let enPate = 0, plusGros = 0;
+  for (const t of tailles.values()) {
+    if (t >= 3) enPate += t;
+    if (t > plusGros) plusGros = t;
+  }
+
+  // espacement : plus proche voisine du même type, rapportée à ce que la portée permet
+  const parType = new Map<string, typeof svc>();
+  for (const s of svc) parType.set(s.d.id, [...(parType.get(s.d.id) ?? []), s]);
+  const parService: Regroupement["parService"] = [];
+  for (const [defId, copies] of parType) {
+    const portee = planningRange(copies[0].d, roadType);
+    if (copies.length < 2 || portee <= 0) continue;
+    const centres = copies.map((c) => [c.x + c.w / 2, c.y + c.h / 2]);
+    const proches = centres.map(([x, y], i) => Math.min(...centres
+      .filter((_, j) => j !== i).map(([u, v]) => Math.abs(x - u) + Math.abs(y - v)))).sort((a, b) => a - b);
+    const m = proches.length >> 1;
+    const voisin = proches.length % 2 ? proches[m] : (proches[m - 1] + proches[m]) / 2;
+    const permis = 2 * Math.max(8, portee - DETOUR_PEIGNE);
+    parService.push({
+      defId, nom: copies[0].d.name, copies: copies.length, voisin, permis,
+      rapport: Math.round((100 * voisin) / permis) / 100,
+    });
+  }
+  parService.sort((a, b) => a.rapport - b.rapport || a.defId.localeCompare(b.defId));
+  return {
+    services: n,
+    enPate: n ? Math.round((100 * enPate) / n) : 0,
+    plusGros,
+    parService,
+    espacement: parService[0]?.rapport ?? 1,
   };
 }

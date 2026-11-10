@@ -37,13 +37,13 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `LigneNomenclature` (interface, L134) [0]
 - `Nomenclature` (interface, L145) [3]
 - `copiesPourCouvrir` (function, L170) [1] : Copies d'un service à portée-rue pour couvrir une zone : pavage en diamants L1 de rayon effectif `portée − pas du peign…
-- `nomenclature` (function, L179) [18] : La nomenclature d'une commande.
+- `nomenclature` (function, L179) [19] : La nomenclature d'une commande.
 ### `src/commande/planifier.ts`
 - `ObjectifPose` (interface, L28) [0] : Un bien de l'objectif, et le débit que le plan POSÉ en tire.
 - `Argent` (interface, L33) [9]
 - `PlanCommande` (interface, L35) [0]
 - `compterEmplacements` (function, L55) [0] : Emplacements de terrain de l'île, par type.
-- `planifierCommande` (function, L61) [7]
+- `planifierCommande` (function, L61) [8]
 - `ResultatCommande` (interface, L151) [6] : Ce qui traverse la frontière du worker : le plan à poser et le rapport, sans les masques de grille (zone, île) qui pèse…
 - `resumer` (function, L174) [3]
 ### `src/commande/planifierWorker.ts`
@@ -60,7 +60,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ## src/data
 
 ### `src/data/islandGrid.ts` — Construit la grille VIVANTE ½-tuile (cellsPerTile=2) d'une île à partir de son id.
-- `buildIslandGrid` (function, L7) [27]
+- `buildIslandGrid` (function, L7) [28]
 ### `src/data/islands.ts` — Décode le masque RLE en tableau de booléens (longueur w*h).
 - `Island` (interface, L3) [2]
 - `islands` (const, L12) [34]
@@ -79,9 +79,9 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `riversOf` (function, L58) [2] : Cases rivière (boolean[w*h]) d'une île, ou undefined si aucune.
 - `ZonesIle` (interface, L65) [0] : Zones constructibles d'une île selon le jeu, repère de l'image ; undefined si absentes.
 - `zonesOf` (function, L73) [2] : LE JEU DIT LUI-MÊME OÙ L'ON BÂTIT (AreaIDs × Water dans le gamedata de l'île) : terre constructible, bande d'eau côtièr…
-- `hasHeights` (function, L81) [5] : Vrai si l'île a des hauteurs extraites (le décodage peut malgré tout échouer côté navigateur).
+- `hasHeights` (function, L81) [6] : Vrai si l'île a des hauteurs extraites (le décodage peut malgré tout échouer côté navigateur).
 - `slotsOf` (function, L86) [1] : Slots posables (montagne/rivière/marais — les blockers sont ignorés), repère de l'image.
-- `heightsOf` (function, L100) [6]
+- `heightsOf` (function, L100) [7]
 
 ## src/economy
 
@@ -232,15 +232,15 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `parcourir` (function, L374) [5] : PORTÉE le long des routes : les nœuds dont le trajet depuis une source, source comprise, ne dépasse pas `budget` (1 par…
 - `FileDeNoeuds` (class, L419) [1] : File de priorité (tas binaire) sur (longueur, ordre d'arrivée).
 ### `src/engine/roads.ts` — LE TYPE DE ROUTE ALLONGE LA PORTÉE DES SERVICES
-- `RoadType` (type, L20) [14]
+- `RoadType` (type, L20) [15]
 - `ROAD_TYPES` (const, L22) [1]
 - `DEFAULT_ROAD_TYPE` (const, L28) [1]
 - `roadFactor` (const, L30) [1]
-- `planningRange` (function, L39) [10] : Portée de PLANIFICATION d'un bâtiment, en cases de route du type donné.
+- `planningRange` (function, L39) [11] : Portée de PLANIFICATION d'un bâtiment, en cases de route du type donné.
 - `porteeDeTrajet` (function, L49) [2] : Portée en LONGUEUR de trajet, sans arrondi : pour un réseau qui mêle cases droites (1) et losanges diagonaux (√2, cf.
 ### `src/engine/rules.ts`
 - `DefLookup` (type, L37) [19]
-- `makeLookup` (function, L71) [42]
+- `makeLookup` (function, L71) [43]
 - `canPlace` (function, L103) [3] : Peut-on poser `def` en (x,y,rot) ?
 - `terrainConvient` (function, L133) [5] : Le terrain convient-il à `def` posé en (x, y) ?
 - `rootedRoadSet` (function, L160) [13] : Ensemble des cases de route reliées à un comptoir (roadRoot), via BFS sur le réseau (4-connexité).
@@ -281,7 +281,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `FieldSpec` (interface, L14) [0]
 - `ProductionGood` (interface, L19) [0]
 - `ProductionSpec` (interface, L24) [0]
-- `BuildingDef` (interface, L31) [80] : Définition catalogue : gabarit réutilisable d'un type de bâtiment.
+- `BuildingDef` (interface, L31) [81] : Définition catalogue : gabarit réutilisable d'un type de bâtiment.
 - `PlacedBuilding` (interface, L84) [23] : Instance d'un bâtiment posé sur la grille.
 - `FieldTile` (interface, L93) [4]
 - `RoadTile` (interface, L100) [14]
@@ -413,7 +413,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `facadeDe` (function, L67) [2] : FAÇADE d'une pose : la rangée de cases le long du grand côté qui donne sur le plus de terre constructible.
 ### `src/optimizer/halfTileAdapter.ts` — Adaptateur ½-tuile ⇄ tuile pour l'optimiseur.
 - `gridWithObstacles` (function, L22) [4] : Marque l'emprise des bâtiments donnés comme NON constructible (obstacle) sur une copie de la grille.
-- `downscaleGrid` (function, L44) [25] : Inverse de upscale2x : ½-tuile → tuile (coin haut-gauche de chaque bloc 2×2).
+- `downscaleGrid` (function, L44) [26] : Inverse de upscale2x : ½-tuile → tuile (coin haut-gauche de chaque bloc 2×2).
 - `upscaleBuildings` (function, L75) [1] : Bâtiments tuile → ½-tuile : position ×2 (l'emprise re-double via cellsPerTile=2).
 - `upscaleTiles` (function, L80) [1] : Tuiles (route/champ/aqueduc) tuile → ½-tuile : 1 tuile → bloc 2×2 (route large 1 tuile).
 - `scaleResultToHalfTile` (function, L91) [4] : Reprojette un résultat de plan d'île (tuile) en ½-tuiles si la grille d'origine l'était.
@@ -429,7 +429,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `ImportGood` (interface, L189) [0]
 - `IslandPlanResult` (interface, L195) [8]
 - `planIsland` (function, L295) [3] : Point d'entrée UNIQUE du plan d'île.
-- `planIslandImport` (function, L546) [17]
+- `planIslandImport` (function, L546) [18]
 ### `src/optimizer/islandPlanWorker.ts`
 - `IslandPlanMsg` (type, L5) [1]
 ### `src/optimizer/kontor.ts` — COMPTOIR (kontor) — racine du réseau de routes et point d'entrée des marchandises.
@@ -461,12 +461,14 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `HousePlot` (interface, L98) [2] : Une PARCELLE bâtie et les paliers qu'elle peut légalement accueillir, d'après les services qui la couvrent.
 - `hostableTiers` (const, L112) [1] : Paliers qu'au moins une parcelle sait accueillir — le VIVIER de la cascade.
 - `LatticeResult` (interface, L118) [1]
-- `planLattice` (function, L175) [13]
+- `planLattice` (function, L175) [14]
 ### `src/optimizer/planQuality.ts` — QUALITÉ D'UN PLAN : CE QUE LE SOL DEVIENT
-- `PlanRole` (type, L23) [0] : Rôle d'un bâtiment dans le plan, du point de vue de l'usage du sol.
-- `roleOf` (function, L31) [2] : Rôle d'un bâtiment.
-- `PlanQuality` (interface, L40) [2]
-- `planQuality` (function, L55) [7] : Mesure l'usage du sol d'un plan.
+- `PlanRole` (type, L24) [0] : Rôle d'un bâtiment dans le plan, du point de vue de l'usage du sol.
+- `roleOf` (function, L32) [2] : Rôle d'un bâtiment.
+- `PlanQuality` (interface, L41) [2]
+- `planQuality` (function, L56) [8] : Mesure l'usage du sol d'un plan.
+- `Regroupement` (interface, L121) [1] : REGROUPEMENT ET ESPACEMENT DES SERVICES
+- `regroupement` (function, L149) [2] : Mesure le regroupement des services d'un plan.
 ### `src/optimizer/plansAuChoix.ts` — PLANS AU CHOIX
 - `PlanComparable` (interface, L19) [1] : Ce qu'un plan doit exposer pour être comparé.
 - `Critere` (type, L28) [1]

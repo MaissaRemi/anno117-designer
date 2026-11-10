@@ -22,6 +22,7 @@ const LOURDS = [
   "src/optimizer/bilanIndicatif.test.ts",
   "src/optimizer/trameDroite.golden.test.ts",
   "src/optimizer/reseauRoutier.projection.test.ts",
+  "src/optimizer/qualite.panneau.test.ts",
   "src/commande/ileDeProduction.test.ts",
   "src/monde/calcul.test.ts",
 ];

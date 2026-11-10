@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef, GridShape, PlacedBuilding } from "../model/types";
 import { makeLookup } from "../engine/rules";
-import { planQuality, roleOf } from "./planQuality";
+import { planQuality, regroupement, roleOf } from "./planQuality";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -65,5 +65,27 @@ describe("qualité d'un plan", () => {
   it("des services sans aucune maison donnent un ratio infini, pas zéro", () => {
     const q = planQuality({ buildings: [at(TAVERNE, 0, 0)], roads: [], fields: [] }, grid(10, 10), lookup);
     expect(q.servicesPerHouse).toBe(Infinity);
+  });
+});
+
+describe("regroupement des services", () => {
+  // Taverne 4×6, portée-rue 26 : espacement permis 2 × (26 − 7) = 38 en terre, 2 × (39 − 7) = 64 en pavée.
+  it("trois tavernes à une case l'une de l'autre forment un pâté, serrées bien en deçà de leur portée", () => {
+    const r = regroupement({ buildings: [at(TAVERNE, 0, 0), at(TAVERNE, 5, 0), at(TAVERNE, 10, 0), at(RESIDENCE, 20, 0)] }, lookup);
+    expect(r.services).toBe(3);
+    expect(r.enPate).toBe(100);
+    expect(r.plusGros).toBe(3);
+    expect(r.parService[0]).toMatchObject({ copies: 3, voisin: 5, permis: 38, rapport: 0.13 });
+    expect(r.espacement).toBe(0.13);
+  });
+
+  it("deux tavernes éloignées ne forment pas de pâté ; la route pavée permet un espacement plus grand", () => {
+    const plan = { buildings: [at(TAVERNE, 0, 0), at(TAVERNE, 40, 0)] };
+    expect(regroupement(plan, lookup)).toMatchObject({ enPate: 0, plusGros: 1, espacement: 1.05 });
+    expect(regroupement(plan, lookup, "pavee").espacement).toBe(0.63);
+  });
+
+  it("un seul exemplaire de chaque service : rien à espacer", () => {
+    expect(regroupement({ buildings: [at(TAVERNE, 0, 0)] }, lookup).espacement).toBe(1);
   });
 });
