@@ -20,6 +20,9 @@ export interface DispositionOpts {
   heights?: Int8Array;
   /** Rangées d'îlots entre deux corridors d'eau ; 0 ou absent = aucun (cf. `ilots.ts`). */
   corridors?: number;
+  /** Lever le gain minimal d'une copie supplémentaire de service : les copies se resserrent
+   *  pour loger une commande qui ne tient pas sinon. Défaut : essayé en repli seulement. */
+  copiesSerrees?: boolean;
 }
 
 export interface LignePosee {

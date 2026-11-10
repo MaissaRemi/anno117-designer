@@ -1,59 +1,62 @@
 {
   "recommande": {
     "palier": "1498",
-    "maisons": 620,
-    "habitants": 22990,
-    "maisonsAuPalier": 539,
+    "maisons": 570,
+    "habitants": 23072,
+    "maisonsAuPalier": 474,
     "paliers": {
-      "1498": 539,
-      "1499": 81
+      "1496": 18,
+      "1497": 51,
+      "1498": 474,
+      "1499": 27
     },
-    "batiments": 711,
-    "routes": 2101,
-    "conduites": 380,
+    "batiments": 660,
+    "routes": 2098,
+    "conduites": 307,
     "champs": 0,
     "eau": {
-      "sources": 5,
-      "utilisee": 190
+      "sources": 4,
+      "utilisee": 195
     },
     "repere": "droit",
     "analyse": {
-      "reseauEnracine": 2101,
+      "reseauEnracine": 2098,
       "batimentsCoupes": 0,
-      "casesCouvertes": 108363,
-      "hachageCouvertures": "dc4daf6212543598"
+      "casesCouvertes": 110196,
+      "hachageCouvertures": "b2286750266968d4"
     },
     "violations": 3,
-    "hachage": "d47447eb1d33b785"
+    "hachage": "4b24833b26d4b8ed"
   },
   "alternatives": [
     {
       "palier": "1498",
-      "maisons": 662,
-      "habitants": 23914,
-      "maisonsAuPalier": 543,
+      "maisons": 659,
+      "habitants": 25600,
+      "maisonsAuPalier": 568,
       "paliers": {
-        "1497": 18,
-        "1498": 543,
-        "1499": 101
+        "1496": 24,
+        "1497": 32,
+        "1498": 568,
+        "1499": 35
       },
-      "batiments": 733,
-      "routes": 2066,
-      "conduites": 444,
+      "batiments": 742,
+      "routes": 2103,
+      "conduites": 274,
       "champs": 0,
       "eau": {
-        "sources": 5,
-        "utilisee": 160
+        "sources": 4,
+        "utilisee": 120
       },
       "repere": "droit",
       "analyse": {
-        "reseauEnracine": 2066,
+        "reseauEnracine": 2103,
         "batimentsCoupes": 0,
-        "casesCouvertes": 91018,
-        "hachageCouvertures": "e5c06bb6a047e67b"
+        "casesCouvertes": 101939,
+        "hachageCouvertures": "5ea3900342484127"
       },
       "violations": 3,
-      "hachage": "3491b20759587f59"
+      "hachage": "1e3bdc4547cbd92a"
     }
   ]
 }

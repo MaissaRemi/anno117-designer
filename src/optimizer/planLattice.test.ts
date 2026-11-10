@@ -97,7 +97,10 @@ describe("planLattice (clusters co-localisés + gros gain-prunés)", () => {
 
   it("floor 1 : densité max, cœur au tier-cible, accounting cohérent", () => {
     const grid = realIsland("roman_island_medium_01");
-    const r = planLattice(grid, tierRich.guid, lookup, { coverageFloor: 1 });
+    // `viabilityGate: false`, comme le test précédent : on mesure la densité du pavage. Sans
+    // institutions ni eau, la porte de viabilité ne gardait que ~75 maisons, un nombre qui
+    // tient au bilan d'attributs et pas au pavage (74 après les tranches de portée, 2026-11-10).
+    const r = planLattice(grid, tierRich.guid, lookup, { coverageFloor: 1, viabilityGate: false });
     expect(r.houses).toBeGreaterThan(80);
     expect(r.fullyCovered).toBeGreaterThan(0); // le cœur couvert par tous les services
     expect(sumTiers(r.tierCounts)).toBe(r.houses);

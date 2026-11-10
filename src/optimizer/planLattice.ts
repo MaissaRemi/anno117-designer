@@ -546,10 +546,9 @@ export function planLattice(
   // des clusters est calé sur CE rayon-là (le minimum), gain-pruné comme les gros.
   const bigDefs = svcDefs.filter((d) => rangeOf(d) > SMALL_RANGE_MAX);
   const smallDefs = svcDefs.filter((d) => rangeOf(d) <= SMALL_RANGE_MAX);
-  const smallByH = [...smallDefs].sort((a, b) => b.size.h - a.size.h);
-  // strip atomique : tous les petits types alternés dessus/dessous d'une ligne du
-  // peigne (rotation pour ceux qui débordent de la poche), tout ou rien
-  const tryStrip = (cx: number, ly: number): boolean => {
+  // strip atomique : tous les petits types D'UNE TRANCHE alternés dessus/dessous d'une ligne
+  // du peigne (rotation pour ceux qui débordent de la poche), tout ou rien
+  const tryStrip = (smallByH: BuildingDef[], cx: number, ly: number): boolean => {
     let xa = cx, xb = cx, above = true;
     const pos: { d: BuildingDef; x: number; y: number; rot: 0 | 1 }[] = [];
     // Le quota compte AUSSI ce que ce strip a déjà retenu : sans ce compteur local, un même
@@ -573,8 +572,8 @@ export function planLattice(
     for (const p of pos) stamp(p.d, p.x, p.y, p.rot);
     return true;
   };
-  const placeClusterLattice = () => {
-    if (!smallDefs.length) return;
+  const placeClusterLattice = (smallDefs: BuildingDef[]) => {
+    const smallByH = [...smallDefs].sort((a, b) => b.size.h - a.size.h);
     // NOTE : les bâtiments à quota restent dans ce calcul, bien qu'on n'en pose qu'un ou
     // deux. Les en exclure élargit la trame et dégrade mesurablement la connexité routière
     // (0,95 → 0,70) et le raccordement à l'eau (0,60 → 0,54) : c'est une question
@@ -596,7 +595,7 @@ export function planLattice(
       const nBefore = buildings.length;
       let ok = false;
       for (const dx of [0, -3, 3, -6, 6, -9, 9, -12, 12]) {
-        if (tryStrip(a.x + dx, a.y)) { ok = true; break; }
+        if (tryStrip(smallByH, a.x + dx, a.y)) { ok = true; break; }
       }
       if (!ok) return null;
       const seeds: number[] = [];
@@ -609,8 +608,33 @@ export function planLattice(
     });
   };
 
+  // ═══ UNE TRANCHE DE PORTÉE PAR GRAPPE ═══════════════════════════════════════════════
+  //
+  // Tous les petits types partageaient UNE grappe, au pas du plus court : un Medici (portée 38)
+  // était répété au pas d'un Puits (20). Mesuré le 2026-11-10 en chemin de terre sur
+  // roman_island_medium_01 : 12 Medici, 12 Custodia et 13 Citernes voisins de 32 cases, pour
+  // des portées qui en permettent 54 à 62 (exigence E1, `.claude/exigences.md`). Les types sont
+  // donc groupés par tranche — une tranche s'arrête quand la portée effective dépasse
+  // `TRANCHE` fois celle de son type le plus court — et chaque tranche a sa grappe, à son pas.
+  // La co-localisation, qui garde propre l'intersection des couvertures, vaut dans une tranche.
+  //
+  // À 1,5 la route pavée ne change pas (ses petits types tiennent en une tranche) et le chemin
+  // de terre gagne : medium_01 336 → 375 maisons au palier, small_06 139 → 153, les services
+  // moyens à 0,69–0,92 de leur pas au lieu de 0,52–0,74. Des tranches plus fines défont les
+  // pâtés mais déplacent des maisons : à 1,25, part des services en pâté 75 → 65 % (medium_01),
+  // 81 → 64 % (small_06), 83 → 40 % (celtic_large_07) en pavée, pour 563 → 516, 217 → 226 et
+  // 888 → 1 013 maisons au palier. Le choix entre les deux revient à Rémi (exigence E2).
+  const TRANCHE = 1.5;
+  const tranches: BuildingDef[][] = [];
+  for (const d of [...smallDefs].sort((a, b) => effR(a) - effR(b) || a.id.localeCompare(b.id))) {
+    const t = tranches[tranches.length - 1];
+    if (t && effR(d) < TRANCHE * effR(t[0])) t.push(d);
+    else tranches.push([d]);
+  }
   for (const d of bigDefs) placeLattice(d); // gros : grand → petit (espace contigu)
-  placeClusterLattice(); // petits : clusters co-localisés
+  // petits : une grappe par tranche, la plus longue d'abord ; dans une tranche, l'ordre
+  // d'origine — une seule tranche pose alors exactement ce que posait la grappe unique
+  for (const t of tranches.reverse()) placeClusterLattice(smallDefs.filter((d) => t.includes(d)));
 
   // --- carte de demande (où une maison TIENT, après les services) ---
   // recalculable : chaque densification stampe une emprise → des slots meurent.

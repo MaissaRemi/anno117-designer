@@ -1,47 +1,48 @@
 {
   "recommande": {
     "palier": "1498",
-    "maisons": 1519,
-    "habitants": 58319,
-    "maisonsAuPalier": 1220,
+    "maisons": 1366,
+    "habitants": 57606,
+    "maisonsAuPalier": 1230,
     "paliers": {
-      "1497": 193,
-      "1498": 1220,
-      "1499": 106
+      "1496": 16,
+      "1497": 70,
+      "1498": 1230,
+      "1499": 50
     },
-    "batiments": 1690,
-    "routes": 4654,
-    "conduites": 789,
+    "batiments": 1575,
+    "routes": 4739,
+    "conduites": 762,
     "champs": 0,
     "eau": {
-      "sources": 5,
-      "utilisee": 370
+      "sources": 8,
+      "utilisee": 315
     },
     "repere": "droit",
     "analyse": {
-      "reseauEnracine": 4654,
-      "batimentsCoupes": 0,
-      "casesCouvertes": 251746,
-      "hachageCouvertures": "78f02cf957a7e5b6"
+      "reseauEnracine": 4738,
+      "batimentsCoupes": 1,
+      "casesCouvertes": 290383,
+      "hachageCouvertures": "f967ffa4656fa687"
     },
-    "violations": 3,
-    "hachage": "2519c58cc7ff2560"
+    "violations": 4,
+    "hachage": "d88381ce31bf7b61"
   },
   "alternatives": [
     {
       "palier": "1498",
-      "maisons": 1680,
-      "habitants": 60642,
-      "maisonsAuPalier": 1170,
+      "maisons": 1702,
+      "habitants": 62883,
+      "maisonsAuPalier": 1233,
       "paliers": {
-        "1496": 316,
-        "1497": 100,
-        "1498": 1170,
-        "1499": 94
+        "1496": 339,
+        "1497": 93,
+        "1498": 1233,
+        "1499": 37
       },
-      "batiments": 1854,
-      "routes": 4601,
-      "conduites": 196,
+      "batiments": 1877,
+      "routes": 4670,
+      "conduites": 198,
       "champs": 0,
       "eau": {
         "sources": 2,
@@ -49,13 +50,13 @@
       },
       "repere": "droit",
       "analyse": {
-        "reseauEnracine": 4601,
+        "reseauEnracine": 4670,
         "batimentsCoupes": 0,
-        "casesCouvertes": 256691,
-        "hachageCouvertures": "36ad385470dcc638"
+        "casesCouvertes": 241950,
+        "hachageCouvertures": "c4d9496bebe47696"
       },
       "violations": 3,
-      "hachage": "a1353669e2679730"
+      "hachage": "28c786b19b55ac7e"
     }
   ]
 }

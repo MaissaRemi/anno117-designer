@@ -20,7 +20,15 @@ import { regroupement, type Regroupement } from "./planQuality";
  * correction qui améliore une valeur resserre son seuil dans le même commit ; un seuil ne se
  * relâche qu'avec l'accord de Rémi, jamais pour faire passer un gain d'habitants.
  *
- * Trois îles, les deux moteurs de quartiers, route pavée (le défaut de l'interface).
+ * Trois îles, les deux moteurs de quartiers, route pavée (le défaut de l'interface) ; un cas en
+ * chemin de terre pour « Remplir l'île », où les portées courtes changent la donne.
+ *
+ * 2026-11-10, étapes 1 et 2 de l'audit — « Ma commande » : îlots partiels, petits services
+ * collés à la colonne de route, gain minimal d'une copie de plus, recouvrement une fois la ville
+ * faite. Avant → après : medium_01 61 % en pâté / 0,2 / 333 logées → 35 % / 0,27 / 450 ;
+ * small_06 74 % / 0,4 / 91 → 32 % / 0,46 / 158 ; celtic_large_07 39 % / 0,29 / 700 → 22 % /
+ * 0,36 / 700. « Remplir l'île » : une grappe par tranche de portée, sans effet en pavée ; en
+ * terre medium_01 passe de 336 à 375 maisons au palier (86 → 90 % en pâté, 0,52 → 0,38).
  */
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -35,21 +43,22 @@ interface Seuils {
 }
 
 /** Palier sommet de chaque monde : Patriciens (1498) au Latium, Nobles (1504) en Albion. */
-const ILES: { ile: string; region: string; palier: string; commandees: number; remplir: Seuils; commande: Seuils }[] = [
+const ILES: { ile: string; region: string; palier: string; commandees: number; remplir: Seuils; terre?: Seuils; commande: Seuils }[] = [
   {
     ile: "roman_island_medium_01", region: "Roman", palier: "1498", commandees: 450,
     remplir: { enPate: 75, espacement: 0.59, auPalier: 563 },
-    commande: { enPate: 61, espacement: 0.2, auPalier: 333 },
+    terre: { enPate: 90, espacement: 0.38, auPalier: 375 },
+    commande: { enPate: 35, espacement: 0.27, auPalier: 450 },
   },
   {
     ile: "roman_island_small_06", region: "Roman", palier: "1498", commandees: 200,
     remplir: { enPate: 81, espacement: 0.49, auPalier: 217 },
-    commande: { enPate: 74, espacement: 0.4, auPalier: 91 },
+    commande: { enPate: 32, espacement: 0.46, auPalier: 158 },
   },
   {
     ile: "celtic_island_large_07", region: "Celtic", palier: "1504", commandees: 700,
     remplir: { enPate: 83, espacement: 0.55, auPalier: 888 },
-    commande: { enPate: 39, espacement: 0.29, auPalier: 700 },
+    commande: { enPate: 22, espacement: 0.36, auPalier: 700 },
   },
 ];
 
@@ -69,16 +78,19 @@ describe("panneau de qualité : pâtés, espacement, maisons au palier", () => {
   for (const c of ILES) {
     const grid = downscaleGrid(buildIslandGrid(c.ile)!);
 
-    it(`${c.ile} — Remplir l'île`, async () => {
-      const h = hasHeights(c.ile) ? await heightsOf(c.ile) : null;
-      const heights = h && h.length === grid.w * grid.h ? h : undefined;
-      const p = planIslandImport({
-        catalog, grid, tierGuid: c.palier, coverageFloor: 0.8, needMode: "auto", roadType: "pavee", heights,
-      });
-      const r = regroupement(p, lookup, "pavee");
-      ligne(c.ile, "remplir", r, `${p.fullyCovered} / ${p.houses}`);
-      tenir(r, p.fullyCovered, c.remplir);
-    }, 300_000);
+    for (const [roadType, seuils] of [["pavee", c.remplir], ["terre", c.terre]] as const) {
+      if (!seuils) continue;
+      it(`${c.ile} — Remplir l'île, ${roadType}`, async () => {
+        const h = hasHeights(c.ile) ? await heightsOf(c.ile) : null;
+        const heights = h && h.length === grid.w * grid.h ? h : undefined;
+        const p = planIslandImport({
+          catalog, grid, tierGuid: c.palier, coverageFloor: 0.8, needMode: "auto", roadType, heights,
+        });
+        const r = regroupement(p, lookup, roadType);
+        ligne(c.ile, `remplir ${roadType}`, r, `${p.fullyCovered} / ${p.houses}`);
+        tenir(r, p.fullyCovered, seuils);
+      }, 300_000);
+    }
 
     it(`${c.ile} — Ma commande, ${c.commandees} maisons`, () => {
       const p = planifierCommande(grid, {

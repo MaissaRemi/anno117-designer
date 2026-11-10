@@ -11,7 +11,7 @@ import { connectKontor, keepMainLandmass, pickKontorDef, reserveKontor } from ".
 import { pruneDeadEnds } from "../optimizer/roadCleanup";
 import { planQuality } from "../optimizer/planQuality";
 import { verdictViable } from "../optimizer/viability";
-import { nomenclature, type Commande } from "./nomenclature";
+import { nomenclature, SURFACE_PAR_MAISON, type Commande } from "./nomenclature";
 import { copiesEnTrop } from "../optimizer/doublons";
 import { distancesDeCroissance, type DispositionOpts, type LignePosee, type PlanQuartiers } from "./disposition";
 import { planningRange } from "../engine/roads";
@@ -60,6 +60,14 @@ const CORRIDOR_TOUS = 4;
 /** Tours de relocalisation des consommateurs restés secs. Mesuré : au-delà de quatre, les
  *  interdictions s'accumulent et chassent les citernes de toute position utile. */
 const TOURS_EAU = 4;
+/**
+ * Part de la capacité d'une copie (en maisons) qu'une copie SUPPLÉMENTAIRE doit couvrir.
+ * Mesuré le 2026-11-10, 450 Patriciens sur `roman_island_medium_01`, routes pavées, tous logés
+ * dans les quatre cas : 0 → 67 services, 0,05 → 56, 0,1 → 48, 0,2 → 39, pour un devis de 43.
+ * À 0,1 la pose rejoint le devis (48 pour 43 ; Albion 65 pour 70) et le bilan ne bouge pas
+ * (Bonheur 1 796 → 1 753, Sécurité incendie −631 → −658).
+ */
+const PART_GAIN = 0.1;
 
 
 type EtatIlot = "maisons" | "services" | "groupe";
@@ -111,6 +119,16 @@ class Trame {
   routable(x: number, y: number) {
     return this.terre(x, y) || (x >= 0 && y >= 0 && x < this.grid.w && y < this.grid.h
       && routeSeule(this.grid, y * this.grid.w + x));
+  }
+  /** Cases de l'intérieur qui ne sont pas de la terre (1) ; `null` hors de la trame. */
+  horsTerre(i: number, j: number): Uint8Array | null {
+    if (i < 0 || j < 0 || i >= this.nI || j >= this.nJ) return null;
+    const { x, y } = this.coin(i, j);
+    const m = new Uint8Array(ILOT.largeur * ILOT.hauteur);
+    for (let dy = 0; dy < ILOT.hauteur; dy++) for (let dx = 0; dx < ILOT.largeur; dx++) {
+      if (!this.terre(x + dx, y + dy)) m[dy * ILOT.largeur + dx] = 1;
+    }
+    return m;
   }
   /** Intérieur tout en terre, et les deux rangées de route qui le bordent aussi. */
   valide(i: number, j: number): boolean {
@@ -252,6 +270,31 @@ export function disposerQuartiers(
   lookup: DefLookup,
   opts: DispositionOpts = {},
 ): PlanQuartiers {
+  const plan = disposerAvecEau(grid, commande, catalog, lookup, opts);
+  const toutLoge = (p: PlanQuartiers) => p.lignes.every((l) => (l.role !== "residence" && l.role !== "ouvriers") || l.pose >= l.demande);
+  if (opts.copiesSerrees !== undefined || toutLoge(plan)) return plan;
+  // Des maisons de bordure qu'une copie espacée ne rentabilise pas manquent à l'appel : on
+  // retente en laissant les copies se resserrer. Ce plan n'est retenu que s'il loge TOUTE la
+  // commande (exigence E3 tenue, au prix de E1) ; si l'île est trop petite dans les deux cas, on
+  // garde le plan espacé et l'on dit ce que le resserrement aurait logé de plus — mesuré sur
+  // `roman_island_small_06`, 200 Patriciens : 158 logés espacés, 175 serrés.
+  const serre = disposerAvecEau(grid, commande, catalog, lookup, { ...opts, copiesSerrees: true });
+  if (toutLoge(serre)) {
+    return { ...serre, avertissements: [...serre.avertissements, "Île juste pour cette commande : des services sont plus rapprochés que leur portée ne le demande, pour loger toutes les maisons"] };
+  }
+  const maisonsDe = (p: PlanQuartiers) => Object.values(p.maisonsParPalier).reduce((a, b) => a + b, 0);
+  const dePlus = maisonsDe(serre) - maisonsDe(plan);
+  if (dePlus <= 0) return plan;
+  return { ...plan, avertissements: [...plan.avertissements, `En rapprochant les services plus que leur portée ne le demande, ${dePlus} maison(s) de plus seraient logées`] };
+}
+
+function disposerAvecEau(
+  grid: GridShape,
+  commande: Commande,
+  catalog: BuildingDef[],
+  lookup: DefLookup,
+  opts: DispositionOpts,
+): PlanQuartiers {
   const simple = disposer(grid, commande, catalog, lookup, opts);
   if (opts.corridors !== undefined || !simple.manques.some((m) => m.startsWith(SANS_EAU))) return simple;
   // Des consommateurs secs : on retente avec des corridors d'eau, et l'on garde le plan qui
@@ -336,6 +379,45 @@ function disposer(
     distIlot.set(cle, d);
   }
   const estValide = new Set(valides);
+  /**
+   * ═══ ÎLOTS PARTIELS ═════════════════════════════════════════════════════════════════════
+   *
+   * Un îlot n'était retenu que si ses 12 × 6 cases étaient de la terre. Sur une côte découpée
+   * presque tout le pourtour tombait, et pire : un îlot écarté ne porte aucune route, donc les
+   * îlots entiers derrière lui n'étaient plus rattachables. Mesuré le 2026-11-10 sur
+   * `roman_island_medium_01` (450 Patriciens, routes pavées) : 75 îlots utilisés sur 114,
+   * « plus aucun îlot rattachable », 333 maisons logées et 56 % de la terre vide.
+   *
+   * Un îlot entamé par la côte ou le relief entre donc dans la ville comme un îlot de services
+   * dont les cases hors terre sont déjà prises : il loge les maisons qui tiennent encore contre
+   * un bout de route, accueille les petits services, et prolonge les routes de la trame.
+   */
+  const partiels = new Map<number, Uint8Array>();
+  const repere = new Map<number, number>(); // une case de terre de l'îlot, pour les distances
+  for (let j = 0; j < trame.nJ; j++) for (let i = 0; i < trame.nI; i++) {
+    const cle = trame.cle(i, j);
+    if (estValide.has(cle)) continue;
+    const masque = trame.horsTerre(i, j)!;
+    const { x, y } = trame.coin(i, j);
+    // au moins une maison 3×3 contre la route du haut ou du bas, sur une case où la route passe
+    let loge = false;
+    for (const r of [0, ILOT.hauteur - 3]) {
+      const ry = r === 0 ? y - 1 : y + ILOT.hauteur;
+      for (let dx = 0; dx + 3 <= ILOT.largeur && !loge; dx++) {
+        let ok = false;
+        for (let k = 0; k < 3; k++) if (trame.routable(x + dx + k, ry)) ok = true;
+        for (let dy = 0; dy < 3 && ok; dy++) for (let k = 0; k < 3; k++) if (masque[(r + dy) * ILOT.largeur + dx + k]) { ok = false; break; }
+        if (ok) loge = true;
+      }
+    }
+    if (!loge) continue;
+    const libre = masque.findIndex((v) => !v);
+    const c = (y + Math.floor(libre / ILOT.largeur)) * W + x + (libre % ILOT.largeur);
+    if (dist[c] < 0) continue;
+    partiels.set(cle, masque);
+    repere.set(cle, c);
+    distIlot.set(cle, dist[c]);
+  }
 
   // ─── LE CENTRE DE LA VILLE ──────────────────────────────────────────────────────────
   // La ville poussait DEPUIS le comptoir : sur une île étroite elle s'allongeait le long de la
@@ -384,8 +466,12 @@ function disposer(
       const q = trame.coin(trame.ij(c).i, trame.ij(c).j);
       distIlot.set(c, dc[(q.y + 2) * W + q.x + 5]);
     }
+    for (const [c, r] of repere) distIlot.set(c, dc[r]);
   }
   valides.sort((a, b) => distIlot.get(a)! - distIlot.get(b)! || a - b);
+  /** Îlots où la ville peut s'étendre : les entiers et les partiels, du plus proche au plus loin. */
+  const extensibles = [...valides, ...[...partiels.keys()].filter((c) => distIlot.get(c)! >= 0)]
+    .sort((a, b) => distIlot.get(a)! - distIlot.get(b)! || a - b);
 
   // ─── ÉTAT DE LA VILLE ───────────────────────────────────────────────────────────────
   const etat = new Map<number, EtatIlot>();
@@ -414,10 +500,11 @@ function disposer(
     let ajoutes = 0;
     for (let progres = true; progres && ajoutes < n; ) {
       progres = false;
-      for (const c of valides) {
+      for (const c of extensibles) {
         if (ajoutes >= n) break;
         if (etat.has(c) || !rattachable(c)) continue;
-        etat.set(c, "maisons");
+        const masque = partiels.get(c);
+        if (masque) { etat.set(c, "services"); occIlot.set(c, masque.slice()); } else etat.set(c, "maisons");
         route = routes();
         ajoutes++;
         progres = true;
@@ -449,6 +536,24 @@ function disposer(
       const t = taille(g.def, g.rot);
       for (let dy = 0; dy < t.h; dy++) for (let dx = 0; dx < t.w; dx++) r[(g.y + dy) * W + g.x + dx] = 0;
     }
+    // UN SEUL TENANT. Un îlot partiel pose des bouts de route que l'eau ou le relief séparent du
+    // reste ; le comptoir s'y accrochait et toute la ville se retrouvait sans accès (mesuré sur
+    // `roman_island_small_06` : 200 maisons coupées). Seul le plus grand réseau reste.
+    const tenant = new Int32Array(N);
+    let meilleur = 0, plusGrand = 0;
+    for (let c0 = 0, id = 0; c0 < N; c0++) {
+      if (!r[c0] || tenant[c0]) continue;
+      tenant[c0] = ++id;
+      let n = 0;
+      for (const pile = [c0]; pile.length; n++) {
+        const c = pile.pop()!, x = c % W;
+        for (const v of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, c - W, c + W]) {
+          if (v >= 0 && v < N && r[v] && !tenant[v]) { tenant[v] = id; pile.push(v); }
+        }
+      }
+      if (n > plusGrand) { plusGrand = n; meilleur = id; }
+    }
+    for (let c = 0; c < N; c++) if (r[c] && tenant[c] !== meilleur) r[c] = 0;
     return r;
   };
   let route = routes();
@@ -473,6 +578,14 @@ function disposer(
     }
     return out;
   };
+  /** Maisons d'un îlot de services : celles de `libres` qui touchent un bout de route posé
+   *  (dans un îlot partiel, la route du haut ou du bas peut manquer par endroits). */
+  const logeables = (occ: Uint8Array, coin: { x: number; y: number }, cle: number): Maison[] =>
+    libres(occ, ILOT.largeur, ILOT.hauteur, coin.x, coin.y, cle).filter((m) => {
+      const ry = m.y === coin.y ? coin.y - 1 : coin.y + ILOT.hauteur;
+      for (let k = 0; k < 3; k++) if (ry >= 0 && ry < H && route[ry * W + m.x + k]) return true;
+      return false;
+    });
   /**
    * Maisons qui tiennent dans les RESTES d'un groupe : îlot par îlot, comme ailleurs, puisque
    * les routes de la trame y survivent hors de l'emprise du bâtiment (cf. `routes`). Une maison
@@ -511,7 +624,7 @@ function disposer(
       if (e === "maisons") {
         for (let r = 0; r < 2; r++) for (let k = 0; k < 4; k++) out.push({ cle: c, x: x + 3 * k, y: y + 3 * r });
       } else if (e === "services") {
-        out.push(...libres(occIlot.get(c)!, ILOT.largeur, ILOT.hauteur, x, y, c));
+        out.push(...logeables(occIlot.get(c)!, { x, y }, c));
       }
     }
     for (const g of groupes) {
@@ -601,8 +714,15 @@ function disposer(
     for (const rot of (d.rotatable ? [0, 90] : [0]) as (0 | 90)[]) {
       const { w, h } = taille(d, rot);
       if (w > ILOT.largeur || h > ILOT.hauteur) continue;
+      // Sans eau, il se colle au contraire à la COLONNE DE ROUTE de son îlot : posé contre
+      // l'allée il ne touchait que la route du haut ou celle du bas, et rejoindre l'autre
+      // demandait le détour par la colonne de route (jusqu'à 13 cases, plus la descente). Mesuré le
+      // 2026-11-10 : une Tour de guet tous les 9 pas, une en haut et une en bas du même îlot,
+      // pour une portée qui en permet 46.
+      const versRoute = Array.from({ length: ILOT.largeur - w + 1 }, (_, k) => k);
+      if (!trame.routeColonne(i)) versRoute.reverse();
       const xs = !eau
-        ? Array.from({ length: ILOT.largeur - w + 1 }, (_, k) => k)
+        ? versRoute
         : [!trame.routeColonne(i) ? 0 : -1, !trame.routeColonne(i + 1) ? ILOT.largeur - w : -1].filter((x) => x >= 0);
       for (const y of [0, ILOT.hauteur - h]) {
         for (const x of xs) {
@@ -703,7 +823,7 @@ function disposer(
       const occ = e === "services" ? occIlot.get(k)! : new Uint8Array(ILOT.largeur * ILOT.hauteur);
       const ms = e === "maisons"
         ? Array.from({ length: 8 }, (_, n) => ({ cle: k, x: coin.x + 3 * (n % 4), y: coin.y + 3 * Math.floor(n / 4) }))
-        : e === "services" ? libres(occ, ILOT.largeur, ILOT.hauteur, coin.x, coin.y, k) : [];
+        : e === "services" ? logeables(occ, coin, k) : [];
       for (const m of ms) exclues.add(m.y * W + m.x);
       avant += ms.length;
     }
@@ -718,7 +838,7 @@ function disposer(
       const coin = trame.coin(i, j);
       const occ = etat.get(k) === "services" ? occIlot.get(k)!.slice() : new Uint8Array(ILOT.largeur * ILOT.hauteur);
       for (let dy = 0; dy < c.h; dy++) for (let dx = 0; dx < c.w; dx++) occ[(c.y - coin.y + dy) * ILOT.largeur + c.x - coin.x + dx] = 1;
-      const reste = libres(occ, ILOT.largeur, ILOT.hauteur, coin.x, coin.y, k);
+      const reste = logeables(occ, coin, k);
       apres = reste.length;
       for (const m of reste) exclues.delete(m.y * W + m.x); // restées en place : toujours là
     }
@@ -736,6 +856,13 @@ function disposer(
   const couvrir = (d: BuildingDef) => {
     const grand = besoinEnIlots(d);
     const unique = !!d.unique;
+    // UNE COPIE DE PLUS DOIT VALOIR SA PORTÉE (exigence E1). Acceptée dès un gain positif, une
+    // copie se posait pour deux maisons de bordure : mesuré le 2026-11-10, 15 Puits là où le
+    // devis en compte 10, voisins de 17 cases pour une portée qui en permet 46. Elle doit
+    // désormais couvrir `PART_GAIN` de ce qu'une copie bien placée couvre (la capacité du devis,
+    // `copiesPourCouvrir`). `copiesSerrees` lève la règle quand la commande ne tient pas sinon.
+    const rayon = Math.max(8, rangeOf(d) - 7);
+    const seuil = opts.copiesSerrees ? 0 : (PART_GAIN * 2 * rayon * rayon) / SURFACE_PAR_MAISON;
     for (let copie = 0; copie < 400; copie++) {
       const lesMaisons = maisons();
       const cov = couvertureDe(d);
@@ -765,7 +892,7 @@ function disposer(
       const b = best as { c: Candidat; score: number } | null;
       // La première copie se pose même à perte : un service absent laisse toute la ville
       // sous son palier. Les suivantes doivent rapporter.
-      if (!b || (deja >= 1 && b.score <= 0)) return;
+      if (!b || (deja >= 1 && b.score <= seuil)) return;
       appliquer(d, b.c);
     }
   };
@@ -903,6 +1030,44 @@ function disposer(
     return retires;
   };
 
+  /**
+   * ═══ RECOUVRIR, UNE FOIS LA VILLE ARRÊTÉE ═══════════════════════════════════════════
+   *
+   * `couvrir` pose ses copies pendant que la ville grandit : la première au centre d'une ville
+   * encore petite, les suivantes en bordure, tour après tour, et aucune n'est jamais déplacée.
+   * Les positions gardent donc la trace de l'histoire, pas de la ville finale (exigence E1 :
+   * peu de copies, espacées selon la portée). On retire ici toutes les copies d'un type et on
+   * le recouvre d'un seul trait sur la ville faite ; on garde le résultat s'il compte moins de
+   * copies sans découvrir une maison de plus, sinon on remet les copies d'origine.
+   *
+   * Les consommateurs d'eau restent en place : leurs positions sortent de la boucle de l'eau.
+   */
+  const recouvrir = () => {
+    for (const t of ordreTypes) {
+      const d = t.def;
+      if (d.unique || needsWater(d)) continue;
+      const copiesDe = (): { o: { groupe?: Groupe; cle?: number; petit?: PetitService }; c: Candidat }[] => [
+        ...groupes.filter((g) => g.def.id === d.id).map((g) => {
+          const cles: number[] = [];
+          for (let dj = 0; dj < g.m; dj++) for (let di = 0; di < g.k; di++) cles.push(trame.cle(g.i + di, g.j + dj));
+          return { o: { groupe: g }, c: { cles, x: g.x, y: g.y, ...taille(g.def, g.rot), rot: g.rot, groupe: { i: g.i, j: g.j, k: g.k, m: g.m } } };
+        }),
+        ...[...petits].flatMap(([cle, l]) => l.filter((p) => p.def.id === d.id).map((p) => (
+          { o: { cle, petit: p }, c: { cles: [cle], x: p.x, y: p.y, ...taille(p.def, p.rot), rot: p.rot, groupe: null } }))),
+      ];
+      const decouvertes = () => { const cov = couvertureDe(d); return maisons().filter((m) => !couverte(m, cov)).length; };
+      const avant = copiesDe();
+      if (avant.length < 2) continue;
+      const manqueAvant = decouvertes();
+      for (const x of avant) retirer(x.o, false);
+      couvrir(d);
+      const apres = copiesDe();
+      if (apres.length < avant.length && decouvertes() <= manqueAvant) continue;
+      for (const x of apres) retirer(x.o, false);
+      for (const x of avant) appliquer(d, x.c);
+    }
+  };
+
   let tours = 0, toursEau = 0;
   if (sommet && totalMaisons > 0) {
     ajouterIlotsDeMaisons(besoinIlots + ilotsServices);
@@ -933,6 +1098,7 @@ function disposer(
     // Une seule passe, puis une couverture de rattrapage pour les maisons rendues par
     // l'élagage : elles naissent contre des copies restantes, rarement hors de portée.
     if (elaguerDoublons()) for (const t of ordreTypes) couvrir(t.def);
+    recouvrir();
   }
 
   // ─── BÂTIMENTS ──────────────────────────────────────────────────────────────────────
@@ -1086,7 +1252,7 @@ function disposer(
       buildings.length = 0;
       buildings.push(...garder);
       for (const u of partis) attribution.delete(u);
-      avertissements.push(`${partis.size} maison(s) rasée(s) pour raccorder le comptoir`);
+      manques.push(`${partis.size} maison(s) rasée(s) pour raccorder le comptoir`);
     }
     buildings.push(kp.building);
     const vu = new Set(roadTiles.map((r) => r.y * W + r.x));
