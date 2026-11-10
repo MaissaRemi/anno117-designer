@@ -1,5 +1,8 @@
 # État du projet et chantiers ouverts
 
+> **Document historique (état au 22/08/2026).** L'état courant, les objectifs et la suite
+> sont dans `docs/REPRISE.md` ; la feuille de route dans `.claude/ROADMAP.md`.
+
 > **Reprise au 29/10/2026 : lire d'abord `docs/REPRISE.md`.**
 
 > **2026-10-29 — refonte du moteur d'île faite (8 étapes).** Le chemin principal est désormais

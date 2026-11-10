@@ -1,7 +1,59 @@
-# Reprise du projet — état au 30/10/2026
+# Reprise du projet — état au 10/11/2026
 
 Point d'entrée d'une nouvelle session. Tout le travail est sur la branche **`dev`** (poussée
-sur GitHub) ; `main` n'a pas été mis à jour depuis.
+sur GitHub, à jour au commit `557af5b` et suivants) ; `main` n'a pas été mis à jour depuis.
+
+Plan du document : les objectifs, comment l'outil fonctionne, ce qui a été fait (par chantier,
+avec les mesures), ce qui reste à faire, les questions à trancher en jeu, les pièges.
+
+## Les objectifs du projet
+
+1. **Planifier une partie entière d'Anno 117** — c'est l'objectif de Rémi. Toutes les îles d'une
+   partie, des deux provinces (Latium et Albion) : des îles PRINCIPALES qui ne portent que des
+   maisons et tous leurs services (objectif au choix : le plus de gains, d'habitants ou de
+   maisons), et des îles de PRODUCTION qui fabriquent, ouvriers compris, tout ce que les
+   principales consomment. L'outil répartit la production, chiffre les flux entre îles, dit ce
+   qui manque et quelles îles acheter, et donne le plan de chaque île à reconstruire en jeu.
+2. **Planifier une île** — trois moyens, dans l'onglet Planifier : « Ma commande » (le joueur
+   dit ce qu'il veut, le moteur dresse la nomenclature et dispose l'île), « Remplir l'île » (le
+   plus d'habitants d'un palier) et « Île de production » (des biens et leur débit).
+3. **Rester fidèle au jeu** — aucune valeur tapée à la main : bâtiments, économie, îles,
+   terrain, sauvegardes sont lus dans les fichiers du jeu. Toute règle de jeu se vérifie dans les
+   fichiers ou se teste en jeu par Rémi.
+
+## Comment l'outil fonctionne
+
+```
+fichiers du jeu (.rda) ──tools/*.py──▶ src/data/*.generated.json (versionnés)
+                                              │
+sauvegarde .a8s ──src/monde/sauvegarde──▶ configuration d'un monde (IndexedDB)
+                                              │
+            src/economy (solveur à point fixe : population → besoins → production → main-d'œuvre)
+                                              │
+  src/commande (nomenclature, quartiers en îlots, production posée) ◀── île de production
+  src/optimizer (remplir l'île : trame de rues, services, eau, emplacements, comptoir)
+                                              │
+            src/monde (calcul d'un monde : îles principales, répartition, pose, flux, achats)
+                                              │
+            src/ui (React) · src/render (Canvas) · Web Workers pour chaque moteur
+```
+
+- **Données** (`src/data`) : catalogue des bâtiments (emprises, portées, côtiers avec quai et
+  partie dans l'eau), économie (paliers, besoins, chaînes, main-d'œuvre, dieux), 55 îles (masque,
+  terre constructible, eau côtière, relief, rivières, hauteurs, emplacements avec leur
+  `ObjectId`). Régénérées par `tools/build_*.py`, `tools/extraire_quais.py`,
+  `tools/extraire_ids_emplacements.py`.
+- **Règles** (`src/engine`) : fonctions pures sans React — géométrie, terrain, raccordement,
+  réseau routier en graphe. Les moteurs et l'éditeur partagent les mêmes règles.
+- **Moteurs d'île** : `src/commande` (« Ma commande » et « Île de production », `planifierCommande`)
+  et `src/optimizer` (« Remplir l'île », `planIslandImport`). Ils tournent en cases entières
+  (`downscaleGrid`), le résultat est reprojeté en demi-cases pour l'éditeur.
+- **Monde** (`src/monde`) : `configuration.ts` (modèle, réglages de la partie), `calcul.ts`
+  (orchestration, recalcul incrémental par empreinte), `repartition.ts` (devis à moins d'1 ms,
+  budgets terre / côte / emplacements, suggestions d'achat), `sauvegarde/` (lecteur RDA, FileDB,
+  partie), `stockage.ts` (IndexedDB).
+- **Interface** (`src/ui`) : Éditeur, Planifier (trois modes), Monde (configurations,
+  assistant, import, calcul, résultat avec flux, déficits, bilan et achats).
 
 ## Remettre le projet en route
 
@@ -11,14 +63,21 @@ cd anno117-designer
 git switch dev
 pnpm install
 pnpm dev          # application sur http://localhost:5173
-pnpm test         # ~515 tests, 1 min 45 ; pnpm test:fast écarte les balayages lourds
+pnpm test         # ~540 tests, ~1 min 50 ; pnpm test:fast écarte les balayages lourds
 ```
 
 Machine actuelle : Windows, projet dans `C:\Users\rem34\Projects\anno117-designer`, jeu dans
 `C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher\games\Anno 117 - Pax Romana\maindata`
 (patch 210). Les données extraites (`src/data/*.generated.json`, patch 200) sont versionnées :
 l'application et les tests n'ont besoin de rien d'autre. `tools/rda_extract.py` lit les
-archives `.rda` du jeu (`list`, `get`, `dump`) pour aller vérifier une règle dans les fichiers.
+archives `.rda` du jeu (`list`, `get`, `dump`) pour aller vérifier une règle dans les fichiers ;
+`tools/filedb.py` lit le format FileDB (îles, sauvegardes). Sauvegardes de Rémi :
+`Documents/Anno 117 - Pax Romana/accounts/<compte>/<profil>/*.a8s`.
+
+Outils installés pour Claude Code (10/11/2026) : **Graphify** (`/graphify .` construit le graphe
+de connaissances du dépôt dans `graphify-out/`) ; **Ponytail** à installer par Rémi
+(`claude plugin marketplace add DietrichGebert/ponytail`, puis
+`claude plugin install ponytail@ponytail`).
 
 ## Conventions du dépôt
 
@@ -32,7 +91,9 @@ archives `.rda` du jeu (`list`, `get`, `dump`) pour aller vérifier une règle d
 - PowerShell 5.1 : `R` est un alias réservé ; un message de commit avec guillemets passe par
   `git commit -F fichier`.
 
-## Ce qui a été fait (26–30/10/2026)
+## Ce qui a été fait
+
+### Moteur d'une île (26–30/10/2026)
 
 Détail et mesures : `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`, puis
 `docs/superpowers/plans/2026-10-29-portees-motifs-eau.md`, puis
@@ -54,7 +115,7 @@ Détail et mesures : `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`, 
 - **Maillage de triangles** (`optimizer/maillageTriangles.ts`) : 4 triangles par case, socle
   commun aux trames droite et diagonale (étape 1 de la trame mêlée).
 
-## Règles du jeu établies pour la diagonale (vérifiées en jeu par Rémi)
+### Règles du jeu établies pour la diagonale (vérifiées en jeu par Rémi)
 
 - Route diagonale = losanges de côté √2 centrés sur les coins de la grille : √2 de large en
   travers, 2 cases sur une ligne horizontale.
@@ -72,7 +133,7 @@ Détail et mesures : `docs/superpowers/plans/2026-10-26-refonte-moteur-ile.md`, 
 - Les demi-cases au bord d'une route diagonale sont constructibles par un bâtiment diagonal.
 - La route du jeu est un graphe de tronçons (`MeshGraph`), pas une peinture de cases.
 
-## Où en est la trame mêlée : EN PAUSE
+### Où en est la trame mêlée : EN PAUSE
 
 Décidé après mesure (section « étape 3 : étude préalable » de l'étude des diagonales) : le
 gain espéré d'une île droite ici et en biais là est du même ordre que le bruit entre deux plans
@@ -96,7 +157,7 @@ losange n'est posé. Q2 tranchée aussi : deux losanges qui ne se touchent que p
 sont PAS reliés ; on les relie par une route de l'autre orientation (une route droite
 horizontale entre les deux bas d'un V). Le graphe le faisait déjà.
 
-## Raccordement au comptoir : corrigé
+### Raccordement au comptoir : corrigé
 
 **Albion**, mesuré à part (22 îles, pavée, Foi, 80 %, hauteurs), avant les corrections
 (commit 62e8e0b) → après, chaque branche séparément, aucune île en recul :
@@ -133,7 +194,7 @@ comptoir. Trois corrections dans `optimizer/kontor.ts`, une dans `optimizer/plan
   non isolée ; avec les réglages du recensement (hauteurs, pavée, Foi), cette île ne recule pas.
   Les poches laissées vides peuvent déclencher l'invariant `terre-vide`.
 
-## Île de production : faite (30/10/2026)
+### Île de production : faite (30/10/2026)
 
 Conception validée par Rémi, réponses consignées en fin de
 `docs/superpowers/specs/2026-10-30-ile-de-production-design.md`. Planifier a un quatrième
@@ -163,7 +224,7 @@ plusieurs à la fois, posés par le moteur de « Ma commande ».
   « Ma commande » en Albion ; et un lot trop grand pour la terre libre d'une petite île n'était
   pas recoupé.
 
-## Planification d'un monde : étapes 1 à 4 faites (30/10/2026)
+### Planification d'un monde : étapes 1 à 4 faites (30/10 – 04/11/2026)
 
 Le projet que Rémi veut vraiment : planifier TOUTES les îles d'une partie, des deux provinces
 (les besoins complets des Patriciens passent par l'Albion, ceux des Nobles par le Latium).
@@ -239,7 +300,7 @@ Conception validée, réponses de Rémi incluses :
 - Au passage : la fenêtre modale partagée reprenait le focus à chaque rendu (un champ de saisie
   le perdait à chaque frappe) ; corrigé dans `ui/Modal.tsx`.
 
-## Import d'une sauvegarde `.a8s` : fait (04/11/2026)
+### Import d'une sauvegarde `.a8s`, emplacements et réglages de la partie (04–05/11/2026)
 
 « Importer… » dans l'onglet Monde accepte une sauvegarde du jeu (`Documents/Anno 117 - Pax
 Romana/accounts/<compte>/<profil>/*.a8s`) et en fait une configuration : toutes les îles des deux
@@ -292,7 +353,49 @@ rotation et leur position. Lue dans le navigateur en ~150 ms (`monde/sauvegarde/
   la fiabilité avant de bâtir l'écran : des captures de la minimap de Maximilia Maxima, dont la
   sauvegarde donne la vérité (îles, rotations, positions) — et le sens de la rotation au passage.
 
-## La suite, par intérêt
+## Ce qui reste à faire, par intérêt (10/11/2026)
+
+Feuille de route détaillée : `.claude/ROADMAP.md`.
+
+**Planification d'un monde** (l'objectif principal)
+1. **Estimation de terre des fermes et des bâtiments à aire libre** : la répartition promet
+   parfois à une île plus qu'elle ne peut porter (terre comptée à 65 %) ; le rattrapage ne
+   compense qu'en partie. Mesurer l'écart devis / pose par type de chaîne, corriger le devis.
+2. **Ouvriers des ateliers de luxe** : leurs biens de luxe alourdissent la demande ; le rendre
+   visible dans le résultat (part de la demande due aux ouvriers).
+3. **Navires** (étape 5 de la conception) : temps de trajet entre îles à partir des positions
+   lues dans la sauvegarde, puis nombre de navires par flux.
+4. **Plan de développement par étapes** : dans quel ordre construire les îles.
+5. **Main-d'œuvre des îles principales au réglage d'entretien** : leurs services restent au cran
+   Faible (cascade interne au moteur d'île).
+6. **Réglages dans les outils d'une île** : « Remplir l'île » et « Île de production » sont au
+   cran Faible ; une partie standard (Moyen) consomme 25 % de plus et demande 22 % de
+   main-d'œuvre et d'entretien en plus.
+7. **Impôts de la partie** (`SetupTaxes`) : à brancher une fois leur effet établi en jeu.
+8. **Reconnaissance par la minimap** : mise de côté par Rémi (voir la section de l'import).
+9. **Noms des villes** dans l'import (`CityNameGuid`).
+
+**Moteur d'une île** (gain faible, reportés)
+10. Un service sans accès au comptoir compte encore dans la couverture (un seul cas en Latium).
+11. Plan diagonal non posable dans l'éditeur ; trame mêlée en pause.
+
+**Entretien du dépôt**
+12. Ancien dossier de travail `.claude/worktrees/confident-jemison-990e57` à nettoyer.
+13. `main` n'a pas reçu `dev` depuis octobre.
+
+## Questions à trancher en jeu (Rémi)
+
+1. **Sens de la rotation** des îles importées : la vignette de Petite 02 (DLC) d'une
+   configuration importée est-elle comme sur la minimap, ou en miroir ?
+2. **Emplacement de montagne inactif** (sans gisement) : accepte-t-il une source d'aqueduc ?
+   Supposé que non.
+3. **Impôts** : dans Maximilia Maxima (impôts « Spare »), une maison de Plébéiens au complet
+   rapporte-t-elle 17 ?
+4. **Bâtiment côtier** : la partie de l'emprise ni quai ni eau accepte-t-elle terre ET eau ?
+5. Anciennes : sens de `UpgradeThreshold`, consommation par maison ou par habitant, effet d'un
+   manque de main-d'œuvre (`.claude/GAME_MECHANICS.md`, §13).
+
+## Historique des priorités (octobre 2026)
 
 1. ~~Ne pas créer de poches~~ : fait (`planLattice`, « UN GRAND BÂTIMENT NE MURE PAS UNE PARTIE
    DE L'ÎLE ») — une grande emprise qui couperait du comptoir plus de 25 maisons de terre est
@@ -300,22 +403,13 @@ rotation et leur position. Lue dans le navigateur en ~150 ms (`monde/sauvegarde/
    et 12 essayés, chacun faisait reculer une ou deux îles. Plan diagonal de medium_01 :
    14 384 → 22 990 habitants.
 2. ~~Deux écarts « cases en coin »~~ : corrigés, sans effet mesuré en Latium.
-3. ~~Plan diagonal d'extralarge_04 à 0 habitant~~ : il loge désormais 2 218 maisons ; l'une
-   des corrections du raccordement ou des poches a levé l'échec, non isolée.
-4. **Un service sans accès compte encore dans la couverture et le bilan** : reporté. Il n'en
-   reste qu'un en Latium (medium_02, une source d'aqueduc barrée par un service) et aucun en
-   Albion ; le corriger demande de réévaluer chaque maison sans les services inactifs, or
-   `planLattice` n'exporte que le palier atteint, pas la couverture. Réévalué le 30/10/2026 :
-   les parcelles ne gardent qu'un masque de services par TYPE (union des copies) ; retirer une
-   copie coupée demande de recalculer la portée par copie, puis palier, capacité et attributs
-   des maisons touchées. Chantier réel pour un seul service sur 27 îles : laissé en l'état.
-5. ~~Île de production~~ : faite (voir la section ci-dessus). L'addition des bonus de
-   productivité (dieu + saisie) est confirmée en jeu.
-6. ~~Prix du bilan non réglable~~ : curseur dans les options avancées de « Remplir l'île »
-   (indicatif seulement, 0 à 20 %, 6 % par défaut).
-7. **Plan diagonal non posable dans l'éditeur** : reporté. L'éditeur (demi-cases) ne sait
-   représenter ni un losange de route ni une maison diagonale sans approximation, et la
-   diagonale ne gagne plus nettement que sur small_07 (+26 %).
+3. ~~Plan diagonal d'extralarge_04 à 0 habitant~~ : il loge désormais 2 218 maisons.
+4. **Un service sans accès compte encore dans la couverture et le bilan** : reporté (voir 10
+   ci-dessus). Les parcelles ne gardent qu'un masque de services par TYPE ; retirer une copie
+   coupée demande de recalculer la portée par copie, puis palier, capacité et attributs.
+5. ~~Île de production~~ : faite.
+6. ~~Prix du bilan non réglable~~ : curseur dans les options avancées de « Remplir l'île ».
+7. **Plan diagonal non posable dans l'éditeur** : reporté (voir 11 ci-dessus).
 
 ## Pièges connus
 

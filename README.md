@@ -38,10 +38,12 @@ That constraint turned a layout tool into three problems worth solving.
 - **Placement with live validation** — valid/invalid preview, rotation, moving, locking. Broken rules are outlined in red and explained in the side panel.
 - **Roads and fields** painted by hand, checked against the real rules: road adjacency, field size, connectivity and contact with its building.
 - **Influence radii** drawn as overlays.
-- **Order planner (📋 Commande)** — order houses per tier, a service recipe and production buildings; get a live bill of materials, then a full island layout that says what was served and what was not.
-- **Fill an island (🏛 Remplir l'île)** — the original engine: pack the most inhabitants of a tier onto the island.
-- **Production blueprints (🏭 Production)** — the smallest working layout for a production chain, ready to copy.
-- **Persistence** — browser autosave, JSON import/export, PNG export.
+- **Plan an island (📐 Planifier)**, three ways:
+  - **Ma commande** — order houses per tier, a service recipe and production buildings; get a live bill of materials, then a full island layout that says what was served and what was not.
+  - **Remplir l'île** — the original engine: pack the most inhabitants of a tier onto the island, with up to three contrasting plans to choose from.
+  - **Île de production** — ask for goods and a rate per minute; every chain is laid out down to its raw materials, workers housed, and whatever the island cannot make is reported as an import with the reason.
+- **Plan a whole game (🌍 Monde)** — every island of both provinces: main islands of houses and services, production spread over your other islands, trade flows between islands, deficits with their reason, a world balance, and which islands to buy. Start from scratch with a wizard, or **import your own save game** (`.a8s`).
+- **Persistence** — browser autosave, JSON import/export, PNG export; world configurations in IndexedDB.
 
 ---
 
@@ -141,7 +143,7 @@ python tools/extract_icons.py     # -> public/icons/*.png   (not committed)
 
 ## Order planner
 
-Load an island, open **📋 Commande**, and say what you want.
+Load an island, open **📐 Planifier → Ma commande**, and say what you want.
 
 - **The order** — houses per tier, a service recipe (minimal ground, or every service for more inhabitants per house), anti-incident institutions, production buildings picked by name, whether to complete their chains, whether the houses' goods are imported or produced on the island, and whether missing workforce gets worker houses or is only reported.
 - **The bill of materials** — recomputed on every keystroke (`src/commande/nomenclature.ts`): every building with the reason it is there, the tier each line actually reaches, the goods and their source, the workforce balance, the ground it will take. Worker tiers get the services *their* thresholds require; a good no building of this world produces is imported instead of pulling a chain from the other world.
@@ -162,11 +164,28 @@ Press **🏝 Island** to load one of the game's 55 islands as your grid.
 
 ## Fill an island
 
-The original engine, still available as **🏛 Remplir l'île**: pick a tier and it packs as many inhabitants as it can, choosing the services itself. Roads come from a fixed comb, services are laid as a lattice over the whole island, houses fill the rest; water is routed during placement.
+The original engine, still available as **📐 Planifier → Remplir l'île**: pick a tier and it packs as many inhabitants as it can, choosing the services itself. Roads come from a fixed comb, services are laid as a lattice over the whole island, houses fill the rest; water is routed during placement.
 
 The island's attribute balance is **reported, not enforced** by default. An earlier "viability guard" demolished up to nine houses in ten to keep the island's total attributes above zero — a rule never checked against the game — and left the services and roads behind. It is still available as an option (*Respecter strictement le bilan d'attributs*).
 
-Code: `src/optimizer/` (`islandPlan`, `planLattice`, `waterPlan`, `slotPlan`, `kontor`). The *production* archetype of this tab still uses the greedy decoder and simulated annealing (`greedy`, `anneal`, `prodPlan`).
+Code: `src/optimizer/` (`islandPlan`, `planLattice`, `waterPlan`, `slotPlan`, `kontor`, `plansAuChoix`). The old greedy decoder and simulated annealing were removed once nothing called them.
+
+## Production island
+
+**Île de production** in the planner: list goods and a rate per minute. All chains are solved in one pass (a chain shared by two goods is summed before rounding), workers are housed next to their workshops, and productivity is the patron god plus what you enter for research and items — the bonuses add up (checked in game). A good stays on the island only if this world has a producer, the island has the fertility or deposit, and there are enough mountain or river slots; otherwise it is imported and the report says why. The report also gives the island's money: workers' taxes minus the upkeep of everything placed.
+
+Code: `src/commande/` (`nomenclature`, `planifier`, `production`). Design: [`docs/superpowers/specs/2026-10-30-ile-de-production-design.md`](docs/superpowers/specs/2026-10-30-ile-de-production-design.md).
+
+## Planning a whole game
+
+The **🌍 Monde** tab plans every island of a game at once, across Latium and Albion — the Patricians' full needs go through Albion, the Nobles' through Latium.
+
+- **Configurations** — named, saved in IndexedDB, exportable. A wizard identifies each island by its shape (land, relief, rivers, coastal water, with rotation), its fertilities grouped as in game, and who owns it.
+- **Save import** — or skip the wizard: drop a save game (`.a8s`) and the tool reads every island of both provinces, its fertilities and deposits, its owner (you, a rival, nobody), its rotation and position, which random mountain or river slots the map generator actually activated, and the game's consumption and maintenance settings. Read in the browser in about 150 ms: an RDA archive reader, a FileDB v3 reader that only keeps the branches it needs out of ~80 MB, and the game's own island and slot ids (`src/monde/sauvegarde/`). In a multiplayer save, it asks which player you are.
+- **Computation** — main islands are planned in parallel Web Workers (all services, mines on free slots when the deposit exists); their total demand, minus their mines, is spread over your other islands by sub-millisecond estimates with three budgets per island (land, coast, mountain and river slots), looping on what the workers themselves consume; then each production island is really laid out, with one catch-up pass for whatever did not fit. Out come the flows between islands (units per minute, no ships yet), the deficits with their reason, and the balance of the whole world.
+- **Buying islands** — for what is missing, the free islands that would cover the most, judged on their net gain (what they cover minus what they would need in return). Accept and the world is recomputed — only the islands that changed.
+
+Code: `src/monde/` (`calcul`, `repartition`, `configuration`, `sauvegarde/`). Design: [`docs/superpowers/specs/2026-10-30-planification-globale-design.md`](docs/superpowers/specs/2026-10-30-planification-globale-design.md).
 
 ## Keyboard shortcuts
 
@@ -197,61 +216,70 @@ flowchart TD
 
   subgraph app_["src/"]
     direction TB
-    model["model/<br/>types, factories, serialisation<br/>3 files"]
-    engine["engine/<br/>pure rules<br/>2 files"]
-    economy["economy/<br/>fixed-point solver<br/>8 files"]
+    model["model/<br/>types, factories, serialisation<br/>4 files"]
+    engine["engine/<br/>pure rules<br/>4 files"]
+    economy["economy/<br/>fixed-point solver<br/>9 files"]
     commande["commande/<br/>order, bill of materials, layout<br/>7 files"]
-    prodlayout["prodlayout/<br/>production blueprints<br/>14 files"]
-    optimizer["optimizer/<br/>island fill engine, water, slots<br/>24 files"]
+    prodlayout["prodlayout/<br/>production placement<br/>12 files"]
+    optimizer["optimizer/<br/>island fill engine, water, slots<br/>23 files"]
+    monde["monde/<br/>world planning, save import<br/>8 files"]
     data["data/<br/>generated game data<br/>4 files"]
     state["state/<br/>Zustand store<br/>1 file"]
     render["render/<br/>Canvas 2D<br/>2 files"]
     persist["persist/<br/>save / import / export<br/>5 files"]
-    ui["ui/<br/>React components<br/>24 files"]
+    ui["ui/<br/>React components<br/>29 files"]
     app["app/<br/>entry point<br/>3 files"]
   end
 
   RDA --> PY --> data
-  optimizer --> |"33"| economy
-  optimizer --> |"30"| engine
-  optimizer --> |"24"| model
-  ui --> |"16"| state
-  commande --> |"12"| optimizer
-  ui --> |"10"| economy
-  commande --> |"9"| economy
-  commande --> |"9"| engine
-  ui --> |"9"| engine
+  optimizer --> |"34"| engine
+  optimizer --> |"30"| economy
+  optimizer --> |"22"| model
+  ui --> |"18"| state
+  ui --> |"16"| engine
+  commande --> |"14"| optimizer
+  commande --> |"12"| engine
+  ui --> |"12"| data
+  ui --> |"12"| economy
+  commande --> |"11"| economy
+  ui --> |"10"| optimizer
+  ui --> |"9"| monde
   commande --> |"8"| model
-  ui --> |"8"| model
-  optimizer --> data
-  ui --> data
-  ui --> optimizer
+  ui --> commande
+  ui --> model
+  monde --> economy
   commande --> prodlayout
-  ui --> render
-  ui --> persist
-  persist --> model
+  engine --> model
+  monde --> data
+  monde --> engine
+  optimizer --> data
   prodlayout --> model
+  economy --> engine
+  monde --> commande
+  monde --> model
+  persist --> data
+  persist --> model
   render --> engine
   state --> data
-  ui --> commande
-  data --> model
-  economy --> engine
-  economy --> model
-  engine --> model
-  persist --> data
-  render --> model
   state --> engine
+  ui --> persist
+  data --> model
+  economy --> model
+  render --> model
   state --> model
   state --> persist
-  ui --> prodlayout
+  ui --> render
   app --> state
   app --> ui
   commande --> data
   economy --> data
+  model --> engine
+  monde --> optimizer
   persist --> economy
   prodlayout --> data
   state --> economy
   state --> optimizer
+  ui --> prodlayout
 
   classDef ext fill:#2b2b33,stroke:#55555f,color:#d8d6df;
   class RDA,PY ext;
@@ -259,19 +287,20 @@ flowchart TD
 
 <!-- ARCHITECTURE:END -->
 
-The rule engine is deliberately kept as **pure functions with no React dependency**, and so are the order planner and the blueprints. That is what makes them testable — **over 440 tests** cover geometry, placement rules, the economy solver, the layout engines and the invariants every plan must keep (no overlap, nothing off the island, everything reachable from the trading post) — and what lets the planners reuse the exact same rules as the live editor.
+The rule engine is deliberately kept as **pure functions with no React dependency**, and so are the order planner and the blueprints. That is what makes them testable — **over 540 tests** cover geometry, placement rules, the economy solver, the layout engines and the invariants every plan must keep (no overlap, nothing off the island, everything reachable from the trading post) — and what lets the planners reuse the exact same rules as the live editor.
 
 ---
 
 ## Where it stands
 
-What works: the extraction pipeline, the rule engine, the editor, the order planner, the production blueprints, the island fill engine, and the Docker build — with the measurements in the redesign plan linked above.
+What works: the extraction pipeline, the rule engine, the editor, the three island planners, world planning with save import, and the Docker build — with the measurements in [`docs/REPRISE.md`](docs/REPRISE.md), the project's living state.
 
 What is missing before this can be called finished:
 
-- **In-game validation** — no layout has been rebuilt in Anno 117 yet. Four checks matter most: what a negative attribute balance really does to a city, what a tier's `UpgradeThreshold` means, whether goods are consumed per house or per inhabitant, and how far an aqueduct carries on flat ground (`.claude/GAME_MECHANICS.md`, §13).
+- **In-game validation** — several rules have been checked in game (diagonal roads, service range as a travel length, productivity bonuses adding up), but no full layout has been rebuilt yet. Open checks: what a tier's `UpgradeThreshold` means, whether goods are consumed per house or per inhabitant, the direction of an imported island's rotation, and what the tax setting does to house income (`.claude/GAME_MECHANICS.md`, §13 and §17).
+- **World planning, next steps** — ships and travel times from the island positions already read from the save, a staged development plan, a tighter land estimate for farms, and the game settings applied in the single-island planners too ([`.claude/ROADMAP.md`](.claude/ROADMAP.md)).
 - **Exact footprints** — sizes come from `.ifo` bounding boxes and are accurate to ±1 tile. They are editable in-app, but they are not yet correct by default for every building.
-- **Deposits** — which ore a mountain holds is not in the extracted data: a gold mine may land on an iron mountain.
+- **Deposits** — which ore a mountain holds is not in the extracted data: a gold mine may land on an iron mountain. A save import at least removes the slots the map generator never activated.
 
 The planners are tested against themselves and against the game's data, not against the game. That distinction matters, and it is the main reason this is still marked as in progress.
 

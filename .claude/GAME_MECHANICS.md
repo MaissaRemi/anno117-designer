@@ -404,6 +404,9 @@ donc une copie par DIVINITÉ : **72 autels** mesurés sur `roman_island_medium_0
 
 ## 13. CHECKLIST TESTS IN-GAME (pour l'utilisateur — à plus fort levier)
 
+> Ajouts de novembre 2026 (détail au §17) : sens de `Rotation90` à l'import, source d'aqueduc
+> sur un emplacement inactif, impôts d'une maison au réglage « Spare », zone libre d'un côtier.
+
 0. **[LE PLUS RENTABLE] Sens de `UpgradeThreshold`** — le seuil porté par la résidence du
    palier T est-il la condition pour **ÊTRE** T, ou pour **QUITTER** T ? Protocole : monter
    une maison au palier Patricien en ne fournissant que le **Forum** côté Wonders (w4), sans
@@ -489,3 +492,62 @@ MaxTransporterRange — tous confirmés GUID+propriété). Corrigé :
   bloquent la tuile entière. Champs peints par bloc (1 clic = 1 tuile). Import JSON tuile migré ×2.
 - Doc : le `round(xf*2)` = demi-extent→TUILE entière (pas ½-tuile) ; la grille ½-tuile est un
   choix runtime du planner, pas une granularité jeu prouvée.
+
+## 17. Règles établies d'octobre à novembre 2026
+
+Détail, mesures et code : `docs/REPRISE.md`. Verdicts comme plus haut.
+
+### Routes et diagonale
+- **[IN-GAME]** Route diagonale = losanges de côté √2 centrés sur les coins ; une maison 3 × 3
+  droite = 2 × 2 cases de route diagonale posée en biais.
+- **[IN-GAME]** La portée est une LONGUEUR DE TRAJET : une case diagonale coûte ~1,4 pas.
+- **[IN-GAME]** Jonction droite / diagonale par recouvrement ; deux losanges qui ne se touchent
+  que par une pointe ne sont PAS reliés (on les relie par une route de l'autre orientation).
+- **[IN-GAME]** Un aqueduc peut croiser une route en biais.
+
+### Production
+- **[IN-GAME]** Les bonus de productivité (dieu, recherche, objets) s'ADDITIONNENT.
+
+### Bâtiments côtiers
+- **[FICHIERS]** Un `.ifo` côtier a trois zones dans l'emprise (`BuildBlocker`) : le quai
+  (`QuayArea`, polygone, à terre ; celui du ramasseur de coques est en U), la partie dans l'eau
+  (`WaterBlocker`) et le reste. Le reste peut se trouver AU LARGE (marais salants, coques).
+  **[OUVERT in-game]** le reste accepte-t-il indifféremment terre et eau constructible ?
+
+### Emplacements de terrain
+- **[FICHIERS]** « Slot Roman/Celtic Mountain » (2882, 5281), « Slot Roman River » (2969),
+  « Slot Celtic Marsh » (5282) sont des objets de carte ALÉATOIRES (`RandomMapObject`,
+  `MapGeneratorSlotCount` par réglage de matières premières et taille d'île) ; « Fixed Slot … »
+  (37926, 38473, 38471) ont `ActivateAll = 1`. Chaque emplacement a un `ObjectId` 64 bits
+  (`ObjectMetaInfo/RandomSlotObjects` du `.a7minfo`).
+- **[FICHIERS]** Une sauvegarde dit lesquels sont activés (`MineSlotActivation`, paires
+  ObjectId / booléen). Sur Grande 05 d'Albion (Maximilia), 2 emplacements de montagne tirés sur
+  6 activés = ses deux gisements de montagne. **[OUVERT in-game]** un emplacement inactif
+  accepte-t-il une source d'aqueduc ?
+
+### Réglages de la partie (`gamesetup.a7s`, `DifficultySettings` dans assets.xml)
+- **[FICHIERS]** Crans des choix dans `datasets.xml` : DCNeedConsumption et DCMaintenance
+  Low 0 / Medium 1 / High 2 ; DCFertilities et DCRawMaterials High 2 / Medium 1 / Low 0 ;
+  DCTaxes Spare 2 / Medium 1 / Plenty 0.
+- **[FICHIERS]** `NeedConsumption/ConsumptionFactor` : Low 1, Medium 1,25, High 1,5. Les taux
+  extraits (`NeedConsumptionRate`) sont au cran Low.
+- **[FICHIERS]** `Maintenance/MaintenancePercentage` : 100 / 122 / 140, appliqué à la monnaie
+  (1010017) ET à chaque bien de main-d'œuvre (2181, 2184…). Les valeurs extraites sont à 100 %.
+- **[FICHIERS]** `Taxes/LandTaxFactor` : Spare (absent, ×1), Medium 1,5, Plenty 2.
+  **[OUVERT in-game]** effet sur l'argent des maisons (non appliqué par l'outil).
+- **[FICHIERS]** Préréglage Medium : tout en Medium ; profils humains `AvailableHumans` : 41,
+  600069, 600070, 42 (Profile_Human_00 à 03).
+
+### Sauvegarde `.a8s`
+- **[FICHIERS]** Archive RDA 2.2 : `meta.a7s`, `header.a7s`, `gamesetup.a7s`, `data.a7s`, chacun
+  un flux zlib suivi de 12 octets (flux zlib vide `78 da 03 00 00 00 00 01` + taille
+  décompressée en uint32).
+- **[FICHIERS]** `data.a7s` (FileDB v3) : `MetaGameManager/GameSessions/#1` = une province
+  (`SessionDesc@SessionID` 1 Latium, 3 Albion dans Maximilia ; `SessionData@BinaryData` = un
+  FileDB). Dans une province : `GameSessionManager/MapTemplate/TemplateElement/Element`
+  (`MapFilePath` = fichier de l'île, `Rotation90`, `Position`, `FertilitiesPerAreaIndex`,
+  `MineSlotActivation`) et `AreaInfo` (clé = `(129 + rang de l'élément) × 64 + n° de session`,
+  `OwnerProfile`, `Fertility`).
+- **[FICHIERS]** Propriétaires : 41 = joueur 1 ; 31099 Dorian, 31100 Tarragon, 31101 Licia,
+  31102 Athr Iorgwyn, 31103 Zara, 31104 Concordia = rivaux ; comptoirs tiers et décors hors
+  catalogue. **[OUVERT in-game]** sens de `Rotation90` (supposé horaire).

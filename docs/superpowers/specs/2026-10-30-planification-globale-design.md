@@ -198,3 +198,15 @@ interface IleDuMonde {
 4. **Le nouvel outil remplace « Plusieurs îles »** (à l'étape 3, quand il sait faire mieux).
 5. **L'onglet va dans la colonne de gauche**, sous Planifier : « Monde ».
 6. **Première version sans navires** : flux en u/min. Les navires plus tard.
+
+## Avancement (10/11/2026)
+
+- Étapes 1 à 4 faites (30/10) : onglet Monde, assistant, calcul (îles principales, répartition,
+  pose, flux, bilan), suggestions d'achat, recalcul incrémental.
+- Ajouts : argent des îles de production dans le bilan (04/11) ; **import d'une sauvegarde
+  `.a8s`** (04/11), qui remplace la saisie dans l'assistant et lève la limite « une même île peut
+  apparaître tournée » (la rotation est lue) ; emplacements inactifs de la partie retirés du
+  calcul et réglages de consommation et d'entretien (05/11).
+- Étape 5 (navires, plan de développement) : pas commencée ; les positions des îles sont déjà
+  lues dans la sauvegarde. Reconnaissance par la minimap : mise de côté.
+- Détail et mesures : `docs/REPRISE.md` ; reste à faire : `.claude/ROADMAP.md`.

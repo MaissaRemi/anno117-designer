@@ -1,4 +1,58 @@
-# Feuille de route — reste à faire (annoDesigner, 2026-06-21)
+# Feuille de route — Anno 117 Designer (10/11/2026)
+
+État détaillé, mesures et questions en jeu : `docs/REPRISE.md`. Conception du monde :
+`docs/superpowers/specs/2026-10-30-planification-globale-design.md`.
+
+## Objectif
+
+Planifier une partie entière : îles principales (maisons et services) et îles de production
+(tous les biens, ouvriers compris), flux entre îles, achats d'îles, plan de chaque île à
+reconstruire en jeu. Données toujours lues dans le jeu ou dans la sauvegarde du joueur.
+
+## Fait
+
+| Étape | Contenu | Date |
+|---|---|---|
+| Moteur d'île refondu | « Ma commande » : nomenclature, îlots, production posée ; portées, eau, comptoir | 26–30/10 |
+| Île de production | des biens et leur débit, productivité additive, fertilités et emplacements | 30/10 |
+| Monde 1 | onglet Monde, configurations, assistant (îles, fertilités, propriété) | 30/10 |
+| Monde 2–3 | îles principales, répartition sur les îles de production, pose, flux, bilan | 30/10 |
+| Monde 4 | suggestions d'achat, recalcul incrémental | 30/10 |
+| Pose côtière | quai à terre, partie dans l'eau, reste libre (marais salants, coques) | 04/11 |
+| Argent des îles de production | impôts des ouvriers moins entretien, dans le bilan du monde | 04/11 |
+| Import de sauvegarde | îles, fertilités, propriétaires, rotation, position ; partie à plusieurs | 04/11 |
+| Emplacements inactifs | `MineSlotActivation` : emplacements non activés retirés du calcul | 05/11 |
+| Réglages de la partie | consommation ×1 / 1,25 / 1,5, entretien ×1 / 1,22 / 1,4 | 05/11 |
+
+## À faire, par intérêt
+
+1. **Estimation de terre** des fermes et bâtiments à aire libre dans la répartition (devis trop
+   optimiste, rattrapage partiel).
+2. **Ouvriers de luxe** visibles dans le résultat du monde.
+3. **Navires** : temps de trajet (positions de la sauvegarde), nombre de navires par flux.
+4. **Plan de développement par étapes**.
+5. **Main-d'œuvre des îles principales** au réglage d'entretien (moteur d'île).
+6. **Réglages de la partie dans les outils d'une île** (« Remplir l'île », « Île de production »).
+7. **Impôts** de la partie, après vérification en jeu.
+8. **Minimap** : reconnaissance des îles sur une capture (mise de côté).
+9. **Noms des villes** à l'import.
+10. Moteur d'île, reportés : service sans accès compté dans la couverture ; plan diagonal non
+    posable dans l'éditeur ; trame mêlée en pause.
+11. Dépôt : nettoyer `.claude/worktrees/confident-jemison-990e57` ; fusionner `dev` dans `main`.
+
+## Questions en jeu
+
+Sens de la rotation importée ; source d'aqueduc sur un emplacement inactif ; impôts d'une maison
+de Plébéiens au réglage « Spare » ; zone libre d'un bâtiment côtier ; `UpgradeThreshold` ;
+consommation par maison ou par habitant ; manque de main-d'œuvre.
+
+---
+
+# Historique — feuille de route du 21/06/2026
+
+> Conservée pour mémoire : décrit l'état et les phases de juin 2026, en grande partie
+> dépassées par la refonte du moteur d'île (octobre 2026).
+
 
 ## ÉTAT D'EXÉCUTION (2026-06-21, branche feature/operational-polish)
 Phases attaquées dans l'ordre. **124 tests verts, tsc clean, lint 0, build green.**

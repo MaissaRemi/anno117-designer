@@ -1,5 +1,8 @@
 # Anno 117 Designer — Avancement & Architecture
 
+> **Document historique (juin 2026).** L'état courant, les objectifs et la suite sont dans
+> `docs/REPRISE.md` ; la feuille de route dans `.claude/ROADMAP.md`.
+
 Outil web pour concevoir/optimiser des dispositions de bâtiments Anno 117, avec données réelles
 extraites du jeu. Ce fichier = mémoire du projet (garder l'avancé).
 
