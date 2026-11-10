@@ -63,7 +63,7 @@ cd anno117-designer
 git switch dev
 pnpm install
 pnpm dev          # application sur http://localhost:5173
-pnpm test         # ~540 tests, ~1 min 50 ; pnpm test:fast écarte les balayages lourds
+pnpm test         # ~550 tests, ~1 min 50 ; pnpm test:fast écarte les balayages lourds
 ```
 
 Machine actuelle : Windows, projet dans `C:\Users\rem34\Projects\anno117-designer`, jeu dans
@@ -375,6 +375,27 @@ rotation et leur position. Lue dans le navigateur en ~150 ms (`monde/sauvegarde/
   la minimap, brouillard, couleurs des propriétaires, minimap droite ou en losange. Pour mesurer
   la fiabilité avant de bâtir l'écran : des captures de la minimap de Maximilia Maxima, dont la
   sauvegarde donne la vérité (îles, rotations, positions) — et le sens de la rotation au passage.
+
+### Audit et qualité des plans (10/11/2026)
+
+Audit complet : `docs/AUDIT-2026-11-10.md` (mesures, causes, plan en cinq étapes). Constat
+central : la suite vérifiait qu'un plan est valide, jamais qu'il est bon, et les consignes de
+Rémi n'étaient écrites nulle part.
+
+- **Étape 0** : `.claude/exigences.md` (importé par `CLAUDE.md`), mesure `regroupement`
+  (`optimizer/planQuality.ts`), panneau `optimizer/qualite.panneau.test.ts` (seuils en cliquet).
+- **Étapes 1 et 2, « Ma commande »** (`commande/ilots.ts`) : îlots partiels le long des côtes,
+  un seul réseau de routes, petits services collés à la colonne de route, gain minimal d'une
+  copie de plus (`PART_GAIN`), recouvrement une fois la ville faite. medium_01, 450 Patriciens,
+  pavée : 333 → 450 logés, 61 → 48 services, 61 → 35 % de services en pâté.
+- **Étape 1, « Remplir l'île »** (`optimizer/planLattice.ts`) : une grappe par tranche de portée
+  (`TRANCHE` = 1,5). Sans effet en pavée ; en terre, +3,7 % de maisons au palier sur sept îles
+  pour 19 % de services en plus. Les pâtés de « Remplir l'île » restent à 75–83 %.
+- **À décider par Rémi** : `TRANCHE` = 1,25 divise les pâtés de « Remplir l'île » par deux sans
+  perte d'habitants au total, mais fait reculer trois seuils du panneau (tableau dans
+  `.claude/exigences.md`).
+- **Restent de l'audit** : main-d'œuvre sur ce qui est posé, île de production (étape 3), monde
+  (étape 4, dont le conseil de l'île principale), entretien (étape 5).
 
 ## Ce qui reste à faire, par intérêt (10/11/2026)
 

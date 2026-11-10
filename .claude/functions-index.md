@@ -18,16 +18,16 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 
 ### `src/commande/disposition.ts` — DISPOSER UNE COMMANDE — TYPES ET OUTILS COMMUNS
 - `DispositionOpts` (interface, L18) [2]
-- `LignePosee` (interface, L25) [3]
-- `PlanQuartiers` (interface, L33) [2]
-- `distancesDeCroissance` (function, L117) [2] : Distance OCTILE le long de la terre depuis des graines (10 en ligne droite, 14 en diagonale, la diagonale n'étant permi…
+- `LignePosee` (interface, L28) [3]
+- `PlanQuartiers` (interface, L36) [2]
+- `distancesDeCroissance` (function, L120) [2] : Distance OCTILE le long de la terre depuis des graines (10 en ligne droite, 14 en diagonale, la diagonale n'étant permi…
 ### `src/commande/ilots.ts` — LES ÎLOTS : UNE VILLE QUI SE LIT
 - `ILOT` (const, L44) [0]
-- `besoinEnIlots` (function, L78) [1] : Îlots à fusionner (k colonnes × m rangées) pour loger ce bâtiment, et l'orientation.
-- `routeVersReseau` (function, L160) [1] : Plus court chemin de route du périmètre d'une emprise (sans les coins : l'accès est orthogonal) jusqu'au réseau, par de…
-- `disposerQuartiers` (function, L248) [2] : Pose les quartiers d'une commande en îlots, sur une île (grille TUILE, celle des moteurs).
+- `besoinEnIlots` (function, L86) [1] : Îlots à fusionner (k colonnes × m rangées) pour loger ce bâtiment, et l'orientation.
+- `routeVersReseau` (function, L178) [1] : Plus court chemin de route du périmètre d'une emprise (sans les coins : l'accès est orthogonal) jusqu'au réseau, par de…
+- `disposerQuartiers` (function, L266) [2] : Pose les quartiers d'une commande en îlots, sur une île (grille TUILE, celle des moteurs).
 ### `src/commande/nomenclature.ts` — LA COMMANDE, ET CE QU'ELLE COÛTE EN BÂTIMENTS
-- `SURFACE_PAR_MAISON` (const, L33) [0] : Surface urbaine par maison, routes et services compris.
+- `SURFACE_PAR_MAISON` (const, L33) [1] : Surface urbaine par maison, routes et services compris.
 - `LigneMaisons` (interface, L39) [1]
 - `ChoixServices` (type, L44) [1]
 - `Commande` (interface, L46) [14]
@@ -36,7 +36,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `RoleLigne` (type, L132) [0]
 - `LigneNomenclature` (interface, L134) [0]
 - `Nomenclature` (interface, L145) [3]
-- `copiesPourCouvrir` (function, L170) [1] : Copies d'un service à portée-rue pour couvrir une zone : pavage en diamants L1 de rayon effectif `portée − pas du peign…
+- `copiesPourCouvrir` (function, L170) [2] : Copies d'un service à portée-rue pour couvrir une zone : pavage en diamants L1 de rayon effectif `portée − pas du peign…
 - `nomenclature` (function, L179) [19] : La nomenclature d'une commande.
 ### `src/commande/planifier.ts`
 - `ObjectifPose` (interface, L28) [0] : Un bien de l'objectif, et le débit que le plan POSÉ en tire.
@@ -361,7 +361,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `filtreChemins` (function, L92) [2] : Un filtre qui garde les chemins donnés et tout ce qui est dessous.
 - `enfant` (const, L102) [1]
 - `enfants` (const, L103) [2]
-- `chemin` (const, L104) [19]
+- `chemin` (const, L104) [20]
 - `attribut` (const, L106) [14]
 - `attributs` (const, L107) [22]
 - `entier` (function, L110) [18] : Un entier little-endian signé, de la taille de la donnée (1, 2, 4 ou 8 octets).

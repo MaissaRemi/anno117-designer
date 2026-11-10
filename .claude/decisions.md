@@ -28,6 +28,19 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
 
 ## Moteurs d'île
 
+- **Les exigences de Rémi passent avant le nombre d'habitants** (10/11, audit) : elles sont
+  écrites dans `.claude/exigences.md` et tenues par le panneau `optimizer/qualite.panneau.test.ts`,
+  dont les seuils ne se relâchent qu'avec son accord.
+- **Îlots partiels dans « Ma commande »** (10/11) : un îlot entamé par la côte entre dans la
+  ville comme îlot de services aux cases hors terre déjà prises. Sans eux un îlot écarté coupait
+  les routes vers les îlots entiers derrière lui (333 Patriciens logés sur 450, 56 % de vide).
+- **Une copie de plus doit valoir sa portée** (10/11, `PART_GAIN` = 0,1) : un dixième de la
+  capacité d'une copie, sinon elle se posait pour deux maisons de bordure. Loger toute la
+  commande prime : repli en copies resserrées, gardé seulement s'il loge tout.
+- **Une grappe de petits services par tranche de portée** dans `planLattice` (10/11,
+  `TRANCHE` = 1,5) : un service moyen n'est plus répété au pas d'un puits. Des tranches plus
+  fines (1,25) défont les pâtés ; ce réglage attend la décision de Rémi.
+
 - **« Ma commande » comme chemin principal** (refonte du 26/10) : le joueur dit ce qu'il veut, le
   moteur dresse la nomenclature et dispose en îlots ; l'ancien moteur reste comme « Remplir
   l'île ». Raison : l'ancien décidait seul des services et ne disait pas ce qui manquait.
