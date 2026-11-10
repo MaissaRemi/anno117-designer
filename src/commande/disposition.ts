@@ -23,6 +23,9 @@ export interface DispositionOpts {
   /** Lever le gain minimal d'une copie supplémentaire de service : les copies se resserrent
    *  pour loger une commande qui ne tient pas sinon. Défaut : essayé en repli seulement. */
   copiesSerrees?: boolean;
+  /** Faire entrer dans la ville les îlots entamés par la côte ou le relief (cf. `ilots.ts`).
+   *  Défaut : essayé en repli seulement. */
+  ilotsPartiels?: boolean;
 }
 
 export interface LignePosee {

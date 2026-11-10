@@ -31,12 +31,17 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
 - **Les exigences de Rémi passent avant le nombre d'habitants** (10/11, audit) : elles sont
   écrites dans `.claude/exigences.md` et tenues par le panneau `optimizer/qualite.panneau.test.ts`,
   dont les seuils ne se relâchent qu'avec son accord.
-- **Îlots partiels dans « Ma commande »** (10/11) : un îlot entamé par la côte entre dans la
-  ville comme îlot de services aux cases hors terre déjà prises. Sans eux un îlot écarté coupait
-  les routes vers les îlots entiers derrière lui (333 Patriciens logés sur 450, 56 % de vide).
+- **Îlots partiels dans « Ma commande », en dernier recours** (10/11) : un îlot entamé par la
+  côte entre dans la ville comme îlot de services aux cases hors terre déjà prises, quand plus
+  aucun îlot entier n'est rattachable. Sans eux un îlot écarté coupait les routes vers les îlots
+  entiers derrière lui (333 Patriciens logés sur 450, 56 % de vide) ; mêlés aux entiers ils
+  bordaient le relief et gênaient les aqueducs.
+- **Trois façons de poser une commande, la première qui loge tout** (10/11) : copies espacées
+  avec îlots partiels, copies resserrées sans, copies resserrées avec. Aucune ne gagne sur
+  toutes les îles ; le choix se fait sur les maisons logées, mesurées avec les hauteurs.
 - **Une copie de plus doit valoir sa portée** (10/11, `PART_GAIN` = 0,1) : un dixième de la
-  capacité d'une copie, sinon elle se posait pour deux maisons de bordure. Loger toute la
-  commande prime : repli en copies resserrées, gardé seulement s'il loge tout.
+  capacité d'une copie, sinon elle se posait pour deux maisons de bordure. Loger la commande
+  prime sur l'espacement.
 - **Une grappe de petits services par tranche de portée** dans `planLattice` (10/11,
   `TRANCHE` = 1,5) : un service moyen n'est plus répété au pas d'un puits. Des tranches plus
   fines (1,25) défont les pâtés ; ce réglage attend la décision de Rémi.

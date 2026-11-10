@@ -384,10 +384,11 @@ Rémi n'étaient écrites nulle part.
 
 - **Étape 0** : `.claude/exigences.md` (importé par `CLAUDE.md`), mesure `regroupement`
   (`optimizer/planQuality.ts`), panneau `optimizer/qualite.panneau.test.ts` (seuils en cliquet).
-- **Étapes 1 et 2, « Ma commande »** (`commande/ilots.ts`) : îlots partiels le long des côtes,
-  un seul réseau de routes, petits services collés à la colonne de route, gain minimal d'une
-  copie de plus (`PART_GAIN`), recouvrement une fois la ville faite. medium_01, 450 Patriciens,
-  pavée : 333 → 450 logés, 61 → 48 services, 61 → 35 % de services en pâté.
+- **Étapes 1 et 2, « Ma commande »** (`commande/ilots.ts`) : îlots partiels le long des côtes
+  (en dernier recours), un seul réseau de routes, petits services collés à la colonne de route,
+  gain minimal d'une copie de plus (`PART_GAIN`), recouvrement une fois la ville faite, et trois
+  façons de poser essayées dans l'ordre (`disposerQuartiers`). medium_01, 450 Patriciens,
+  pavée : 333 → 450 logés, 61 → 46 services, 61 → 7 % de services en pâté.
 - **Étape 1, « Remplir l'île »** (`optimizer/planLattice.ts`) : une grappe par tranche de portée
   (`TRANCHE` = 1,5). Sans effet en pavée ; en terre, +3,7 % de maisons au palier sur sept îles
   pour 19 % de services en plus. Les pâtés de « Remplir l'île » restent à 75–83 %.
@@ -460,7 +461,8 @@ Feuille de route détaillée : `.claude/ROADMAP.md`.
 - Après une fusion, le serveur de développement peut garder des modules périmés (page blanche,
   « does not provide an export named … ») : le redémarrer.
 - Une sonde de mesure doit passer les hauteurs de l'île (`heightsOf`) comme le worker de
-  l'application, sinon ses résultats diffèrent de l'écran.
+  l'application, sinon ses résultats diffèrent de l'écran. Vécu le 10/11/2026 : un plan de
+  « Ma commande » à 450 maisons au test en logeait 0 à l'écran.
 - Les moteurs tournent en cases entières (`downscaleGrid`) ; le résultat est reprojeté en
   demi-cases pour l'éditeur (`scaleResultToHalfTile`), alternatives comprises — un plan
   diagonal garde son repère.

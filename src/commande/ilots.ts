@@ -270,22 +270,36 @@ export function disposerQuartiers(
   lookup: DefLookup,
   opts: DispositionOpts = {},
 ): PlanQuartiers {
-  const plan = disposerAvecEau(grid, commande, catalog, lookup, opts);
-  const toutLoge = (p: PlanQuartiers) => p.lignes.every((l) => (l.role !== "residence" && l.role !== "ouvriers") || l.pose >= l.demande);
-  if (opts.copiesSerrees !== undefined || toutLoge(plan)) return plan;
-  // Des maisons de bordure qu'une copie espacée ne rentabilise pas manquent à l'appel : on
-  // retente en laissant les copies se resserrer. Ce plan n'est retenu que s'il loge TOUTE la
-  // commande (exigence E3 tenue, au prix de E1) ; si l'île est trop petite dans les deux cas, on
-  // garde le plan espacé et l'on dit ce que le resserrement aurait logé de plus — mesuré sur
-  // `roman_island_small_06`, 200 Patriciens : 158 logés espacés, 175 serrés.
-  const serre = disposerAvecEau(grid, commande, catalog, lookup, { ...opts, copiesSerrees: true });
-  if (toutLoge(serre)) {
-    return { ...serre, avertissements: [...serre.avertissements, "Île juste pour cette commande : des services sont plus rapprochés que leur portée ne le demande, pour loger toutes les maisons"] };
+  // UN SEUL ESSAI si l'appelant a fixé les deux réglages.
+  if (opts.copiesSerrees !== undefined && opts.ilotsPartiels !== undefined) {
+    return disposerAvecEau(grid, commande, catalog, lookup, opts);
   }
+  // TROIS FAÇONS DE POSER, dans l'ordre de préférence ; la première qui loge TOUTE la commande
+  // est retenue, sinon celle qui loge le plus de maisons (exigence E3), à égalité la première.
+  //  1. copies espacées (exigence E1), îlots partiels en dernier recours ;
+  //  2. copies resserrées, îlots entiers seuls — le plan d'avant le 2026-11-10 ;
+  //  3. copies resserrées, îlots partiels.
+  // Aucune ne gagne partout. Mesuré avec les hauteurs de l'île, maisons logées (1 / 2 / 3) :
+  // medium_01 450 Patriciens 450 / 333 / 450 ; small_06 200 : 165 / 91 / 147 ; large_03 800 :
+  // 587 / 800 / 720 (les îlots partiels y bordent le relief et gênent les aqueducs) ;
+  // large_03 1 200 : 1 169 / 859 / 932 ; medium_05 350 : 350 / 220 / 278.
+  const toutLoge = (p: PlanQuartiers) => p.lignes.every((l) => (l.role !== "residence" && l.role !== "ouvriers") || l.pose >= l.demande);
   const maisonsDe = (p: PlanQuartiers) => Object.values(p.maisonsParPalier).reduce((a, b) => a + b, 0);
-  const dePlus = maisonsDe(serre) - maisonsDe(plan);
-  if (dePlus <= 0) return plan;
-  return { ...plan, avertissements: [...plan.avertissements, `En rapprochant les services plus que leur portée ne le demande, ${dePlus} maison(s) de plus seraient logées`] };
+  const SERRE = "Île juste pour cette commande : des services sont plus rapprochés que leur portée ne le demande, pour loger plus de maisons";
+  let meilleur: PlanQuartiers | null = null;
+  for (const essai of [
+    { copiesSerrees: false, ilotsPartiels: true },
+    { copiesSerrees: true, ilotsPartiels: false },
+    { copiesSerrees: true, ilotsPartiels: true },
+  ]) {
+    if (opts.copiesSerrees !== undefined && opts.copiesSerrees !== essai.copiesSerrees) continue;
+    if (opts.ilotsPartiels !== undefined && opts.ilotsPartiels !== essai.ilotsPartiels) continue;
+    const brut = disposerAvecEau(grid, commande, catalog, lookup, { ...opts, ...essai });
+    const p = essai.copiesSerrees ? { ...brut, avertissements: [...brut.avertissements, SERRE] } : brut;
+    if (toutLoge(p)) return p;
+    if (!meilleur || maisonsDe(p) > maisonsDe(meilleur)) meilleur = p;
+  }
+  return meilleur!;
 }
 
 function disposerAvecEau(
@@ -410,7 +424,7 @@ function disposer(
         if (ok) loge = true;
       }
     }
-    if (!loge) continue;
+    if (!loge || !opts.ilotsPartiels) continue;
     const libre = masque.findIndex((v) => !v);
     const c = (y + Math.floor(libre / ILOT.largeur)) * W + x + (libre % ILOT.largeur);
     if (dist[c] < 0) continue;
@@ -469,9 +483,12 @@ function disposer(
     for (const [c, r] of repere) distIlot.set(c, dc[r]);
   }
   valides.sort((a, b) => distIlot.get(a)! - distIlot.get(b)! || a - b);
-  /** Îlots où la ville peut s'étendre : les entiers et les partiels, du plus proche au plus loin. */
-  const extensibles = [...valides, ...[...partiels.keys()].filter((c) => distIlot.get(c)! >= 0)]
-    .sort((a, b) => distIlot.get(a)! - distIlot.get(b)! || a - b);
+  // LES ÎLOTS ENTIERS D'ABORD, les partiels en dernier recours — quand plus aucun îlot entier
+  // n'est rattachable. Mêlés par distance, les partiels bordaient aussi le RELIEF et barraient
+  // le passage des aqueducs depuis la montagne : mesuré avec les hauteurs de l'île sur
+  // `roman_island_large_03`, 800 Patriciens logés sans eux, 674 avec.
+  const extensibles = [...valides, ...[...partiels.keys()].filter((c) => distIlot.get(c)! >= 0)
+    .sort((a, b) => distIlot.get(a)! - distIlot.get(b)! || a - b)];
 
   // ─── ÉTAT DE LA VILLE ───────────────────────────────────────────────────────────────
   const etat = new Map<number, EtatIlot>();

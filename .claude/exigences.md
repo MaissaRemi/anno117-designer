@@ -10,14 +10,17 @@ Ce que le projet DOIT tenir. Ce fichier dit ce qui est exigé, pas ce qui a ét�
 - Les seuils du panneau sont un cliquet : une amélioration les resserre dans le même commit ;
   ils ne se relâchent qu'avec l'accord de Rémi.
 - Une exigence sans test s'outille avant d'y travailler.
+- Une mesure passe les hauteurs de l'île, comme l'application : sans elles l'eau passe partout
+  et le plan mesuré n'est pas celui de l'écran (10/11 : un plan à 450 maisons au test en
+  logeait 0 à l'écran).
 - Ne pas répondre qu'un défaut signalé par Rémi est « une conséquence du jeu » sans le lui
   avoir montré, mesure à l'appui.
 
 | # | Exigence | Vérifiée par | État au 10/11/2026 |
 |---|---|---|---|
-| E1 | Le moins de copies possible d'un même service, espacées selon sa portée réelle (le long de la route, allongée par le type de route). Pas une copie tous les dix pas quand la portée en couvre cinquante. | panneau, `espacement` (`regroupement`, `optimizer/planQuality.ts`) ; 1 = au pas que la portée permet | **en progrès** (étape 1) : « Ma commande » 0,27 à 0,46 (était 0,2 à 0,4), 48 services pour 450 maisons sur medium_01 (était 61 pour 333) ; « Remplir l'île » inchangé en pavée (0,49 à 0,59) |
-| E2 | Pas de pâtés : les services ne forment pas des groupes collés ; ils sont placés là où ils couvrent le mieux. | panneau, `enPate` (part des services à une case ou moins de deux autres) | **en progrès** : « Ma commande » 22 à 35 % (était 39 à 74 %) ; « Remplir l'île » **non tenue**, 75 à 83 % en pavée |
-| E3 | Rien ne manque : ce qui est commandé est logé à son palier, ce qui est annoncé au devis est posé, ni plus ni moins. | panneau, `auPalier` ; la ligne imprimée donne aussi « services posés / au devis » | **en progrès** (étape 2) : 450 Patriciens logés sur 450 (medium_01, était 333), 158 sur 200 (small_06, était 91 ; île trop petite) ; devis et pose encore différents (48 pour 43, 38 pour 23) |
+| E1 | Le moins de copies possible d'un même service, espacées selon sa portée réelle (le long de la route, allongée par le type de route). Pas une copie tous les dix pas quand la portée en couvre cinquante. | panneau, `espacement` (`regroupement`, `optimizer/planQuality.ts`) ; 1 = au pas que la portée permet | **en progrès** (étape 1) : « Ma commande » 0,37 à 0,38 (était 0,2 à 0,4), 46 services pour 450 maisons sur medium_01 (était 61 pour 333) ; « Remplir l'île » inchangé en pavée (0,49 à 0,59) |
+| E2 | Pas de pâtés : les services ne forment pas des groupes collés ; ils sont placés là où ils couvrent le mieux. | panneau, `enPate` (part des services à une case ou moins de deux autres) | **en progrès** : « Ma commande » 7 à 60 % (était 39 à 74 %) ; « Remplir l'île » **non tenue**, 75 à 83 % en pavée |
+| E3 | Rien ne manque : ce qui est commandé est logé à son palier, ce qui est annoncé au devis est posé, ni plus ni moins. | panneau, `auPalier` ; la ligne imprimée donne aussi « services posés / au devis » | **en progrès** (étape 2) : 450 Patriciens logés sur 450 (medium_01, était 333), 165 sur 200 (small_06, était 91 ; île trop petite) ; devis et pose proches sur les grandes îles (46 pour 43, 71 pour 70), pas sur la petite (35 pour 23) |
 | E4 | La portée se compte le long de la route et le type de route l'allonge. | `engine/roads.ts` (`planningRange`), `commande/ilots.test.ts` (moins de services en pavée) | tenue |
 | E5 | Monde, phase 1 : repérer le monde, puis choisir l'île principale **ou se la faire conseiller**, et savoir sur quelle île produire quoi. | aucun test | conseil de l'île principale : **absent** |
 | E6 | Île de production : plan complet (ateliers, fermes, champs), tassé pour gagner de la place et produire le plus possible. | aucun test de densité | **non tenue** : fermes refusées « faute de place » avec 43 % de terre vide |

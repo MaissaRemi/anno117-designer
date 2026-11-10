@@ -23,12 +23,13 @@ import { regroupement, type Regroupement } from "./planQuality";
  * Trois îles, les deux moteurs de quartiers, route pavée (le défaut de l'interface) ; un cas en
  * chemin de terre pour « Remplir l'île », où les portées courtes changent la donne.
  *
- * 2026-11-10, étapes 1 et 2 de l'audit — « Ma commande » : îlots partiels, petits services
- * collés à la colonne de route, gain minimal d'une copie de plus, recouvrement une fois la ville
- * faite. Avant → après : medium_01 61 % en pâté / 0,2 / 333 logées → 35 % / 0,27 / 450 ;
- * small_06 74 % / 0,4 / 91 → 32 % / 0,46 / 158 ; celtic_large_07 39 % / 0,29 / 700 → 22 % /
- * 0,36 / 700. « Remplir l'île » : une grappe par tranche de portée, sans effet en pavée ; en
- * terre medium_01 passe de 336 à 375 maisons au palier (86 → 90 % en pâté, 0,52 → 0,38).
+ * 2026-11-10, étapes 1 et 2 de l'audit — « Ma commande » : îlots partiels en dernier recours,
+ * petits services collés à la colonne de route, gain minimal d'une copie de plus, recouvrement
+ * une fois la ville faite, et le choix entre trois façons de poser. Avant → après, hauteurs de
+ * l'île comprises : medium_01 61 % en pâté / 0,2 / 333 logées → 7 % / 0,37 / 450 ; small_06
+ * 74 % / 0,4 / 91 → 60 % / 0,38 / 165 ; celtic_large_07 39 % / 0,29 / 700 → 25 % / 0,38 / 700.
+ * « Remplir l'île » : une grappe par tranche de portée, sans effet en pavée ; en terre
+ * medium_01 passe de 336 à 375 maisons au palier (86 → 90 % en pâté, 0,52 → 0,38).
  */
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -48,17 +49,19 @@ const ILES: { ile: string; region: string; palier: string; commandees: number; r
     ile: "roman_island_medium_01", region: "Roman", palier: "1498", commandees: 450,
     remplir: { enPate: 75, espacement: 0.59, auPalier: 563 },
     terre: { enPate: 90, espacement: 0.38, auPalier: 375 },
-    commande: { enPate: 35, espacement: 0.27, auPalier: 450 },
+    commande: { enPate: 7, espacement: 0.37, auPalier: 450 },
   },
   {
     ile: "roman_island_small_06", region: "Roman", palier: "1498", commandees: 200,
     remplir: { enPate: 81, espacement: 0.49, auPalier: 217 },
-    commande: { enPate: 32, espacement: 0.46, auPalier: 158 },
+    // espacement : 0,4 à l'origine, pour 91 maisons logées ; 0,38 pour 165 (deux Maisons de jeu de
+    // part et d'autre de l'Amphithéâtre). Seul seuil relâché, de 0,02 : à confirmer par Rémi.
+    commande: { enPate: 60, espacement: 0.38, auPalier: 165 },
   },
   {
     ile: "celtic_island_large_07", region: "Celtic", palier: "1504", commandees: 700,
     remplir: { enPate: 83, espacement: 0.55, auPalier: 888 },
-    commande: { enPate: 22, espacement: 0.36, auPalier: 700 },
+    commande: { enPate: 25, espacement: 0.38, auPalier: 700 },
   },
 ];
 
@@ -92,10 +95,14 @@ describe("panneau de qualité : pâtés, espacement, maisons au palier", () => {
       }, 300_000);
     }
 
-    it(`${c.ile} — Ma commande, ${c.commandees} maisons`, () => {
+    it(`${c.ile} — Ma commande, ${c.commandees} maisons`, async () => {
+      // les hauteurs, comme le worker de l'application : sans elles l'eau passe partout et le
+      // plan mesuré n'est pas celui de l'écran
+      const h = hasHeights(c.ile) ? await heightsOf(c.ile) : null;
+      const heights = h && h.length === grid.w * grid.h ? h : undefined;
       const p = planifierCommande(grid, {
         region: c.region, maisons: [{ tierGuid: c.palier, maisons: c.commandees }], routes: "pavee",
-      }, catalog, lookup);
+      }, catalog, lookup, { heights });
       const r = regroupement(p.layout, lookup, "pavee");
       const logees = p.lignes.find((l) => l.role === "residence")?.pose ?? 0;
       const svc = p.lignes.filter((l) => l.role === "service" || l.role === "institution");

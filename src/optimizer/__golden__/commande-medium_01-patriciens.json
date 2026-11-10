@@ -1,16 +1,16 @@
 {
-  "batiments": 342,
-  "routes": 1057,
-  "conduites": 254,
+  "batiments": 343,
+  "routes": 1162,
+  "conduites": 188,
   "champs": 0,
   "servi": true,
   "manques": [],
   "lignes": 13,
   "analyse": {
-    "reseauEnracine": 1057,
+    "reseauEnracine": 1162,
     "batimentsCoupes": 0,
-    "casesCouvertes": 42340,
-    "hachageCouvertures": "99ecdee4ee6564b5"
+    "casesCouvertes": 43904,
+    "hachageCouvertures": "bb279b4622b712b2"
   },
-  "hachage": "19a10b57aef6e8fb"
+  "hachage": "81413d5fde9d0cc7"
 }

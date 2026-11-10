@@ -18,9 +18,9 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 
 ### `src/commande/disposition.ts` — DISPOSER UNE COMMANDE — TYPES ET OUTILS COMMUNS
 - `DispositionOpts` (interface, L18) [2]
-- `LignePosee` (interface, L28) [3]
-- `PlanQuartiers` (interface, L36) [2]
-- `distancesDeCroissance` (function, L120) [2] : Distance OCTILE le long de la terre depuis des graines (10 en ligne droite, 14 en diagonale, la diagonale n'étant permi…
+- `LignePosee` (interface, L31) [3]
+- `PlanQuartiers` (interface, L39) [2]
+- `distancesDeCroissance` (function, L123) [2] : Distance OCTILE le long de la terre depuis des graines (10 en ligne droite, 14 en diagonale, la diagonale n'étant permi…
 ### `src/commande/ilots.ts` — LES ÎLOTS : UNE VILLE QUI SE LIT
 - `ILOT` (const, L44) [0]
 - `besoinEnIlots` (function, L86) [1] : Îlots à fusionner (k colonnes × m rangées) pour loger ce bâtiment, et l'orientation.
