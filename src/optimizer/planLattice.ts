@@ -366,11 +366,17 @@ export function planLattice(
     const verifier = !!opts.reserved && w * h >= GRANDE_EMPRISE;
     let avant: { n: number; vu: Uint8Array } | null = null;
     let repli: { x: number; y: number } | null = null;
+    const deja = placements.get(def.id) ?? [];
+    const trop = effR(def) / 2;
     for (let r = 0; r <= maxRad; r++) {
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const x = tx + dx, y = ty + dy;
         if (!fitsBld(w, h, x, y)) continue;
+        // PAS DEUX COPIES D'UN MÊME SERVICE CÔTE À CÔTE (exigence E1) : à moins d'un quart de
+        // l'espacement que sa portée permet, la position est écartée. Mesuré le 2026-11-10 en
+        // chemin de terre sur roman_island_medium_01 : deux Temples à 23 cases pour 122 permises.
+        if (deja.some((q) => Math.abs(q.x + q.w / 2 - x - w / 2) + Math.abs(q.y + q.h / 2 - y - h / 2) < trop)) continue;
         if (verifier) {
           repli ??= { x, y };
           avant ??= terreAtteignable();
@@ -618,13 +624,13 @@ export function planLattice(
   // `TRANCHE` fois celle de son type le plus court — et chaque tranche a sa grappe, à son pas.
   // La co-localisation, qui garde propre l'intersection des couvertures, vaut dans une tranche.
   //
-  // À 1,5 la route pavée ne change pas (ses petits types tiennent en une tranche) et le chemin
-  // de terre gagne : medium_01 336 → 375 maisons au palier, small_06 139 → 153, les services
-  // moyens à 0,69–0,92 de leur pas au lieu de 0,52–0,74. Des tranches plus fines défont les
-  // pâtés mais déplacent des maisons : à 1,25, part des services en pâté 75 → 65 % (medium_01),
-  // 81 → 64 % (small_06), 83 → 40 % (celtic_large_07) en pavée, pour 563 → 516, 217 → 226 et
-  // 888 → 1 013 maisons au palier. Le choix entre les deux revient à Rémi (exigence E2).
-  const TRANCHE = 1.5;
+  // LE SEUIL SÉPARE AUSSI LES PÂTÉS (exigence E2). À 1,5 la route pavée ne changeait pas, ses
+  // petits types tenant en une tranche. À 1,25, choisi par Rémi le 2026-11-10 sur mesure, la
+  // part des services en pâté passe en pavée de 75 à 65 % (medium_01), 81 à 64 % (small_06),
+  // 83 à 40 % (celtic_large_07 et large_03), pour 563 → 516, 217 → 226, 888 → 1 013 et
+  // 1 495 → 1 413 maisons au palier — autant au total, +0,5 % d'habitants. En chemin de terre :
+  // 86 → 40 % en pâté sur medium_01, 336 → 376 maisons au palier.
+  const TRANCHE = 1.25;
   const tranches: BuildingDef[][] = [];
   for (const d of [...smallDefs].sort((a, b) => effR(a) - effR(b) || a.id.localeCompare(b.id))) {
     const t = tranches[tranches.length - 1];

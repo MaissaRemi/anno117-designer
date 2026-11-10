@@ -1,17 +1,17 @@
 {
   "recommande": {
     "palier": "1498",
-    "maisons": 531,
-    "habitants": 19691,
-    "maisonsAuPalier": 449,
+    "maisons": 536,
+    "habitants": 19675,
+    "maisonsAuPalier": 446,
     "paliers": {
-      "1497": 20,
-      "1498": 449,
-      "1499": 62
+      "1497": 21,
+      "1498": 446,
+      "1499": 69
     },
-    "batiments": 599,
-    "routes": 2871,
-    "conduites": 426,
+    "batiments": 603,
+    "routes": 2868,
+    "conduites": 440,
     "champs": 0,
     "eau": {
       "sources": 4,
@@ -19,43 +19,41 @@
     },
     "repere": "droit",
     "analyse": {
-      "reseauEnracine": 2871,
+      "reseauEnracine": 2868,
       "batimentsCoupes": 0,
-      "casesCouvertes": 83962,
-      "hachageCouvertures": "060ad5b3ae5f39b3"
+      "casesCouvertes": 83212,
+      "hachageCouvertures": "5245b686573e887f"
     },
     "violations": 1,
-    "hachage": "3bbf9d090a35dbcd"
+    "hachage": "89cfd61a2be30712"
   },
   "alternatives": [
     {
       "palier": "1498",
-      "maisons": 537,
-      "habitants": 20536,
-      "maisonsAuPalier": 459,
+      "maisons": 575,
+      "habitants": 20545,
+      "maisonsAuPalier": 474,
       "paliers": {
-        "1496": 50,
-        "1497": 2,
-        "1498": 459,
-        "1499": 26
+        "1498": 474,
+        "1499": 101
       },
-      "batiments": 613,
-      "routes": 2914,
-      "conduites": 172,
+      "batiments": 639,
+      "routes": 2850,
+      "conduites": 252,
       "champs": 0,
       "eau": {
-        "sources": 2,
-        "utilisee": 80
+        "sources": 3,
+        "utilisee": 120
       },
       "repere": "droit",
       "analyse": {
-        "reseauEnracine": 2914,
+        "reseauEnracine": 2850,
         "batimentsCoupes": 0,
-        "casesCouvertes": 98298,
-        "hachageCouvertures": "6d487eb82225ed4a"
+        "casesCouvertes": 84581,
+        "hachageCouvertures": "0e3a26000191a496"
       },
       "violations": 1,
-      "hachage": "2537ed3a50269f04"
+      "hachage": "0f50cb6058a016a7"
     }
   ]
 }

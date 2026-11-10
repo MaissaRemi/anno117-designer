@@ -389,12 +389,12 @@ Rémi n'étaient écrites nulle part.
   gain minimal d'une copie de plus (`PART_GAIN`), recouvrement une fois la ville faite, et trois
   façons de poser essayées dans l'ordre (`disposerQuartiers`). medium_01, 450 Patriciens,
   pavée : 333 → 450 logés, 61 → 46 services, 61 → 7 % de services en pâté.
-- **Étape 1, « Remplir l'île »** (`optimizer/planLattice.ts`) : une grappe par tranche de portée
-  (`TRANCHE` = 1,5). Sans effet en pavée ; en terre, +3,7 % de maisons au palier sur sept îles
-  pour 19 % de services en plus. Les pâtés de « Remplir l'île » restent à 75–83 %.
-- **À décider par Rémi** : `TRANCHE` = 1,25 divise les pâtés de « Remplir l'île » par deux sans
-  perte d'habitants au total, mais fait reculer trois seuils du panneau (tableau dans
-  `.claude/exigences.md`).
+- **Étape 1, « Remplir l'île »** (`optimizer/planLattice.ts`) : une grappe de petits services
+  par tranche de portée (`TRANCHE` = 1,25, choisi par Rémi) et jamais deux copies d'un même
+  service côte à côte. Services en pâté, pavée : 75–83 % → 40–65 %, autant de maisons au palier
+  au total de quatre îles (mais 563 → 516 sur medium_01). En terre : 86 → 56 % sur sept îles,
+  −3 % d'habitants. Le plan diagonal n'est plus proposé sur small_05 (dominé) ; il l'est sur
+  small_07.
 - **Restent de l'audit** : main-d'œuvre sur ce qui est posé, île de production (étape 3), monde
   (étape 4, dont le conseil de l'île principale), entretien (étape 5).
 

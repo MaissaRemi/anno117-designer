@@ -155,8 +155,10 @@ describe("cascade dans le plan d'île", () => {
     const r = planIslandImport({ catalog, grid, tierGuid: tier.guid, coverageFloor: 0.8 });
     expect(r.workforce.conversions).toEqual([]);
     // Mesuré 15 710 depuis que la terre constructible vient du jeu (29/10/2026) : l'ancien
-    // seuil comptait des maisons posées sur la montagne.
-    expect(r.residents).toBeGreaterThan(14_000);
+    // seuil comptait des maisons posées sur la montagne. Puis 13 690 le 11/11/2026 : Rémi a
+    // choisi des services moins regroupés (tranches de portée à 1,25, jamais deux copies d'un
+    // même service côte à côte), ce qui coûte des habitants en chemin de terre.
+    expect(r.residents).toBeGreaterThan(13_000);
   }, 300_000);
 
   it("on ne pose pas ce que l'île ne pourra jamais armer", () => {

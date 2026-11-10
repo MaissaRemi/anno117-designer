@@ -1,18 +1,18 @@
 {
   "recommande": {
     "palier": "1498",
-    "maisons": 1574,
-    "habitants": 64849,
-    "maisonsAuPalier": 1369,
+    "maisons": 1573,
+    "habitants": 64687,
+    "maisonsAuPalier": 1362,
     "paliers": {
-      "1496": 9,
-      "1497": 144,
-      "1498": 1369,
-      "1499": 52
+      "1496": 7,
+      "1497": 148,
+      "1498": 1362,
+      "1499": 56
     },
-    "batiments": 1751,
-    "routes": 7760,
-    "conduites": 757,
+    "batiments": 1756,
+    "routes": 7793,
+    "conduites": 797,
     "champs": 0,
     "eau": {
       "sources": 5,
@@ -20,29 +20,29 @@
     },
     "repere": "droit",
     "analyse": {
-      "reseauEnracine": 7760,
+      "reseauEnracine": 7793,
       "batimentsCoupes": 0,
-      "casesCouvertes": 298279,
-      "hachageCouvertures": "84f0f127b2cddf20"
+      "casesCouvertes": 297494,
+      "hachageCouvertures": "6c8e343d86d6c876"
     },
     "violations": 1,
-    "hachage": "4661e5c26a4904ae"
+    "hachage": "f73e53c99ad3a5fa"
   },
   "alternatives": [
     {
       "palier": "1498",
-      "maisons": 1577,
-      "habitants": 57206,
-      "maisonsAuPalier": 1381,
+      "maisons": 1571,
+      "habitants": 56742,
+      "maisonsAuPalier": 1362,
       "paliers": {
-        "1496": 8,
-        "1497": 137,
-        "1498": 1381,
-        "1499": 51
+        "1496": 7,
+        "1497": 145,
+        "1498": 1362,
+        "1499": 57
       },
-      "batiments": 1753,
-      "routes": 7729,
-      "conduites": 811,
+      "batiments": 1755,
+      "routes": 7791,
+      "conduites": 797,
       "champs": 0,
       "eau": {
         "sources": 5,
@@ -50,13 +50,13 @@
       },
       "repere": "droit",
       "analyse": {
-        "reseauEnracine": 7729,
+        "reseauEnracine": 7791,
         "batimentsCoupes": 0,
-        "casesCouvertes": 293733,
-        "hachageCouvertures": "3501d19267e71364"
+        "casesCouvertes": 297880,
+        "hachageCouvertures": "45668b41d1396f66"
       },
       "violations": 0,
-      "hachage": "a5562a26d702795e"
+      "hachage": "217690884e7ea6af"
     }
   ]
 }

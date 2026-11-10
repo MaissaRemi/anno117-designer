@@ -28,8 +28,12 @@ import { regroupement, type Regroupement } from "./planQuality";
  * une fois la ville faite, et le choix entre trois façons de poser. Avant → après, hauteurs de
  * l'île comprises : medium_01 61 % en pâté / 0,2 / 333 logées → 7 % / 0,37 / 450 ; small_06
  * 74 % / 0,4 / 91 → 60 % / 0,38 / 165 ; celtic_large_07 39 % / 0,29 / 700 → 25 % / 0,38 / 700.
- * « Remplir l'île » : une grappe par tranche de portée, sans effet en pavée ; en terre
- * medium_01 passe de 336 à 375 maisons au palier (86 → 90 % en pâté, 0,52 → 0,38).
+ * « Remplir l'île » : une grappe de petits services par tranche de portée (`TRANCHE` = 1,25,
+ * choisi par Rémi sur mesure : moins de pâtés, au prix de seuils relâchés avec son accord) et
+ * jamais deux copies d'un même service côte à côte. Avant → après : medium_01 pavée 75 % /
+ * 0,59 / 563 → 65 % / 0,53 / 516 ; medium_01 terre 86 % / 0,52 / 336 → 37 % / 0,69 / 337 ;
+ * small_06 81 % / 0,49 / 217 → 64 % / 0,47 / 226 ; celtic_large_07 83 % / 0,55 / 888 → 40 % /
+ * 0,42 / 1 013.
  */
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -47,20 +51,20 @@ interface Seuils {
 const ILES: { ile: string; region: string; palier: string; commandees: number; remplir: Seuils; terre?: Seuils; commande: Seuils }[] = [
   {
     ile: "roman_island_medium_01", region: "Roman", palier: "1498", commandees: 450,
-    remplir: { enPate: 75, espacement: 0.59, auPalier: 563 },
-    terre: { enPate: 90, espacement: 0.38, auPalier: 375 },
+    remplir: { enPate: 65, espacement: 0.53, auPalier: 516 },
+    terre: { enPate: 37, espacement: 0.69, auPalier: 337 },
     commande: { enPate: 7, espacement: 0.37, auPalier: 450 },
   },
   {
     ile: "roman_island_small_06", region: "Roman", palier: "1498", commandees: 200,
-    remplir: { enPate: 81, espacement: 0.49, auPalier: 217 },
+    remplir: { enPate: 64, espacement: 0.47, auPalier: 226 },
     // espacement : 0,4 à l'origine, pour 91 maisons logées ; 0,38 pour 165 (deux Maisons de jeu de
     // part et d'autre de l'Amphithéâtre). Seul seuil relâché, de 0,02 : à confirmer par Rémi.
     commande: { enPate: 60, espacement: 0.38, auPalier: 165 },
   },
   {
     ile: "celtic_island_large_07", region: "Celtic", palier: "1504", commandees: 700,
-    remplir: { enPate: 83, espacement: 0.55, auPalier: 888 },
+    remplir: { enPate: 40, espacement: 0.42, auPalier: 1013 },
     commande: { enPate: 25, espacement: 0.38, auPalier: 700 },
   },
 ];

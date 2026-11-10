@@ -361,7 +361,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `filtreChemins` (function, L92) [2] : Un filtre qui garde les chemins donnés et tout ce qui est dessous.
 - `enfant` (const, L102) [1]
 - `enfants` (const, L103) [2]
-- `chemin` (const, L104) [20]
+- `chemin` (const, L104) [21]
 - `attribut` (const, L106) [14]
 - `attributs` (const, L107) [22]
 - `entier` (function, L110) [18] : Un entier little-endian signé, de la taille de la donnée (1, 2, 4 ou 8 octets).

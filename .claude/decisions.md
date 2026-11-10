@@ -43,8 +43,13 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
   capacité d'une copie, sinon elle se posait pour deux maisons de bordure. Loger la commande
   prime sur l'espacement.
 - **Une grappe de petits services par tranche de portée** dans `planLattice` (10/11,
-  `TRANCHE` = 1,5) : un service moyen n'est plus répété au pas d'un puits. Des tranches plus
-  fines (1,25) défont les pâtés ; ce réglage attend la décision de Rémi.
+  `TRANCHE` = 1,25, choisi par Rémi) : un service moyen n'est plus répété au pas d'un puits, et
+  les services de portées différentes ne sont plus collés. Moins de pâtés (75–83 % → 40–65 % en
+  pavée) contre des maisons déplacées : autant au palier au total, mais pas île par île.
+- **Jamais deux copies d'un même service côte à côte** dans `planLattice` (11/11) : une
+  position à moins d'un quart de l'espacement permis d'une copie du même type est écartée
+  (deux Temples à 23 cases en chemin de terre). Coût mesuré sur medium_01 en terre : 39 maisons
+  au palier.
 
 - **« Ma commande » comme chemin principal** (refonte du 26/10) : le joueur dit ce qu'il veut, le
   moteur dresse la nomenclature et dispose en îlots ; l'ancien moteur reste comme « Remplir

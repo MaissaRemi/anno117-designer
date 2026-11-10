@@ -69,11 +69,13 @@ describe("terre gardée autour du comptoir", () => {
 });
 
 describe("trame diagonale dans les plans au choix", () => {
-  // small_05 : la seule île romaine où la diagonale gagne nettement (+41 % d'habitants) une fois
-  // la portée comptée en longueur (√2 par losange) ; large_07, l'exemple d'avant, y perd 10 %.
-  it("roman_island_small_05 : le plan diagonal est proposé, dans son repère", () => {
+  // small_07 : l'île romaine où la diagonale gagne encore nettement (7 360 habitants contre
+  // 5 965 au plan droit, mesuré le 2026-11-11). small_05, l'exemple d'avant, ne la propose plus :
+  // son plan droit (6 358) domine le diagonal (4 799) sur tous les critères, et un plan dominé
+  // n'entre pas dans les plans au choix.
+  it("roman_island_small_07 : le plan diagonal est proposé, dans son repère", () => {
     const r = planIsland({
-      catalog, grid: downscaleGrid(buildIslandGrid("roman_island_small_05")!), tierGuid: "1498",
+      catalog, grid: downscaleGrid(buildIslandGrid("roman_island_small_07")!), tierGuid: "1498",
       coverageFloor: 0.8, roadType: "pavee", essayerDiagonale: true,
     }) as IslandPlanResult;
     expect(r.repere).toBeUndefined(); // le recommandé reste le plan droit
