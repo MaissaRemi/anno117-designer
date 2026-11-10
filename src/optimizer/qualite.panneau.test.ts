@@ -116,3 +116,42 @@ describe("panneau de qualité : pâtés, espacement, maisons au palier", () => {
     }, 300_000);
   }
 });
+
+/**
+ * ═══ ÎLE DE PRODUCTION (exigence E6) ══════════════════════════════════════════════════
+ *
+ * Des biens et leur débit sur une île sans ville, hauteurs comprises. Le seuil est la part de
+ * l'objectif réellement POSÉE ; la ligne imprimée donne aussi la terre laissée vide et le sol
+ * pris par bâtiment de production, qui dépendent trop du mélange de biens pour faire un seuil.
+ *
+ * 2026-11-11, étape 3 de l'audit — lots coupés en demi-chaînes et traités par niveau de taille,
+ * pose dans la forme de la terre libre quand aucun rectangle n'est libre. Avant → après :
+ * medium_01 71 → 83 % de l'objectif posé (43 → 30 % de terre vide), small_06 40 → 100 %,
+ * celtic_large_02 100 → 100 %.
+ */
+const PAIN = "2137", TUNIQUES = "2141", SAUCISSES = "8405";
+const PRODUCTIONS: { ile: string; region: string; objectif: { good: string; parMinute: number }[]; pose: number }[] = [
+  { ile: "roman_island_medium_01", region: "Roman", objectif: [{ good: PAIN, parMinute: 40 }, { good: TUNIQUES, parMinute: 30 }], pose: 83 },
+  { ile: "roman_island_small_06", region: "Roman", objectif: [{ good: PAIN, parMinute: 15 }, { good: TUNIQUES, parMinute: 10 }], pose: 100 },
+  { ile: "celtic_island_large_02", region: "Celtic", objectif: [{ good: PAIN, parMinute: 30 }, { good: SAUCISSES, parMinute: 15 }], pose: 100 },
+];
+
+describe("panneau de qualité : île de production", () => {
+  for (const c of PRODUCTIONS) {
+    it(`${c.ile} — ${c.objectif.map((o) => `${o.parMinute}/min`).join(" + ")}`, async () => {
+      const grid = downscaleGrid(buildIslandGrid(c.ile)!);
+      const h = hasHeights(c.ile) ? await heightsOf(c.ile) : null;
+      const heights = h && h.length === grid.w * grid.h ? h : undefined;
+      const p = planifierCommande(grid, { region: c.region, maisons: [], routes: "pavee", objectif: c.objectif }, catalog, lookup, { heights });
+      const demande = p.objectif.reduce((s, o) => s + o.parMinute, 0);
+      const pose = Math.round((100 * p.objectif.reduce((s, o) => s + o.pose, 0)) / demande);
+      const prises = Math.round((p.qualite.land * (100 - p.qualite.pct.free)) / 100);
+      console.log([
+        c.ile, "production", p.objectif.map((o) => `${o.nom} ${o.pose}/${o.parMinute}`).join(", "), `${pose} % de l'objectif posé`,
+        `${p.qualite.pct.free} % de terre vide`, `${Math.round(prises / Math.max(1, p.qualite.counts.production))} cases par bâtiment de production`,
+        p.manques.join(" ; "),
+      ].filter(Boolean).join(" | "));
+      expect(pose, "part de l'objectif de production posée").toBeGreaterThanOrEqual(c.pose);
+    }, 300_000);
+  }
+});

@@ -6,7 +6,7 @@ import { downscaleGrid } from "../optimizer/halfTileAdapter";
 import { makeLookup, roadConnected, rootedRoadSet } from "../engine/rules";
 import { footprintSize } from "../engine/geometry";
 import { economy } from "../economy/economy";
-import { lotsDeProduction } from "./production";
+import { couper, lotsDeProduction } from "./production";
 import { planifierCommande, resumer } from "./planifier";
 import type { Commande } from "./nomenclature";
 
@@ -45,6 +45,21 @@ describe("lots de production", () => {
     const pain = lots.find((l) => l.some((x) => x.defId === BOULANGERIE))!;
     expect(pain.map((x) => x.defId).sort()).toEqual([BOULANGERIE, FERME, MOULIN].sort());
     expect(lots.find((l) => l.some((x) => x.defId === MINE_FER))).toHaveLength(1);
+  });
+});
+
+describe("couper un lot", () => {
+  it("donne deux demi-chaînes, pas les fermes d'un côté et les ateliers de l'autre", () => {
+    const [a, b] = couper([
+      { defId: BOULANGERIE, count: 4 }, { defId: MOULIN, count: 1 }, { defId: FERME, count: 5 },
+    ])!;
+    // la moitié de chaque ligne ; les restes impairs alternent d'une moitié à l'autre
+    expect(a).toEqual([{ defId: BOULANGERIE, count: 2 }, { defId: MOULIN, count: 1 }, { defId: FERME, count: 2 }]);
+    expect(b).toEqual([{ defId: BOULANGERIE, count: 2 }, { defId: FERME, count: 3 }]);
+  });
+
+  it("un bâtiment seul ne se coupe plus", () => {
+    expect(couper([{ defId: FERME, count: 1 }])).toBeNull();
   });
 });
 

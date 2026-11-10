@@ -217,7 +217,7 @@ export function ProductionPlanner() {
         {result && !running && (
           <div className="result-split">
             <div className="result-map">
-              <PlanPreview grid={grid} buildings={result.buildings} roads={result.roads} aqueducts={result.aqueducts} lookup={lookup} roadType={result.roadType} />
+              <PlanPreview grid={grid} buildings={result.buildings} roads={result.roads} aqueducts={result.aqueducts} fields={result.fields} lookup={lookup} roadType={result.roadType} />
             </div>
             <div className="result-stats">
               <div className="opt-result">

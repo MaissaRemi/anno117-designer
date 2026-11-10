@@ -32,7 +32,11 @@ import { distancesDeCroissance, type LignePosee } from "./disposition";
  */
 
 const TERRAIN = new Set(["mountain", "river", "marsh"]);
-const DECOUPE_MAX = 5;
+/** Un lot refusé est coupé en deux demi-chaînes, jusqu'au bâtiment seul s'il le faut. */
+const DECOUPE_MAX = 12;
+/** Au-delà de ce nombre de bâtiments, un lot n'est pas essayé dans la forme de la terre libre :
+ *  chaque essai coûte une pose complète, et un grand lot se coupe de toute façon. */
+const FORME_MAX = 12;
 
 export interface PlanProduction {
   buildings: PlacedBuilding[];
@@ -74,20 +78,25 @@ export function lotsDeProduction(lignes: BasketLine[]): BasketLine[][] {
   return [...groupes.values()].sort((a, b) => a[0].defId.localeCompare(b[0].defId));
 }
 
-/** Coupe un lot en deux moitiés de taille voisine, en séparant au besoin les exemplaires. */
-function couper(lot: BasketLine[]): [BasketLine[], BasketLine[]] | null {
+/**
+ * Coupe un lot en deux DEMI-CHAÎNES : la moitié de chaque ligne de part et d'autre. Couper entre
+ * les lignes mettait les fermes d'un côté et les ateliers de l'autre : une moitié posée sans
+ * l'autre ne produisait rien (mesuré le 2026-11-11, `roman_island_medium_01` : 34 % de la terre
+ * en champs pour 3 Pain par minute sur 40). Les lignes à un seul exemplaire alternent.
+ */
+export function couper(lot: BasketLine[]): [BasketLine[], BasketLine[]] | null {
   const total = lot.reduce((s, l) => s + l.count, 0);
   if (total < 2) return null;
-  if (lot.length === 1) {
-    const l = lot[0];
-    return [[{ defId: l.defId, count: Math.ceil(l.count / 2) }], [{ defId: l.defId, count: Math.floor(l.count / 2) }]];
-  }
   const a: BasketLine[] = [], b: BasketLine[] = [];
-  let na = 0;
+  let impairVersA = true;
   for (const l of lot) {
-    if (na < total / 2) { a.push(l); na += l.count; } else b.push(l);
+    const grand = Math.ceil(l.count / 2), petit = l.count - grand;
+    const [na, nb] = grand === petit || impairVersA ? [grand, petit] : [petit, grand];
+    if (grand !== petit) impairVersA = !impairVersA;
+    if (na) a.push({ defId: l.defId, count: na });
+    if (nb) b.push({ defId: l.defId, count: nb });
   }
-  return b.length ? [a, b] : [lot.slice(0, Math.ceil(lot.length / 2)), lot.slice(Math.ceil(lot.length / 2))];
+  return a.length && b.length ? [a, b] : null;
 }
 
 /**
@@ -178,6 +187,10 @@ export function disposerProduction(
   const reste = panier.lines.filter((l) => !terrain.includes(l) && !cotiers.includes(l));
   const poses = new Map<string, number>();
   const compter = (id: string, n = 1) => poses.set(id, (poses.get(id) ?? 0) + n);
+  /** Bâtiments restés sans place, cumulés : UN message à la fin, pas un par lot refusé. */
+  const sansPlace = new Map<string, number>();
+  /** Bâtiments dont le manque est déjà dit, par identifiant — un nom peut en contenir un autre. */
+  const signales = new Set<string>();
 
   // ─── BLUEPRINTS ─────────────────────────────────────────────────────────────────────
   // Image intégrale des cases NON libres : tester qu'une boîte est entièrement libre coûte O(1).
@@ -197,49 +210,101 @@ export function disposerProduction(
     && integrale[(y + h) * (W + 1) + x + w] - integrale[y * (W + 1) + x + w]
       - integrale[(y + h) * (W + 1) + x] + integrale[y * (W + 1) + x] === 0;
 
+  const versDehors = (side: string): [number, number] =>
+    side === "nord" ? [0, -1] : side === "sud" ? [0, 1] : side === "ouest" ? [-1, 0] : [1, 0];
+  /** Installe un blueprint, son coin en (x, y), si sa sortie rejoint le réseau. */
+  const installer = (p: BasketPlan, x: number, y: number): boolean => {
+    const [dx, dy] = versDehors(p.exit.side);
+    const sx = x + p.exit.x + dx, sy = y + p.exit.y + dy;
+    if (sx < 0 || sy < 0 || sx >= W || sy >= H) return false;
+    const s = sy * W + sx;
+    if (dist[s] < 0 || !(route[s] || franchissable(s))) return false;
+    const chemin = relier(s);
+    if (chemin === null) return false;
+    for (const b of p.layout.buildings) {
+      const nb: PlacedBuilding = { ...b, uid: uid("prod"), x: b.x + x, y: b.y + y };
+      out.buildings.push(nb);
+      marquer(nb);
+      if (estEntrepot(lookup(b.defId))) out.entrepots++;
+      else compter(b.defId);
+    }
+    // Seules les cases PRISES sont réservées — emprises, champs, aires libres des bûcherons et
+    // des ruchers (elles sortent du placeur comme des cases de champ), routes. Réserver toute la
+    // boîte gardait hors d'atteinte les cases qu'elle laissait libres.
+    for (const f of p.layout.fields) {
+      out.fields.push({ ...f, x: f.x + x, y: f.y + y });
+      occ[(f.y + y) * W + f.x + x] = 1;
+    }
+    poserRoutes(p.layout.roads.map((r) => ({ x: r.x + x, y: r.y + y })));
+    if (!route[s]) poserRoutes([{ x: sx, y: sy }]);
+    poserRoutes(chemin);
+    out.blueprints++;
+    return true;
+  };
+
   /** Pose un blueprint : la boîte libre la plus proche de la ville, sortie reliée au réseau. */
   const poserBlueprint = (variantes: BasketPlan[]): boolean => {
     reintegrer();
-    const cands: { p: BasketPlan; x: number; y: number; d: number; sortie: number }[] = [];
+    const cands: { p: BasketPlan; x: number; y: number; d: number }[] = [];
     for (const p of variantes) {
       const { w, h } = p.box;
-      const [dx, dy] = p.exit.side === "nord" ? [0, -1] : p.exit.side === "sud" ? [0, 1] : p.exit.side === "ouest" ? [-1, 0] : [1, 0];
+      const [dx, dy] = versDehors(p.exit.side);
       for (let y = 0; y + h <= H; y++) for (let x = 0; x + w <= W; x++) {
         if (!boiteLibre(x, y, w, h)) continue;
         const sx = x + p.exit.x + dx, sy = y + p.exit.y + dy;
         if (sx < 0 || sy < 0 || sx >= W || sy >= H) continue;
-        const s = sy * W + sx;
-        const d = dist[s];
-        if (d < 0 || !(route[s] || franchissable(s))) continue;
-        cands.push({ p, x, y, d, sortie: s });
+        const d = dist[sy * W + sx];
+        if (d < 0) continue;
+        cands.push({ p, x, y, d });
       }
     }
     cands.sort((a, b) => a.d - b.d || a.y - b.y || a.x - b.x);
-    for (const c of cands.slice(0, 40)) {
-      const chemin = relier(c.sortie);
-      if (chemin === null) continue;
-      const { layout } = c.p;
-      for (const b of layout.buildings) {
-        const nb: PlacedBuilding = { ...b, uid: uid("prod"), x: b.x + c.x, y: b.y + c.y };
-        out.buildings.push(nb);
-        if (estEntrepot(lookup(b.defId))) out.entrepots++;
-        else compter(b.defId);
+    return cands.slice(0, 40).some((c) => installer(c.p, c.x, c.y));
+  };
+
+  /**
+   * ═══ DANS LA FORME DE LA TERRE LIBRE ═══════════════════════════════════════════════
+   *
+   * Un rectangle entièrement libre devient rare dès que l'île se remplit : mesuré le
+   * 2026-11-11, hauteurs comprises, `roman_island_medium_01` refusait des fermes avec 38 % de
+   * terre vide, `roman_island_large_03` avec 60 %. Le placeur sait pourtant poser dans une
+   * forme quelconque (`BoxSpec` `forme`) : on lui donne ici une fenêtre de l'île, un peu plus
+   * grande que la boîte qu'il aurait voulue, avec pour masque sa terre encore libre. Les champs
+   * épousent la forme ; rien ne déborde sur ce qui est déjà pris.
+   */
+  const poserDansLaForme = (lot: BasketLine[], gabarit: { w: number; h: number }): boolean => {
+    if (lot.reduce((n, l) => n + l.count, 0) > FORME_MAX) return false;
+    reintegrer();
+    const prises = (x: number, y: number, w: number, h: number) =>
+      integrale[(y + h) * (W + 1) + x + w] - integrale[y * (W + 1) + x + w]
+      - integrale[(y + h) * (W + 1) + x] + integrale[y * (W + 1) + x];
+    const panierDuLot = normalizeBasket(lot);
+    for (const k of [1.25, 1.6]) {
+      const w = Math.min(W, Math.ceil(gabarit.w * k)), h = Math.min(H, Math.ceil(gabarit.h * k));
+      const pas = Math.max(2, Math.min(w, h) >> 2);
+      const fenetres: { x: number; y: number; d: number }[] = [];
+      for (let y = 0; y + h <= H; y += pas) for (let x = 0; x + w <= W; x += pas) {
+        // assez de terre libre pour la boîte voulue, et le centre libre : l'entrepôt s'y pose
+        if (w * h - prises(x, y, w, h) < gabarit.w * gabarit.h) continue;
+        const c = (y + (h >> 1)) * W + x + (w >> 1);
+        if (!libre(c) || dist[c] < 0) continue;
+        fenetres.push({ x, y, d: dist[c] });
       }
-      for (const f of layout.fields) out.fields.push({ ...f, x: f.x + c.x, y: f.y + c.y });
-      // toute la boîte est réservée : ses cases libres sont l'aire libre des bûcherons et
-      // des ruchers, que rien ne doit venir occuper
-      for (let j = 0; j < c.p.box.h; j++) for (let i = 0; i < c.p.box.w; i++) occ[(c.y + j) * W + c.x + i] = 1;
-      poserRoutes(layout.roads.map((r) => ({ x: r.x + c.x, y: r.y + c.y })));
-      const s = c.sortie;
-      if (!route[s]) poserRoutes([{ x: s % W, y: (s / W) | 0 }]);
-      poserRoutes(chemin);
-      out.blueprints++;
-      return true;
+      fenetres.sort((a, b) => a.d - b.d || a.y - b.y || a.x - b.x);
+      for (const f of fenetres.slice(0, 6)) {
+        const usable: boolean[] = new Array(w * h);
+        for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) usable[j * w + i] = !!libre((f.y + j) * W + f.x + i);
+        for (const side of EXIT_SIDES) {
+          const r = planFromBasket(catalog, panierDuLot, { exitSide: side, region: opts.region, box: { mode: "forme", w, h, usable } });
+          if (!("refuse" in r) && installer(r, f.x + r.origine.x, f.y + r.origine.y)) return true;
+        }
+      }
     }
     return false;
   };
 
-  const traiterLot = (lot: BasketLine[], profondeur: number) => {
+  /** Pose un lot ; rend les deux moitiés à reprendre s'il n'a pas tenu d'un bloc. */
+  const traiterLot = (lot: BasketLine[], profondeur: number): BasketLine[][] => {
     const variantes: BasketPlan[] = [];
     let refus = "";
     for (const side of EXIT_SIDES) {
@@ -247,15 +312,31 @@ export function disposerProduction(
       if ("refuse" in r) refus = r.raison || r.nonServis.map((u) => direUnmet(u, nom)).join(" · ");
       else variantes.push(r);
     }
-    if (variantes.length && poserBlueprint(variantes)) return;
+    if (variantes.length && poserBlueprint(variantes)) return [];
+    if (variantes.length && poserDansLaForme(lot, variantes[0].box)) return [];
     // Refusé, le plus souvent parce qu'un seul entrepôt ne dessert pas tout ; ou trop grand pour
     // la terre libre d'une petite île. On coupe en deux : chaque moitié a son entrepôt.
     const moities = profondeur < DECOUPE_MAX ? couper(lot) : null;
-    if (moities) { for (const m of moities) traiterLot(m, profondeur + 1); return; }
-    if (variantes.length) out.manques.push(`Aucune place libre sur l'île pour : ${lot.map((l) => `${l.count} × ${nom(l.defId)}`).join(", ")}`);
+    if (moities) return moities;
+    for (const l of lot) signales.add(l.defId);
+    if (variantes.length) for (const l of lot) sansPlace.set(l.defId, (sansPlace.get(l.defId) ?? 0) + l.count);
     else out.manques.push(`Blueprint impossible (${lot.map((l) => nom(l.defId)).join(", ")}) : ${refus}`);
+    return [];
   };
-  for (const lot of lotsDeProduction(reste)) traiterLot(lot, 0);
+  /**
+   * PAR NIVEAU DE TAILLE, pas un lot jusqu'au bout. Découpé en profondeur d'abord, le premier
+   * lot se posait en petits morceaux partout et ne laissait plus un rectangle libre aux lots
+   * suivants. Ici tous les lots sont essayés entiers, puis toutes les moitiés, puis les quarts :
+   * les grandes boîtes passent tant qu'il reste de grands rectangles, et chaque bien a sa part.
+   */
+  const poserLots = (lots: BasketLine[][]) => {
+    const file = lots.map((lot) => ({ lot, profondeur: 0 }));
+    for (let k = 0; k < file.length; k++) {
+      const { lot, profondeur } = file[k];
+      for (const m of traiterLot(lot, profondeur)) file.push({ lot: m, profondeur: profondeur + 1 });
+    }
+  };
+  poserLots(lotsDeProduction(reste));
 
   // ─── EXPLOITATIONS SUR LES EMPLACEMENTS DE L'ÎLE ────────────────────────────────────
   if (terrain.length) {
@@ -283,10 +364,12 @@ export function disposerProduction(
       .map((l) => ({ defId: l.defId, count: l.count - (poses.get(l.defId) ?? 0) }))
       .filter((l) => l.count > 0);
     const manquesMarais = new Set(horsMarais.map((l) => nom(l.defId)));
-    out.manques.push(...sp.gaps.filter((g) => ![...manquesMarais].some((n) => g.startsWith(`${n} :`))));
+    const dits = sp.gaps.filter((g) => ![...manquesMarais].some((n) => g.startsWith(`${n} :`)));
+    out.manques.push(...dits);
+    for (const l of terrain) if (dits.some((g) => g.startsWith(`${nom(l.defId)} :`))) signales.add(l.defId);
     if (horsMarais.length) {
       out.avertissements.push(`Posé(s) hors marais, faute d'emplacement : ${horsMarais.map((l) => `${l.count} × ${nom(l.defId)}`).join(", ")}`);
-      for (const lot of lotsDeProduction(horsMarais)) traiterLot(lot, 0);
+      poserLots(lotsDeProduction(horsMarais));
     }
   }
 
@@ -371,7 +454,7 @@ export function disposerProduction(
         if (chemin) poserRoutes(chemin);
         else out.manques.push(`${d.name} en (${b.x}, ${b.y}) sans route jusqu'au réseau`);
       }
-      if (n < l.count) out.manques.push(`${d.name} : ${l.count - n} sur ${l.count} sans place sur la côte`);
+      if (n < l.count) { out.manques.push(`${d.name} : ${l.count - n} sur ${l.count} sans place sur la côte`); signales.add(d.id); }
     }
     // Un côtier n'expédie que si un entrepôt (ou le comptoir) est à portée de charrette.
     const wh = pickWarehouse(catalog, opts.region);
@@ -407,10 +490,11 @@ export function disposerProduction(
   }
 
   out.lignes = panier.lines.map((l) => ({ defId: l.defId, nom: nom(l.defId), role: "production", demande: l.count, pose: poses.get(l.defId) ?? 0 }));
+  if (sansPlace.size) {
+    out.manques.push(`Aucune place libre sur l'île pour : ${[...sansPlace].map(([id, n]) => `${n} × ${nom(id)}`).join(", ")}`);
+  }
   for (const l of out.lignes) {
-    if (l.pose < l.demande && !out.manques.some((m) => m.includes(l.nom))) {
-      out.manques.push(`${l.nom} : ${l.pose} posé(s) sur ${l.demande}`);
-    }
+    if (l.pose < l.demande && !signales.has(l.defId)) out.manques.push(`${l.nom} : ${l.pose} posé(s) sur ${l.demande}`);
   }
   return out;
 }

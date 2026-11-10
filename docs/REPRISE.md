@@ -395,8 +395,13 @@ Rémi n'étaient écrites nulle part.
   au total de quatre îles (mais 563 → 516 sur medium_01). En terre : 86 → 56 % sur sept îles,
   −3 % d'habitants. Le plan diagonal n'est plus proposé sur small_05 (dominé) ; il l'est sur
   small_07.
-- **Restent de l'audit** : main-d'œuvre sur ce qui est posé, île de production (étape 3), monde
-  (étape 4, dont le conseil de l'île principale), entretien (étape 5).
+- **Étape 3, île de production** (`commande/production.ts`, `prodlayout`) : lots coupés en
+  demi-chaînes et traités par niveau de taille, pose dans la forme de la terre libre, aire
+  libre des bûcherons et ruchers dans le plan et limitée à l'aire exigée, champs dessinés dans
+  l'aperçu. Part de l'objectif posée : medium_01 71 → 83 %, small_06 40 → 100 %, large_03
+  64 → 100 %.
+- **Restent de l'audit** : main-d'œuvre sur ce qui est posé, mode « produire le maximum » d'une
+  île de production, monde (étape 4, dont le conseil de l'île principale), entretien (étape 5).
 
 ## Ce qui reste à faire, par intérêt (10/11/2026)
 

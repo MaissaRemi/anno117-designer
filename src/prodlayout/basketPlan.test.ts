@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import rawCatalog from "../data/catalog.generated.json";
-import type { BuildingDef } from "../model/types";
+import { AIRE_LIBRE, type BuildingDef } from "../model/types";
 import { normalizeBasket } from "./basket";
 import { planFromBasket } from "./index";
 
@@ -11,6 +11,18 @@ const pain = normalizeBasket([
   { defId: "g3075", count: 1 },
   { defId: "g2693", count: 3 },
 ]);
+
+describe("aire libre", () => {
+  it("celle d'un bûcheron sort avec le plan : juste l'aire exigée, en cases d'un type à part", () => {
+    // Bûcheron g2878 : rayon 8, aire exigée 80 (catalogue)
+    const p = planFromBasket(catalog, normalizeBasket([{ defId: "g2878", count: 1 }]), { exitSide: "sud" });
+    if ("refuse" in p) throw new Error(p.raison);
+    const bucheron = p.layout.buildings.find((b) => b.defId === "g2878")!;
+    const nues = p.layout.fields.filter((f) => f.fieldType === AIRE_LIBRE);
+    expect(nues.length).toBe(80);
+    expect(nues.every((f) => f.ownerUid === bucheron.uid)).toBe(true);
+  });
+});
 
 describe("planFromBasket", () => {
   it("pose exactement le panier, plus l'entrepôt — rien de plus", () => {

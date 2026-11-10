@@ -1,6 +1,6 @@
 import { footprintCells, footprintSize, gridScale, isDiagonal, parseCellKey } from "../engine/geometry";
 import type { BuildingIssues } from "../engine/rules";
-import type { BuildingDef, Layout, Rotation } from "../model/types";
+import { AIRE_LIBRE, type BuildingDef, type Layout, type Rotation } from "../model/types";
 
 export interface View {
   originX: number; // décalage écran en px
@@ -209,9 +209,11 @@ function drawFields(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
   for (const f of o.layout.fields) {
     if (f.x < cx0 || f.x >= cx1 || f.y < cy0 || f.y >= cy1) continue;
     const [sx, sy] = gridToScreen(v, f.x, f.y);
-    ctx.fillStyle = "rgba(150,200,90,0.55)";
+    // l'aire libre d'un bûcheron ou d'un rucher : plus pâle qu'un champ, c'est de la terre nue
+    const nue = f.fieldType === AIRE_LIBRE;
+    ctx.fillStyle = nue ? "rgba(150,200,90,0.22)" : "rgba(150,200,90,0.55)";
     ctx.fillRect(sx + 1, sy + 1, v.cell - 2, v.cell - 2);
-    ctx.strokeStyle = "rgba(120,170,70,0.9)";
+    ctx.strokeStyle = nue ? "rgba(120,170,70,0.4)" : "rgba(120,170,70,0.9)";
     ctx.strokeRect(sx + 1.5, sy + 1.5, v.cell - 3, v.cell - 3);
   }
 }

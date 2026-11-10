@@ -50,10 +50,11 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `CommandeRequete` (interface, L8) [2]
 - `CommandeMsg` (type, L14) [1]
 ### `src/commande/production.ts` — LA PRODUCTION POSÉE SUR L'ÎLE
-- `PlanProduction` (interface, L37) [1]
-- `VilleExistante` (interface, L48) [0]
-- `lotsDeProduction` (function, L57) [1] : Lots de production : les lignes qui échangent des biens restent ensemble.
-- `disposerProduction` (function, L97) [1] : Pose la production d'une commande sur l'île, autour d'une ville déjà posée.
+- `PlanProduction` (interface, L41) [1]
+- `VilleExistante` (interface, L52) [0]
+- `lotsDeProduction` (function, L61) [1] : Lots de production : les lignes qui échangent des biens restent ensemble.
+- `couper` (function, L87) [2] : Coupe un lot en deux DEMI-CHAÎNES : la moitié de chaque ligne de part et d'autre.
+- `disposerProduction` (function, L106) [1] : Pose la production d'une commande sur l'île, autour d'une ville déjà posée.
 ### `src/commande/runPlanifier.ts` — Lance la planification d'une commande dans un Web Worker (interface non bloquée).
 - `runPlanifier` (function, L5) [3]
 
@@ -261,7 +262,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `estEntrepot` (const, L19) [3] : Un entrepôt, de l'un ou l'autre monde.
 - `pickWarehouseDef` (function, L21) [3]
 ### `src/model/factories.ts` — Identifiant unique court (suffisant côté client).
-- `uid` (function, L5) [39]
+- `uid` (function, L5) [40]
 - `makeGrid` (function, L10) [10]
 - `emptyLayout` (function, L19) [4] : Layout vide pour l'éditeur : grille ½-tuile (cellsPerTile=2) afin que la construction 45° soit possible d'emblée (cf.
 - `resizeGridShape` (function, L28) [2] : Redimensionne une grille en PRÉSERVANT le terrain : re-clippe les masques par-case (usable/water/rivers) et filtre les…
@@ -283,14 +284,15 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `ProductionSpec` (interface, L24) [0]
 - `BuildingDef` (interface, L31) [81] : Définition catalogue : gabarit réutilisable d'un type de bâtiment.
 - `PlacedBuilding` (interface, L84) [23] : Instance d'un bâtiment posé sur la grille.
-- `FieldTile` (interface, L93) [4]
-- `RoadTile` (interface, L100) [14]
-- `AqueductTile` (interface, L112) [3] : Tuile de conduite d'aqueduc (réseau d'eau, distinct des routes).
-- `GridSlot` (interface, L119) [0] : Slot de ressource du terrain (montagne/rivière/marais) — extrait du jeu.
-- `GridShape` (interface, L128) [38] : Grille de forme libre : masque des cases utilisables.
-- `Layout` (interface, L143) [27]
-- `Catalog` (type, L154) [10] : Catalogue persistant des définitions de bâtiments.
-- `Cell` (interface, L156) [2]
+- `FieldTile` (interface, L93) [5]
+- `AIRE_LIBRE` (const, L105) [4] : `fieldType` d'une case d'AIRE LIBRE : la terre qu'un bûcheron ou un rucher (`freeArea`) doit garder nue autour de lui.
+- `RoadTile` (interface, L107) [14]
+- `AqueductTile` (interface, L119) [3] : Tuile de conduite d'aqueduc (réseau d'eau, distinct des routes).
+- `GridSlot` (interface, L126) [0] : Slot de ressource du terrain (montagne/rivière/marais) — extrait du jeu.
+- `GridShape` (interface, L135) [38] : Grille de forme libre : masque des cases utilisables.
+- `Layout` (interface, L150) [27]
+- `Catalog` (type, L161) [10] : Catalogue persistant des définitions de bâtiments.
+- `Cell` (interface, L163) [2]
 
 ## src/monde
 
@@ -580,8 +582,8 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `FieldCell` (interface, L26) [1]
 - `fillFields` (function, L37) [3]
 - `reserveFreeArea` (function, L60) [2] : Réserve les cases libres à `radius` du bâtiment : plus rien ne s'y bâtira.
-- `freeAround` (function, L76) [2] : Cases libres disponibles à `radius` du rectangle — sonde avant réservation.
-- `reservedAround` (function, L95) [1] : Cases DÉJÀ réservées à `radius` du rectangle.
+- `freeAround` (function, L88) [2] : Cases libres disponibles à `radius` du rectangle — sonde avant réservation.
+- `reservedAround` (function, L107) [1] : Cases DÉJÀ réservées à `radius` du rectangle.
 ### `src/prodlayout/frac.ts` — Arithmétique rationnelle exacte.
 - `Frac` (interface, L11) [2] : Rationnel réduit.
 - `frac` (function, L18) [6]
@@ -594,8 +596,8 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ### `src/prodlayout/index.ts` — BLUEPRINTS DE PRODUCTION — la porte du module.
 - `BasketPlanOptions` (interface, L21) [0]
 - `BasketPlan` (interface, L32) [1]
-- `pickWarehouse` (function, L46) [1] : Entrepôt canonique de la région : plus petit GUID, templates des deux mondes (`model/entrepot.ts`).
-- `planFromBasket` (function, L75) [3] : Pose une commande libre de bâtiments : le plus petit plan ENTIÈREMENT servi, avec une sortie de route sur le bord deman…
+- `pickWarehouse` (function, L48) [1] : Entrepôt canonique de la région : plus petit GUID, templates des deux mondes (`model/entrepot.ts`).
+- `planFromBasket` (function, L77) [3] : Pose une commande libre de bâtiments : le plus petit plan ENTIÈREMENT servi, avec une sortie de route sur le bord deman…
 ### `src/prodlayout/occupancy.ts` — Grille d'occupation du blueprint.
 - `FREE` (const, L7) [7]
 - `BUILDING` (const, L8) [5]
@@ -617,11 +619,11 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `Placement` (interface, L30) [0]
 - `PackInput` (interface, L38) [3]
 - `PackResult` (interface, L45) [2]
-- `Copy` (interface, L71) [0] : Une copie à poser, dans l'ordre total de pose.
-- `expandCopies` (function, L77) [1]
-- `usefulArea` (function, L93) [1] : Surface utile estimée : emprises + champs + aires libres exigées.
-- `tryBox` (function, L206) [3] : Pose la commande dans une boîte de dimensions données, et rend ce qui manque.
-- `better` (function, L409) [5] : ORDRE TOTAL : servi, puis petit, puis carré.
+- `Copy` (interface, L74) [0] : Une copie à poser, dans l'ordre total de pose.
+- `expandCopies` (function, L80) [1]
+- `usefulArea` (function, L96) [1] : Surface utile estimée : emprises + champs + aires libres exigées.
+- `tryBox` (function, L210) [3] : Pose la commande dans une boîte de dimensions données, et rend ce qui manque.
+- `better` (function, L424) [5] : ORDRE TOTAL : servi, puis petit, puis carré.
 ### `src/prodlayout/roads.ts` — SQUELETTE ET PORTÉE.
 - `SpineAxis` (type, L11) [0]
 - `paintSkeleton` (function, L36) [4] : Épine dorsale à `spinePos` et branches perpendiculaires tous les `pitch`.
@@ -631,7 +633,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `touchesRoad` (const, L166) [4]
 - `roadDistances` (function, L174) [5] : Distance-rue depuis un ensemble de graines.
 ### `src/prodlayout/search.ts` — LE CHOIX DE LA BOÎTE.
-- `BoxSpec` (type, L16) [1]
+- `BoxSpec` (type, L16) [2]
 - `searchBox` (function, L24) [2]
 ### `src/prodlayout/unmet.ts` — CE QUI MANQUE, CHIFFRÉ.
 - `Unmet` (type, L11) [1]
@@ -707,8 +709,8 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `IslandThumb` (function, L32) [3]
 ### `src/ui/components/PlanPreview.tsx` — Carte de prévisualisation d'un plan — colorée par PALIER ATTEINT, navigable, et capable de montrer la portée réelle d'un service au survol.
 - `PlanPreviewProps` (interface, L25) [0]
-- `PlanPreview` (function, L77) [4]
-- `PlanPreviewLegend` (function, L321) [1] : Légende : une pastille par palier présent + les repères de lecture.
+- `PlanPreview` (function, L81) [4]
+- `PlanPreviewLegend` (function, L327) [1] : Légende : une pastille par palier présent + les repères de lecture.
 ### `src/ui/components/PlansAuChoix.tsx`
 - `PlansAuChoix` (function, L28) [1] : PLANS AU CHOIX : une carte par plan proposé, le recommandé d'abord.
 ### `src/ui/components/RoadTypeSelect.tsx` — Choix du type de route d'un plan.

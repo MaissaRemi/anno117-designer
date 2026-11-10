@@ -28,6 +28,13 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
 
 ## Moteurs d'île
 
+- **Un lot de production se coupe en demi-chaînes et se traite par niveau de taille** (11/11) :
+  coupé entre ses lignes et en profondeur d'abord, une moitié ne produisait rien sans l'autre
+  et le premier bien prenait toute la terre. Faute de rectangle libre, un petit lot est posé
+  dans la forme de la terre libre.
+- **L'aire libre fait partie du plan** (11/11) : cases de champ de type `AIRE_LIBRE`, limitées
+  à l'aire exigée. Avant, elle n'existait que dans le placeur et le joueur voyait une terre vide.
+
 - **Les exigences de Rémi passent avant le nombre d'habitants** (10/11, audit) : elles sont
   écrites dans `.claude/exigences.md` et tenues par le panneau `optimizer/qualite.panneau.test.ts`,
   dont les seuils ne se relâchent qu'avec son accord.

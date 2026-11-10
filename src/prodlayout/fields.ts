@@ -59,17 +59,29 @@ export function fillFields(o: Occ, c: FarmClaim): FieldCell[] {
  */
 export function reserveFreeArea(
   o: Occ, x: number, y: number, w: number, h: number, radius: number,
+  opts: {
+    /** Cases à réserver au plus, les plus proches d'abord. Absent : toutes celles du rayon. */
+    max?: number;
+    /** Reçoit les cases réservées par cet appel, pour qui veut les montrer. */
+    cases?: { x: number; y: number }[];
+  } = {},
 ): number {
-  let n = 0;
+  const libres: { x: number; y: number; d: number }[] = [];
   for (let cy = y - radius; cy <= y + h - 1 + radius; cy++) {
     for (let cx = x - radius; cx <= x + w - 1 + radius; cx++) {
-      if (distToRect(cx, cy, x, y, w, h) > radius) continue;
-      if (at(o, cx, cy) !== FREE) continue;
-      setAt(o, cx, cy, RESERVED);
-      n++;
+      const d = distToRect(cx, cy, x, y, w, h);
+      if (d > radius || at(o, cx, cy) !== FREE) continue;
+      libres.push({ x: cx, y: cy, d });
     }
   }
-  return n;
+  // tri stable : à distance égale, l'ordre de balayage (haut-gauche d'abord) est gardé
+  libres.sort((a, b) => a.d - b.d);
+  const gardees = libres.slice(0, opts.max ?? libres.length);
+  for (const c of gardees) {
+    setAt(o, c.x, c.y, RESERVED);
+    opts.cases?.push({ x: c.x, y: c.y });
+  }
+  return gardees.length;
 }
 
 /** Cases libres disponibles à `radius` du rectangle — sonde avant réservation. */

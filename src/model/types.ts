@@ -97,6 +97,13 @@ export interface FieldTile {
   fieldType: string;
 }
 
+/**
+ * `fieldType` d'une case d'AIRE LIBRE : la terre qu'un bûcheron ou un rucher (`freeArea`) doit
+ * garder nue autour de lui. Portée par le plan comme une case de champ, pour qu'elle se voie et
+ * que rien ne s'y pose ; aucune ferme n'a ce type, elle n'entre donc dans aucun compte de champ.
+ */
+export const AIRE_LIBRE = "aire-libre";
+
 export interface RoadTile {
   x: number;
   y: number;

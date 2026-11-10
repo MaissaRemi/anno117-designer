@@ -1,4 +1,4 @@
-import type { BuildingDef } from "../model/types";
+import { AIRE_LIBRE, type BuildingDef } from "../model/types";
 import type { Advisory } from "./basket";
 import type { Lookup } from "./chain";
 import { ensureExit, type ExitPoint, type ExitSide } from "./exit";
@@ -50,6 +50,9 @@ export interface PackResult {
   fields: FieldCell[];
   /** Masque de la boîte finale, après rognage. `false` = hors forme. */
   usable: boolean[];
+  /** Coin de la boîte rendue dans la boîte DEMANDÉE : le rognage décale tout le contenu, et
+   *  qui a imposé une forme prise sur une île doit pouvoir l'y reporter. */
+  origine: { x: number; y: number };
   tiles: { buildings: number; fields: number; roads: number };
   /** Mesure AFFICHÉE, dénominateur = surface utilisable. Ne décide plus de rien. */
   efficiency: number;
@@ -191,6 +194,7 @@ function riens(input: PackInput, w: number, h: number, exitSide: ExitSide): Pack
   unmet.push({ kind: "sortie", side: exitSide });
   return {
     w, h, placements: [], roads: [], fields: [], usable: new Array(w * h).fill(true),
+    origine: { x: 0, y: 0 },
     tiles: { buildings: 0, fields: 0, roads: 0 }, efficiency: 0,
     exit: null, unmet, advisories: [], served: false,
   };
@@ -250,7 +254,16 @@ export function tryBox(
     fill(occ, spot.x, spot.y, cw, ch, BUILDING);
     const uid = `b${nextUid++}`;
     placements.push({ uid, defId: c.defId, x: spot.x, y: spot.y, rot: spot.rot });
-    if (c.def.freeArea) reserveFreeArea(occ, spot.x, spot.y, cw, ch, c.def.freeArea.radius);
+    if (c.def.freeArea) {
+      // l'aire libre sort avec le plan, comme des cases de champ d'un type à part : sinon elle
+      // n'existait que dans ce placeur, et le joueur voyait une terre vide qu'il pouvait bâtir
+      // Juste l'aire EXIGÉE, pas tout le rayon : la production est proportionnelle aux cases
+      // libres jusqu'à `area`, au-delà elles ne rendent rien. Réserver tout le rayon prenait à
+      // un Bûcheron environ 330 cases pour les 80 qui lui suffisent.
+      const cases: { x: number; y: number }[] = [];
+      reserveFreeArea(occ, spot.x, spot.y, cw, ch, c.def.freeArea.radius, { max: c.def.freeArea.area, cases });
+      for (const k of cases) fields.push({ x: k.x, y: k.y, ownerUid: uid, fieldType: AIRE_LIBRE });
+    }
     if (c.def.field) {
       const got = fillFields(occ, {
         x: spot.x, y: spot.y, w: cw, h: ch,
@@ -342,6 +355,7 @@ function trim(a: Attempt): PackResult {
     return {
       w: a.occ.w, h: a.occ.h, placements: [], roads: [], fields: [],
       usable: new Array(a.occ.w * a.occ.h).fill(true),
+      origine: { x: 0, y: 0 },
       tiles: { buildings: 0, fields: 0, roads: 0 }, efficiency: 0,
       exit: a.exit, unmet: a.unmet, advisories: a.advisories, served: false,
     };
@@ -385,6 +399,7 @@ function trim(a: Attempt): PackResult {
     roads,
     fields: a.fields.map((f) => ({ ...f, x: f.x - x0, y: f.y - y0 })),
     usable,
+    origine: { x: x0, y: y0 },
     tiles,
     efficiency: dispo > 0 ? (tiles.buildings + tiles.fields + tiles.roads) / dispo : 0,
     exit: a.exit ? { ...a.exit, x: a.exit.x - x0, y: a.exit.y - y0 } : null,

@@ -34,6 +34,8 @@ export interface BasketPlan {
   basket: Basket;
   balance: Balance;
   box: { w: number; h: number };
+  /** Coin de `box` dans la boîte demandée (cf. `PackResult.origine`). */
+  origine: { x: number; y: number };
   tiles: { buildings: number; fields: number; roads: number };
   efficiency: number;
   /** Toujours vrai : un plan non servi sort en `PlanRefus`, jamais en `BasketPlan`. */
@@ -108,6 +110,7 @@ export function planFromBasket(
     basket,
     balance: balanceBasket(basket, lookup),
     box: { w: packed.w, h: packed.h },
+    origine: packed.origine,
     tiles: packed.tiles,
     efficiency: packed.efficiency,
     served: true,

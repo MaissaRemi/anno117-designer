@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { footprintCells, footprintSize } from "../../engine/geometry";
 import type { DefLookup } from "../../engine/rules";
 import { economy } from "../../economy/economy";
-import type { GridShape, PlacedBuilding, RoadTile } from "../../model/types";
+import { AIRE_LIBRE, type FieldTile, type GridShape, type PlacedBuilding, type RoadTile } from "../../model/types";
 import { planningRange, type RoadType } from "../../engine/roads";
 
 /**
@@ -27,6 +27,8 @@ export interface PlanPreviewProps {
   buildings: PlacedBuilding[];
   roads: RoadTile[];
   aqueducts?: { x: number; y: number }[];
+  /** Champs des fermes, et aire libre des bûcherons et ruchers (plus sombre). */
+  fields?: FieldTile[];
   lookup: DefLookup;
   /** Type des routes du plan : la portée affichée au survol en dépend (cf. engine/roads). */
   roadType?: RoadType;
@@ -53,6 +55,8 @@ const COL_RIVER: RGB = [45, 90, 115];
 const COL_COAST: RGB = [18, 44, 64];
 const COL_ROAD: RGB = [96, 100, 108];
 const COL_AQUA: RGB = [64, 176, 208];
+const COL_CHAMP: RGB = [104, 142, 62];
+const COL_AIRE_LIBRE: RGB = [52, 74, 44];
 const COL_SERVICE: RGB = [214, 92, 76];
 const COL_ROOT: RGB = [255, 214, 92];
 const COL_REACH: RGB = [88, 224, 120]; // rues à portée du service survolé
@@ -74,7 +78,7 @@ const hexToRgb = (h: string): RGB => [
  */
 const BUFFER = 1024;
 
-export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, roadType, size = 720, pivoter45 = false }: PlanPreviewProps) {
+export function PlanPreview({ grid, buildings, roads, aqueducts, fields, lookup, roadType, size = 720, pivoter45 = false }: PlanPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLCanvasElement | null>(null);
   const hlRef = useRef<HTMLCanvasElement | null>(null);
@@ -137,6 +141,8 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, roadTyp
       const o = i * 4;
       px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255;
     }
+    // les champs d'abord : sans eux une île de production semblait à moitié vide
+    for (const f of fields ?? []) put(f.x, f.y, f.fieldType === AIRE_LIBRE ? COL_AIRE_LIBRE : COL_CHAMP);
     for (const r of roads) put(r.x, r.y, COL_ROAD);
     for (const a of aqueducts ?? []) put(a.x, a.y, COL_AQUA);
     for (const b of buildings) {
@@ -158,7 +164,7 @@ export function PlanPreview({ grid, buildings, roads, aqueducts, lookup, roadTyp
     off.getContext("2d")!.putImageData(img, 0, 0);
     baseRef.current = off;
     setView({ z: 1, ox: 0, oy: 0 });
-  }, [grid, buildings, roads, aqueducts, lookup, colorOfResidence, W, H, cpt]);
+  }, [grid, buildings, roads, aqueducts, fields, lookup, colorOfResidence, W, H, cpt]);
 
   // ---- couche de SURLIGNAGE : portée-rue du service survolé ----
   const hovered = hover >= 0 ? buildings[hover] : null;
@@ -336,6 +342,8 @@ export function PlanPreviewLegend({ tierCounts }: { tierCounts: Record<string, n
       <span><i style={{ background: "#d65c4c" }} />services</span>
       <span><i style={{ background: "#ffd65c" }} />comptoir</span>
       <span><i style={{ background: "#40b0d0" }} />aqueduc</span>
+      <span><i style={{ background: "#688e3e" }} />champs</span>
+      <span><i style={{ background: "#344a2c" }} />aire libre</span>
     </div>
   );
 }
