@@ -1,5 +1,4 @@
 import rawEconomy from "../data/economy.generated.json";
-import type { BuildingDef } from "../model/types";
 import { frac, type Frac } from "./frac";
 
 /**
@@ -32,8 +31,6 @@ interface RawEconomy {
 }
 
 export const eco = rawEconomy as unknown as RawEconomy;
-
-export type Lookup = (id: string) => BuildingDef | undefined;
 
 /** Débit d'un bâtiment pour un bien, en unités par minute. */
 export const ratePerMin = (p: RawProd, good: string): Frac => {

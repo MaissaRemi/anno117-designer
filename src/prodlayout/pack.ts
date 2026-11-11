@@ -1,6 +1,6 @@
 import { AIRE_LIBRE, type BuildingDef } from "../model/types";
 import type { Advisory } from "./basket";
-import type { Lookup } from "./chain";
+import type { DefLookup } from "../engine/rules";
 import { ensureExit, type ExitPoint, type ExitSide } from "./exit";
 import { fillFields, freeAround, reserveFreeArea, reservedAround, type FieldCell } from "./fields";
 import {
@@ -39,7 +39,7 @@ export interface PackInput {
   /** Bâtiments à poser, hors entrepôt. */
   items: { defId: string; count: number }[];
   warehouseDefId: string;
-  lookup: Lookup;
+  lookup: DefLookup;
 }
 
 export interface PackResult {
@@ -123,7 +123,7 @@ function findSpot(
 }
 
 /** Cases de route contiguës à tous les entrepôts posés. */
-function warehouseSeeds(occ: Occ, placements: Placement[], lookup: Lookup): number[] {
+function warehouseSeeds(occ: Occ, placements: Placement[], lookup: DefLookup): number[] {
   const seeds: number[] = [];
   for (const p of placements) {
     const d = lookup(p.defId);
@@ -136,7 +136,7 @@ function warehouseSeeds(occ: Occ, placements: Placement[], lookup: Lookup): numb
 
 /** Producteurs hors de portée d'un entrepôt, en distance-rue, avec leur écart chiffré. */
 function outOfRange(
-  occ: Occ, placements: Placement[], lookup: Lookup,
+  occ: Occ, placements: Placement[], lookup: DefLookup,
 ): { p: Placement; distance: number; portee: number }[] {
   const dist = roadDistances(occ, warehouseSeeds(occ, placements, lookup));
   const bad: { p: Placement; distance: number; portee: number }[] = [];

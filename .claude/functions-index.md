@@ -240,7 +240,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `planningRange` (function, L39) [11] : Portée de PLANIFICATION d'un bâtiment, en cases de route du type donné.
 - `porteeDeTrajet` (function, L49) [2] : Portée en LONGUEUR de trajet, sans arrondi : pour un réseau qui mêle cases droites (1) et losanges diagonaux (√2, cf.
 ### `src/engine/rules.ts`
-- `DefLookup` (type, L37) [19]
+- `DefLookup` (type, L37) [23]
 - `makeLookup` (function, L71) [43]
 - `canPlace` (function, L103) [3] : Peut-on poser `def` en (x,y,rot) ?
 - `terrainConvient` (function, L133) [5] : Le terrain convient-il à `def` posé en (x, y) ?
@@ -272,7 +272,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `SaveFile` (interface, L3) [1]
 - `toSaveFile` (function, L10) [0]
 - `serialize` (function, L14) [3]
-- `parse` (function, L18) [7]
+- `parse` (function, L18) [6]
 - `RefIssues` (interface, L29) [0]
 - `findOrphanRefs` (function, L39) [2] : Vérifie l'intégrité référentielle d'une disposition : tout `defId` doit exister dans le catalogue et tout champ doit po…
 ### `src/model/types.ts`
@@ -282,7 +282,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `FieldSpec` (interface, L14) [0]
 - `ProductionGood` (interface, L19) [0]
 - `ProductionSpec` (interface, L24) [0]
-- `BuildingDef` (interface, L31) [81] : Définition catalogue : gabarit réutilisable d'un type de bâtiment.
+- `BuildingDef` (interface, L31) [80] : Définition catalogue : gabarit réutilisable d'un type de bâtiment.
 - `PlacedBuilding` (interface, L84) [23] : Instance d'un bâtiment posé sur la grille.
 - `FieldTile` (interface, L93) [5]
 - `AIRE_LIBRE` (const, L105) [4] : `fieldType` d'une case d'AIRE LIBRE : la terre qu'un bûcheron ou un rucher (`freeArea`) doit garder nue autour de lui.
@@ -536,16 +536,11 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 
 ## src/persist
 
-### `src/persist/blueprints.ts` — Bibliothèque locale de blueprints.
-- `SavedBlueprint` (interface, L10) [0]
-- `listBlueprints` (function, L18) [1]
-- `saveBlueprint` (function, L37) [1]
-- `deleteBlueprint` (function, L41) [1]
 ### `src/persist/json.ts` — Télécharge la disposition + catalogue en fichier JSON.
 - `exportJson` (function, L5) [1]
 - `importJson` (function, L16) [1] : Ouvre un sélecteur de fichier et renvoie le contenu parsé.
 ### `src/persist/local.ts`
-- `saveState` (function, L17) [2] : Sauvegarde auto dans le navigateur (localStorage).
+- `saveState` (function, L17) [1] : Sauvegarde auto dans le navigateur (localStorage).
 - `migrateV7toV8` (function, L26) [2] : Suréchantillonne un layout TUILE (v7) en ½-tuiles (v8) : tout ×2, masques upscale2x.
 - `loadState` (function, L99) [2]
 - `clearState` (function, L124) [0]
@@ -561,22 +556,21 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ## src/prodlayout
 
 ### `src/prodlayout/basket.ts` — LE PANIER — ce que l'utilisateur a choisi, littéralement.
-- `BasketLine` (interface, L12) [3]
-- `Basket` (interface, L17) [2]
-- `GoodFlow` (interface, L22) [0] : Un débit de bien, en unités par minute, exact.
-- `Advisory` (interface, L29) [2] : Ce que le module ne peut pas vérifier hors terrain — signalé, jamais bloquant.
-- `Balance` (interface, L34) [1]
-- `normalizeBasket` (function, L48) [7] : Panier canonique : doublons fusionnés, comptes tronqués à l'entier, comptes ≤ 0 écartés, ordre total par defId.
-- `balanceBasket` (function, L68) [4] : Production moins consommation, bien par bien, en rationnels exacts.
+- `BasketLine` (interface, L13) [3]
+- `Basket` (interface, L18) [2]
+- `GoodFlow` (interface, L23) [0] : Un débit de bien, en unités par minute, exact.
+- `Advisory` (interface, L30) [2] : Ce que le module ne peut pas vérifier hors terrain — signalé, jamais bloquant.
+- `Balance` (interface, L35) [1]
+- `normalizeBasket` (function, L49) [7] : Panier canonique : doublons fusionnés, comptes tronqués à l'entier, comptes ≤ 0 écartés, ordre total par defId.
+- `balanceBasket` (function, L69) [4] : Production moins consommation, bien par bien, en rationnels exacts.
 ### `src/prodlayout/chain.ts` — DONNÉES DE CHAÎNE — la seule porte de ce module vers les données économiques.
-- `eco` (const, L34) [3]
-- `Lookup` (type, L36) [4]
-- `ratePerMin` (const, L39) [6] : Débit d'un bâtiment pour un bien, en unités par minute.
-- `pickProducer` (function, L46) [8] : Producteur d'un bien, en préférant la région demandée.
-- `goodName` (const, L52) [12]
-- `isProducer` (const, L62) [2] : Le bâtiment produit-il réellement quelque chose ?
+- `eco` (const, L33) [3]
+- `ratePerMin` (const, L36) [6] : Débit d'un bâtiment pour un bien, en unités par minute.
+- `pickProducer` (function, L43) [8] : Producteur d'un bien, en préférant la région demandée.
+- `goodName` (const, L49) [12]
+- `isProducer` (const, L59) [2] : Le bâtiment produit-il réellement quelque chose ?
 ### `src/prodlayout/complete.ts` — COMPLÉTER LE PANIER — un geste explicite, jamais un effet de bord.
-- `completeBasket` (function, L26) [2]
+- `completeBasket` (function, L27) [2]
 ### `src/prodlayout/exit.ts` — LA SORTIE DE ROUTE — la seule règle qui ne vienne pas du catalogue.
 - `ExitSide` (type, L13) [4]
 - `ExitPoint` (interface, L15) [2]
@@ -617,7 +611,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `setAt` (const, L42) [5]
 - `fits` (function, L47) [4] : Le rectangle tient-il entièrement dans la boîte, sur des cases libres ?
 - `fill` (function, L55) [40]
-- `count` (function, L60) [34] : Nombre de cases portant une valeur donnée.
+- `count` (function, L60) [32] : Nombre de cases portant une valeur donnée.
 - `usableArea` (const, L67) [1] : Surface réellement disponible — le dénominateur honnête de l'efficacité.
 ### `src/prodlayout/pack.ts` — LE PLACEUR — glouton, à ordre total, sans une once d'aléa.
 - `Rot0or90` (type, L28) [0]
@@ -649,12 +643,11 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 
 ### `src/render/draw.ts`
 - `View` (interface, L5) [2]
-- `Lookup` (type, L11) [4]
-- `HoverPreview` (interface, L13) [1]
-- `DrawOpts` (interface, L21) [0]
-- `gridToScreen` (const, L33) [0]
-- `screenToGrid` (function, L53) [1]
-- `drawScene` (function, L60) [2]
+- `HoverPreview` (interface, L11) [1]
+- `DrawOpts` (interface, L19) [0]
+- `gridToScreen` (const, L31) [0]
+- `screenToGrid` (function, L51) [1]
+- `drawScene` (function, L58) [2]
 ### `src/render/exportImage.ts` — View qui fait tenir TOUTE la grille (w×h cases) dans `maxPx`, marge incluse — indépendant du zoom/pan courant de l'éditeur.
 - `fitView` (function, L9) [1]
 - `renderFullCanvas` (function, L27) [1] : Rend la disposition ENTIÈRE sur un canvas hors-écran (toute l'île, pas le viewport visible).

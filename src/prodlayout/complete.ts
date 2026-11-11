@@ -1,5 +1,6 @@
 import { balanceBasket, normalizeBasket, type Basket, type BasketLine } from "./basket";
-import { eco, pickProducer, ratePerMin, type Lookup } from "./chain";
+import type { DefLookup } from "../engine/rules";
+import { eco, pickProducer, ratePerMin } from "./chain";
 import { divF, toNumber } from "./frac";
 
 /**
@@ -14,7 +15,7 @@ import { divF, toNumber } from "./frac";
 const PASSES_MAX = 24;
 
 /** Région dominante du panier, pour choisir un producteur du bon monde. */
-function regionOf(basket: Basket, lookup: Lookup): string | undefined {
+function regionOf(basket: Basket, lookup: DefLookup): string | undefined {
   const n = new Map<string, number>();
   for (const l of basket.lines) {
     const r = lookup(l.defId)?.region;
@@ -25,7 +26,7 @@ function regionOf(basket: Basket, lookup: Lookup): string | undefined {
 
 export function completeBasket(
   basket: Basket,
-  lookup: Lookup,
+  lookup: DefLookup,
   imported: ReadonlySet<string> = new Set(),
 ): Basket {
   let cur = normalizeBasket(basket.lines);

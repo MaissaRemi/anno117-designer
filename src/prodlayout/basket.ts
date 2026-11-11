@@ -1,4 +1,5 @@
-import { eco, goodName, type Lookup } from "./chain";
+import type { DefLookup } from "../engine/rules";
+import { eco, goodName } from "./chain";
 import { addF, frac, mulF, subF, type Frac } from "./frac";
 
 /**
@@ -65,7 +66,7 @@ const flowsOf = (m: Map<string, Frac>): GoodFlow[] =>
     .sort((a, b) => a.good.localeCompare(b.good));
 
 /** Production moins consommation, bien par bien, en rationnels exacts. */
-export function balanceBasket(basket: Basket, lookup: Lookup): Balance {
+export function balanceBasket(basket: Basket, lookup: DefLookup): Balance {
   const prod = new Map<string, Frac>();
   const cons = new Map<string, Frac>();
   const advisories: Advisory[] = [];

@@ -1,5 +1,5 @@
 import { footprintCells, footprintSize, gridScale, isDiagonal, parseCellKey } from "../engine/geometry";
-import type { BuildingIssues } from "../engine/rules";
+import type { BuildingIssues, DefLookup } from "../engine/rules";
 import { AIRE_LIBRE, type BuildingDef, type Layout, type Rotation } from "../model/types";
 
 export interface View {
@@ -7,8 +7,6 @@ export interface View {
   originY: number;
   cell: number; // taille d'une case en px
 }
-
-export type Lookup = (id: string) => BuildingDef | undefined;
 
 export interface HoverPreview {
   def: BuildingDef;
@@ -20,7 +18,7 @@ export interface HoverPreview {
 
 export interface DrawOpts {
   layout: Layout;
-  lookup: Lookup;
+  lookup: DefLookup;
   view: View;
   issues: Map<string, BuildingIssues>;
   coverage: Map<string, Set<string>>;
