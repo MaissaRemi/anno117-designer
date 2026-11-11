@@ -43,6 +43,11 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
 
 ## Moteurs d'île
 
+- **Le maximum d'une île de production se cherche en posant** (12/11, `commande/maximum.ts`) :
+  aucune formule ne donne ce qu'une île tient (formes, côte, emplacements, quartiers
+  d'ouvriers). Les débits sont des proportions ; on pose, on lit ce qui a tenu, on monte selon
+  la terre restée libre ou on coupe en deux. Les proportions sont strictes : un bien borné
+  par les emplacements plafonne tous les autres, et le plan le dit.
 - **Un lot de production se coupe en demi-chaînes et se traite par niveau de taille** (11/11) :
   coupé entre ses lignes et en profondeur d'abord, une moitié ne produisait rien sans l'autre
   et le premier bien prenait toute la terre. Faute de rectangle libre, un petit lot est posé

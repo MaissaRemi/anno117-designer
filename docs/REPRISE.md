@@ -16,7 +16,8 @@ détail est archivé), ce qui reste à faire, les questions à trancher en jeu, 
    qui manque et quelles îles acheter, et donne le plan de chaque île à reconstruire en jeu.
 2. **Planifier une île** — trois moyens, dans l'onglet Planifier : « Ma commande » (le joueur
    dit ce qu'il veut, le moteur dresse la nomenclature et dispose l'île), « Remplir l'île » (le
-   plus d'habitants d'un palier) et « Île de production » (des biens et leur débit).
+   plus d'habitants d'un palier) et « Île de production » (des biens et leur débit, ou le
+   maximum que l'île tient).
 3. **Rester fidèle au jeu** — aucune valeur tapée à la main : bâtiments, économie, îles,
    terrain, sauvegardes sont lus dans les fichiers du jeu. Toute règle de jeu se vérifie dans les
    fichiers ou se teste en jeu par Rémi.
@@ -188,8 +189,12 @@ Rémi n'étaient écrites nulle part.
   plus en pourcentage par province ; côte et emplacements en bâtiments entiers ; le raccord
   d'une mine franchit une rivière (large_03 : 4 → 9 mines posées sur 9). Monde d'essai : demande
   de la ville servie 66 → 73 %, affecté posé 79 → 86 %, déficits 89 → 74 u/min.
-- **Restent de l'audit** : main-d'œuvre sur ce qui est posé, mode « produire le maximum » d'une
-  île de production.
+- **Produire le maximum** (12/11 ; `commande/maximum.ts`, case de « Île de production ») : les
+  débits saisis deviennent des proportions, et le moteur cherche en POSANT (huit poses au plus)
+  le plus grand multiple que l'île tient en entier ; un bien borné par les emplacements
+  plafonne l'île, et le plan dit pourquoi. medium_01 : 33,7 pains et 22,5 tuniques par minute
+  tenus (28 pains sur 40 demandés avant). Une à deux minutes sur une grande île.
+- **Reste de l'audit** : main-d'œuvre sur ce qui est posé.
 
 ## Ce qui reste à faire, par intérêt (11/11/2026)
 

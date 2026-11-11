@@ -17,7 +17,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ## src/commande
 
 ### `src/commande/disposition.ts` — DISPOSER UNE COMMANDE — TYPES ET OUTILS COMMUNS
-- `DispositionOpts` (interface, L18) [2]
+- `DispositionOpts` (interface, L18) [3]
 - `LignePosee` (interface, L31) [3]
 - `PlanQuartiers` (interface, L39) [2]
 - `distancesDeCroissance` (function, L123) [2] : Distance OCTILE le long de la terre depuis des graines (10 en ligne droite, 14 en diagonale, la diagonale n'étant permi…
@@ -26,29 +26,32 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `besoinEnIlots` (function, L86) [1] : Îlots à fusionner (k colonnes × m rangées) pour loger ce bâtiment, et l'orientation.
 - `routeVersReseau` (function, L178) [1] : Plus court chemin de route du périmètre d'une emprise (sans les coins : l'accès est orthogonal) jusqu'au réseau, par de…
 - `disposerQuartiers` (function, L266) [2] : Pose les quartiers d'une commande en îlots, sur une île (grille TUILE, celle des moteurs).
+### `src/commande/maximum.ts` — PRODUIRE LE MAXIMUM
+- `tenue` (const, L28) [6] : Part de l'objectif posée, sur le bien le moins bien tenu.
+- `planifierMaximum` (function, L31) [2]
 ### `src/commande/nomenclature.ts` — LA COMMANDE, ET CE QU'ELLE COÛTE EN BÂTIMENTS
 - `SURFACE_PAR_MAISON` (const, L33) [1] : Surface urbaine par maison, routes et services compris.
 - `LigneMaisons` (interface, L39) [1]
 - `ChoixServices` (type, L44) [1]
-- `Commande` (interface, L46) [14]
+- `Commande` (interface, L46) [16]
 - `LigneObjectif` (interface, L116) [1] : Un bien de l'objectif : demandé, et ce que l'île en produit (le reste est importé).
 - `ImportObjectif` (interface, L125) [1]
 - `RoleLigne` (type, L132) [0]
 - `LigneNomenclature` (interface, L134) [0]
 - `Nomenclature` (interface, L145) [3]
 - `copiesPourCouvrir` (function, L170) [2] : Copies d'un service à portée-rue pour couvrir une zone : pavage en diamants L1 de rayon effectif `portée − pas du peign…
-- `nomenclature` (function, L182) [19] : La nomenclature d'une commande.
+- `nomenclature` (function, L182) [21] : La nomenclature d'une commande.
 ### `src/commande/planifier.ts`
 - `ObjectifPose` (interface, L28) [0] : Un bien de l'objectif, et le débit que le plan POSÉ en tire.
 - `Argent` (interface, L33) [9]
-- `PlanCommande` (interface, L35) [0]
+- `PlanCommande` (interface, L35) [1]
 - `compterEmplacements` (function, L55) [0] : Emplacements de terrain de l'île, par type.
-- `planifierCommande` (function, L61) [8]
+- `planifierCommande` (function, L61) [9]
 - `ResultatCommande` (interface, L151) [6] : Ce qui traverse la frontière du worker : le plan à poser et le rapport, sans les masques de grille (zone, île) qui pèse…
 - `resumer` (function, L174) [3]
 ### `src/commande/planifierWorker.ts`
-- `CommandeRequete` (interface, L8) [2]
-- `CommandeMsg` (type, L14) [1]
+- `CommandeRequete` (interface, L9) [2]
+- `CommandeMsg` (type, L17) [1]
 ### `src/commande/production.ts` — LA PRODUCTION POSÉE SUR L'ÎLE
 - `PlanProduction` (interface, L41) [1]
 - `VilleExistante` (interface, L52) [0]
@@ -61,7 +64,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ## src/data
 
 ### `src/data/islandGrid.ts` — Construit la grille VIVANTE ½-tuile (cellsPerTile=2) d'une île à partir de son id.
-- `buildIslandGrid` (function, L7) [29]
+- `buildIslandGrid` (function, L7) [30]
 ### `src/data/islands.ts` — Décode le masque RLE en tableau de booléens (longueur w*h).
 - `Island` (interface, L3) [2]
 - `islands` (const, L12) [34]
@@ -80,9 +83,9 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `riversOf` (function, L58) [2] : Cases rivière (boolean[w*h]) d'une île, ou undefined si aucune.
 - `ZonesIle` (interface, L65) [0] : Zones constructibles d'une île selon le jeu, repère de l'image ; undefined si absentes.
 - `zonesOf` (function, L73) [2] : LE JEU DIT LUI-MÊME OÙ L'ON BÂTIT (AreaIDs × Water dans le gamedata de l'île) : terre constructible, bande d'eau côtièr…
-- `hasHeights` (function, L81) [7] : Vrai si l'île a des hauteurs extraites (le décodage peut malgré tout échouer côté navigateur).
+- `hasHeights` (function, L81) [8] : Vrai si l'île a des hauteurs extraites (le décodage peut malgré tout échouer côté navigateur).
 - `slotsOf` (function, L86) [1] : Slots posables (montagne/rivière/marais — les blockers sont ignorés), repère de l'image.
-- `heightsOf` (function, L100) [8]
+- `heightsOf` (function, L100) [9]
 
 ## src/economy
 
@@ -240,8 +243,8 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `planningRange` (function, L39) [11] : Portée de PLANIFICATION d'un bâtiment, en cases de route du type donné.
 - `porteeDeTrajet` (function, L49) [2] : Portée en LONGUEUR de trajet, sans arrondi : pour un réseau qui mêle cases droites (1) et losanges diagonaux (√2, cf.
 ### `src/engine/rules.ts`
-- `DefLookup` (type, L37) [24]
-- `makeLookup` (function, L71) [43]
+- `DefLookup` (type, L37) [25]
+- `makeLookup` (function, L71) [44]
 - `canPlace` (function, L103) [3] : Peut-on poser `def` en (x,y,rot) ?
 - `terrainConvient` (function, L133) [6] : Le terrain convient-il à `def` posé en (x, y) ?
 - `rootedRoadSet` (function, L160) [13] : Ensemble des cases de route reliées à un comptoir (roadRoot), via BFS sur le réseau (4-connexité).
@@ -282,14 +285,14 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `FieldSpec` (interface, L14) [0]
 - `ProductionGood` (interface, L19) [0]
 - `ProductionSpec` (interface, L24) [0]
-- `BuildingDef` (interface, L31) [80] : Définition catalogue : gabarit réutilisable d'un type de bâtiment.
+- `BuildingDef` (interface, L31) [82] : Définition catalogue : gabarit réutilisable d'un type de bâtiment.
 - `PlacedBuilding` (interface, L84) [23] : Instance d'un bâtiment posé sur la grille.
 - `FieldTile` (interface, L93) [5]
 - `AIRE_LIBRE` (const, L105) [4] : `fieldType` d'une case d'AIRE LIBRE : la terre qu'un bûcheron ou un rucher (`freeArea`) doit garder nue autour de lui.
 - `RoadTile` (interface, L107) [14]
 - `AqueductTile` (interface, L119) [3] : Tuile de conduite d'aqueduc (réseau d'eau, distinct des routes).
 - `GridSlot` (interface, L126) [0] : Slot de ressource du terrain (montagne/rivière/marais) — extrait du jeu.
-- `GridShape` (interface, L135) [38] : Grille de forme libre : masque des cases utilisables.
+- `GridShape` (interface, L135) [39] : Grille de forme libre : masque des cases utilisables.
 - `Layout` (interface, L150) [27]
 - `Catalog` (type, L161) [10] : Catalogue persistant des définitions de bâtiments.
 - `Cell` (interface, L163) [2]
@@ -372,7 +375,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `chemin` (const, L106) [21]
 - `attribut` (const, L108) [14]
 - `attributs` (const, L109) [22]
-- `entier` (function, L112) [18] : Un entier little-endian signé, de la taille de la donnée (1, 2, 4 ou 8 octets).
+- `entier` (function, L112) [20] : Un entier little-endian signé, de la taille de la donnée (1, 2, 4 ou 8 octets).
 - `entier64Texte` (function, L125) [1] : Un entier 64 bits signé, en texte (il ne tient pas dans un nombre JavaScript).
 - `entiers32` (function, L131) [2] : Une suite d'entiers 32 bits little-endian.
 - `texteUtf16` (const, L139) [1]
@@ -421,7 +424,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `facadeDe` (function, L67) [2] : FAÇADE d'une pose : la rangée de cases le long du grand côté qui donne sur le plus de terre constructible.
 ### `src/optimizer/halfTileAdapter.ts` — Adaptateur ½-tuile ⇄ tuile pour l'optimiseur.
 - `gridWithObstacles` (function, L22) [4] : Marque l'emprise des bâtiments donnés comme NON constructible (obstacle) sur une copie de la grille.
-- `downscaleGrid` (function, L44) [28] : Inverse de upscale2x : ½-tuile → tuile (coin haut-gauche de chaque bloc 2×2).
+- `downscaleGrid` (function, L44) [29] : Inverse de upscale2x : ½-tuile → tuile (coin haut-gauche de chaque bloc 2×2).
 - `upscaleBuildings` (function, L75) [1] : Bâtiments tuile → ½-tuile : position ×2 (l'emprise re-double via cellsPerTile=2).
 - `upscaleTiles` (function, L80) [1] : Tuiles (route/champ/aqueduc) tuile → ½-tuile : 1 tuile → bloc 2×2 (route large 1 tuile).
 - `scaleResultToHalfTile` (function, L91) [4] : Reprojette un résultat de plan d'île (tuile) en ½-tuiles si la grille d'origine l'était.

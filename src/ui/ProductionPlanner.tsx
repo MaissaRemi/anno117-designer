@@ -60,6 +60,10 @@ export function ProductionPlanner() {
   );
 
   const [biens, setBiens] = useState<LigneBien[]>([]);
+  /** Produire le maximum : les débits saisis ne sont plus que des proportions. */
+  const [maximum, setMaximum] = useState(false);
+  /** Le résultat affiché vient-il d'une recherche du maximum ? */
+  const [resultatMaximum, setResultatMaximum] = useState(false);
   // changer de monde invalide les biens d'un autre monde
   useEffect(() => {
     setBiens((l) => l.filter((b) => biensDuMonde.some((x) => x.good === b.good)));
@@ -105,10 +109,10 @@ export function ProductionPlanner() {
     cancelRef.current?.();
     const locked = s.layout.buildings.filter((b) => b.locked);
     const g = gridWithObstacles(s.layout.grid, locked, makeLookup(s.catalog));
-    const { promise, cancel } = runPlanifier({ grid: g, commande, catalog: s.catalog });
+    const { promise, cancel } = runPlanifier({ grid: g, commande, catalog: s.catalog, maximum });
     cancelRef.current = cancel;
     promise
-      .then(setResult)
+      .then((r) => { setResult(r); setResultatMaximum(maximum); })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => { setRunning(false); cancelRef.current = null; });
   };
@@ -146,6 +150,11 @@ export function ProductionPlanner() {
         ))}
         <button type="button" disabled={!libres.length}
           onClick={() => setBiens((b) => [...b, { good: libres[0].good, parMinute: 10 }])}>+ Bien</button>
+        <label className="checkbox" style={{ display: "flex", alignItems: "flex-start", gap: 6, margin: "6px 0 8px" }}
+          title="L'île est remplie : les débits saisis donnent seulement les proportions entre les biens (10 et 5 : deux fois plus du premier). Plusieurs poses, donc plus long.">
+          <input type="checkbox" checked={maximum} onChange={(e) => setMaximum(e.target.checked)} />
+          <span>Produire le maximum <span className="muted">(les débits donnent les proportions)</span></span>
+        </label>
 
         <RoadTypeSelect value={routes} onChange={setRoutes} />
         <DieuSelect dieu={dieu} onDieu={setDieu} devotion={devotion} onDevotion={setDevotion} vide="aucun" />
@@ -182,7 +191,7 @@ export function ProductionPlanner() {
 
         {biens.length > 0 && (
           <div className="opt-result" style={{ marginTop: 8 }}>
-            <b>Devis</b> — {devis.lignes.reduce((s, l) => s + l.nombre, 0).toLocaleString("fr")} bâtiments,
+            <b>{maximum ? "Devis des débits saisis" : "Devis"}</b> — {devis.lignes.reduce((s, l) => s + l.nombre, 0).toLocaleString("fr")} bâtiments,
             ~{devis.surface.total.toLocaleString("fr")} cases
             {devis.dieu && (
               <div className="muted" style={{ fontSize: "0.85em" }}>
@@ -232,8 +241,13 @@ export function ProductionPlanner() {
                     {result.argent.net.toLocaleString("fr")} argent/min
                   </span>
                 </div>
+                {resultatMaximum && (
+                  <div className="muted" style={{ fontSize: "0.85em", marginBottom: 6 }}>
+                    Débits les plus hauts que l'île tient en entier, dans les proportions saisies.
+                  </div>
+                )}
                 <table className="muted" style={{ fontSize: "0.85em", width: "100%", marginBottom: 6 }}>
-                  <thead><tr><th style={{ textAlign: "left" }}>Bien</th><th>demandé</th><th>sur l'île</th><th>posé</th></tr></thead>
+                  <thead><tr><th style={{ textAlign: "left" }}>Bien</th><th>{resultatMaximum ? "retenu" : "demandé"}</th><th>sur l'île</th><th>posé</th></tr></thead>
                   <tbody>
                     {result.objectif.map((o) => (
                       <tr key={o.good} style={{ color: o.pose < o.parMinute ? "#ff8a85" : undefined }}>

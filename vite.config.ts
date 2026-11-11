@@ -11,6 +11,7 @@ import react from "@vitejs/plugin-react";
  */
 const LOURDS = [
   "src/optimizer/wanted.test.ts",
+  "src/commande/maximum.test.ts",
   "src/optimizer/invariants.test.ts",
   "src/optimizer/islandPlan.test.ts",
   "src/optimizer/slotPlan.test.ts",
