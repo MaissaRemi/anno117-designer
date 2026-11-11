@@ -94,3 +94,9 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
   inchangés ; un adaptateur fait la conversion.
 - **Données extraites versionnées** : l'application et les tests tournent sans le jeu installé.
 - **Albion et Latium ne se transposent pas** : jamais appliquer une mesure de l'un à l'autre.
+
+## Documentation
+
+- **`REPRISE.md` ne porte que l'état et la suite** (11/11) : il est chargé à chaque session.
+  Le détail d'un chantier terminé part dans `docs/archive/`, avec les anciens audits et les
+  anciens documents d'état ; `docs/superpowers/` garde les conceptions et plans datés.

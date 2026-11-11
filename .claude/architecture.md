@@ -129,8 +129,5 @@ Invariants de tout plan (pas de chevauchement, rien hors de l'île, tout relié 
 
 - `optimizer/maillageTriangles.ts` : socle de la trame mêlée (en pause), utilisé seulement par
   ses tests et ceux de `engine/reseauRoutier`.
-- `persist/blueprints.ts` : bibliothèque de blueprints de l'ancien onglet Production (retiré le
-  30/10) ; plus importée que par son test. Candidat au retrait.
 - `optimizer/types.ts` (`OptimizeResult`) : nom hérité de l'ancien optimiseur à recuit, toujours
   le format de sortie posé dans l'éditeur.
-- `prodlayout/chain.ts` définit `Lookup`, même signature que `engine/rules.ts` `DefLookup`.

@@ -38,7 +38,8 @@ reconstruire en jeu. Données toujours lues dans le jeu ou dans la sauvegarde du
 9. **Noms des villes** à l'import.
 10. Moteur d'île, reportés : service sans accès compté dans la couverture ; plan diagonal non
     posable dans l'éditeur ; trame mêlée en pause.
-11. Dépôt : nettoyer `.claude/worktrees/confident-jemison-990e57` ; fusionner `dev` dans `main`.
+11. Dépôt : test de composant pour `ui/IslandPlanner.tsx` ; dépendances en retard d'une à
+    deux majeures.
 
 ## Questions en jeu
 
@@ -82,7 +83,7 @@ Phases attaquées dans l'ordre. **124 tests verts, tsc clean, lint 0, build gree
 
 Issu d'une investigation multi-agents vérifiée contre le code **actuel** (post-simplification +
 correctifs B1-B8 / I1-I8). 30 items réels, 0 déjà fait par erreur. Séquencé en 7 phases respectant
-les dépendances. Effort S/M/L/XL · Risque low/med/high. Voir [AUDIT-2026-06-21.md](AUDIT-2026-06-21.md).
+les dépendances. Effort S/M/L/XL · Risque low/med/high. Voir [AUDIT-2026-06-21.md](../docs/archive/AUDIT-2026-06-21.md).
 
 Rien de tout ceci n'est **bloquant** : l'app marche (1 optimiseur, 93 tests verts). C'est de la
 qualité, de la justesse de modèle, et de la dette.

@@ -8,6 +8,10 @@ sauvegarde dans `src/monde`, données du jeu extraites dans `src/data`.
 
 @docs/REPRISE.md
 
+Exigences de Rémi, à tenir avant tout gain d'habitants, et le test qui vérifie chacune :
+
+@.claude/exigences.md
+
 À lire au besoin (convention `.claude/` par thème) :
 - architecture, modules et flux de données : `.claude/architecture.md` ;
 - décisions structurantes et leur raison : `.claude/decisions.md` ;
@@ -16,5 +20,5 @@ sauvegarde dans `src/monde`, données du jeu extraites dans `src/data`.
   `python tools/gen_functions_index.py`) ;
 - feuille de route : `.claude/ROADMAP.md` ;
 - mécanique du jeu, règles prouvées et questions ouvertes : `.claude/GAME_MECHANICS.md` ;
-- conceptions et plans datés : `docs/superpowers/` (archives ; `.claude/AUDIT-*`, `PROGRESS.md`
-  et `docs/ETAT-ET-SUITE.md` sont historiques).
+- conceptions et plans datés : `docs/superpowers/` ; documents historiques (anciens audits,
+  anciens états, détail des chantiers faits) : `docs/archive/`.
