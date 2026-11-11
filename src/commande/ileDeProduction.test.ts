@@ -4,7 +4,7 @@ import type { BuildingDef } from "../model/types";
 import { buildIslandGrid } from "../data/islandGrid";
 import { downscaleGrid } from "../optimizer/halfTileAdapter";
 import { makeLookup, roadConnected, rootedRoadSet } from "../engine/rules";
-import { planifierCommande } from "./planifier";
+import { mainOeuvrePosee, planifierCommande } from "./planifier";
 import type { Commande } from "./nomenclature";
 
 /**
@@ -42,6 +42,9 @@ describe("île de production sur de vraies cartes", () => {
       const coupes = p.layout.buildings.filter((b) => !roadConnected(p.layout, lookup, b, set)).map((b) => lookup(b.defId)?.name);
       expect(coupes).toEqual([]);
       expect(p.manques).toEqual([]);
+      // la main-d'œuvre de ce qui est POSÉ est logée, pas seulement celle du devis
+      expect(Object.keys(p.mainOeuvre.demande).length).toBeGreaterThan(0);
+      expect(p.mainOeuvre.manque).toEqual({});
       for (const o of p.objectif) {
         expect(o.produit, o.nom).toBe(o.parMinute);
         expect(o.pose, o.nom).toBe(o.parMinute);
@@ -53,4 +56,15 @@ describe("île de production sur de vraies cartes", () => {
       }
     });
   }
+
+  it("la main-d'œuvre se compte sur ce qui est posé : un atelier sans maison manque d'ouvriers", () => {
+    // g3174 : la boulangerie du Latium
+    const boulangerie = { uid: "b", defId: "g3174", x: 0, y: 0, rotation: 0 as const, locked: false };
+    const [palier, n] = Object.entries(mainOeuvrePosee([boulangerie], {}).manque)[0];
+    expect(n).toBeGreaterThan(0);
+    // assez d'habitants de ce palier : plus rien ne manque
+    expect(mainOeuvrePosee([boulangerie], { [palier]: 10_000 }).manque).toEqual({});
+    // le réglage d'entretien de la partie alourdit ce que le bâtiment réclame
+    expect(mainOeuvrePosee([boulangerie], {}, 1.22).manque[palier]).toBeGreaterThan(n);
+  });
 });

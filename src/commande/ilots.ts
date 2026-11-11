@@ -1302,6 +1302,7 @@ function disposer(
 
   // ─── COMPTES ────────────────────────────────────────────────────────────────────────
   const maisonsParPalier: Record<string, number> = {};
+  const habitantsParPalier: Record<string, number> = {};
   let habitants = 0;
   let impots = 0;
   const somme: Record<string, number> = {};
@@ -1311,7 +1312,9 @@ function disposer(
     if (!o) continue;
     maisonsParPalier[o.guid] = (maisonsParPalier[o.guid] ?? 0) + 1;
     // le dieu ajoute ses habitants à CHAQUE maison, à la dévotion du devis (sa Foi)
-    habitants += o.cap + Math.max(0, nom.dieu?.residence.Population ?? 0);
+    const pop = o.cap + Math.max(0, nom.dieu?.residence.Population ?? 0);
+    habitants += pop;
+    habitantsParPalier[o.guid] = (habitantsParPalier[o.guid] ?? 0) + pop;
     impots += o.money;
     for (const k of VITAL_ATTRS) somme[k] += o.attrs[k] ?? 0;
   }
@@ -1356,6 +1359,7 @@ function disposer(
     lignes,
     habitants,
     maisonsParPalier,
+    habitantsParPalier,
     impots: Math.round(impots),
     bilan,
     viable: verdictViable(bilan, nMaisons, 0),

@@ -194,13 +194,25 @@ Rémi n'étaient écrites nulle part.
   le plus grand multiple que l'île tient en entier ; un bien borné par les emplacements
   plafonne l'île, et le plan dit pourquoi. medium_01 : 33,7 pains et 22,5 tuniques par minute
   tenus (28 pains sur 40 demandés avant). Une à deux minutes sur une grande île.
-- **Reste de l'audit** : main-d'œuvre sur ce qui est posé.
+- **Main-d'œuvre sur ce qui est posé** (12/11 ; `mainOeuvrePosee`, `commande/planifier.ts`) :
+  ce que réclament les bâtiments posés contre ce qu'offrent les maisons posées, en manque du
+  plan (ou en avertissement si le joueur a choisi « signaler »). Mesuré sur six cas : devis et
+  pose s'accordent quand tout est posé ; dans les données, seuls les bâtiments de production
+  réclament de la main-d'œuvre, aucun service. **L'audit du 10/11 est clos.**
 
 ## Ce qui reste à faire, par intérêt (11/11/2026)
 
 Feuille de route détaillée : `.claude/ROADMAP.md`.
 
 **Planification d'un monde** (l'objectif principal)
+
+À faire d'abord, demandé par Rémi le 12/11 : **exploiter les emplacements des îles principales
+selon ce qui manque au monde**, et envoyer ces matières aux îles de production (les navires
+reviennent chargés de produits finis). Aujourd'hui une île principale choisit ses mines au prix
+de vente (`pickSlotBuilding`), un seul bâtiment par type d'emplacement, et n'en pose presque
+pas : medium_01, Patriciens, 7 emplacements de montagne et 4 de rivière → une mine d'or et un
+laveur d'or. Le monde d'essai manque pourtant de minerai d'or et de minéraux.
+
 1. **Devis d'une île de production, ce qui reste faux** (sonde du 11/11) : les quartiers
    d'ouvriers de haut palier (services et eau : 2 à 3 fois la terre du devis quand l'île est
    pleine) ; un ou deux emplacements de montagne pris par les sources d'aqueduc, ou murés par

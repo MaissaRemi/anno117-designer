@@ -20,7 +20,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `DispositionOpts` (interface, L18) [3]
 - `LignePosee` (interface, L31) [3]
 - `PlanQuartiers` (interface, L39) [2]
-- `distancesDeCroissance` (function, L123) [2] : Distance OCTILE le long de la terre depuis des graines (10 en ligne droite, 14 en diagonale, la diagonale n'étant permi…
+- `distancesDeCroissance` (function, L125) [2] : Distance OCTILE le long de la terre depuis des graines (10 en ligne droite, 14 en diagonale, la diagonale n'étant permi…
 ### `src/commande/ilots.ts` — LES ÎLOTS : UNE VILLE QUI SE LIT
 - `ILOT` (const, L44) [0]
 - `besoinEnIlots` (function, L86) [1] : Îlots à fusionner (k colonnes × m rangées) pour loger ce bâtiment, et l'orientation.
@@ -42,13 +42,15 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `copiesPourCouvrir` (function, L170) [2] : Copies d'un service à portée-rue pour couvrir une zone : pavage en diamants L1 de rayon effectif `portée − pas du peign…
 - `nomenclature` (function, L182) [21] : La nomenclature d'une commande.
 ### `src/commande/planifier.ts`
-- `ObjectifPose` (interface, L28) [0] : Un bien de l'objectif, et le débit que le plan POSÉ en tire.
-- `Argent` (interface, L33) [9]
-- `PlanCommande` (interface, L35) [1]
-- `compterEmplacements` (function, L55) [0] : Emplacements de terrain de l'île, par type.
-- `planifierCommande` (function, L61) [9]
-- `ResultatCommande` (interface, L151) [6] : Ce qui traverse la frontière du worker : le plan à poser et le rapport, sans les masques de grille (zone, île) qui pèse…
-- `resumer` (function, L174) [3]
+- `MainOeuvre` (interface, L19) [0]
+- `mainOeuvrePosee` (function, L27) [1] : La main-d'œuvre du plan POSÉ, par palier : ce que réclament les bâtiments posés, ce qu'offrent les maisons posées et le…
+- `ObjectifPose` (interface, L53) [0] : Un bien de l'objectif, et le débit que le plan POSÉ en tire.
+- `Argent` (interface, L58) [9]
+- `PlanCommande` (interface, L60) [1]
+- `compterEmplacements` (function, L82) [0] : Emplacements de terrain de l'île, par type.
+- `planifierCommande` (function, L88) [9]
+- `ResultatCommande` (interface, L188) [6] : Ce qui traverse la frontière du worker : le plan à poser et le rapport, sans les masques de grille (zone, île) qui pèse…
+- `resumer` (function, L211) [3]
 ### `src/commande/planifierWorker.ts`
 - `CommandeRequete` (interface, L9) [2]
 - `CommandeMsg` (type, L17) [1]
@@ -134,7 +136,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `economy` (const, L245) [69]
 - `tiers` (const, L247) [42]
 - `upkeepOf` (const, L248) [4]
-- `tierByGuid` (const, L252) [10]
+- `tierByGuid` (const, L252) [11]
 - `residentialChain` (function, L271) [3] : Chaîne résidentielle menant au tier-cible : ses ANCÊTRES dans le graphe de montée, du plus bas à la cible.
 - `residentialChainExtended` (function, L305) [7] : CHAÎNE ÉTENDUE — la chaîne résidentielle, plus les LIGNÉES PARALLÈLES du même monde.
 - `goodName` (const, L321) [12]
@@ -174,7 +176,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `uniqueCap` (function, L42) [5] : Combien d'exemplaires de ce bâtiment l'île accepte, tous porteurs du même type confondus.
 ### `src/economy/workforce.ts` — MAIN-D'ŒUVRE — le pool d'ouvriers d'une île.
 - `Difficulty` (type, L26) [0] : Réglage de difficulté de la partie — le comptoir n'offre pas autant dans les trois.
-- `workforceGrant` (function, L37) [3] : Main-d'œuvre NETTE offerte par un bâtiment, par palier.
+- `workforceGrant` (function, L37) [4] : Main-d'œuvre NETTE offerte par un bâtiment, par palier.
 - `workforceDemand` (function, L56) [2] : Main-d'œuvre réclamée par un ensemble de bâtiments posés, par palier.
 - `workforceDeficit` (function, L67) [1] : Ce qui manque, palier par palier.
 - `alienDemand` (function, L87) [1] : Paliers dont la main-d'œuvre est HORS DU MONDE de l'île.
@@ -265,7 +267,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `estEntrepot` (const, L19) [3] : Un entrepôt, de l'un ou l'autre monde.
 - `pickWarehouseDef` (function, L21) [3]
 ### `src/model/factories.ts` — Identifiant unique court (suffisant côté client).
-- `uid` (function, L5) [40]
+- `uid` (function, L5) [41]
 - `makeGrid` (function, L10) [10]
 - `emptyLayout` (function, L19) [4] : Layout vide pour l'éditeur : grille ½-tuile (cellsPerTile=2) afin que la construction 45° soit possible d'emblée (cf.
 - `resizeGridShape` (function, L28) [2] : Redimensionne une grille en PRÉSERVANT le terrain : re-clippe les masques par-case (usable/water/rivers) et filtre les…

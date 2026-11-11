@@ -7,12 +7,37 @@ import type { Commande, ImportObjectif, LigneObjectif } from "./nomenclature";
 import type { DispositionOpts, LignePosee, PlanQuartiers } from "./disposition";
 import { disposerQuartiers } from "./ilots";
 import { disposerProduction, type PlanProduction } from "./production";
-import { upkeepOf } from "../economy/economy";
+import { economy, tierByGuid, upkeepOf } from "../economy/economy";
+import { workforceGrant } from "../economy/workforce";
 
 /** L'entretien se compte sur les bâtiments réellement posés, comme pour une île principale. */
 function argentDe(impots: number, buildings: Layout["buildings"]): Argent {
   const entretien = Math.round(buildings.reduce((s, b) => s + upkeepOf(b.defId), 0));
   return { impots, entretien, net: impots - entretien };
+}
+
+export interface MainOeuvre { demande: Record<string, number>; offre: Record<string, number>; manque: Record<string, number> }
+
+/**
+ * La main-d'œuvre du plan POSÉ, par palier : ce que réclament les bâtiments posés, ce qu'offrent
+ * les maisons posées et le comptoir. Le devis la calculait sur ses propres comptes ; or la pose
+ * met plus de services que lui (35 pour 23 sur une petite île), des entrepôts qu'il ignore, et
+ * parfois moins de maisons : en jeu, les ateliers tournaient au ralenti sans que le plan le dise.
+ */
+export function mainOeuvrePosee(
+  buildings: Layout["buildings"], habitantsParPalier: Record<string, number>, facteurEntretien = 1,
+): MainOeuvre {
+  const demande: Record<string, number> = {}, offre: Record<string, number> = {}, manque: Record<string, number> = {};
+  for (const b of buildings) {
+    for (const w of economy.buildingWorkforce[b.defId] ?? []) demande[w.tier] = (demande[w.tier] ?? 0) + w.amount * facteurEntretien;
+    for (const [g, n] of Object.entries(workforceGrant(b.defId))) offre[g] = (offre[g] ?? 0) + n;
+  }
+  for (const [g, pop] of Object.entries(habitantsParPalier)) offre[g] = (offre[g] ?? 0) + pop * (tierByGuid(g)?.factor ?? 0);
+  for (const [g, d] of Object.entries(demande)) {
+    const m = Math.ceil(d - (offre[g] ?? 0) - 1e-6);
+    if (m > 0) manque[g] = m;
+  }
+  return { demande, offre, manque };
 }
 
 /**
@@ -45,6 +70,8 @@ export interface PlanCommande {
   imports: ImportObjectif[];
   /** Argent par minute : impôts des maisons, entretien de TOUS les bâtiments posés. */
   argent: Argent;
+  /** Main-d'œuvre de ce qui est posé (et non du devis). */
+  mainOeuvre: MainOeuvre;
   /** Tout est posé, servi, et relié au comptoir. */
   servi: boolean;
   manques: string[];
@@ -119,6 +146,15 @@ export function planifierCommande(
     manques.push("Aucun comptoir : le réseau routier n'a pas de racine");
   }
 
+  // La main-d'œuvre se lit sur ce qui est posé. « Loger » promettait de la loger : ce qui manque
+  // est un manque du plan ; « signaler » demandait seulement de le dire.
+  const mainOeuvre = mainOeuvrePosee(layout.buildings, q.habitantsParPalier, commande.facteurEntretien);
+  const avertissements = [...q.avertissements, ...p.avertissements];
+  for (const [g, m] of Object.entries(mainOeuvre.manque)) {
+    const texte = `Main-d'œuvre ${tierByGuid(g)?.name ?? g} : ${m} manquante(s) pour ce qui est posé (${Math.round(mainOeuvre.offre[g] ?? 0)} pour ${Math.round(mainOeuvre.demande[g])})`;
+    (commande.mainOeuvre === "signaler" ? avertissements : manques).push(texte);
+  }
+
   const posee = new Map(p.lignes.map((l) => [l.defId, l]));
   const objectif: ObjectifPose[] = q.nomenclature.objectif.map((o) => {
     let part = 1;
@@ -136,11 +172,12 @@ export function planifierCommande(
     objectif,
     imports: q.nomenclature.imports,
     argent: argentDe(q.impots ?? 0, layout.buildings),
+    mainOeuvre,
     lignes: [...q.lignes, ...p.lignes],
     qualite: planQuality(layout, grid, lookup),
     servi: manques.length === 0,
     manques,
-    avertissements: [...q.avertissements, ...p.avertissements],
+    avertissements,
   };
 }
 
