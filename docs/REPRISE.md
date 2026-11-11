@@ -204,6 +204,11 @@ Rémi n'étaient écrites nulle part.
 
 Feuille de route détaillée : `.claude/ROADMAP.md`.
 
+**Prochaine session, demandé par Rémi le 12/11** : essayer un autre moteur de plans — un
+modèle entraîné sur la machine, et des plans de référence (optimum prouvé sur un petit cas,
+plafond par île) auxquels comparer les méthodes. Réflexion, ordre des essais et décisions à
+prendre : `docs/superpowers/specs/2026-11-12-autre-moteur-de-plans-reflexion.md`.
+
 **Planification d'un monde** (l'objectif principal)
 
 Demandé par Rémi le 12/11 : **exploiter les emplacements des îles principales selon ce qui
