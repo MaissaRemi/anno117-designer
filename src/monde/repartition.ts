@@ -27,8 +27,10 @@ export interface IleProductrice {
   emplacements: Record<string, number>;
   /** Cases de terre constructible, à l'échelle des moteurs (tuile). */
   terre: number;
-  /** Cases de la bande d'eau côtière constructible (tuile). */
-  cote: number;
+  /** Nombre d'exemplaires d'un bâtiment côtier que la côte de l'île accueille (cf.
+   *  `capaciteCote`, `calcul.ts`). Un pourcentage de la bande d'eau par province promettait
+   *  30 marais salants là où 18 tiennent, et 9 ramasseurs de coques pour 3. */
+  capaciteCote: (defId: string) => number;
   dieu?: string;
 }
 
@@ -54,15 +56,6 @@ export const fertilitesPourMoteur = (f: string[] | null): string[] => (f && f.le
 
 /** Part de la terre qu'une île de production peut vraiment bâtir : routes, côte, formes. */
 const REMPLISSAGE = 0.65;
-/**
- * Part de la bande d'eau côtière que couvrent vraiment les parties dans l'eau des bâtiments
- * côtiers, PAR PROVINCE. Mesuré le 04/11/2026 en posant 80 exemplaires, après la lecture des
- * quais (`partieQuai`) : au Latium 14 % (cabanes de pêcheur, escargotières), 7 % (marais
- * salants) ; en Albion 5,6 % (salicorne), 4,3 % (coquillages), 1,7 % (coques). Les côtiers
- * d'Albion sont longs le long du rivage (6 à 7 cases) : une côte découpée en accueille peu. La
- * bande d'eau, elle, est aussi profonde dans les deux provinces (9 cases et plus).
- */
-const COTE_UTILE: Record<string, number> = { Roman: 0.12, Celtic: 0.05 };
 /** Emplacements dont le nombre borne une exploitation (le marais ne borne rien). */
 const LIMITANTS = ["mountain", "river"] as const;
 const EPS = 1e-6;
@@ -93,7 +86,7 @@ export function besoinsDuDevis(n: Nomenclature, consommation = 1): BienDebit[] {
 
 export interface Repartition {
   affectation: Record<string, BienDebit[]>;
-  /** Budgets estimés consommés par île : terre, bande d'eau côtière, emplacements par type. */
+  /** Budgets estimés consommés par île : terre (cases), côte (part de 0 à 1), emplacements par type. */
   terreUtilisee: Record<string, number>;
   coteUtilisee: Record<string, number>;
   placesUtilisees: Record<string, Record<string, number>>;
@@ -137,7 +130,10 @@ export function repartir(
   // Les compter bien par bien laissait deux mines se disputer les mêmes emplacements de montagne
   // et remplissait une côte deux fois.
   const cap = new Map(iles.map((i) => [i.cle, i.terre * REMPLISSAGE - (dejaPris.terreUtilisee?.[i.cle] ?? 0)]));
-  const cote = new Map(iles.map((i) => [i.cle, i.cote * (COTE_UTILE[i.region] ?? COTE_UTILE.Roman) - (dejaPris.coteUtilisee?.[i.cle] ?? 0)]));
+  // la côte est UNE part de 0 à 1, que se partagent des bâtiments de longueurs différentes
+  const cote = new Map(iles.map((i) => [i.cle, 1 - (dejaPris.coteUtilisee?.[i.cle] ?? 0)]));
+  // Côte et emplacements se comptent en BÂTIMENTS ENTIERS : une demi-mine prend un emplacement.
+  const entiers = (n: number) => Math.ceil(n - 1e-3);
   const places = new Map(iles.map((i) => [i.cle, Object.fromEntries(LIMITANTS.map(
     (t) => [t, (i.emplacements[t] ?? 0) - (dejaPris.placesUtilisees?.[i.cle]?.[t] ?? 0)])) as Record<string, number>]));
   const aff = new Map<string, Map<string, number>>();
@@ -146,8 +142,12 @@ export function repartir(
   const placesUtilisees: Record<string, Record<string, number>> = {};
   const nonCouvert: Repartition["nonCouvert"] = [];
 
-  /** Par unité produite : terre, côte, emplacements ; et la part produite sur place. */
-  interface Estimation { produit: number; parUnite: number; cote: number; places: Record<string, number> }
+  /** Par unité produite : terre, bâtiments côtiers (et ce que la côte en accueille), emplacements. */
+  interface Estimation {
+    produit: number; parUnite: number;
+    cotiers: { parUnite: number; capacite: number }[];
+    places: Record<string, number>;
+  }
   const cache = new Map<string, Estimation>();
   const estimer = (ile: IleProductrice, good: string, debit: number): Estimation => {
     const k = `${ile.cle}|${good}|${Math.round(debit * 10)}`;
@@ -155,17 +155,18 @@ export function repartir(
     if (!e) {
       const n = devisIle(ile, [{ good, parMinute: debit }], o);
       const produit = n.objectif[0]?.produit ?? 0;
-      let eau = 0;
+      const cotiers = new Map<string, number>();
       const pl: Record<string, number> = {};
       for (const l of n.lignes) {
         if (l.role !== "production") continue;
         const d = o.lookup(l.defId);
-        if (d?.partieEau) eau += l.nombre * d.partieEau.w * d.partieEau.h;
+        if (d?.partieEau) cotiers.set(d.id, (cotiers.get(d.id) ?? 0) + l.nombre);
         if (d?.slotType && (LIMITANTS as readonly string[]).includes(d.slotType)) pl[d.slotType] = (pl[d.slotType] ?? 0) + l.nombre;
       }
       const u = produit > EPS ? 1 / produit : Infinity;
       e = {
-        produit, parUnite: terreDuDevis(n) * u, cote: eau * u,
+        produit, parUnite: terreDuDevis(n) * u,
+        cotiers: [...cotiers].map(([id, nb]) => ({ parUnite: nb * u, capacite: ile.capaciteCote(id) })),
         places: Object.fromEntries(Object.entries(pl).map(([t, v]) => [t, v * u])),
       };
       cache.set(k, e);
@@ -189,18 +190,25 @@ export function repartir(
       if (place <= 0 || !Number.isFinite(e.parUnite)) continue;
       // le premier budget épuisé borne : terre, côte, chaque type d'emplacement
       let q = Math.min(reste, place / e.parUnite, e.produit);
-      if (e.cote > 0) q = Math.min(q, cote.get(ile.cle)! / e.cote);
+      const coteLibre = cote.get(ile.cle)!;
+      // les côtiers d'une même chaîne (maquereaux ET marais salants du garum) se partagent la côte
+      const coteParUnite = e.cotiers.reduce((s, c) => s + c.parUnite / c.capacite, 0);
+      if (coteParUnite > 0) {
+        q = Math.min(q, coteLibre / coteParUnite);
+        for (const c of e.cotiers) q = Math.min(q, Math.floor(q * c.parUnite + 1e-3) / c.parUnite);
+      }
       const pl = places.get(ile.cle)!;
-      for (const [t, v] of Object.entries(e.places)) if (v > 0) q = Math.min(q, pl[t] / v);
+      for (const [t, v] of Object.entries(e.places)) if (v > 0) q = Math.min(q, Math.floor(pl[t] + 1e-3) / v);
       if (q <= EPS) continue;
       const m = aff.get(ile.cle) ?? new Map<string, number>();
       m.set(good, (m.get(good) ?? 0) + q);
       aff.set(ile.cle, m);
       cap.set(ile.cle, place - q * e.parUnite);
-      cote.set(ile.cle, cote.get(ile.cle)! - q * e.cote);
-      coteUtilisee[ile.cle] = (coteUtilisee[ile.cle] ?? 0) + q * e.cote;
+      const cotePrise = e.cotiers.reduce((s, c) => s + entiers(q * c.parUnite) / c.capacite, 0);
+      cote.set(ile.cle, coteLibre - cotePrise);
+      coteUtilisee[ile.cle] = (coteUtilisee[ile.cle] ?? 0) + cotePrise;
       const prises = (placesUtilisees[ile.cle] ??= {});
-      for (const [t, v] of Object.entries(e.places)) { pl[t] -= q * v; prises[t] = (prises[t] ?? 0) + q * v; }
+      for (const [t, v] of Object.entries(e.places)) { const nb = entiers(q * v); pl[t] -= nb; prises[t] = (prises[t] ?? 0) + nb; }
       utilisee[ile.cle] = (utilisee[ile.cle] ?? 0) + q * e.parUnite;
       reste -= q;
     }
@@ -218,7 +226,9 @@ export function repartir(
 
   const affectation: Record<string, BienDebit[]> = {};
   for (const [cle, m] of aff) {
-    affectation[cle] = [...m].map(([good, parMinute]) => ({ good, parMinute: Math.round(parMinute * 100) / 100 }))
+    // arrondi VERS LE BAS : un centième de trop réclame un bâtiment de plus que la côte ou les
+    // emplacements n'en accueillent
+    affectation[cle] = [...m].map(([good, parMinute]) => ({ good, parMinute: Math.floor(parMinute * 100 + 1e-6) / 100 }))
       .filter((b) => b.parMinute > 0).sort((a, b) => b.parMinute - a.parMinute);
   }
   return { affectation, terreUtilisee: utilisee, coteUtilisee, placesUtilisees, nonCouvert: nonCouvert.sort((a, b) => b.parMinute - a.parMinute) };

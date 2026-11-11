@@ -5,6 +5,12 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
 
 ## Planification d'un monde
 
+- **Un devis se corrige en le mesurant contre la pose** (11/11) : pour chaque bien, ce que la
+  répartition promet à une île seule, puis ce que le moteur pose. Trois erreurs trouvées ainsi,
+  aucune sur les fermes que l'on soupçonnait : l'aire libre oubliée, la côte, les emplacements.
+- **La côte se compte en bâtiments, sur la carte** (11/11, `capaciteCote`) : un pourcentage de
+  la bande d'eau par province promettait 30 marais salants là où 18 tiennent. La pose en tient
+  77 à 86 % (`COTE_TENUE` = 0,75) ; côte et emplacements se comptent en bâtiments entiers.
 - **L'île principale se conseille en la planifiant** (11/11, exigence E5) : chaque île à moi
   est posée seule en île principale par le vrai moteur, puis classée selon l'objectif de la
   partie. Aucun modèle d'estimation à entretenir ; quelques secondes par île, en parallèle.

@@ -37,7 +37,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `LigneNomenclature` (interface, L134) [0]
 - `Nomenclature` (interface, L145) [3]
 - `copiesPourCouvrir` (function, L170) [2] : Copies d'un service à portée-rue pour couvrir une zone : pavage en diamants L1 de rayon effectif `portée − pas du peign…
-- `nomenclature` (function, L179) [19] : La nomenclature d'une commande.
+- `nomenclature` (function, L182) [19] : La nomenclature d'une commande.
 ### `src/commande/planifier.ts`
 - `ObjectifPose` (interface, L28) [0] : Un bien de l'objectif, et le débit que le plan POSÉ en tire.
 - `Argent` (interface, L33) [9]
@@ -61,7 +61,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ## src/data
 
 ### `src/data/islandGrid.ts` — Construit la grille VIVANTE ½-tuile (cellsPerTile=2) d'une île à partir de son id.
-- `buildIslandGrid` (function, L7) [28]
+- `buildIslandGrid` (function, L7) [29]
 ### `src/data/islands.ts` — Décode le masque RLE en tableau de booléens (longueur w*h).
 - `Island` (interface, L3) [2]
 - `islands` (const, L12) [34]
@@ -181,13 +181,13 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ### `src/engine/geometry.ts`
 - `isDiagonal` (const, L11) [1] : Rotation diagonale (diamant) ?
 - `gridScale` (const, L14) [6] : Cellules par tuile d'une grille (½-tuile = 2 ; tuile/optimiseur = 1 par défaut).
-- `footprintSize` (function, L17) [19] : Dimensions effectives après rotation, EN CELLULES (def.size ×scale).
-- `partieEauPosee` (function, L32) [4] : Partie dans l'eau d'un bâtiment côtier posé avec `rot`, en cases relatives à son coin (même échelle que l'emprise), ou…
+- `footprintSize` (function, L17) [20] : Dimensions effectives après rotation, EN CELLULES (def.size ×scale).
+- `partieEauPosee` (function, L32) [5] : Partie dans l'eau d'un bâtiment côtier posé avec `rot`, en cases relatives à son coin (même échelle que l'emprise), ou…
 - `partieQuaiPosee` (function, L39) [1] : Le quai d'un bâtiment côtier posé avec `rot` (cf.
 - `footprintCells` (function, L59) [9] : Liste des cases occupées (EN CELLULES) par un bâtiment posé en (x,y).
 - `inBounds` (const, L88) [1]
 - `cellIndex` (const, L91) [1]
-- `routeSeule` (const, L99) [5] : Une ROUTE peut-elle passer sur la case `c` alors qu'aucun bâtiment ne le peut ?
+- `routeSeule` (const, L99) [6] : Une ROUTE peut-elle passer sur la case `c` alors qu'aucun bâtiment ne le peut ?
 - `isUsable` (const, L101) [2]
 - `isWater` (const, L105) [2] : Case d'eau (mer) ?
 - `isBuildable` (const, L113) [2] : Case constructible pour un bâtiment selon son terrain de pose.
@@ -240,10 +240,10 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `planningRange` (function, L39) [11] : Portée de PLANIFICATION d'un bâtiment, en cases de route du type donné.
 - `porteeDeTrajet` (function, L49) [2] : Portée en LONGUEUR de trajet, sans arrondi : pour un réseau qui mêle cases droites (1) et losanges diagonaux (√2, cf.
 ### `src/engine/rules.ts`
-- `DefLookup` (type, L37) [23]
+- `DefLookup` (type, L37) [24]
 - `makeLookup` (function, L71) [43]
 - `canPlace` (function, L103) [3] : Peut-on poser `def` en (x,y,rot) ?
-- `terrainConvient` (function, L133) [5] : Le terrain convient-il à `def` posé en (x, y) ?
+- `terrainConvient` (function, L133) [6] : Le terrain convient-il à `def` posé en (x, y) ?
 - `rootedRoadSet` (function, L160) [13] : Ensemble des cases de route reliées à un comptoir (roadRoot), via BFS sur le réseau (4-connexité).
 - `roadConnected` (function, L220) [10] : Le bâtiment touche-t-il une route reliée au comptoir ?
 - `FieldResult` (interface, L250) [0]
@@ -276,7 +276,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `RefIssues` (interface, L29) [0]
 - `findOrphanRefs` (function, L39) [2] : Vérifie l'intégrité référentielle d'une disposition : tout `defId` doit exister dans le catalogue et tout champ doit po…
 ### `src/model/types.ts`
-- `Rotation` (type, L5) [9]
+- `Rotation` (type, L5) [10]
 - `RadiusKind` (type, L7) [0]
 - `RadiusSpec` (interface, L9) [0]
 - `FieldSpec` (interface, L14) [0]
@@ -297,21 +297,22 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ## src/monde
 
 ### `src/monde/calcul.ts` — CALCULER UN MONDE
-- `Executeurs` (interface, L40) [3]
-- `PlanPose` (interface, L45) [0]
-- `IleCalculee` (interface, L53) [1]
-- `Flux` (interface, L76) [0]
-- `Deficit` (interface, L77) [0]
-- `ResultatMonde` (interface, L79) [2]
-- `OptionsCalcul` (interface, L93) [0]
-- `VERSION_CALCUL` (const, L108) [1] : VERSION DES MOTEURS, dans l'empreinte de chaque île.
-- `versProductrice` (function, L148) [0] : Une île en île de production : ce que la répartition et la pose savent d'elle.
-- `sansEmplacementsInactifs` (function, L176) [1] : L'île telle qu'elle est DANS LA PARTIE : sans les emplacements que le générateur de carte n'a pas activés (lus dans une…
-- `ConseilPrincipale` (interface, L220) [1]
-- `conseillerPrincipales` (function, L240) [2] : CONSEILLER L'ÎLE PRINCIPALE (exigence E5)
-- `calculerMonde` (function, L259) [3]
-- `nomIle` (const, L528) [0] : Nom lisible d'une île de la configuration.
-- `nomPalier` (const, L529) [0]
+- `Executeurs` (interface, L42) [3]
+- `PlanPose` (interface, L47) [0]
+- `IleCalculee` (interface, L55) [1]
+- `Flux` (interface, L78) [0]
+- `Deficit` (interface, L79) [0]
+- `ResultatMonde` (interface, L81) [2]
+- `OptionsCalcul` (interface, L95) [0]
+- `VERSION_CALCUL` (const, L110) [1] : VERSION DES MOTEURS, dans l'empreinte de chaque île.
+- `capaciteCote` (function, L154) [3] : Combien d'exemplaires d'un bâtiment côtier la côte de l'île accueille, posés seuls et serrés : la règle de terrain de l…
+- `versProductrice` (function, L193) [0] : Une île en île de production : ce que la répartition et la pose savent d'elle.
+- `sansEmplacementsInactifs` (function, L233) [1] : L'île telle qu'elle est DANS LA PARTIE : sans les emplacements que le générateur de carte n'a pas activés (lus dans une…
+- `ConseilPrincipale` (interface, L277) [1]
+- `conseillerPrincipales` (function, L297) [2] : CONSEILLER L'ÎLE PRINCIPALE (exigence E5)
+- `calculerMonde` (function, L316) [3]
+- `nomIle` (const, L585) [0] : Nom lisible d'une île de la configuration.
+- `nomPalier` (const, L586) [0]
 ### `src/monde/configuration.ts` — CONFIGURATION D'UN MONDE
 - `Propriete` (type, L20) [2] : À qui est l'île.
 - `PROPRIETES` (const, L21) [0]
@@ -345,19 +346,19 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ### `src/monde/repartition.ts` — RÉPARTIR LA DEMANDE D'UN MONDE ENTRE SES ÎLES DE PRODUCTION
 - `BienDebit` (interface, L20) [1]
 - `IleProductrice` (interface, L22) [2]
-- `OptionsRepartition` (interface, L35) [2]
-- `AUCUNE_FERTILITE` (const, L52) [0] : Les moteurs d'île lisent une liste de fertilités VIDE comme « tout est présent » (convention de « Remplir l'île », où l…
-- `fertilitesPourMoteur` (const, L53) [2]
-- `devisIle` (function, L71) [2] : Le devis d'une île pour un objectif : bâtiments, ouvriers, biens de leurs maisons, imports.
-- `terreDuDevis` (const, L82) [0] : Terre consommée par l'objectif : production et quartiers des ouvriers.
-- `besoinsDuDevis` (function, L86) [2] : Ce qu'il faut AUSSI fournir à l'île pour qu'elle tienne son objectif : les biens de ses ouvriers et les matières premiè…
-- `Repartition` (interface, L94) [0]
-- `BudgetsPris` (type, L104) [1] : Ce qu'une répartition précédente a déjà pris sur les îles (passe de rattrapage).
-- `cumulerBudgets` (function, L107) [2] : Cumule les budgets pris par deux répartitions successives.
-- `repartir` (function, L124) [2]
-- `nomDuBien` (const, L227) [1]
-- `SuggestionAchat` (interface, L231) [1]
-- `suggererAchats` (function, L253) [1] : Les îles à acheter qui couvriraient le plus de ce qui manque — choisies l'une après l'autre : la deuxième est jugée sur…
+- `OptionsRepartition` (interface, L37) [2]
+- `AUCUNE_FERTILITE` (const, L54) [0] : Les moteurs d'île lisent une liste de fertilités VIDE comme « tout est présent » (convention de « Remplir l'île », où l…
+- `fertilitesPourMoteur` (const, L55) [2]
+- `devisIle` (function, L64) [2] : Le devis d'une île pour un objectif : bâtiments, ouvriers, biens de leurs maisons, imports.
+- `terreDuDevis` (const, L75) [0] : Terre consommée par l'objectif : production et quartiers des ouvriers.
+- `besoinsDuDevis` (function, L79) [2] : Ce qu'il faut AUSSI fournir à l'île pour qu'elle tienne son objectif : les biens de ses ouvriers et les matières premiè…
+- `Repartition` (interface, L87) [0]
+- `BudgetsPris` (type, L97) [1] : Ce qu'une répartition précédente a déjà pris sur les îles (passe de rattrapage).
+- `cumulerBudgets` (function, L100) [2] : Cumule les budgets pris par deux répartitions successives.
+- `repartir` (function, L117) [2]
+- `nomDuBien` (const, L237) [1]
+- `SuggestionAchat` (interface, L241) [1]
+- `suggererAchats` (function, L263) [1] : Les îles à acheter qui couvriraient le plus de ce qui manque — choisies l'une après l'autre : la deuxième est jugée sur…
 
 ## src/monde/sauvegarde
 
@@ -420,7 +421,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `facadeDe` (function, L67) [2] : FAÇADE d'une pose : la rangée de cases le long du grand côté qui donne sur le plus de terre constructible.
 ### `src/optimizer/halfTileAdapter.ts` — Adaptateur ½-tuile ⇄ tuile pour l'optimiseur.
 - `gridWithObstacles` (function, L22) [4] : Marque l'emprise des bâtiments donnés comme NON constructible (obstacle) sur une copie de la grille.
-- `downscaleGrid` (function, L44) [26] : Inverse de upscale2x : ½-tuile → tuile (coin haut-gauche de chaque bloc 2×2).
+- `downscaleGrid` (function, L44) [28] : Inverse de upscale2x : ½-tuile → tuile (coin haut-gauche de chaque bloc 2×2).
 - `upscaleBuildings` (function, L75) [1] : Bâtiments tuile → ½-tuile : position ×2 (l'emprise re-double via cellsPerTile=2).
 - `upscaleTiles` (function, L80) [1] : Tuiles (route/champ/aqueduc) tuile → ½-tuile : 1 tuile → bloc 2×2 (route large 1 tuile).
 - `scaleResultToHalfTile` (function, L91) [4] : Reprojette un résultat de plan d'île (tuile) en ½-tuiles si la grille d'origine l'était.

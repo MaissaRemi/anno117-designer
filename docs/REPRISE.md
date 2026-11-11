@@ -180,17 +180,27 @@ Rémi n'étaient écrites nulle part.
 - **Étape 5, entretien** (11/11) : documents historiques dans `docs/archive/`, ce document
   ramené à l'état et à la suite, `persist/blueprints.ts` et le worktree d'agent supprimés, un
   seul type `DefLookup`, `main` aligné sur `dev` en local.
+- **Devis d'une île de production** (11/11 ; `monde/repartition.ts`, `monde/calcul.ts`,
+  `commande/nomenclature.ts`, `optimizer/slotPlan.ts`) : mesuré bien par bien, ce que la
+  répartition promet à une île contre ce que la pose tient (deux îles, hauteurs). L'aire libre
+  des bûcherons et ruchers entre dans l'emprise (la terre réelle valait 3 à 9 fois le devis) ;
+  la côte se compte en bâtiments que la carte accueille (`capaciteCote`, tenue à 75 %) et non
+  plus en pourcentage par province ; côte et emplacements en bâtiments entiers ; le raccord
+  d'une mine franchit une rivière (large_03 : 4 → 9 mines posées sur 9). Monde d'essai : demande
+  de la ville servie 66 → 73 %, affecté posé 79 → 86 %, déficits 89 → 74 u/min.
 - **Restent de l'audit** : main-d'œuvre sur ce qui est posé, mode « produire le maximum » d'une
-  île de production, part de la répartition arrondie au bâtiment entier.
+  île de production.
 
 ## Ce qui reste à faire, par intérêt (11/11/2026)
 
 Feuille de route détaillée : `.claude/ROADMAP.md`.
 
 **Planification d'un monde** (l'objectif principal)
-1. **Estimation de terre des fermes et des bâtiments à aire libre** : la répartition promet
-   parfois à une île plus qu'elle ne peut porter (terre comptée à 65 %) ; le rattrapage ne
-   compense qu'en partie. Mesurer l'écart devis / pose par type de chaîne, corriger le devis.
+1. **Devis d'une île de production, ce qui reste faux** (sonde du 11/11) : les quartiers
+   d'ouvriers de haut palier (services et eau : 2 à 3 fois la terre du devis quand l'île est
+   pleine) ; un ou deux emplacements de montagne pris par les sources d'aqueduc, ou murés par
+   ce qui est posé avant les mines ; plusieurs biens côtiers qui se disputent les mêmes places.
+   Les fermes, elles, sont justes (terre prise à 0,92 du devis).
 2. **Ouvriers des ateliers de luxe** : leurs biens de luxe alourdissent la demande ; le rendre
    visible dans le résultat (part de la demande due aux ouvriers).
 3. **Navires** (étape 5 de la conception) : temps de trajet entre îles à partir des positions

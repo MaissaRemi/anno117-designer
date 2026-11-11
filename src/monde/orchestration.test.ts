@@ -4,7 +4,9 @@ import type { BuildingDef } from "../model/types";
 import type { IslandPlanResult } from "../optimizer/islandPlan";
 import type { ResultatCommande } from "../commande/planifier";
 import { nouvelleConfiguration, nouvelleIle, type ConfigurationMonde, type IleDuMonde } from "./configuration";
-import { calculerMonde, conseillerPrincipales, VERSION_CALCUL, type Executeurs } from "./calcul";
+import { buildIslandGrid } from "../data/islandGrid";
+import { downscaleGrid } from "../optimizer/halfTileAdapter";
+import { calculerMonde, capaciteCote, conseillerPrincipales, VERSION_CALCUL, type Executeurs } from "./calcul";
 
 /**
  * L'ORCHESTRATION DU CALCUL D'UN MONDE, avec des moteurs FACTICES : une île principale demande
@@ -119,6 +121,16 @@ describe("orchestration du calcul d'un monde", () => {
     const r2 = await calculerMonde(c, { catalog, executeurs, precedent: ancien });
     expect(appels).toEqual({ principale: 2, production: 2 });
     expect(r2.reutilisees).toBe(0);
+  });
+
+  it("la côte d'une île accueille un nombre compté de bâtiments côtiers, lu sur sa carte", () => {
+    const grille = downscaleGrid(buildIslandGrid("roman_island_large_02")!);
+    const def = (nom: string) => catalog.find((d) => d.name === nom && d.region === "Roman")!;
+    // mesuré le 11/11/2026 ; la pose en tient 77 à 86 % (`COTE_TENUE`)
+    expect(capaciteCote(grille, def("Marais salants"))).toBe(15);
+    expect(capaciteCote(grille, def("Cabane de pêcheur"))).toBe(25);
+    // un bâtiment de terre n'a pas de capacité côtière
+    expect(capaciteCote(grille, def("Bûcheron"))).toBe(0);
   });
 
   it("conseille l'île principale : chaque île à moi essayée seule, classée selon l'objectif de la partie", async () => {

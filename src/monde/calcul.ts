@@ -1,5 +1,7 @@
-import type { BuildingDef, GridShape, Layout } from "../model/types";
-import { makeLookup } from "../engine/rules";
+import type { BuildingDef, GridShape, Layout, Rotation } from "../model/types";
+import { footprintSize, partieEauPosee } from "../engine/geometry";
+import { makeLookup, terrainConvient, type DefLookup } from "../engine/rules";
+import { downscaleGrid } from "../optimizer/halfTileAdapter";
 import { buildIslandGrid } from "../data/islandGrid";
 import { tierByGuid } from "../economy/economy";
 import type { IslandPlanRequest, IslandPlanResult } from "../optimizer/islandPlan";
@@ -105,7 +107,7 @@ export interface OptionsCalcul {
  * ce qu'il pose : sans elle un monde déjà calculé reprenait ses anciens plans, et une correction
  * du moteur semblait ne pas avoir pris.
  */
-export const VERSION_CALCUL = 2;
+export const VERSION_CALCUL = 3;
 /** Tours de rattrapage après la première pose. Chacun repose les îles qui reçoivent du travail. */
 const TOURS_RATTRAPAGE = 3;
 
@@ -144,11 +146,66 @@ const emplacementsDe = (g: GridShape) => {
 const plan = (r: { buildings: Layout["buildings"]; roads: Layout["roads"]; fields: Layout["fields"]; aqueducts?: Layout["aqueducts"]; roadType?: Layout["roadType"] }): PlanPose =>
   ({ buildings: r.buildings, roads: r.roads, fields: r.fields, aqueducts: r.aqueducts ?? [], roadType: r.roadType });
 
+/**
+ * Combien d'exemplaires d'un bâtiment côtier la côte de l'île accueille, posés seuls et serrés :
+ * la règle de terrain de la pose (`terrainConvient` : quai à terre, partie dans l'eau sur l'eau
+ * constructible), sans ville ni route. `grid` à l'échelle des moteurs (tuile).
+ */
+export function capaciteCote(grid: GridShape, d: BuildingDef): number {
+  if (!grid.water || !partieEauPosee(d, 0)) return 0;
+  const W = grid.w, H = grid.h, occ = new Uint8Array(W * H);
+  let n = 0;
+  for (const rot of (d.rotatable ? [0, 90, 180, 270] : [0]) as Rotation[]) {
+    const { w, h } = footprintSize(d, rot), p = partieEauPosee(d, rot)!;
+    // l'emprise et sa partie dans l'eau, débordement compris : deux côtiers ne partagent pas leur eau
+    const x0 = Math.min(0, p.x), y0 = Math.min(0, p.y), x1 = Math.max(w, p.x + p.w), y1 = Math.max(h, p.y + p.h);
+    for (let y = 0; y + h <= H; y++) for (let x = 0; x + w <= W; x++) {
+      // rejet rapide : le premier coin de la partie dans l'eau n'est pas sur l'eau (une île de
+      // 512 × 512 demandait une seconde par bâtiment sans lui)
+      const ex = x + p.x, ey = y + p.y;
+      if (ex >= 0 && ey >= 0 && ex < W && ey < H && !grid.water[ey * W + ex]) continue;
+      if (!terrainConvient(grid, d, x, y, rot, 1)) continue;
+      let libre = true;
+      for (let j = y0; j < y1 && libre; j++) for (let i = x0; i < x1; i++) {
+        const xx = x + i, yy = y + j;
+        if (xx >= 0 && yy >= 0 && xx < W && yy < H && occ[yy * W + xx]) { libre = false; break; }
+      }
+      if (!libre) continue;
+      for (let j = y0; j < y1; j++) for (let i = x0; i < x1; i++) {
+        const xx = x + i, yy = y + j;
+        if (xx >= 0 && yy >= 0 && xx < W && yy < H) occ[yy * W + xx] = 1;
+      }
+      n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * Part de la capacité serrée que la pose tient vraiment : elle prend la place la plus proche de
+ * la ville, pas la plus économe, et partage la côte avec le comptoir. Mesuré le 11/11/2026 sur
+ * roman_island_large_03 et celtic_island_large_02, dix bâtiments côtiers : 77 à 86 % (marais
+ * salants 18 sur 21, cabanes à maquereaux 26 sur 32, salicorne 16 sur 20).
+ */
+const COTE_TENUE = 0.75;
+
 /** Une île en île de production : ce que la répartition et la pose savent d'elle. */
-export function versProductrice(i: IleDuMonde, g: GridShape): IleProductrice {
+export function versProductrice(i: IleDuMonde, g: GridShape, lookup: DefLookup): IleProductrice {
+  // calculée à la demande : seuls quelques bâtiments côtiers entrent dans un devis
+  let tuile: GridShape | undefined;
+  const capacites = new Map<string, number>();
   return {
     cle: i.cle, region: provinceDe(i), fertilites: fertilitesPourMoteur(i.fertilites),
-    emplacements: emplacementsDe(g), terre: compter(g.usable, g), cote: compter(g.water, g),
+    emplacements: emplacementsDe(g), terre: compter(g.usable, g),
+    capaciteCote: (id) => {
+      let n = capacites.get(id);
+      if (n === undefined) {
+        const d = lookup(id);
+        n = d ? Math.floor(capaciteCote(tuile ??= downscaleGrid(g), d) * COTE_TENUE) : 0;
+        capacites.set(id, n);
+      }
+      return n;
+    },
     ...(i.dieu ? { dieu: i.dieu } : {}),
   };
 }
@@ -303,7 +360,7 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
   const iles: IleCalculee[] = [...principalesCalculees];
 
   // ─── 2. RÉPARTITION, EN REBOUCLANT SUR LES BESOINS DES ÎLES DE PRODUCTION ───────────
-  const productrices = autres.filter((i) => grilles.has(i.cle)).map((i) => versProductrice(i, grilles.get(i.cle)!));
+  const productrices = autres.filter((i) => grilles.has(i.cle)).map((i) => versProductrice(i, grilles.get(i.cle)!, lookup));
   for (const i of autres) if (i.fertilites === null) avertissements.push(`${nomIle(i)} : fertilités inconnues, traitée comme sans fertilité`);
   const opts: OptionsRepartition = { catalog: o.catalog, lookup, ...reglagesProd };
   const net = (m: Map<string, number>) => {
@@ -501,7 +558,7 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
   const suggestions = deficits.length && achetables.length
     ? suggererAchats(
       Object.fromEntries(deficits.map((d) => [d.good, d.parMinute])),
-      achetables.map((i) => ({ ile: versProductrice(i, grilles.get(i.cle)!), fertilitesInconnues: i.fertilites === null })),
+      achetables.map((i) => ({ ile: versProductrice(i, grilles.get(i.cle)!, lookup), fertilitesInconnues: i.fertilites === null })),
       opts,
     )
     : [];

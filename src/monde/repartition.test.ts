@@ -9,9 +9,10 @@ const o: OptionsRepartition = { catalog, lookup: makeLookup(catalog), routes: "p
 
 // Données vérifiées : Pain 2137 (Latium et Albion), Bière 2154 (Albion seulement, orge 2212),
 // Fer 2115 (fonderie sans fertilité), Minerai de fer 2080 (Gisement de fer 4049, montagne).
-const PAIN = "2137", BIERE = "2154", FER = "2115", MINERAI = "2080";
+// Sel 2090 : marais salants, bâtiment côtier du Latium.
+const PAIN = "2137", BIERE = "2154", FER = "2115", MINERAI = "2080", SEL = "2090";
 const ile = (cle: string, region: string, fertilites: string[] | null, terre = 20_000, emplacements: Record<string, number> = { mountain: 4 }): IleProductrice =>
-  ({ cle, region, fertilites: fertilitesPourMoteur(fertilites), emplacements, terre, cote: 3000 });
+  ({ cle, region, fertilites: fertilitesPourMoteur(fertilites), emplacements, terre, capaciteCote: () => 10 });
 
 describe("répartir la demande d'un monde", () => {
   it("un bien que seule l'autre province produit va sur une île de cette province", () => {
@@ -52,6 +53,19 @@ describe("répartir la demande d'un monde", () => {
     // écartée pour le minerai seulement : le pain lui reste ouvert
     const r3 = repartir({ [MINERAI]: 2, [PAIN]: 5 }, [ile("mixte", "Roman", ["4049"])], o, {}, new Set([`mixte|${MINERAI}`]));
     expect(r3.affectation.mixte.map((b) => b.good)).toEqual([PAIN]);
+  });
+
+  it("la côte se compte en bâtiments que l'île accueille, entiers, et ne se redonne pas", () => {
+    const cotiere: IleProductrice = { ...ile("cotiere", "Roman", ["4049"]), capaciteCote: () => 3 };
+    const r1 = repartir({ [SEL]: 1000 }, [cotiere], o);
+    // trois marais salants, pas un de plus : toute la côte est prise
+    const marais = devisIle(cotiere, r1.affectation.cotiere, o).lignes.filter((l) => l.role === "production" && o.lookup(l.defId)?.partieEau);
+    expect(marais.reduce((s, l) => s + l.nombre, 0)).toBe(3);
+    expect(r1.coteUtilisee.cotiere).toBeCloseTo(1, 5);
+    expect(r1.nonCouvert[0].good).toBe(SEL);
+    expect(repartir({ [SEL]: 5 }, [cotiere], o, r1).affectation).toEqual({});
+    // une côte qui n'en accueille aucun : rien n'est promis
+    expect(repartir({ [SEL]: 5 }, [{ ...cotiere, capaciteCote: () => 0 }], o).affectation).toEqual({});
   });
 
   it("la place manque : le bien se partage entre îles, puis le reste est signalé", () => {

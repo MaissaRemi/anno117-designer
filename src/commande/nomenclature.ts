@@ -138,7 +138,7 @@ export interface LigneNomenclature {
   role: RoleLigne;
   /** Pourquoi cette ligne existe — c'est ce que le joueur lit pour comprendre le devis. */
   raison: string;
-  /** Cases par exemplaire, champs compris. */
+  /** Cases par exemplaire, champs et aire libre compris. */
   emprise: number;
 }
 
@@ -173,7 +173,10 @@ export function copiesPourCouvrir(def: BuildingDef, surface: number, routes?: Ro
   return Math.max(1, Math.ceil(surface / (2 * r * r)));
 }
 
-const empriseDe = (d: BuildingDef): number => d.size.w * d.size.h + (d.field?.tiles ?? 0);
+/** Terre qu'un exemplaire immobilise : son emprise, ses champs, et l'aire qu'il lui faut LIBRE
+ *  (bûcheron, rucher…). Sans elle, le devis d'une île de bûcherons était 3 à 9 fois trop bas
+ *  (mesuré le 11/11/2026 : terre prise à la pose contre terre du devis). */
+const empriseDe = (d: BuildingDef): number => d.size.w * d.size.h + (d.field?.tiles ?? 0) + (d.freeArea?.area ?? 0);
 
 /** La nomenclature d'une commande. Fonction pure et déterministe. */
 export function nomenclature(commande: Commande, catalog: BuildingDef[], lookup: DefLookup): Nomenclature {

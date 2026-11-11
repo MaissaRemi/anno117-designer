@@ -1,5 +1,5 @@
 import { uid } from "../model/factories";
-import { footprintSize } from "../engine/geometry";
+import { footprintSize, routeSeule } from "../engine/geometry";
 import { economy, goodName, priceOf } from "../economy/economy";
 import type { DefLookup } from "../engine/rules";
 import type { BuildingDef, GridShape, PlacedBuilding, RoadTile } from "../model/types";
@@ -252,7 +252,7 @@ export function planSlots(
     // par la terre seulement : l'emplacement donne sur elle (cf. emplacements.ts), et une route
     // ne monte pas sur la montagne
     const passable = (c: number): boolean => {
-      if (!grid.usable[c]) return false;
+      if (!grid.usable[c] && !routeSeule(grid, c)) return false;
       if (opts.bloquees?.[c]) return false;
       const o = owner[c];
       return o < 0 || demolishable(all[o].defId);
