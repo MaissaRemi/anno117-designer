@@ -135,12 +135,12 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `chainFertilities` (function, L228) [3] : Fertilités/gisements requis par la chaîne de production d'un bien (récursif).
 - `economy` (const, L245) [69]
 - `tiers` (const, L247) [42]
-- `upkeepOf` (const, L248) [4]
+- `upkeepOf` (const, L248) [5]
 - `tierByGuid` (const, L252) [11]
 - `residentialChain` (function, L271) [3] : Chaîne résidentielle menant au tier-cible : ses ANCÊTRES dans le graphe de montée, du plus bas à la cible.
 - `residentialChainExtended` (function, L305) [7] : CHAÎNE ÉTENDUE — la chaîne résidentielle, plus les LIGNÉES PARALLÈLES du même monde.
 - `goodName` (const, L321) [12]
-- `priceOf` (const, L325) [5] : Valeur marchande de référence d'un bien (BasePrice), 0 si inconnu.
+- `priceOf` (const, L325) [6] : Valeur marchande de référence d'un bien (BasePrice), 0 si inconnu.
 - `effectOf` (const, L329) [6] : Effet de zone d'un bâtiment, ou undefined s'il n'en porte pas.
 - `cityStatusAttrs` (function, L336) [6] : Malus/bonus de RANG DE CITÉ pour une population donnée, appliqués à chaque résidence.
 - `worldOf` (const, L351) [21] : MONDE d'une culture de population.
@@ -246,7 +246,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `porteeDeTrajet` (function, L49) [2] : Portée en LONGUEUR de trajet, sans arrondi : pour un réseau qui mêle cases droites (1) et losanges diagonaux (√2, cf.
 ### `src/engine/rules.ts`
 - `DefLookup` (type, L37) [25]
-- `makeLookup` (function, L71) [44]
+- `makeLookup` (function, L71) [45]
 - `canPlace` (function, L103) [3] : Peut-on poser `def` en (x,y,rot) ?
 - `terrainConvient` (function, L133) [6] : Le terrain convient-il à `def` posé en (x, y) ?
 - `rootedRoadSet` (function, L160) [13] : Ensemble des cases de route reliées à un comptoir (roadRoot), via BFS sur le réseau (4-connexité).
@@ -267,7 +267,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `estEntrepot` (const, L19) [3] : Un entrepôt, de l'un ou l'autre monde.
 - `pickWarehouseDef` (function, L21) [3]
 ### `src/model/factories.ts` — Identifiant unique court (suffisant côté client).
-- `uid` (function, L5) [41]
+- `uid` (function, L5) [43]
 - `makeGrid` (function, L10) [10]
 - `emptyLayout` (function, L19) [4] : Layout vide pour l'éditeur : grille ½-tuile (cellsPerTile=2) afin que la construction 45° soit possible d'emblée (cf.
 - `resizeGridShape` (function, L28) [2] : Redimensionne une grille en PRÉSERVANT le terrain : re-clippe les masques par-case (usable/water/rivers) et filtre les…
@@ -304,7 +304,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ### `src/monde/calcul.ts` — CALCULER UN MONDE
 - `Executeurs` (interface, L42) [3]
 - `PlanPose` (interface, L47) [0]
-- `IleCalculee` (interface, L55) [1]
+- `IleCalculee` (interface, L55) [2]
 - `Flux` (interface, L78) [0]
 - `Deficit` (interface, L79) [0]
 - `ResultatMonde` (interface, L81) [2]
@@ -313,11 +313,12 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `capaciteCote` (function, L154) [3] : Combien d'exemplaires d'un bâtiment côtier la côte de l'île accueille, posés seuls et serrés : la règle de terrain de l…
 - `versProductrice` (function, L193) [0] : Une île en île de production : ce que la répartition et la pose savent d'elle.
 - `sansEmplacementsInactifs` (function, L233) [1] : L'île telle qu'elle est DANS LA PARTIE : sans les emplacements que le générateur de carte n'a pas activés (lus dans une…
-- `ConseilPrincipale` (interface, L277) [1]
-- `conseillerPrincipales` (function, L297) [2] : CONSEILLER L'ÎLE PRINCIPALE (exigence E5)
-- `calculerMonde` (function, L316) [3]
-- `nomIle` (const, L585) [0] : Nom lisible d'une île de la configuration.
-- `nomPalier` (const, L586) [0]
+- `reaffecterMines` (function, L296) [1] : LES MINES DES ÎLES PRINCIPALES SUIVENT CE QUI MANQUE AU MONDE
+- `ConseilPrincipale` (interface, L340) [1]
+- `conseillerPrincipales` (function, L360) [2] : CONSEILLER L'ÎLE PRINCIPALE (exigence E5)
+- `calculerMonde` (function, L379) [3]
+- `nomIle` (const, L660) [0] : Nom lisible d'une île de la configuration.
+- `nomPalier` (const, L661) [0]
 ### `src/monde/configuration.ts` — CONFIGURATION D'UN MONDE
 - `Propriete` (type, L20) [2] : À qui est l'île.
 - `PROPRIETES` (const, L21) [0]
@@ -360,7 +361,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `Repartition` (interface, L87) [0]
 - `BudgetsPris` (type, L97) [1] : Ce qu'une répartition précédente a déjà pris sur les îles (passe de rattrapage).
 - `cumulerBudgets` (function, L100) [2] : Cumule les budgets pris par deux répartitions successives.
-- `repartir` (function, L117) [2]
+- `repartir` (function, L117) [3]
 - `nomDuBien` (const, L237) [1]
 - `SuggestionAchat` (interface, L241) [1]
 - `suggererAchats` (function, L263) [1] : Les îles à acheter qui couvriraient le plus de ce qui manque — choisies l'une après l'autre : la deuxième est jugée sur…

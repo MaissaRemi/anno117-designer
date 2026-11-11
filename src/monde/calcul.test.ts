@@ -103,6 +103,7 @@ describe("calculer un monde", () => {
     for (const i of prod) {
       console.log(`  ${c.iles.find((x) => x.cle === i.cle)!.ileId} : ${i.produit.reduce((t, b) => t + b.parMinute, 0).toFixed(1)} posé sur ${i.affecte.reduce((t, b) => t + b.parMinute, 0).toFixed(1)} affecté, ${i.habitants} ouvriers, terre prise ${i.terrePrise ?? "?"}${i.manques.length ? ` ; ${i.manques.join(" ; ").slice(0, 200)}` : ""}`);
     }
+    console.log(`  île principale : extrait ${principale.produit.map((b) => `${goodName(b.good)} ${b.parMinute}`).join(", ") || "rien"}`);
     for (const d of r.deficits) console.log(`  déficit ${goodName(d.good)} ${d.parMinute} : ${d.raison}`);
     expect(couverture, "part de la demande de la ville servie").toBeGreaterThanOrEqual(SEUIL_COUVERTURE);
     expect(tenue, "part de l'affecté réellement posée par les îles de production").toBeGreaterThanOrEqual(SEUIL_TENUE);

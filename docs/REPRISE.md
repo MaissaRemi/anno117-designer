@@ -206,12 +206,20 @@ Feuille de route détaillée : `.claude/ROADMAP.md`.
 
 **Planification d'un monde** (l'objectif principal)
 
-À faire d'abord, demandé par Rémi le 12/11 : **exploiter les emplacements des îles principales
-selon ce qui manque au monde**, et envoyer ces matières aux îles de production (les navires
-reviennent chargés de produits finis). Aujourd'hui une île principale choisit ses mines au prix
-de vente (`pickSlotBuilding`), un seul bâtiment par type d'emplacement, et n'en pose presque
-pas : medium_01, Patriciens, 7 emplacements de montagne et 4 de rivière → une mine d'or et un
-laveur d'or. Le monde d'essai manque pourtant de minerai d'or et de minéraux.
+Demandé par Rémi le 12/11 : **exploiter les emplacements des îles principales selon ce qui
+manque au monde**, et envoyer ces matières aux îles de production (les navires reviennent
+chargés de produits finis).
+- Fait (`reaffecterMines`, `monde/calcul.ts`) : chaque exploitation posée sur une île
+  principale devient celle du bien qui manque le plus au monde (pesé par son prix), à emprise,
+  main-d'œuvre et emplacement égaux, gisement déclaré. Les flux vers les îles de production
+  existaient déjà. Sans effet sur le monde d'essai : son île principale minait déjà de l'or,
+  qui manque.
+- **Reste, et c'est le vrai frein** : une île principale de Patriciens n'a presque plus
+  d'emplacements. medium_01 : 6 des 7 emplacements de montagne portent une source d'aqueduc ;
+  3 des 4 emplacements de rivière sont inexploitables, murés par les maisons posées avant
+  (`planSlots`, « encombrement »). Piste : réserver les abords des emplacements de rivière
+  avant de poser les maisons. Les exploitations demandent aussi des Plébéiens (5 par mine),
+  que le moteur obtient en rétrogradant des maisons.
 
 1. **Devis d'une île de production, ce qui reste faux** (sonde du 11/11) : les quartiers
    d'ouvriers de haut palier (services et eau : 2 à 3 fois la terre du devis quand l'île est

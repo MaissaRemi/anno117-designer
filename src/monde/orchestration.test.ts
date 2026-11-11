@@ -6,7 +6,8 @@ import type { ResultatCommande } from "../commande/planifier";
 import { nouvelleConfiguration, nouvelleIle, type ConfigurationMonde, type IleDuMonde } from "./configuration";
 import { buildIslandGrid } from "../data/islandGrid";
 import { downscaleGrid } from "../optimizer/halfTileAdapter";
-import { calculerMonde, capaciteCote, conseillerPrincipales, VERSION_CALCUL, type Executeurs } from "./calcul";
+import { makeLookup } from "../engine/rules";
+import { calculerMonde, capaciteCote, conseillerPrincipales, reaffecterMines, VERSION_CALCUL, type Executeurs, type IleCalculee } from "./calcul";
 
 /**
  * L'ORCHESTRATION DU CALCUL D'UN MONDE, avec des moteurs FACTICES : une île principale demande
@@ -121,6 +122,30 @@ describe("orchestration du calcul d'un monde", () => {
     const r2 = await calculerMonde(c, { catalog, executeurs, precedent: ancien });
     expect(appels).toEqual({ principale: 2, production: 2 });
     expect(r2.reutilisees).toBe(0);
+  });
+
+  it("les mines d'une île principale extraient ce qui manque au monde, pas ce qui se vend le plus cher", () => {
+    // Gisement d'or 32027, gisement minéral 4053 ; minerai d'or 31697, minéraux 8563.
+    const OR = "32027", MINERAL = "4053", MINERAI_OR = "31697", MINERAUX = "8563";
+    const lookup = makeLookup(catalog);
+    const def = (nom: string) => catalog.find((d) => d.name === nom && d.region === "Roman")!;
+    const c = monde(ile("roman_island_medium_01", { role: "principale", fertilites: [OR, MINERAL] }));
+    const principale: IleCalculee = {
+      cle: c.iles[0].cle, role: "principale", habitants: 1000, maisons: 50, argent: 500,
+      plan: { buildings: [{ uid: "mine", defId: def("Mine d'or").id, x: 0, y: 0, rotation: 0, locked: false }], roads: [], fields: [], aqueducts: [] },
+      produit: [{ good: MINERAI_OR, parMinute: 0.4 }], consomme: [], affecte: [], manques: [], avertissements: [],
+    };
+    // le monde manque de minéraux : la mine d'or devient une carrière de minéraux, au même endroit
+    const [r] = reaffecterMines([principale], { [MINERAUX]: 2 }, c, catalog, lookup);
+    expect(r.plan!.buildings[0]).toMatchObject({ uid: "mine", defId: def("Carrière de minéraux").id, x: 0, y: 0 });
+    expect(r.produit).toEqual([{ good: MINERAUX, parMinute: 1.33 }]);
+    // repartir du résultat redonne le même : le recalcul d'un monde est stable
+    expect(reaffecterMines([r], { [MINERAUX]: 2 }, c, catalog, lookup)[0].produit).toEqual(r.produit);
+    // rien ne manque : le choix du moteur reste
+    expect(reaffecterMines([principale], {}, c, catalog, lookup)[0]).toBe(principale);
+    // gisement minéral non déclaré sur l'île : pas d'échange
+    const sansGisement = monde({ ...c.iles[0], fertilites: [OR] });
+    expect(reaffecterMines([principale], { [MINERAUX]: 2 }, sansGisement, catalog, lookup)[0]).toBe(principale);
   });
 
   it("la côte d'une île accueille un nombre compté de bâtiments côtiers, lu sur sa carte", () => {

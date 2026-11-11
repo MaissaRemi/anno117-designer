@@ -3,7 +3,7 @@ import { footprintSize, partieEauPosee } from "../engine/geometry";
 import { makeLookup, terrainConvient, type DefLookup } from "../engine/rules";
 import { downscaleGrid } from "../optimizer/halfTileAdapter";
 import { buildIslandGrid } from "../data/islandGrid";
-import { tierByGuid } from "../economy/economy";
+import { economy, priceOf, tierByGuid, upkeepOf } from "../economy/economy";
 import type { IslandPlanRequest, IslandPlanResult } from "../optimizer/islandPlan";
 import type { CommandeRequete } from "../commande/planifierWorker";
 import type { ResultatCommande } from "../commande/planifier";
@@ -274,6 +274,69 @@ async function planifierPrincipale(c: ConfigurationMonde, ile: IleDuMonde, grid:
   };
 }
 
+/** Ce que sort une exploitation d'emplacement, au débit de base. */
+function debitDe(defId: string): BienDebit | null {
+  const p = economy.buildingProd[defId];
+  const sortie = p?.outputs?.[0];
+  return p?.cycleTime && sortie?.good ? { good: sortie.good, parMinute: (sortie.amount / p.cycleTime) * 60 } : null;
+}
+
+/**
+ * ═══ LES MINES DES ÎLES PRINCIPALES SUIVENT CE QUI MANQUE AU MONDE ═════════════════════
+ *
+ * Le moteur d'île choisit ses exploitations au PRIX DE VENTE, sans rien savoir du monde : une
+ * île principale minait de l'or pendant que les ateliers manquaient de minéraux. Ici, chaque
+ * exploitation posée devient celle du bien qui manque le plus (`manque`, ce que le monde ne
+ * couvre pas quand les îles principales n'extraient rien), pesé par son prix.
+ *
+ * On ne touche pas au plan : on échange un bâtiment contre un autre de MÊME emplacement, même
+ * emprise et même main-d'œuvre, dont le gisement est déclaré sur l'île. Rien ne manque : le
+ * choix du moteur reste. Le résultat ne dépend pas du bâtiment de départ (recalcul stable).
+ */
+export function reaffecterMines(
+  principales: IleCalculee[], manque: Record<string, number>, c: ConfigurationMonde,
+  catalog: BuildingDef[], lookup: DefLookup, kEntretien = 1,
+): IleCalculee[] {
+  const reste = { ...manque };
+  const ouvriers = (d: BuildingDef) => JSON.stringify(economy.buildingWorkforce[d.id] ?? []);
+  return principales.map((ile) => {
+    const fertilites = new Set(c.iles.find((x) => x.cle === ile.cle)?.fertilites ?? []);
+    const exploitations = (ile.plan?.buildings ?? []).filter((b) => lookup(b.defId)?.slotType && debitDe(b.defId));
+    // le plan et ses mines comptées doivent s'accorder (une exploitation non servie ne compte pas)
+    const compte = exploitations.reduce((s, b) => s + debitDe(b.defId)!.parMinute, 0);
+    if (!exploitations.length || Math.abs(compte - ile.produit.reduce((s, b) => s + b.parMinute, 0)) > 0.05) return ile;
+    const nouveau = new Map<string, string>(); // uid → bâtiment retenu
+    for (const b of exploitations) {
+      const d = lookup(b.defId)!;
+      let meilleur = d, valeur = 0;
+      for (const x of catalog) {
+        const sortie = debitDe(x.id);
+        const gisement = economy.buildingProd[x.id]?.fertility;
+        if (!sortie || x.slotType !== d.slotType || x.region !== d.region || x.size.w !== d.size.w || x.size.h !== d.size.h
+          || ouvriers(x) !== ouvriers(d) || (gisement && !fertilites.has(gisement))) continue;
+        const v = Math.min(sortie.parMinute, reste[sortie.good] ?? 0) * priceOf(sortie.good);
+        if (v > valeur || (v === valeur && v > 0 && x.id < meilleur.id)) { meilleur = x; valeur = v; }
+      }
+      const sortie = debitDe(meilleur.id)!;
+      if (valeur > 0) reste[sortie.good] -= sortie.parMinute;
+      nouveau.set(b.uid, meilleur.id);
+    }
+    if (exploitations.every((b) => nouveau.get(b.uid) === b.defId)) return ile;
+    const produit = new Map<string, number>();
+    let entretien = 0;
+    for (const b of exploitations) {
+      const id = nouveau.get(b.uid)!;
+      ajouter(produit, [debitDe(id)!]);
+      entretien += upkeepOf(id) - upkeepOf(b.defId);
+    }
+    return {
+      ...ile, produit: versListe(produit),
+      plan: { ...ile.plan!, buildings: ile.plan!.buildings.map((b) => (nouveau.has(b.uid) ? { ...b, defId: nouveau.get(b.uid)! } : b)) },
+      ...(ile.argent !== undefined ? { argent: Math.round(ile.argent - entretien * kEntretien) } : {}),
+    };
+  });
+}
+
 export interface ConseilPrincipale {
   cle: string;
   habitants: number;
@@ -352,38 +415,50 @@ export async function calculerMonde(c: ConfigurationMonde, o: OptionsCalcul): Pr
   }), n);
 
   const demandeVilles = new Map<string, number>();
-  const mines = new Map<string, number>();
-  for (const i of principalesCalculees) {
-    ajouter(demandeVilles, i.consomme);
-    ajouter(mines, i.produit);
-  }
-  const iles: IleCalculee[] = [...principalesCalculees];
+  for (const i of principalesCalculees) ajouter(demandeVilles, i.consomme);
 
   // ─── 2. RÉPARTITION, EN REBOUCLANT SUR LES BESOINS DES ÎLES DE PRODUCTION ───────────
   const productrices = autres.filter((i) => grilles.has(i.cle)).map((i) => versProductrice(i, grilles.get(i.cle)!, lookup));
   for (const i of autres) if (i.fertilites === null) avertissements.push(`${nomIle(i)} : fertilités inconnues, traitée comme sans fertilité`);
   const opts: OptionsRepartition = { catalog: o.catalog, lookup, ...reglagesProd };
-  const net = (m: Map<string, number>) => {
-    const d: Record<string, number> = {};
-    for (const [g, v] of m) { const r = v - (mines.get(g) ?? 0); if (r > 0.005) d[g] = r; }
-    return d;
+  /** La répartition, pour ce que les îles principales extraient (`mines`). */
+  const repartirTout = (mines: Map<string, number>) => {
+    const net = (m: Map<string, number>) => {
+      const d: Record<string, number> = {};
+      for (const [g, v] of m) { const r = v - (mines.get(g) ?? 0); if (r > 0.005) d[g] = r; }
+      return d;
+    };
+    let demande = new Map(demandeVilles);
+    let rep = repartir(net(demande), productrices, opts);
+    let stable = !productrices.length;
+    for (let tour = 0; tour < 5; tour++) {
+      const suivante = new Map(demandeVilles);
+      for (const p of productrices) {
+        const a = rep.affectation[p.cle];
+        if (a?.length) ajouter(suivante, besoinsDuDevis(devisIle(p, a, opts), kConso));
+      }
+      const ecart = [...new Set([...suivante.keys(), ...demande.keys()])]
+        .reduce((s, g) => s + Math.abs((suivante.get(g) ?? 0) - (demande.get(g) ?? 0)), 0);
+      demande = suivante;
+      rep = repartir(net(demande), productrices, opts);
+      if (ecart < 0.5) { stable = true; break; }
+    }
+    return { rep, stable };
   };
   progres("Répartition de la production");
-  let demande = new Map(demandeVilles);
-  let rep = repartir(net(demande), productrices, opts);
-  let stable = !productrices.length;
-  for (let tour = 0; tour < 5; tour++) {
-    const suivante = new Map(demandeVilles);
-    for (const p of productrices) {
-      const a = rep.affectation[p.cle];
-      if (a?.length) ajouter(suivante, besoinsDuDevis(devisIle(p, a, opts), kConso));
-    }
-    const ecart = [...new Set([...suivante.keys(), ...demande.keys()])]
-      .reduce((s, g) => s + Math.abs((suivante.get(g) ?? 0) - (demande.get(g) ?? 0)), 0);
-    demande = suivante;
-    rep = repartir(net(demande), productrices, opts);
-    if (ecart < 0.5) { stable = true; break; }
-  }
+  // Que manque-t-il au monde quand les îles principales n'extraient rien ? Leurs mines
+  // extraient alors CELA, et la répartition repart avec ce qu'elles sortent.
+  const principalesFinales = principalesCalculees.some((i) => i.produit.length)
+    ? reaffecterMines(
+      principalesCalculees,
+      Object.fromEntries(repartirTout(new Map()).rep.nonCouvert.map((n) => [n.good, n.parMinute])),
+      c, o.catalog, lookup, kEntretien,
+    )
+    : principalesCalculees;
+  const mines = new Map<string, number>();
+  for (const i of principalesFinales) ajouter(mines, i.produit);
+  const iles: IleCalculee[] = [...principalesFinales];
+  const { rep, stable } = repartirTout(mines);
   if (!stable) avertissements.push("La répartition n'a pas convergé en cinq tours : les besoins des îles de production sont approchés");
 
   // ─── 3. POSE RÉELLE, PUIS UN RATTRAPAGE ─────────────────────────────────────────────

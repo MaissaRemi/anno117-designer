@@ -5,6 +5,11 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
 
 ## Planification d'un monde
 
+- **Les mines d'une île principale s'échangent après coup** (12/11, `reaffecterMines`) : le
+  moteur d'île les choisit au prix de vente, sans connaître le monde. Plutôt que de replanifier
+  l'île (dix à quarante secondes), on échange le bâtiment posé contre un autre de même
+  emplacement, même emprise et même main-d'œuvre, pour le bien qui manque le plus. Les mines
+  de montagne d'une province ont toutes la même emprise (8 × 3) et la même main-d'œuvre.
 - **Un devis se corrige en le mesurant contre la pose** (11/11) : pour chaque bien, ce que la
   répartition promet à une île seule, puis ce que le moteur pose. Trois erreurs trouvées ainsi,
   aucune sur les fermes que l'on soupçonnait : l'aire libre oubliée, la côte, les emplacements.
