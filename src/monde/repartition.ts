@@ -93,28 +93,57 @@ export function besoinsDuDevis(n: Nomenclature, consommation = 1): BienDebit[] {
 
 export interface Repartition {
   affectation: Record<string, BienDebit[]>;
-  /** Terre estimée consommée par île. */
+  /** Budgets estimés consommés par île : terre, bande d'eau côtière, emplacements par type. */
   terreUtilisee: Record<string, number>;
+  coteUtilisee: Record<string, number>;
+  placesUtilisees: Record<string, Record<string, number>>;
   nonCouvert: { good: string; parMinute: number; raison: string }[];
+}
+
+/** Ce qu'une répartition précédente a déjà pris sur les îles (passe de rattrapage). */
+export type BudgetsPris = Partial<Pick<Repartition, "terreUtilisee" | "coteUtilisee" | "placesUtilisees">>;
+
+/** Cumule les budgets pris par deux répartitions successives. */
+export function cumulerBudgets(a: BudgetsPris, b: BudgetsPris): Required<BudgetsPris> {
+  const somme = (x: Record<string, number> = {}, y: Record<string, number> = {}) => {
+    const out = { ...x };
+    for (const [k, v] of Object.entries(y)) out[k] = (out[k] ?? 0) + v;
+    return out;
+  };
+  const places: Record<string, Record<string, number>> = {};
+  for (const cle of new Set([...Object.keys(a.placesUtilisees ?? {}), ...Object.keys(b.placesUtilisees ?? {})])) {
+    places[cle] = somme(a.placesUtilisees?.[cle], b.placesUtilisees?.[cle]);
+  }
+  return {
+    terreUtilisee: somme(a.terreUtilisee, b.terreUtilisee),
+    coteUtilisee: somme(a.coteUtilisee, b.coteUtilisee),
+    placesUtilisees: places,
+  };
 }
 
 export function repartir(
   demande: Record<string, number>,
   iles: IleProductrice[],
   o: OptionsRepartition,
-  /** Terre déjà prise par île (passe de rattrapage) ; sinon rien. */
-  dejaPris: Record<string, number> = {},
-  /** Îles à ne plus charger (elles n'ont pas tenu leur objectif à la pose). */
+  /** Terre, côte et emplacements déjà pris par île (passe de rattrapage) ; sinon rien. Ne
+   *  transmettre que la terre laissait le rattrapage redonner une côte et des emplacements déjà
+   *  comptés : la seconde pose échouait, et le monde affichait un déficit. */
+  dejaPris: BudgetsPris = {},
+  /** Couples `île|bien` à ne plus tenter : l'île n'a pas tenu ce bien à la pose. Les autres biens
+   *  lui restent ouverts — une côte saturée n'empêche pas d'y semer du blé. */
   pleines: ReadonlySet<string> = new Set(),
 ): Repartition {
   // TROIS BUDGETS PAR ÎLE, partagés entre tous ses biens : la terre, la côte, les emplacements.
   // Les compter bien par bien laissait deux mines se disputer les mêmes emplacements de montagne
   // et remplissait une côte deux fois.
-  const cap = new Map(iles.map((i) => [i.cle, i.terre * REMPLISSAGE - (dejaPris[i.cle] ?? 0)]));
-  const cote = new Map(iles.map((i) => [i.cle, i.cote * (COTE_UTILE[i.region] ?? COTE_UTILE.Roman)]));
-  const places = new Map(iles.map((i) => [i.cle, Object.fromEntries(LIMITANTS.map((t) => [t, i.emplacements[t] ?? 0])) as Record<string, number>]));
+  const cap = new Map(iles.map((i) => [i.cle, i.terre * REMPLISSAGE - (dejaPris.terreUtilisee?.[i.cle] ?? 0)]));
+  const cote = new Map(iles.map((i) => [i.cle, i.cote * (COTE_UTILE[i.region] ?? COTE_UTILE.Roman) - (dejaPris.coteUtilisee?.[i.cle] ?? 0)]));
+  const places = new Map(iles.map((i) => [i.cle, Object.fromEntries(LIMITANTS.map(
+    (t) => [t, (i.emplacements[t] ?? 0) - (dejaPris.placesUtilisees?.[i.cle]?.[t] ?? 0)])) as Record<string, number>]));
   const aff = new Map<string, Map<string, number>>();
   const utilisee: Record<string, number> = {};
+  const coteUtilisee: Record<string, number> = {};
+  const placesUtilisees: Record<string, Record<string, number>> = {};
   const nonCouvert: Repartition["nonCouvert"] = [];
 
   /** Par unité produite : terre, côte, emplacements ; et la part produite sur place. */
@@ -146,7 +175,7 @@ export function repartir(
 
   const biens = Object.entries(demande).filter(([, v]) => v > EPS);
   const capables = new Map(biens.map(([g, v]) => [g, iles.filter((i) => estimer(i, g, v).produit > EPS)]));
-  const eligibles = new Map(biens.map(([g]) => [g, capables.get(g)!.filter((i) => !pleines.has(i.cle))]));
+  const eligibles = new Map(biens.map(([g]) => [g, capables.get(g)!.filter((i) => !pleines.has(`${i.cle}|${g}`))]));
   biens.sort((a, b) => eligibles.get(a[0])!.length - eligibles.get(b[0])!.length || b[1] - a[1] || a[0].localeCompare(b[0]));
 
   for (const [good, total] of biens) {
@@ -169,7 +198,9 @@ export function repartir(
       aff.set(ile.cle, m);
       cap.set(ile.cle, place - q * e.parUnite);
       cote.set(ile.cle, cote.get(ile.cle)! - q * e.cote);
-      for (const [t, v] of Object.entries(e.places)) pl[t] -= q * v;
+      coteUtilisee[ile.cle] = (coteUtilisee[ile.cle] ?? 0) + q * e.cote;
+      const prises = (placesUtilisees[ile.cle] ??= {});
+      for (const [t, v] of Object.entries(e.places)) { pl[t] -= q * v; prises[t] = (prises[t] ?? 0) + q * v; }
       utilisee[ile.cle] = (utilisee[ile.cle] ?? 0) + q * e.parUnite;
       reste -= q;
     }
@@ -190,7 +221,7 @@ export function repartir(
     affectation[cle] = [...m].map(([good, parMinute]) => ({ good, parMinute: Math.round(parMinute * 100) / 100 }))
       .filter((b) => b.parMinute > 0).sort((a, b) => b.parMinute - a.parMinute);
   }
-  return { affectation, terreUtilisee: utilisee, nonCouvert: nonCouvert.sort((a, b) => b.parMinute - a.parMinute) };
+  return { affectation, terreUtilisee: utilisee, coteUtilisee, placesUtilisees, nonCouvert: nonCouvert.sort((a, b) => b.parMinute - a.parMinute) };
 }
 
 export const nomDuBien = (g: string): string => goodName(g);

@@ -63,6 +63,8 @@ export function lireFileDb(d: Uint8Array, garder?: FiltreFileDb): NoeudFileDb {
       continue;
     }
     if (id >= 0x8000) {
+      // fichier abîmé : une taille négative faisait reculer la lecture, sans fin
+      if (taille < 0 || pos + taille > finTags) throw new Error("FileDB corrompu : taille d'attribut invalide");
       if (!saut) {
         const nom = nomDe(id);
         const a = pile[pile.length - 1].attributs;

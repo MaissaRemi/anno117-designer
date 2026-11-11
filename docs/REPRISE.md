@@ -400,8 +400,14 @@ Rémi n'étaient écrites nulle part.
   libre des bûcherons et ruchers dans le plan et limitée à l'aire exigée, champs dessinés dans
   l'aperçu. Part de l'objectif posée : medium_01 71 → 83 %, small_06 40 → 100 %, large_03
   64 → 100 %.
+- **Étape 4, monde** (`monde/calcul.ts`, `monde/repartition.ts`, `ui/MondeView.tsx`) : bouton
+  « Conseiller l'île principale » (`conseillerPrincipales` : chaque île à moi planifiée seule,
+  classée selon l'objectif) ; rattrapage sur le monde tel qu'il est posé, trois tours, île
+  écartée bien par bien ; version des moteurs dans les empreintes (`VERSION_CALCUL`, à
+  augmenter quand un moteur change ce qu'il pose) ; résultat enregistré dans la configuration à
+  jour. Monde d'essai, hauteurs comprises : demande de la ville servie 64 → 66 % (il est saturé).
 - **Restent de l'audit** : main-d'œuvre sur ce qui est posé, mode « produire le maximum » d'une
-  île de production, monde (étape 4, dont le conseil de l'île principale), entretien (étape 5).
+  île de production, part de la répartition arrondie au bâtiment entier, entretien (étape 5).
 
 ## Ce qui reste à faire, par intérêt (10/11/2026)
 

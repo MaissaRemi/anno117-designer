@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef } from "../model/types";
 import { makeLookup } from "../engine/rules";
+import { hasHeights, heightsOf } from "../data/terrain";
+import { goodName } from "../economy/economy";
 import { downscaleGrid } from "../optimizer/halfTileAdapter";
 import { planIsland } from "../optimizer/islandPlan";
 import { planifierCommande, resumer } from "../commande/planifier";
@@ -16,9 +18,21 @@ import { calculerMonde, type Executeurs } from "./calcul";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
+// Les hauteurs de l'île, comme les workers de l'application : sans elles l'eau passe partout et
+// le monde mesuré n'est pas celui de l'écran.
+const hauteurs = async (g: { islandId?: string; w: number; h: number }) => {
+  const h = g.islandId && hasHeights(g.islandId) ? await heightsOf(g.islandId) : null;
+  return h && h.length === g.w * g.h ? h : undefined;
+};
 const executeurs: Executeurs = {
-  principale: async (req) => planIsland({ ...req, grid: downscaleGrid(req.grid) }),
-  production: async (req) => resumer(planifierCommande(downscaleGrid(req.grid), req.commande, req.catalog, lookup)),
+  principale: async (req) => {
+    const grid = downscaleGrid(req.grid);
+    return planIsland({ ...req, grid, heights: await hauteurs(grid) });
+  },
+  production: async (req) => {
+    const grid = downscaleGrid(req.grid);
+    return resumer(planifierCommande(grid, req.commande, req.catalog, lookup, { heights: await hauteurs(grid) }));
+  },
 };
 
 // Fertilités (economy.generated) : Latium — lin 2202, raisins 2205, maquereaux 2206, huîtres 2208,
@@ -29,6 +43,8 @@ const executeurs: Executeurs = {
 const LATIUM = ["2202", "2205", "2206", "2208", "2209", "2210", "4049", "4051", "4052", "4053", "4062", "8577", "32027", "51212"];
 const ALBION = ["2202", "2205", "2211", "2212", "2214", "2217", "2218", "2219", "4049", "4063", "4064", "4066", "4082", "8432", "8487", "51212"];
 const BIERE = "2154";
+/** Cliquet, comme le panneau de qualité : valeurs mesurées, à resserrer quand elles montent. */
+const SEUIL_COUVERTURE = 66, SEUIL_TENUE = 79;
 
 const mienne = (ileId: string, fertilites: string[], extra: Partial<IleDuMonde> = {}): IleDuMonde =>
   ({ ...nouvelleIle(ileId), propriete: "moi", fertilites, ...extra });
@@ -71,5 +87,24 @@ describe("calculer un monde", () => {
       expect(recu + manque, b.good).toBeGreaterThanOrEqual(b.parMinute - 0.1);
     }
     for (const d of r.deficits) expect(d.raison.length).toBeGreaterThan(0);
+
+    // CE QUE LE MONDE LIVRE VRAIMENT. La demande des villes est-elle servie, et chaque île de
+    // production pose-t-elle ce qui lui a été affecté ? Le tableau est imprimé pour se juger.
+    const demandeVille = principale.consomme.reduce((s, b) => s + b.parMinute, 0);
+    const servie = principale.consomme.reduce((s, b) => {
+      const recu = r.flux.filter((f) => f.vers === principale.cle && f.good === b.good).reduce((t, f) => t + f.parMinute, 0)
+        + (principale.produit.find((x) => x.good === b.good)?.parMinute ?? 0);
+      return s + Math.min(b.parMinute, recu);
+    }, 0);
+    const affecte = prod.reduce((s, i) => s + i.affecte.reduce((t, b) => t + b.parMinute, 0), 0);
+    const pose = prod.reduce((s, i) => s + i.produit.reduce((t, b) => t + b.parMinute, 0), 0);
+    const couverture = Math.round((100 * servie) / demandeVille), tenue = Math.round((100 * pose) / affecte);
+    console.log(`MONDE habitants ${r.bilan.habitants} argent ${r.bilan.argent} | demande de la ville servie ${couverture} % (${servie.toFixed(1)} sur ${demandeVille.toFixed(1)} u/min) | îles de production : ${tenue} % de l'affecté posé (${pose.toFixed(1)} sur ${affecte.toFixed(1)}) | ${r.deficits.length} déficit(s), ${r.deficits.reduce((s, d) => s + d.parMinute, 0).toFixed(1)} u/min`);
+    for (const i of prod) {
+      console.log(`  ${c.iles.find((x) => x.cle === i.cle)!.ileId} : ${i.produit.reduce((t, b) => t + b.parMinute, 0).toFixed(1)} posé sur ${i.affecte.reduce((t, b) => t + b.parMinute, 0).toFixed(1)} affecté, ${i.habitants} ouvriers, terre prise ${i.terrePrise ?? "?"}${i.manques.length ? ` ; ${i.manques.join(" ; ").slice(0, 200)}` : ""}`);
+    }
+    for (const d of r.deficits) console.log(`  déficit ${goodName(d.good)} ${d.parMinute} : ${d.raison}`);
+    expect(couverture, "part de la demande de la ville servie").toBeGreaterThanOrEqual(SEUIL_COUVERTURE);
+    expect(tenue, "part de l'affecté réellement posée par les îles de production").toBeGreaterThanOrEqual(SEUIL_TENUE);
   }, 600_000);
 });

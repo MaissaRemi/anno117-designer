@@ -80,9 +80,9 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `riversOf` (function, L58) [2] : Cases rivière (boolean[w*h]) d'une île, ou undefined si aucune.
 - `ZonesIle` (interface, L65) [0] : Zones constructibles d'une île selon le jeu, repère de l'image ; undefined si absentes.
 - `zonesOf` (function, L73) [2] : LE JEU DIT LUI-MÊME OÙ L'ON BÂTIT (AreaIDs × Water dans le gamedata de l'île) : terre constructible, bande d'eau côtièr…
-- `hasHeights` (function, L81) [6] : Vrai si l'île a des hauteurs extraites (le décodage peut malgré tout échouer côté navigateur).
+- `hasHeights` (function, L81) [7] : Vrai si l'île a des hauteurs extraites (le décodage peut malgré tout échouer côté navigateur).
 - `slotsOf` (function, L86) [1] : Slots posables (montagne/rivière/marais — les blockers sont ignorés), repère de l'image.
-- `heightsOf` (function, L100) [7]
+- `heightsOf` (function, L100) [8]
 
 ## src/economy
 
@@ -134,7 +134,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `tierByGuid` (const, L252) [10]
 - `residentialChain` (function, L271) [3] : Chaîne résidentielle menant au tier-cible : ses ANCÊTRES dans le graphe de montée, du plus bas à la cible.
 - `residentialChainExtended` (function, L305) [7] : CHAÎNE ÉTENDUE — la chaîne résidentielle, plus les LIGNÉES PARALLÈLES du même monde.
-- `goodName` (const, L321) [11]
+- `goodName` (const, L321) [12]
 - `priceOf` (const, L325) [5] : Valeur marchande de référence d'un bien (BasePrice), 0 si inconnu.
 - `effectOf` (const, L329) [6] : Effet de zone d'un bâtiment, ou undefined s'il n'en porte pas.
 - `cityStatusAttrs` (function, L336) [6] : Malus/bonus de RANG DE CITÉ pour une population donnée, appliqués à chaque résidence.
@@ -300,15 +300,18 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `Executeurs` (interface, L40) [3]
 - `PlanPose` (interface, L45) [0]
 - `IleCalculee` (interface, L53) [1]
-- `Flux` (interface, L74) [0]
-- `Deficit` (interface, L75) [0]
-- `ResultatMonde` (interface, L77) [2]
-- `OptionsCalcul` (interface, L91) [0]
-- `versProductrice` (function, L136) [0] : Une île en île de production : ce que la répartition et la pose savent d'elle.
-- `sansEmplacementsInactifs` (function, L162) [1] : L'île telle qu'elle est DANS LA PARTIE : sans les emplacements que le générateur de carte n'a pas activés (lus dans une…
-- `calculerMonde` (function, L169) [3]
-- `nomIle` (const, L429) [0] : Nom lisible d'une île de la configuration.
-- `nomPalier` (const, L430) [0]
+- `Flux` (interface, L76) [0]
+- `Deficit` (interface, L77) [0]
+- `ResultatMonde` (interface, L79) [2]
+- `OptionsCalcul` (interface, L93) [0]
+- `VERSION_CALCUL` (const, L108) [1] : VERSION DES MOTEURS, dans l'empreinte de chaque île.
+- `versProductrice` (function, L148) [0] : Une île en île de production : ce que la répartition et la pose savent d'elle.
+- `sansEmplacementsInactifs` (function, L176) [1] : L'île telle qu'elle est DANS LA PARTIE : sans les emplacements que le générateur de carte n'a pas activés (lus dans une…
+- `ConseilPrincipale` (interface, L220) [1]
+- `conseillerPrincipales` (function, L240) [2] : CONSEILLER L'ÎLE PRINCIPALE (exigence E5)
+- `calculerMonde` (function, L259) [3]
+- `nomIle` (const, L528) [0] : Nom lisible d'une île de la configuration.
+- `nomPalier` (const, L529) [0]
 ### `src/monde/configuration.ts` — CONFIGURATION D'UN MONDE
 - `Propriete` (type, L20) [2] : À qui est l'île.
 - `PROPRIETES` (const, L21) [0]
@@ -349,10 +352,12 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `terreDuDevis` (const, L82) [0] : Terre consommée par l'objectif : production et quartiers des ouvriers.
 - `besoinsDuDevis` (function, L86) [2] : Ce qu'il faut AUSSI fournir à l'île pour qu'elle tienne son objectif : les biens de ses ouvriers et les matières premiè…
 - `Repartition` (interface, L94) [0]
-- `repartir` (function, L101) [2]
-- `nomDuBien` (const, L196) [1]
-- `SuggestionAchat` (interface, L200) [1]
-- `suggererAchats` (function, L222) [1] : Les îles à acheter qui couvriraient le plus de ce qui manque — choisies l'une après l'autre : la deuxième est jugée sur…
+- `BudgetsPris` (type, L104) [1] : Ce qu'une répartition précédente a déjà pris sur les îles (passe de rattrapage).
+- `cumulerBudgets` (function, L107) [2] : Cumule les budgets pris par deux répartitions successives.
+- `repartir` (function, L124) [2]
+- `nomDuBien` (const, L227) [1]
+- `SuggestionAchat` (interface, L231) [1]
+- `suggererAchats` (function, L253) [1] : Les îles à acheter qui couvriraient le plus de ce qui manque — choisies l'une après l'autre : la deuxième est jugée sur…
 
 ## src/monde/sauvegarde
 
@@ -360,16 +365,16 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `NoeudFileDb` (interface, L19) [1]
 - `FiltreFileDb` (type, L25) [0]
 - `lireFileDb` (function, L40) [2]
-- `filtreChemins` (function, L92) [2] : Un filtre qui garde les chemins donnés et tout ce qui est dessous.
-- `enfant` (const, L102) [1]
-- `enfants` (const, L103) [2]
-- `chemin` (const, L104) [21]
-- `attribut` (const, L106) [14]
-- `attributs` (const, L107) [22]
-- `entier` (function, L110) [18] : Un entier little-endian signé, de la taille de la donnée (1, 2, 4 ou 8 octets).
-- `entier64Texte` (function, L123) [1] : Un entier 64 bits signé, en texte (il ne tient pas dans un nombre JavaScript).
-- `entiers32` (function, L129) [2] : Une suite d'entiers 32 bits little-endian.
-- `texteUtf16` (const, L137) [1]
+- `filtreChemins` (function, L94) [2] : Un filtre qui garde les chemins donnés et tout ce qui est dessous.
+- `enfant` (const, L104) [1]
+- `enfants` (const, L105) [2]
+- `chemin` (const, L106) [21]
+- `attribut` (const, L108) [14]
+- `attributs` (const, L109) [22]
+- `entier` (function, L112) [18] : Un entier little-endian signé, de la taille de la donnée (1, 2, 4 ou 8 octets).
+- `entier64Texte` (function, L125) [1] : Un entier 64 bits signé, en texte (il ne tient pas dans un nombre JavaScript).
+- `entiers32` (function, L131) [2] : Une suite d'entiers 32 bits little-endian.
+- `texteUtf16` (const, L139) [1]
 ### `src/monde/sauvegarde/partie.ts` — IMPORT D'UNE SAUVEGARDE `.a8s` — les îles de la partie, leurs fertilités, leur propriétaire.
 - `PROFIL_JOUEUR` (const, L27) [0]
 - `PROFILS_HUMAINS` (const, L30) [0] : Les profils humains d'une partie (assets.xml : `Profile_Human_00` à `_03`).
@@ -568,7 +573,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `Lookup` (type, L36) [4]
 - `ratePerMin` (const, L39) [6] : Débit d'un bâtiment pour un bien, en unités par minute.
 - `pickProducer` (function, L46) [8] : Producteur d'un bien, en préférant la région demandée.
-- `goodName` (const, L52) [11]
+- `goodName` (const, L52) [12]
 - `isProducer` (const, L62) [2] : Le bâtiment produit-il réellement quelque chose ?
 ### `src/prodlayout/complete.ts` — COMPLÉTER LE PANIER — un geste explicite, jamais un effet de bord.
 - `completeBasket` (function, L26) [2]

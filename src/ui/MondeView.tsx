@@ -8,7 +8,7 @@ import {
 } from "../monde/configuration";
 import { fertilitesLisibles } from "../monde/fertilites";
 import { depotMondes, lireExport, type DepotMondes } from "../monde/stockage";
-import { calculerMonde, type Executeurs } from "../monde/calcul";
+import { calculerMonde, conseillerPrincipales, type ConseilPrincipale, type Executeurs } from "../monde/calcul";
 import { configurationDepuisPartie, joueursDeLaPartie, lirePartie, type PartieLue } from "../monde/sauvegarde/partie";
 import { Modal } from "./Modal";
 import { runIslandPlan } from "../optimizer/runIslandPlan";
@@ -52,6 +52,8 @@ export function MondeView() {
   const [calcul, setCalcul] = useState<{ texte: string } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [choixJoueur, setChoixJoueur] = useState<ChoixJoueur | null>(null);
+  /** Classement des îles essayées en île principale, pour la configuration `id`. */
+  const [conseil, setConseil] = useState<{ id: string; objectif: ObjectifPrincipale; liste: ConseilPrincipale[] } | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
   const annulations = useRef(new Set<() => void>());
   useEffect(() => () => { for (const a of annulations.current) a(); }, []);
@@ -116,21 +118,40 @@ export function MondeView() {
     annulations.current.add(cancel);
     return promise.finally(() => annulations.current.delete(cancel));
   };
-  const calculer = async (cfg: ConfigurationMonde | undefined = c) => {
-    if (!cfg) return;
-    setErreur(null);
-    setCalcul({ texte: "Îles principales…" });
-    const executeurs: Executeurs = {
+  const moteurs = () => ({
+    catalog,
+    executeurs: {
       principale: (req) => enWorker(() => runIslandPlan(req)),
       production: (req) => enWorker(() => runPlanifier(req)),
-    };
+    } satisfies Executeurs,
+    parallelisme: Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 4) - 1)),
+    onProgres: (texte: string) => setCalcul({ texte }),
+  });
+  const calculer = async (cfg: ConfigurationMonde | undefined = c) => {
+    if (!cfg || !depot) return;
+    setErreur(null);
+    setCalcul({ texte: "Îles principales…" });
+    const lanceLe = new Date().toISOString();
     try {
-      const resultat = await calculerMonde(cfg, {
-        catalog, executeurs, precedent: cfg.resultat,
-        parallelisme: Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 4) - 1)),
-        onProgres: (texte) => setCalcul({ texte }),
-      });
-      await enregistrer({ ...cfg, resultat });
+      const resultat = await calculerMonde(cfg, { ...moteurs(), precedent: cfg.resultat });
+      // Le résultat rejoint la configuration TELLE QU'ELLE EST MAINTENANT : l'écrire dans celle
+      // du lancement effaçait sans rien dire un rôle ou un palier changé pendant le calcul. Il
+      // est daté du lancement, pour qu'une telle modification le marque périmé.
+      const actuelle = (await depot.lister()).find((x) => x.id === cfg.id) ?? cfg;
+      await enregistrer({ ...actuelle, resultat: { ...resultat, calculeLe: lanceLe } });
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCalcul(null);
+    }
+  };
+  /** Essaie chacune de mes îles en île principale et les classe selon l'objectif de la partie. */
+  const conseiller = async () => {
+    if (!c) return;
+    setErreur(null);
+    setCalcul({ texte: "Essai de chaque île en île principale…" });
+    try {
+      setConseil({ id: c.id, objectif: c.reglages.objectif, liste: await conseillerPrincipales(c, moteurs()) });
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e));
     } finally {
@@ -150,6 +171,7 @@ export function MondeView() {
   /** Suggestion refusée : l'île n'est pas à vendre, on ne la proposera plus. */
   const refuser = (cle: string) => modifierIle(cle, (i) => ({ ...i, propriete: "indisponible" }));
   const nbPrincipales = c?.iles.filter((i) => i.propriete === "moi" && i.role === "principale").length ?? 0;
+  const nbMiennes = c?.iles.filter((i) => i.propriete === "moi").length ?? 0;
   const perime = !!c?.resultat && c.modifieLe > c.resultat.calculeLe;
 
   return (
@@ -275,9 +297,42 @@ export function MondeView() {
                 <button type="button" className="primary" disabled={!!calcul || !nbPrincipales} onClick={() => void calculer(c)}>
                   {calcul ? "Calcul en cours…" : "Calculer le monde"}
                 </button>
+                <button type="button" disabled={!!calcul || !nbMiennes} onClick={() => void conseiller()}
+                  title="Chacune de tes îles est planifiée seule en île principale, puis elles sont classées selon ce que visent les îles principales">
+                  Conseiller l'île principale
+                </button>
                 {calcul && <span className="muted">{calcul.texte}</span>}
-                {!calcul && !nbPrincipales && <span className="muted">Choisis au moins une île principale parmi tes îles.</span>}
+                {!calcul && !nbPrincipales && <span className="muted">Choisis au moins une île principale parmi tes îles, ou fais-toi conseiller.</span>}
               </div>
+              {conseil?.id === c.id && (
+                <div className="opt-result" style={{ marginTop: 8 }}>
+                  <b>Île principale conseillée</b>
+                  <span className="muted"> — chaque île essayée seule, classée selon « {LIBELLES_OBJECTIF[conseil.objectif]} »</span>
+                  <table className="monde-table">
+                    <thead><tr><th>Île</th><th>Palier</th><th>Habitants</th><th>Maisons</th><th>Gains/min</th><th /></tr></thead>
+                    <tbody>
+                      {conseil.liste.slice(0, 6).map((x, k) => {
+                        const i = c.iles.find((y) => y.cle === x.cle);
+                        if (!i) return null;
+                        return (
+                          <tr key={x.cle}>
+                            <td>{k === 0 ? "★ " : ""}{i.libelle ?? nomCourt(i.ileId)}</td>
+                            <td>{x.palier ?? ""}</td>
+                            <td>{x.habitants.toLocaleString("fr")}</td>
+                            <td>{x.maisons.toLocaleString("fr")}</td>
+                            <td>{x.argent.toLocaleString("fr")}</td>
+                            <td>
+                              {i.role === "principale"
+                                ? <span className="muted">île principale</span>
+                                : <button type="button" disabled={!!calcul} onClick={() => modifierIle(i.cle, (y) => ({ ...y, role: "principale" }))}>Choisir</button>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               {erreur && <div className="warn">Le calcul a échoué : {erreur}</div>}
               {perime && !calcul && <div className="warn">La configuration a changé depuis ce calcul : relance-le pour le mettre à jour.</div>}
               {c.resultat && <ResultatMondeVue c={c} r={c.resultat} occupe={!!calcul} onAcheter={acheter} onRefuser={refuser} />}

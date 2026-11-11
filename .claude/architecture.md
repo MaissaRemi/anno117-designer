@@ -89,7 +89,10 @@ L'éditeur travaille en demi-cases (`cellsPerTile = 2`). Les moteurs tournent en
 4. Pose réelle de chaque île de production (`planifierCommande` avec `objectif`), rattrapage.
 5. Flux entre îles, déficits avec raison, bilan (argent compris), suggestions d'achat
    (`suggererAchats`). Réglages de la partie : consommation et entretien (facteurs).
-6. Recalcul incrémental : chaque île porte l'empreinte de ses entrées (`empreinte`).
+6. Recalcul incrémental : chaque île porte l'empreinte de ses entrées (`empreinte`), version
+   des moteurs comprise (`VERSION_CALCUL`).
+7. À part, `conseillerPrincipales` : chaque île à moi planifiée seule en île principale et
+   classée selon l'objectif de la partie (bouton « Conseiller l'île principale »).
 
 ### L'import d'une sauvegarde
 `.a8s` → `rda.ts` (`lireIndexRda`, `extraireRda`, `fichierDeSauvegarde` : flux zlib + 12 octets de

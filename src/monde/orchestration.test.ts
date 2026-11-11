@@ -4,7 +4,7 @@ import type { BuildingDef } from "../model/types";
 import type { IslandPlanResult } from "../optimizer/islandPlan";
 import type { ResultatCommande } from "../commande/planifier";
 import { nouvelleConfiguration, nouvelleIle, type ConfigurationMonde, type IleDuMonde } from "./configuration";
-import { calculerMonde, type Executeurs } from "./calcul";
+import { calculerMonde, conseillerPrincipales, VERSION_CALCUL, type Executeurs } from "./calcul";
 
 /**
  * L'ORCHESTRATION DU CALCUL D'UN MONDE, avec des moteurs FACTICES : une île principale demande
@@ -106,6 +106,49 @@ describe("orchestration du calcul d'un monde", () => {
     const r3 = await calculerMonde(c, { catalog, executeurs, precedent: r2 });
     expect(appels).toEqual({ principale: 2, production: 1 });
     expect(r3.recalculees).toBe(1);
+  });
+
+  it("un plan posé par une autre version des moteurs n'est pas repris", async () => {
+    const { appels, executeurs } = factices();
+    const c = monde(
+      ile("roman_island_medium_01", { role: "principale" }),
+      ile("celtic_island_large_02", { fertilites: [ORGE] }),
+    );
+    const r1 = await calculerMonde(c, { catalog, executeurs });
+    const ancien = { ...r1, iles: r1.iles.map((i) => ({ ...i, empreinte: i.empreinte?.replace(`"v":${VERSION_CALCUL}`, `"v":${VERSION_CALCUL - 1}`) })) };
+    const r2 = await calculerMonde(c, { catalog, executeurs, precedent: ancien });
+    expect(appels).toEqual({ principale: 2, production: 2 });
+    expect(r2.reutilisees).toBe(0);
+  });
+
+  it("conseille l'île principale : chaque île à moi essayée seule, classée selon l'objectif de la partie", async () => {
+    // moteur factice : les habitants suivent la terre de l'île, les gains vont à l'inverse
+    const executeurs: Executeurs = {
+      principale: async (req) => {
+        const terre = req.grid.usable.filter(Boolean).length;
+        return {
+          importGoods: [], exploited: [], residents: terre, houses: Math.round(terre / 100),
+          money: { gross: 1_000_000 - terre, upkeep: 0, net: 1_000_000 - terre }, tierName: "Patriciens",
+          buildings: [], roads: [], fields: [], aqueducts: [], gaps: [],
+        } as unknown as IslandPlanResult;
+      },
+      production: async () => { throw new Error("le conseil ne pose aucune île de production"); },
+    };
+    const c = monde(
+      ile("roman_island_small_02", {}),
+      ile("roman_island_large_03", {}),
+      ile("roman_island_medium_01", {}),
+      ile("celtic_island_large_02", { propriete: "achetable" }),
+    );
+    const [petite, grande, moyenne] = c.iles.map((i) => i.cle);
+    c.reglages = { ...c.reglages, objectif: "habitants" };
+    const parHabitants = await conseillerPrincipales(c, { catalog, executeurs });
+    // seulement mes îles, la plus peuplée d'abord
+    expect(parHabitants.map((x) => x.cle)).toEqual([grande, moyenne, petite]);
+    expect(parHabitants[0].valeur).toBe(parHabitants[0].habitants);
+    c.reglages = { ...c.reglages, objectif: "argent" };
+    const parGains = await conseillerPrincipales(c, { catalog, executeurs });
+    expect(parGains.map((x) => x.cle)).toEqual([petite, moyenne, grande]);
   });
 
   it("une bière que personne ne produit : l'île achetable d'Albion qui a l'orge est proposée, jamais celle d'un adversaire", async () => {

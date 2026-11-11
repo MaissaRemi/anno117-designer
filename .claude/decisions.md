@@ -5,6 +5,15 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
 
 ## Planification d'un monde
 
+- **L'île principale se conseille en la planifiant** (11/11, exigence E5) : chaque île à moi
+  est posée seule en île principale par le vrai moteur, puis classée selon l'objectif de la
+  partie. Aucun modèle d'estimation à entretenir ; quelques secondes par île, en parallèle.
+- **Le rattrapage part du monde posé** (11/11) : ce qui manque est la consommation moins la
+  production des plans réels, réparti sur trois tours au plus. Une île est jugée sur sa terre
+  réellement prise et n'est écartée que pour le bien qu'elle n'a pas tenu.
+- **La version des moteurs est dans l'empreinte** (11/11, `VERSION_CALCUL`) : à augmenter
+  quand un moteur d'île change ce qu'il pose, sinon un monde déjà calculé garde ses vieux plans.
+
 - **Lire la sauvegarde plutôt que la graine** (04/11/2026). La graine ne suffit pas : le tirage
   des îles et des fertilités se fait dans l'exécutable ; la sauvegarde contient le monde généré.
   Lecteur écrit dans le navigateur (`monde/sauvegarde/`) pour que l'utilisateur dépose son

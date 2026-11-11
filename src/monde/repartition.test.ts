@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef } from "../model/types";
 import { makeLookup } from "../engine/rules";
-import { besoinsDuDevis, devisIle, fertilitesPourMoteur, repartir, type IleProductrice, type OptionsRepartition } from "./repartition";
+import { besoinsDuDevis, cumulerBudgets, devisIle, fertilitesPourMoteur, repartir, type IleProductrice, type OptionsRepartition } from "./repartition";
 
 const catalog = rawCatalog as unknown as BuildingDef[];
 const o: OptionsRepartition = { catalog, lookup: makeLookup(catalog), routes: "pavee", productiviteGlobale: 0 };
@@ -34,6 +34,24 @@ describe("répartir la demande d'un monde", () => {
     expect(besoinsDuDevis(n)).toEqual(expect.arrayContaining([expect.objectContaining({ good: MINERAI, parMinute: 10 })]));
     const avec = ile("avec", "Roman", ["4049"], 20_000, { mountain: 5 }); // 10 fers = 5 mines
     expect(besoinsDuDevis(devisIle(avec, [{ good: FER, parMinute: 10 }], o)).some((b) => b.good === MINERAI)).toBe(false);
+  });
+
+  it("le rattrapage ne redonne pas les emplacements déjà pris, et n'écarte une île que pour le bien manqué", () => {
+    // 10 fers = 5 mines : l'île a ses 5 emplacements de montagne pris après la première passe
+    const mine = ile("mine", "Roman", ["4049"], 20_000, { mountain: 5 });
+    const r1 = repartir({ [MINERAI]: 10 }, [mine], o);
+    expect(r1.affectation.mine).toEqual([expect.objectContaining({ good: MINERAI })]);
+    expect(r1.placesUtilisees.mine.mountain).toBeCloseTo(5, 1);
+    // seconde passe, budgets de la première transmis : plus un seul emplacement
+    const r2 = repartir({ [MINERAI]: 4 }, [mine], o, r1);
+    expect(r2.affectation).toEqual({});
+    // sans eux, l'ancienne passe redonnait les mêmes emplacements
+    expect(repartir({ [MINERAI]: 4 }, [mine], o, { terreUtilisee: r1.terreUtilisee }).affectation.mine).toBeDefined();
+    // les budgets de deux passes se cumulent
+    expect(cumulerBudgets(r1, r1).placesUtilisees.mine.mountain).toBeCloseTo(10, 1);
+    // écartée pour le minerai seulement : le pain lui reste ouvert
+    const r3 = repartir({ [MINERAI]: 2, [PAIN]: 5 }, [ile("mixte", "Roman", ["4049"])], o, {}, new Set([`mixte|${MINERAI}`]));
+    expect(r3.affectation.mixte.map((b) => b.good)).toEqual([PAIN]);
   });
 
   it("la place manque : le bien se partage entre îles, puis le reste est signalé", () => {
