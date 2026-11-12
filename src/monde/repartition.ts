@@ -54,11 +54,24 @@ export interface OptionsRepartition {
 export const AUCUNE_FERTILITE = "0";
 export const fertilitesPourMoteur = (f: string[] | null): string[] => (f && f.length ? f : [AUCUNE_FERTILITE]);
 
-/** Part de la terre qu'une île de production peut vraiment bâtir : routes, côte, formes. */
-const REMPLISSAGE = 0.65;
+/** Part de la terre qu'une île de production peut vraiment bâtir : routes, côte, formes. 0,65
+ *  jusqu'au 12/11 : la pose tenait alors moins (champs en morceaux, lots seuls). Monde d'essai,
+ *  terre prise par la pose à 0,65 : 65 à 69 %, toutes les îles bornées par la terre ; à 0,75 :
+ *  déficits 68,0 → 55,7 u/min, 99,5 % de l'affecté posé (0,7 : 55,5 en 20 lignes ; 0,8 : 61,6
+ *  et la pose ne tient plus que 96,8 %, des cultivateurs de lavande sans place). */
+const REMPLISSAGE = 0.75;
 /** Emplacements dont le nombre borne une exploitation (le marais ne borne rien). */
 const LIMITANTS = ["mountain", "river"] as const;
 const EPS = 1e-6;
+/** Ce qui manque, selon le budget qui a borné le bien sur le plus d'îles. */
+const RAISON_BORNE: Record<string, string> = {
+  terre: "plus assez de place sur tes îles de production",
+  cote: "plus assez de côte sur tes îles de production : leurs places côtières sont prises",
+  mountain: "plus assez d'emplacements de montagne libres sur tes îles de production",
+  river: "plus assez d'emplacements de rivière libres sur tes îles de production",
+  emplacement: "les emplacements de tes îles de production n'en donnent pas plus",
+  pose: "tes îles de production qui le font n'en ont pas tenu plus à la pose",
+};
 
 /** Le devis d'une île pour un objectif : bâtiments, ouvriers, biens de leurs maisons, imports. */
 export function devisIle(ile: IleProductrice, objectif: BienDebit[], o: OptionsRepartition): Nomenclature {
@@ -181,24 +194,33 @@ export function repartir(
 
   for (const [good, total] of biens) {
     let reste = total;
+    // le budget qui a borné ce bien, île par île : la raison dite s'il reste un manque
+    const bornes = new Map<string, number>();
+    const borne = (b: string) => bornes.set(b, (bornes.get(b) ?? 0) + 1);
     const candidates = [...eligibles.get(good)!]
       .sort((a, b) => estimer(a, good, total).parUnite - estimer(b, good, total).parUnite || a.cle.localeCompare(b.cle));
     for (const ile of candidates) {
       if (reste <= EPS) break;
       const e = estimer(ile, good, reste);
       const place = cap.get(ile.cle)!;
-      if (place <= 0 || !Number.isFinite(e.parUnite)) continue;
+      if (!Number.isFinite(e.parUnite)) continue;
+      if (place <= 0) { borne("terre"); continue; }
       // le premier budget épuisé borne : terre, côte, chaque type d'emplacement
-      let q = Math.min(reste, place / e.parUnite, e.produit);
+      let q = Math.min(reste, e.produit);
+      // un devis qui produit moins que demandé est borné par les emplacements de l'île
+      let par = e.produit < reste - EPS ? "emplacement" : "terre";
+      const min = (v: number, b: string) => { if (v < q) { q = v; par = b; } };
+      min(place / e.parUnite, "terre");
       const coteLibre = cote.get(ile.cle)!;
       // les côtiers d'une même chaîne (maquereaux ET marais salants du garum) se partagent la côte
       const coteParUnite = e.cotiers.reduce((s, c) => s + c.parUnite / c.capacite, 0);
       if (coteParUnite > 0) {
-        q = Math.min(q, coteLibre / coteParUnite);
-        for (const c of e.cotiers) q = Math.min(q, Math.floor(q * c.parUnite + 1e-3) / c.parUnite);
+        min(coteLibre / coteParUnite, "cote");
+        for (const c of e.cotiers) min(Math.floor(q * c.parUnite + 1e-3) / c.parUnite, "cote");
       }
       const pl = places.get(ile.cle)!;
-      for (const [t, v] of Object.entries(e.places)) if (v > 0) q = Math.min(q, Math.floor(pl[t] + 1e-3) / v);
+      for (const [t, v] of Object.entries(e.places)) if (v > 0) min(Math.floor(pl[t] + 1e-3) / v, t);
+      if (q < reste - EPS) borne(par);
       if (q <= EPS) continue;
       const m = aff.get(ile.cle) ?? new Map<string, number>();
       m.set(good, (m.get(good) ?? 0) + q);
@@ -219,7 +241,8 @@ export function repartir(
           ? (economy.producers[good]?.length
             ? "aucune de tes îles de production ne peut le produire (province, fertilité ou emplacement)"
             : "aucun bâtiment ne le produit")
-          : "plus assez de place sur tes îles de production",
+          : RAISON_BORNE[[...bornes].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0]
+            ?? (eligibles.get(good)!.length < capables.get(good)!.length ? "pose" : "terre")],
       });
     }
   }

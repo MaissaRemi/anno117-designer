@@ -107,7 +107,7 @@ export interface OptionsCalcul {
  * ce qu'il pose : sans elle un monde déjà calculé reprenait ses anciens plans, et une correction
  * du moteur semblait ne pas avoir pris.
  */
-export const VERSION_CALCUL = 3;
+export const VERSION_CALCUL = 4;
 /** Tours de rattrapage après la première pose. Chacun repose les îles qui reçoivent du travail. */
 const TOURS_RATTRAPAGE = 3;
 

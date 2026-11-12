@@ -63,6 +63,8 @@ describe("répartir la demande d'un monde", () => {
     expect(marais.reduce((s, l) => s + l.nombre, 0)).toBe(3);
     expect(r1.coteUtilisee.cotiere).toBeCloseTo(1, 5);
     expect(r1.nonCouvert[0].good).toBe(SEL);
+    // c'est la côte qui manque, et le monde le dit (pas « la place »)
+    expect(r1.nonCouvert[0].raison).toMatch(/côte/);
     expect(repartir({ [SEL]: 5 }, [cotiere], o, r1).affectation).toEqual({});
     // une côte qui n'en accueille aucun : rien n'est promis
     expect(repartir({ [SEL]: 5 }, [{ ...cotiere, capaciteCote: () => 0 }], o).affectation).toEqual({});
