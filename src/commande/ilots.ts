@@ -1188,6 +1188,17 @@ function disposer(
         .filter((x): x is { p: (typeof plots)[number]; o: Option } => !!x.o)
         .sort((a, b) => b.o.cap - a.o.cap || rang.get(a.p.uid)! - rang.get(b.p.uid)!);
       const pris = cands.slice(0, bz.nombre);
+      if (bz.role === "ouvriers" && pris.length) {
+        // La main-d'œuvre se compte en habitants : une maison sous sa capacité (un service manque
+        // à sa porte) en appelle une de plus, sinon ce qui est posé manque d'ouvriers (mesuré le
+        // 12/11 : 767 Liberti pour 768 sur large_03 au maximum, le devis comptant les maisons pleines).
+        // Seulement ce que la marge du devis ne couvre pas : une maison de trop prend de la terre.
+        const f = tierByGuid(bz.tierGuid)?.factor ?? 0;
+        const marge = f > 0 ? ((nom.mainOeuvre.offre[bz.tierGuid] ?? 0) - (nom.mainOeuvre.demande[bz.tierGuid] ?? 0)) / f : Infinity;
+        const requis = bz.nombre * pris[0].o.cap - Math.max(0, marge);
+        let loges = pris.reduce((s, x) => s + x.o.cap, 0);
+        for (let k = bz.nombre; k < cands.length && loges < requis; k++) { pris.push(cands[k]); loges += cands[k].o.cap; }
+      }
       for (const x of pris) attribution.set(x.p.uid, x.o);
       if (pris.length < bz.nombre) courts.push(`${bz.nombre - pris.length} ${bz.nom} non logée(s) à leur palier sur ${bz.nombre}`);
     }
