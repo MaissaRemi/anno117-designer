@@ -1,4 +1,4 @@
-# Reprise du projet — état au 11/11/2026
+# Reprise du projet — état au 12/11/2026
 
 Point d'entrée d'une nouvelle session. Le travail se fait sur la branche **`dev`** ; `main` l'a
 reçue le 11/11/2026 (avance rapide, en local). Rien ne se pousse sans l'accord de Rémi.
@@ -200,20 +200,57 @@ Rémi n'étaient écrites nulle part.
   pose s'accordent quand tout est posé ; dans les données, seuls les bâtiments de production
   réclament de la main-d'œuvre, aucun service. **L'audit du 10/11 est clos.**
 
-## Ce qui reste à faire, par intérêt (11/11/2026)
+### Campagne d'amélioration des plans (12/11/2026)
+
+Trois chantiers délégués à des agents, chacun mesuré avant d'agir, puis vérifié au panneau et
+à la suite complète (561 tests). Leviers essayés sans gain : fin de
+`docs/archive/PLAN-optimisation-arbitrage.md`.
+
+- **« Remplir l'île »** (`optimizer/islandPlan.ts`, `planLattice.ts`) : la recette gagnante est
+  rejouée sous quatre calages de la trame (décalage (3, 1), avec ou sans service aligné sur une
+  ligne ; services hors grappe CALÉS contre une ligne et une épine, sans anneau de route). Un
+  calage n'est gardé que s'il bat le plan sans recul des maisons au palier, des pâtés ni de
+  l'espacement. Pavée : medium_01 516 → 536 au palier (65 → 41 % en pâté), small_06 226 → 253,
+  celtic_large_07 1 013 → 1 080 (40 → 29 %, espacement 0,42 → 0,63), large_03 60 827 → 65 748
+  habitants. Temps : +35 à 45 %. Mesuré au passage : aucune copie de service en trop ; routes
+  23 à 25 % de la terre, dont 6 à 8 % d'anneaux de services ; terre vide 12 à 14 %, en bandes
+  trop étroites pour une maison.
+- **Île de production** (`prodlayout/fields.ts`, `commande/production.ts`, `maximum.ts`,
+  `ilots.ts`) : les champs étaient posés EN MORCEAUX (18 fermes sur 19), ce que le jeu interdit
+  (`GAME_MECHANICS.md` §5) ; ils poussent maintenant d'un seul tenant. Bâtiments restants posés
+  un à un ; côtiers et exploitations posés AVANT les lots, dont les champs muraient la côte et
+  les emplacements ; une maison de plus quand une maison d'ouvriers est sous sa capacité ; pose
+  3 à 4 fois plus rapide. Débit maximal, pains par minute : small_06 15,0 → 19,0, medium_01
+  33,7 → 43,9, large_03 84,1 → 104,3, celtic_large_02 49,3 → 61,0. Référence du lot
+  « pain ×2 » : 529 → 600 cases, confirmé par Rémi (l'ancienne reposait sur des champs en
+  morceaux).
+- **Monde** (`monde/repartition.ts`) : la terre comptée à 75 % (`REMPLISSAGE`, 65 % avant)
+  puisque la pose la tient ; le résultat dit quel budget a manqué (côte, montagne, rivière,
+  terre, pose). Monde d'essai : demande de la ville servie 73 → 77 %, affecté posé
+  86 → 99,6 %, déficits 74 → 56 u/min en 16 lignes, calcul en 43 s au lieu de 108 s.
+  `VERSION_CALCUL` = 4.
+
+## Ce qui reste à faire, par intérêt (12/11/2026)
 
 Feuille de route détaillée : `.claude/ROADMAP.md`.
 
-**Campagne en cours, carte blanche de Rémi (12/11)** : améliorer au maximum la qualité des
-plans et la planification du monde. L'essai d'un modèle entraîné en local est ABANDONNÉ
-(décision de Rémi) ; la réflexion d'origine reste dans
-`docs/superpowers/specs/2026-11-12-autre-moteur-de-plans-reflexion.md`. Mode de travail voulu
-par Rémi : Claude réfléchit et supervise, le code est délégué à des agents Opus en effort
-élevé (chacun dans son worktree), chaque document se lit une seule fois. Un changement n'est
-gardé que si le panneau et les tests le confirment. Chantiers, dans l'ordre : (1) « Remplir
-l'île » : copies de services en trop, terre perdue ; (2) île de production : terre vide au
-débit maximal ; (3) monde : emplacements des îles principales, devis des quartiers
-d'ouvriers, côte partagée.
+**Campagne d'amélioration, carte blanche de Rémi (12/11)** : première vague faite, résultats
+dans « Ce qui a été fait ». Mode de travail voulu par Rémi : Claude réfléchit et supervise, le
+code est délégué à des agents Opus en effort élevé (chacun dans son worktree, sous
+`.claude/worktrees/`), chaque document se lit une seule fois ; un changement n'est gardé que
+si le panneau et les tests le confirment. L'essai d'un modèle entraîné en local est ABANDONNÉ
+(réflexion d'origine : `docs/superpowers/specs/2026-11-12-autre-moteur-de-plans-reflexion.md`).
+Suite possible, par gain attendu :
+- **Côte des îles principales** : les trois quarts des déficits du monde d'essai (42 sur
+  56 u/min) viennent de la côte des îles de production, toute prise. Les bandes côtières vides
+  des îles principales (5 à 6 % de leur terre, trop étroites pour une maison) pourraient
+  accueillir les côtiers qui manquent. À décider par Rémi : l'île principale ne porterait plus
+  seulement des maisons.
+- **Anneaux de route des services** sur les îles moyennes et petites : 6 à 8 % de la terre.
+  Les services calés sur la trame ne gagnent aujourd'hui que sur les grandes îles.
+- **Arbitrages ouverts, à Rémi** : sur medium_01, un plan à 568 maisons au palier et
+  espacement 0,55 existe, écarté au profit de 536 et 0,59 ; un écart de 2 cases entre services
+  différents divise les pâtés par deux mais coûte 4 à 11 % de maisons au palier.
 
 **Planification d'un monde** (l'objectif principal)
 
@@ -232,11 +269,11 @@ chargés de produits finis).
   avant de poser les maisons. Les exploitations demandent aussi des Plébéiens (5 par mine),
   que le moteur obtient en rétrogradant des maisons.
 
-1. **Devis d'une île de production, ce qui reste faux** (sonde du 11/11) : les quartiers
-   d'ouvriers de haut palier (services et eau : 2 à 3 fois la terre du devis quand l'île est
-   pleine) ; un ou deux emplacements de montagne pris par les sources d'aqueduc, ou murés par
-   ce qui est posé avant les mines ; plusieurs biens côtiers qui se disputent les mêmes places.
-   Les fermes, elles, sont justes (terre prise à 0,92 du devis).
+1. **Ce qui borne le monde d'essai** (12/11) : la côte (42 des 56 u/min de déficit : Toges,
+   Coques, Huîtres, Verres précieux, Sandales…) et les emplacements de montagne (13 u/min). La
+   terre ne borne plus. Pistes : la côte des îles principales (voir plus haut) ; une côte
+   comptée par type de bâtiment plutôt que partagée (non essayé : peut promettre plus que la
+   côte ne tient).
 2. **Ouvriers des ateliers de luxe** : leurs biens de luxe alourdissent la demande ; le rendre
    visible dans le résultat (part de la demande due aux ouvriers).
 3. **Navires** (étape 5 de la conception) : temps de trajet entre îles à partir des positions
@@ -253,7 +290,9 @@ chargés de produits finis).
 
 **Moteur d'une île** (gain faible, reportés)
 10. Un service sans accès au comptoir compte encore dans la couverture (un seul cas en Latium).
-11. Plan diagonal non posable dans l'éditeur ; trame mêlée en pause.
+11. Plan diagonal non posable dans l'éditeur ; trame mêlée en pause. Depuis le 12/11, plus
+    aucune île connue ne propose le plan diagonal : sur small_07 le plan droit loge 8 065
+    habitants contre 7 360.
 
 **Entretien du dépôt**
 12. `ui/IslandPlanner.tsx` (553 lignes) n'a pas de test de composant : sortir la construction

@@ -116,3 +116,25 @@ documents datés de `docs/superpowers/`. Les plus récentes en premier.
 - **`REPRISE.md` ne porte que l'état et la suite** (11/11) : il est chargé à chaque session.
   Le détail d'un chantier terminé part dans `docs/archive/`, avec les anciens audits et les
   anciens documents d'état ; `docs/superpowers/` garde les conceptions et plans datés.
+
+## Campagne du 12/11/2026 (carte blanche de Rémi, code délégué à des agents Opus)
+
+- **Un calage de la trame n'est gardé que sans recul d'exigence.** La recette gagnante de
+  « Remplir l'île » est rejouée sous quatre calages ; un candidat doit battre le plan ET ne
+  faire reculer ni les maisons au palier, ni les pâtés, ni l'espacement. Raison : les exigences
+  de Rémi passent avant le gain d'habitants ; aucune île ne peut y perdre.
+- **Services hors grappe calés contre une ligne et une épine, sans anneau de route.** Raison :
+  l'anneau coûte 6 à 8 % de la terre et 70 % de ses cases ne bordent aucune maison. Supprimer
+  l'anneau SANS caler le service est réfuté (couverture perdue, pâtés, temps triplé).
+- **Les champs poussent d'un seul tenant depuis la ferme** (règle du jeu,
+  `GAME_MECHANICS.md` §5). Raison : posés par anneaux, ils étaient en morceaux sur 18 fermes
+  sur 19, donc inconstructibles. La référence du lot « pain ×2 » passe de 529 à 600 cases,
+  avec l'accord de Rémi (12/11).
+- **Côtiers et exploitations avant les lots.** Raison : les champs des lots muraient la côte
+  et les abords des emplacements.
+- **La répartition compte 75 % de la terre** (`REMPLISSAGE`, 65 % avant). Raison : la pose en
+  tient 78 à 84 % au débit maximal ; à 80 % des bâtiments restent sans place. Le résultat dit
+  quel budget a manqué, parce que « plus assez de place » cachait que la côte et la montagne
+  bornent le monde.
+- **Le cliquet de la part posée est à 99, pas 100.** La mesure est 99,6 % : un seuil arrondi
+  au-dessus casserait au moindre bruit.

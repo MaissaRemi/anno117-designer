@@ -27,8 +27,8 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `routeVersReseau` (function, L178) [1] : Plus court chemin de route du périmètre d'une emprise (sans les coins : l'accès est orthogonal) jusqu'au réseau, par de…
 - `disposerQuartiers` (function, L266) [2] : Pose les quartiers d'une commande en îlots, sur une île (grille TUILE, celle des moteurs).
 ### `src/commande/maximum.ts` — PRODUIRE LE MAXIMUM
-- `tenue` (const, L28) [6] : Part de l'objectif posée, sur le bien le moins bien tenu.
-- `planifierMaximum` (function, L31) [2]
+- `tenue` (const, L29) [6] : Part de l'objectif posée, sur le bien le moins bien tenu.
+- `planifierMaximum` (function, L32) [2]
 ### `src/commande/nomenclature.ts` — LA COMMANDE, ET CE QU'ELLE COÛTE EN BÂTIMENTS
 - `SURFACE_PAR_MAISON` (const, L33) [1] : Surface urbaine par maison, routes et services compris.
 - `LigneMaisons` (interface, L39) [1]
@@ -55,11 +55,11 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `CommandeRequete` (interface, L9) [2]
 - `CommandeMsg` (type, L17) [1]
 ### `src/commande/production.ts` — LA PRODUCTION POSÉE SUR L'ÎLE
-- `PlanProduction` (interface, L41) [1]
-- `VilleExistante` (interface, L52) [0]
-- `lotsDeProduction` (function, L61) [1] : Lots de production : les lignes qui échangent des biens restent ensemble.
-- `couper` (function, L87) [2] : Coupe un lot en deux DEMI-CHAÎNES : la moitié de chaque ligne de part et d'autre.
-- `disposerProduction` (function, L106) [1] : Pose la production d'une commande sur l'île, autour d'une ville déjà posée.
+- `PlanProduction` (interface, L49) [1]
+- `VilleExistante` (interface, L60) [0]
+- `lotsDeProduction` (function, L90) [1] : Lots de production : les lignes qui échangent des biens restent ensemble.
+- `couper` (function, L116) [2] : Coupe un lot en deux DEMI-CHAÎNES : la moitié de chaque ligne de part et d'autre.
+- `disposerProduction` (function, L135) [1] : Pose la production d'une commande sur l'île, autour d'une ville déjà posée.
 ### `src/commande/runPlanifier.ts` — Lance la planification d'une commande dans un Web Worker (interface non bloquée).
 - `runPlanifier` (function, L5) [3]
 
@@ -252,7 +252,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `rootedRoadSet` (function, L160) [13] : Ensemble des cases de route reliées à un comptoir (roadRoot), via BFS sur le réseau (4-connexité).
 - `roadConnected` (function, L220) [10] : Le bâtiment touche-t-il une route reliée au comptoir ?
 - `FieldResult` (interface, L250) [0]
-- `validateFields` (function, L259) [3] : Valide le champ d'un bâtiment : assez de cases, connectées, touchant le bâtiment.
+- `validateFields` (function, L259) [6] : Valide le champ d'un bâtiment : assez de cases, connectées, touchant le bâtiment.
 - `computeRadiusCoverage` (function, L421) [8] : Cases couvertes par le rayon de chaque bâtiment d'influence.
 - `BuildingIssues` (interface, L448) [1]
 - `validateLayout` (function, L470) [5] : Valide toute la disposition, renvoie les problèmes par bâtiment.
@@ -290,7 +290,7 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `BuildingDef` (interface, L31) [82] : Définition catalogue : gabarit réutilisable d'un type de bâtiment.
 - `PlacedBuilding` (interface, L84) [23] : Instance d'un bâtiment posé sur la grille.
 - `FieldTile` (interface, L93) [5]
-- `AIRE_LIBRE` (const, L105) [4] : `fieldType` d'une case d'AIRE LIBRE : la terre qu'un bûcheron ou un rucher (`freeArea`) doit garder nue autour de lui.
+- `AIRE_LIBRE` (const, L105) [5] : `fieldType` d'une case d'AIRE LIBRE : la terre qu'un bûcheron ou un rucher (`freeArea`) doit garder nue autour de lui.
 - `RoadTile` (interface, L107) [14]
 - `AqueductTile` (interface, L119) [3] : Tuile de conduite d'aqueduc (réseau d'eau, distinct des routes).
 - `GridSlot` (interface, L126) [0] : Slot de ressource du terrain (montagne/rivière/marais) — extrait du jeu.
@@ -355,16 +355,16 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `OptionsRepartition` (interface, L37) [2]
 - `AUCUNE_FERTILITE` (const, L54) [0] : Les moteurs d'île lisent une liste de fertilités VIDE comme « tout est présent » (convention de « Remplir l'île », où l…
 - `fertilitesPourMoteur` (const, L55) [2]
-- `devisIle` (function, L64) [2] : Le devis d'une île pour un objectif : bâtiments, ouvriers, biens de leurs maisons, imports.
-- `terreDuDevis` (const, L75) [0] : Terre consommée par l'objectif : production et quartiers des ouvriers.
-- `besoinsDuDevis` (function, L79) [2] : Ce qu'il faut AUSSI fournir à l'île pour qu'elle tienne son objectif : les biens de ses ouvriers et les matières premiè…
-- `Repartition` (interface, L87) [0]
-- `BudgetsPris` (type, L97) [1] : Ce qu'une répartition précédente a déjà pris sur les îles (passe de rattrapage).
-- `cumulerBudgets` (function, L100) [2] : Cumule les budgets pris par deux répartitions successives.
-- `repartir` (function, L117) [3]
-- `nomDuBien` (const, L237) [1]
-- `SuggestionAchat` (interface, L241) [1]
-- `suggererAchats` (function, L263) [1] : Les îles à acheter qui couvriraient le plus de ce qui manque — choisies l'une après l'autre : la deuxième est jugée sur…
+- `devisIle` (function, L77) [2] : Le devis d'une île pour un objectif : bâtiments, ouvriers, biens de leurs maisons, imports.
+- `terreDuDevis` (const, L88) [0] : Terre consommée par l'objectif : production et quartiers des ouvriers.
+- `besoinsDuDevis` (function, L92) [2] : Ce qu'il faut AUSSI fournir à l'île pour qu'elle tienne son objectif : les biens de ses ouvriers et les matières premiè…
+- `Repartition` (interface, L100) [0]
+- `BudgetsPris` (type, L110) [1] : Ce qu'une répartition précédente a déjà pris sur les îles (passe de rattrapage).
+- `cumulerBudgets` (function, L113) [2] : Cumule les budgets pris par deux répartitions successives.
+- `repartir` (function, L130) [3]
+- `nomDuBien` (const, L260) [1]
+- `SuggestionAchat` (interface, L264) [1]
+- `suggererAchats` (function, L286) [1] : Les îles à acheter qui couvriraient le plus de ce qui manque — choisies l'une après l'autre : la deuxième est jugée sur…
 
 ## src/monde/sauvegarde
 
@@ -439,11 +439,11 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `checkPlan` (function, L60) [4] : Toutes les règles, dans l'ordre du catalogue.
 - `groupByRule` (function, L328) [1] : Regroupe des violations par règle, pour l'inventaire.
 ### `src/optimizer/islandPlan.ts` — Choix des services à poser : - "auto" (défaut) : RECHERCHE DE RECETTE — on énumère les sous-ensembles minimaux qui franchissent les seuils du palier,…
-- `IslandPlanRequest` (interface, L33) [8]
-- `ImportGood` (interface, L189) [0]
-- `IslandPlanResult` (interface, L195) [8]
-- `planIsland` (function, L295) [3] : Point d'entrée UNIQUE du plan d'île.
-- `planIslandImport` (function, L546) [18]
+- `IslandPlanRequest` (interface, L34) [8]
+- `ImportGood` (interface, L190) [0]
+- `IslandPlanResult` (interface, L196) [8]
+- `planIsland` (function, L296) [3] : Point d'entrée UNIQUE du plan d'île.
+- `planIslandImport` (function, L547) [18]
 ### `src/optimizer/islandPlanWorker.ts`
 - `IslandPlanMsg` (type, L5) [1]
 ### `src/optimizer/kontor.ts` — COMPTOIR (kontor) — racine du réseau de routes et point d'entrée des marchandises.
@@ -471,18 +471,18 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `occupation` (function, L56) [10] : Projette un plan sur le maillage.
 ### `src/optimizer/planLattice.ts`
 - `LatticeOpts` (interface, L19) [0]
-- `SPINE_STEP` (const, L90) [0] : Espacement des épines verticales du peigne de routes.
-- `HousePlot` (interface, L98) [2] : Une PARCELLE bâtie et les paliers qu'elle peut légalement accueillir, d'après les services qui la couvrent.
-- `hostableTiers` (const, L112) [1] : Paliers qu'au moins une parcelle sait accueillir — le VIVIER de la cascade.
-- `LatticeResult` (interface, L118) [1]
-- `planLattice` (function, L175) [14]
+- `SPINE_STEP` (const, L98) [0] : Espacement des épines verticales du peigne de routes.
+- `HousePlot` (interface, L106) [2] : Une PARCELLE bâtie et les paliers qu'elle peut légalement accueillir, d'après les services qui la couvrent.
+- `hostableTiers` (const, L120) [1] : Paliers qu'au moins une parcelle sait accueillir — le VIVIER de la cascade.
+- `LatticeResult` (interface, L126) [1]
+- `planLattice` (function, L183) [14]
 ### `src/optimizer/planQuality.ts` — QUALITÉ D'UN PLAN : CE QUE LE SOL DEVIENT
 - `PlanRole` (type, L24) [0] : Rôle d'un bâtiment dans le plan, du point de vue de l'usage du sol.
 - `roleOf` (function, L32) [2] : Rôle d'un bâtiment.
 - `PlanQuality` (interface, L41) [2]
-- `planQuality` (function, L56) [8] : Mesure l'usage du sol d'un plan.
+- `planQuality` (function, L56) [9] : Mesure l'usage du sol d'un plan.
 - `Regroupement` (interface, L121) [1] : REGROUPEMENT ET ESPACEMENT DES SERVICES
-- `regroupement` (function, L149) [2] : Mesure le regroupement des services d'un plan.
+- `regroupement` (function, L149) [3] : Mesure le regroupement des services d'un plan.
 ### `src/optimizer/plansAuChoix.ts` — PLANS AU CHOIX
 - `PlanComparable` (interface, L19) [1] : Ce qu'un plan doit exposer pour être comparé.
 - `Critere` (type, L28) [1]
@@ -579,17 +579,17 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 ### `src/prodlayout/complete.ts` — COMPLÉTER LE PANIER — un geste explicite, jamais un effet de bord.
 - `completeBasket` (function, L27) [2]
 ### `src/prodlayout/exit.ts` — LA SORTIE DE ROUTE — la seule règle qui ne vienne pas du catalogue.
-- `ExitSide` (type, L13) [4]
+- `ExitSide` (type, L13) [5]
 - `ExitPoint` (interface, L15) [2]
 - `EXIT_SIDES` (const, L21) [1]
 - `ensureExit` (function, L42) [2] : Garantit une case de route sur le bord `side`, reliée aux `seeds` en distance-rue.
 ### `src/prodlayout/fields.ts` — CHAMPS ET AIRES LIBRES — les deux exigences de surface que le catalogue déclare.
 - `FarmClaim` (interface, L15) [0]
 - `FieldCell` (interface, L26) [1]
-- `fillFields` (function, L37) [3]
-- `reserveFreeArea` (function, L60) [2] : Réserve les cases libres à `radius` du bâtiment : plus rien ne s'y bâtira.
-- `freeAround` (function, L88) [2] : Cases libres disponibles à `radius` du rectangle — sonde avant réservation.
-- `reservedAround` (function, L107) [1] : Cases DÉJÀ réservées à `radius` du rectangle.
+- `fillFields` (function, L43) [4] : Le champ pousse D'UN SEUL TENANT depuis la ferme, en largeur : chaque case touche une case du champ ou le bâtiment ([IN…
+- `reserveFreeArea` (function, L79) [2] : Réserve les cases libres à `radius` du bâtiment : plus rien ne s'y bâtira.
+- `freeAround` (function, L107) [2] : Cases libres disponibles à `radius` du rectangle — sonde avant réservation.
+- `reservedAround` (function, L126) [1] : Cases DÉJÀ réservées à `radius` du rectangle.
 ### `src/prodlayout/frac.ts` — Arithmétique rationnelle exacte.
 - `Frac` (interface, L11) [2] : Rationnel réduit.
 - `frac` (function, L18) [6]
@@ -626,10 +626,10 @@ compris) qui les citent — un nombre élevé signale un contrat partagé. Vue d
 - `PackInput` (interface, L38) [3]
 - `PackResult` (interface, L45) [2]
 - `Copy` (interface, L74) [0] : Une copie à poser, dans l'ordre total de pose.
-- `expandCopies` (function, L80) [1]
-- `usefulArea` (function, L96) [1] : Surface utile estimée : emprises + champs + aires libres exigées.
+- `expandCopies` (function, L80) [2]
+- `usefulArea` (function, L96) [2] : Surface utile estimée : emprises + champs + aires libres exigées.
 - `tryBox` (function, L210) [3] : Pose la commande dans une boîte de dimensions données, et rend ce qui manque.
-- `better` (function, L424) [5] : ORDRE TOTAL : servi, puis petit, puis carré.
+- `better` (function, L427) [5] : ORDRE TOTAL : servi, puis petit, puis carré.
 ### `src/prodlayout/roads.ts` — SQUELETTE ET PORTÉE.
 - `SpineAxis` (type, L11) [0]
 - `paintSkeleton` (function, L36) [4] : Épine dorsale à `spinePos` et branches perpendiculaires tous les `pitch`.

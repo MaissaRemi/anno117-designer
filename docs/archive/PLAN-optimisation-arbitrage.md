@@ -422,3 +422,26 @@ contre 13,4 s sur celtic — soit du bruit machine.
   l'objectif : sur celtic, le meilleur plan mesuré a 71 % de couverture contre 77 % au plan
   battu. Une recette maigre couvre moins et loge bien plus. L'interface le dit désormais en
   infobulle ; le chiffre qui compte est celui des habitants.
+
+## Leviers essayés sans gain le 12/11/2026, à ne pas refaire tels quels
+
+« Remplir l'île » :
+- Retirer les copies de services « en trop » : il n'y en a pas (un recouvrement glouton sur le
+  même réseau et les mêmes maisons en pose autant ou plus).
+- Combler la terre vide de maisons : 93 % est en bandes trop étroites, 12 à 27 emplacements
+  3 × 3 libres par île.
+- Sept décalages de la trame : seuls (3, 1) et (3, 1) avec alignement gagnent.
+- Calages rejoués au seuil de raffinage 0,9 : aucun gagnant.
+- Écart minimal entre copies d'un même service porté à 0,75 puis 1 : celtic_large_07 tombe à
+  909 maisons au palier.
+- Pas d'anneau pour un service déjà au contact d'une route, SANS le caler sur la trame : au
+  palier 536 → 563, 253 → 202, 1 013 → 989, 1 413 → 1 355 ; pâtés et espacement en recul ;
+  temps ×2,5 à 3.
+
+Île de production :
+- Poser les fermes un à un avant les lots : medium_01 tombe à 21,9 pains par minute.
+- Seuil de pose un à un à 4 bâtiments au lieu de 2 : 40,1 contre 41,7.
+
+Monde :
+- `REMPLISSAGE` à 0,80 : 12 cultivateurs de lavande sans place sur large_03.
+- `COTE_TENUE` à 0,90 : un ramasseur de coques sur quatre sans place, pour 0,4 u/min de gain.

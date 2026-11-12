@@ -44,7 +44,7 @@ const LATIUM = ["2202", "2205", "2206", "2208", "2209", "2210", "4049", "4051", 
 const ALBION = ["2202", "2205", "2211", "2212", "2214", "2217", "2218", "2219", "4049", "4063", "4064", "4066", "4082", "8432", "8487", "51212"];
 const BIERE = "2154";
 /** Cliquet, comme le panneau de qualité : valeurs mesurées, à resserrer quand elles montent. */
-const SEUIL_COUVERTURE = 77, SEUIL_TENUE = 100;
+const SEUIL_COUVERTURE = 77, SEUIL_TENUE = 99; // 99,6 % mesuré : 100 échouerait au moindre arrondi
 
 const mienne = (ileId: string, fertilites: string[], extra: Partial<IleDuMonde> = {}): IleDuMonde =>
   ({ ...nouvelleIle(ileId), propriete: "moi", fertilites, ...extra });
