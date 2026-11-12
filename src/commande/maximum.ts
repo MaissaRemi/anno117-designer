@@ -18,9 +18,10 @@ const REMPLISSAGE = 0.65;
 /** Un objectif est tenu à 2 % près : un dernier bâtiment arrondi ne doit pas tout rejeter. */
 const TENU = 0.98;
 /** Nombre de poses au plus ; une grande île en demande plusieurs secondes chacune. */
-const ESSAIS = 8;
-/** Écart entre le plus haut multiple tenu et le plus bas refusé où l'on s'arrête. */
-const PRECISION = 1.05;
+const ESSAIS = 10;
+/** Écart entre le plus haut multiple tenu et le plus bas refusé où l'on s'arrête. 1,05 avant que
+ *  les poses ne soient trois fois plus rapides (12/11) : à 1,02, +1,5 % de débit tenu. */
+const PRECISION = 1.02;
 /** Part de la terre visée quand on monte : au-delà, les poses échouent presque toujours. */
 const VISEE = 0.8;
 

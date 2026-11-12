@@ -29,9 +29,9 @@ const pose = (p: { objectif: { good: string; pose: number }[] }, good: string) =
 describe("produire le maximum", () => {
   it.each([
     // 12/11 : 14,9 et 33,7 (champs en morceaux) ; champs d'un seul tenant et bâtiments posés un à
-    // un dans la terre restée libre → 18,6 et 43,1
-    { ile: "roman_island_small_06", pain: 18.6 },
-    { ile: "roman_island_medium_01", pain: 43.1 },
+    // un dans la terre restée libre, recherche à 2 % près → 18,9 et 43,9
+    { ile: "roman_island_small_06", pain: 18.9 },
+    { ile: "roman_island_medium_01", pain: 43.9 },
   ])("$ile : pain et tuniques à 3 pour 2, tout est posé, l'île est remplie", async ({ ile, pain }) => {
     const p = await maximum(ile, [{ good: PAIN, parMinute: 3 }, { good: TUNIQUES, parMinute: 2 }]);
     // rien de promis qui ne soit posé
