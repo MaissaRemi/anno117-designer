@@ -603,7 +603,7 @@ export function planIslandImport(
   // lu par `runLattice`, comme `patron` (cf. ANCRAGE plus bas)
   let ancrage: "centre" | "source" = "centre";
   // lu par `runLattice`, comme `ancrage` (cf. DÉCALAGE DU PEIGNE plus bas) ; `a` : aligner
-  let decalage = { x: 0, y: 0, a: false };
+  let decalage = { x: 0, y: 0, a: false, c: false };
   if (dieuImpose) {
     const siens = new Set([...(dieuImpose.shrines ?? []), ...(dieuImpose.shrineDefId ? [dieuImpose.shrineDefId] : [])]);
     instCands = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE || siens.has(i.defId));
@@ -798,7 +798,7 @@ export function planIslandImport(
       planLattice(g, req.tierGuid, lookup, {
         coverageFloor: floor, serviceIds, water: true, heights: req.heights,
         institutions: patron ? [...institutions, patron] : institutions,
-        patronAttrs: deityAttrs, ancrage, decalage, aligner: decalage.a,
+        patronAttrs: deityAttrs, ancrage, decalage, aligner: decalage.a, cale: decalage.c,
         permits: req.permits, reserved: kontorRect, tolerance: req.tolerance,
         viabilityGate: regle.strict, roadType: req.roadType,
       }),
@@ -1017,25 +1017,36 @@ export function planIslandImport(
   // (65 → 41 % en pâté), small_06 226 → 253 (64 → 54 %), large_01 1 450 → 1 510 (47 → 37 %) ;
   // sur celtic_large_07, large_03, medium_05, small_01 et celtic_medium_04, et en chemin de
   // terre, aucun calage ne bat le plan sans recul : inchangés. Sept décalages essayés, avec et
-  // sans alignement, sur huit îles : ces deux-là seuls ont gagné. Coût : deux passes du moteur.
+  // sans alignement, sur huit îles : ces deux-là seuls ont gagné.
+  //
+  // DEUX CALAGES « SUR LA GRILLE » (`cale`, 2026-11-12) : chaque service hors grappe collé à une
+  // ligne et à une épine, sans anneau de route, séparé des autres services d'abord. Les anneaux
+  // prenaient 6 à 8 % de la terre. Plan livré : celtic_large_07 1 013 → 1 080 au palier (40 →
+  // 29 % en pâté, 0,42 → 0,63, routes 25,3 → 22,1 %), large_03 1 413 → 1 448 (60 827 → 65 748
+  // habitants, 40 → 34 %, 0,53 → 0,61). Sur medium_01 il loge 568 au palier mais recule
+  // l'espacement (0,59 → 0,55) : écarté par la règle. Coût : quatre passes du moteur.
   if (pick) {
     const qualite = (e: Evaluated) => regroupement(e, lookup, req.roadType);
-    const base = pick;
-    const q = qualite(base);
+    let q = qualite(pick);
     const palier = (e: Evaluated) => e.tierCounts[req.tierGuid] ?? 0;
     let retenu = decalage;
-    total += 2;
-    for (const d of [{ x: 3, y: 1, a: false }, { x: 3, y: 1, a: true }]) {
+    // L'ORDRE COMPTE : chaque calage doit battre le plan retenu jusque-là, sans recul.
+    const CALAGES = [
+      { x: 3, y: 1, a: true, c: false }, { x: 3, y: 1, a: false, c: false },
+      { x: 0, y: 0, a: false, c: true }, { x: 3, y: 1, a: false, c: true },
+    ];
+    total += CALAGES.length;
+    for (const d of CALAGES) {
       decalage = d;
       onProgress?.(trials.length + nVariantes, total);
       const ev = runLattice(bestTrial, coverageFloor);
       const qe = qualite(ev);
-      const ok = better(ev, base) && palier(ev) >= palier(base)
+      const ok = better(ev, pick) && palier(ev) >= palier(pick)
         && qe.enPate <= q.enPate && qe.espacement >= q.espacement;
       if (!ok) continue;
       cands.push(ev);
       if (bestTrial) recetteDe.set(ev, bestTrial);
-      if (better(ev, pick)) { pick = ev; retenu = d; }
+      pick = ev; q = qe; retenu = d;
     }
     decalage = retenu;
   }

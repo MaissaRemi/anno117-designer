@@ -37,6 +37,8 @@ import { regroupement, type Regroupement } from "./planQuality";
  * 2026-11-12, « Remplir l'île » : la recette gagnante rejouée sous deux calages du peigne, gardés
  * seulement sans recul d'aucune exigence (`DÉCALAGE DU PEIGNE`, `islandPlan.ts`). Pavée :
  * medium_01 65 % / 0,53 / 516 → 41 % / 0,59 / 536 ; small_06 64 % / 0,47 / 226 → 54 % / 0,61 / 253.
+ * Puis deux calages « sur la grille », services sans anneau : celtic_large_07 40 % / 0,42 /
+ * 1 013 → 29 % / 0,63 / 1 080.
  */
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -67,7 +69,7 @@ const ILES: { ile: string; region: string; palier: string; commandees: number; r
   },
   {
     ile: "celtic_island_large_07", region: "Celtic", palier: "1504", commandees: 700,
-    remplir: { enPate: 40, espacement: 0.42, auPalier: 1013 },
+    remplir: { enPate: 29, espacement: 0.63, auPalier: 1080 },
     commande: { enPate: 25, espacement: 0.38, auPalier: 700 },
   },
 ];

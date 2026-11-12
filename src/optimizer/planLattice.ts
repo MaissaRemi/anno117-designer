@@ -67,6 +67,9 @@ export interface LatticeOpts {
   /** Poser d'abord un service hors grappe contre une ligne du peigne (son anneau de route sur
    *  la ligne) : pas de rangée de route en plus ni de bande trop étroite pour une maison. */
   aligner?: boolean;
+  /** Poser un service hors grappe calé sur la grille (contre une ligne ET une épine), sans
+   *  anneau de route, séparé des autres services d'abord ; l'ancienne pose en dernier repli. */
+  cale?: boolean;
 }
 
 /**
@@ -290,7 +293,7 @@ export function planLattice(
   const bfsType = (tc: TypeCov) => sg.bfsType(tc, placements);
 
   // rotation 0|1 : 1 = couché (w/h échangés, même ancre top-left — cf. footprintCells)
-  const stamp = (def: BuildingDef, x: number, y: number, rot: 0 | 1 = 0) => {
+  const stamp = (def: BuildingDef, x: number, y: number, rot: 0 | 1 = 0, anneau = true) => {
     const w = rot ? def.size.h : def.size.w, h = rot ? def.size.w : def.size.h;
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const c = (y + j) * W + (x + i);
@@ -306,6 +309,7 @@ export function planLattice(
     markAdj(x, y, w, h);
     // consommateur d'eau : réserver la prise AVANT l'anneau (sinon il l'enferme)
     if (needsWater(def)) reserveWaterGate(x, y, w, h, !!def.unique);
+    if (!anneau) return; // calé sur la grille : la ligne et l'épine qu'il touche sont son accès
     const ring = layRing(x, y, w, h);
     if (ring.length) connectRing(ring);
   };
@@ -376,6 +380,40 @@ export function planLattice(
     const trop = effR(def) / 2;
     const surLigne = (y: number) => ((y - cy0) % STEPH + STEPH) % STEPH === 0;
     const aligne = (y: number) => !!opts.aligner && (surLigne(y - 1) || surLigne(y + h));
+    if (opts.cale) {
+      const surEpine = (x: number) => ((x - cx0) % STEPV + STEPV) % STEPV === 0;
+      // la rotation qui perd le moins de rangées dans ses bandes entières de la grille
+      const perte = (hh: number, ww: number) => (Math.ceil((hh + 1) / STEPH) * STEPH - 1 - hh) * ww;
+      const rots: (0 | 1)[] = def.size.w === def.size.h ? [rot]
+        : perte(def.size.h, def.size.w) <= perte(def.size.w, def.size.h) ? [0, 1] : [1, 0];
+      const autres = [...placements].filter(([id]) => id !== def.id).flatMap(([, a]) => a);
+      for (const isole of [true, false]) for (const rr of rots) {
+        const cw = rr ? def.size.h : def.size.w, ch = rr ? def.size.w : def.size.h;
+        const mur = !!opts.reserved && cw * ch >= GRANDE_EMPRISE;
+        let avantC: { n: number; vu: Uint8Array } | null = null;
+        for (let r = 0; r <= maxRad; r++) {
+          for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx += Math.abs(dy) === r ? 1 : 2 * r) {
+            const x = tx + dx, y = ty + dy;
+            if (!(surLigne(y - 1) || surLigne(y + ch)) || !(surEpine(x - 1) || surEpine(x + cw))) continue;
+            if (!fitsBld(cw, ch, x, y) || !routesAuContact(x, y, cw, ch).length) continue;
+            if (deja.some((q) => Math.abs(q.x + q.w / 2 - x - cw / 2) + Math.abs(q.y + q.h / 2 - y - ch / 2) < trop)) continue;
+            // séparé des autres services par des maisons, pas collé à eux
+            if (isole && autres.some((q) => Math.max(q.x - (x + cw), x - (q.x + q.w), q.y - (y + ch), y - (q.y + q.h)) <= 1)) continue;
+            if (mur) {
+              avantC ??= terreAtteignable();
+              let sous = 0;
+              for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) {
+                const c = (y + j) * W + (x + i);
+                if (avantC.vu[c] && grid.usable[c]) sous++;
+              }
+              if (avantC.n - terreAtteignable({ x, y, w: cw, h: ch }).n - sous > PERTE_MAX) continue;
+            }
+            stamp(def, x, y, rr, false);
+            return true;
+          }
+        }
+      }
+    }
     for (const passe of opts.aligner ? [0, 1] : [1]) for (let r = 0; r <= maxRad; r++) {
       // le seul pourtour de l'anneau r, dans l'ordre du balayage du carré
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx += Math.abs(dy) === r ? 1 : 2 * r) {
