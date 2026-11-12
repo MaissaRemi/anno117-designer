@@ -204,10 +204,16 @@ Rémi n'étaient écrites nulle part.
 
 Feuille de route détaillée : `.claude/ROADMAP.md`.
 
-**Prochaine session, demandé par Rémi le 12/11** : essayer un autre moteur de plans — un
-modèle entraîné sur la machine, et des plans de référence (optimum prouvé sur un petit cas,
-plafond par île) auxquels comparer les méthodes. Réflexion, ordre des essais et décisions à
-prendre : `docs/superpowers/specs/2026-11-12-autre-moteur-de-plans-reflexion.md`.
+**Campagne en cours, carte blanche de Rémi (12/11)** : améliorer au maximum la qualité des
+plans et la planification du monde. L'essai d'un modèle entraîné en local est ABANDONNÉ
+(décision de Rémi) ; la réflexion d'origine reste dans
+`docs/superpowers/specs/2026-11-12-autre-moteur-de-plans-reflexion.md`. Mode de travail voulu
+par Rémi : Claude réfléchit et supervise, le code est délégué à des agents Opus en effort
+élevé (chacun dans son worktree), chaque document se lit une seule fois. Un changement n'est
+gardé que si le panneau et les tests le confirment. Chantiers, dans l'ordre : (1) « Remplir
+l'île » : copies de services en trop, terre perdue ; (2) île de production : terre vide au
+débit maximal ; (3) monde : emplacements des îles principales, devis des quartiers
+d'ouvriers, côte partagée.
 
 **Planification d'un monde** (l'objectif principal)
 

@@ -1,5 +1,9 @@
 # Un autre moteur de plans : réflexion avant essais (12/11/2026)
 
+> **Décision de Rémi, le 12/11 après lecture : l'essai « modèle entraîné » (§ 2) est abandonné.**
+> La campagne d'amélioration passe par le moteur en place et se suit dans `docs/REPRISE.md`.
+> Les plans de référence (§ 1) restent une piste, non lancée.
+
 Demande de Rémi : ne pas seulement régler le moteur en place, chercher s'il peut être remplacé
 par une méthode plus puissante. Deux essais à mener, la réflexion d'abord :
 
