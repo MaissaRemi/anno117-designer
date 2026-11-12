@@ -43,6 +43,8 @@ const FORME_MAX = 12;
 const SEUL_MAX = 2;
 /** Route neuve, en cases, qu'un bâtiment posé seul peut se faire tracer jusqu'au réseau. */
 const ACCES_MAX = 6;
+/** Places de côte essayées, de la plus proche à la plus loin, avant de dire un côtier sans place. */
+const COTE_ESSAIS = 40;
 
 export interface PlanProduction {
   buildings: PlacedBuilding[];
@@ -530,7 +532,6 @@ export function disposerProduction(
       for (const m of traiterLot(lot, profondeur)) file.push({ lot: m, profondeur: profondeur + 1 });
     }
   };
-  poserLots(lotsDeProduction(reste));
 
   // ─── EXPLOITATIONS SUR LES EMPLACEMENTS DE L'ÎLE ────────────────────────────────────
   if (terrain.length) {
@@ -606,7 +607,7 @@ export function disposerProduction(
       let n = 0;
       for (; n < l.count; n++) {
         reintegrer();
-        let best: { x: number; y: number; rot: Rotation; d: number } | null = null;
+        const places: { x: number; y: number; rot: Rotation; d: number }[] = [];
         for (const rot of (d.rotatable ? [0, 90, 180, 270] : [0]) as Rotation[]) {
           const { w, h } = footprintSize(d, rot);
           const partie = partieEauPosee(d, rot);
@@ -622,31 +623,42 @@ export function disposerProduction(
               if (!boiteLibre(x, y, w, h) || !toucheMer(x, y, w, h)) continue;
               dd = dist[y * W + x];
             }
-            if (dd < 0) continue;
-            if (!best || dd < best.d) best = { x, y, rot, d: dd };
+            if (dd >= 0) places.push({ x, y, rot, d: dd });
           }
         }
-        if (!best) break;
-        const b: PlacedBuilding = { uid: uid("cote"), defId: d.id, x: best.x, y: best.y, rotation: best.rot, locked: false };
-        const { w, h } = footprintSize(d, best.rot);
-        // l'emprise est marquée AVANT de chercher la route : sans cela le raccord la traversait
-        marquer(b);
-        // sa partie dans l'eau aussi, débordement compris : deux pêcheurs ne partagent pas leur eau
-        const partie = partieEauPosee(d, best.rot);
-        if (partie) for (let j = 0; j < partie.h; j++) for (let i = 0; i < partie.w; i++) {
-          const xx = best.x + partie.x + i, yy = best.y + partie.y + j;
-          if (xx >= 0 && yy >= 0 && xx < W && yy < H) occ[yy * W + xx] = 1;
+        // La place la plus proche d'abord ; une place d'où aucune route ne rejoint le réseau (un
+        // voisin côtier la mure, une plage coupée) est rendue, et la suivante essayée : un côtier
+        // sans route n'expédie rien (mesuré le 12/11, monde d'essai : quatre ramasseurs de coques).
+        places.sort((a, b) => a.d - b.d || a.y - b.y || a.x - b.x);
+        let pose = false;
+        for (const best of places.slice(0, COTE_ESSAIS)) {
+          const b: PlacedBuilding = { uid: uid("cote"), defId: d.id, x: best.x, y: best.y, rotation: best.rot, locked: false };
+          const { w, h } = footprintSize(d, best.rot);
+          // emprise et partie dans l'eau (débordement compris : deux pêcheurs ne partagent pas
+          // leur eau) marquées AVANT de chercher la route : sans cela le raccord les traversait.
+          // Toutes ces cases étaient libres (`libreDeTout`, `boiteLibre`) : les rendre est sûr.
+          const partie = partieEauPosee(d, best.rot);
+          const prises: number[] = [];
+          for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) prises.push((best.y + j) * W + best.x + i);
+          if (partie) for (let j = 0; j < partie.h; j++) for (let i = 0; i < partie.w; i++) {
+            const xx = best.x + partie.x + i, yy = best.y + partie.y + j;
+            if (xx >= 0 && yy >= 0 && xx < W && yy < H) prises.push(yy * W + xx);
+          }
+          for (const c of prises) occ[c] = 1;
+          let chemin: RoadTile[] | null = null;
+          for (const [px, py] of perimetre(best.x, best.y, w, h, W, H)) {
+            chemin = relier(py * W + px);
+            if (chemin !== null) break;
+          }
+          if (chemin === null) { for (const c of prises) occ[c] = 0; continue; }
+          out.buildings.push(b);
+          compter(d.id);
+          aServir.push(b);
+          poserRoutes(chemin);
+          pose = true;
+          break;
         }
-        let chemin: RoadTile[] | null = null;
-        for (const [px, py] of perimetre(best.x, best.y, w, h, W, H)) {
-          chemin = relier(py * W + px);
-          if (chemin !== null) { chemin = route[py * W + px] ? chemin : [...chemin, { x: px, y: py }]; break; }
-        }
-        out.buildings.push(b);
-        compter(d.id);
-        aServir.push(b);
-        if (chemin) poserRoutes(chemin);
-        else out.manques.push(`${d.name} en (${b.x}, ${b.y}) sans route jusqu'au réseau`);
+        if (!pose) break;
       }
       if (n < l.count) { out.manques.push(`${d.name} : ${l.count - n} sur ${l.count} sans place sur la côte`); signales.add(d.id); }
     }
@@ -682,6 +694,10 @@ export function disposerProduction(
   } else if (cotiers.length) {
     out.manques.push("L'île n'a pas de carte de la mer : bâtiments côtiers non posés");
   }
+  // Les lots EN DERNIER : ils vont sur n'importe quelle terre, les côtiers et les exploitations
+  // non. Posés avant, leurs champs muraient la côte (12/11, monde d'essai : ramasseurs de coques
+  // sans route ou sans place) et les abords des emplacements.
+  poserLots(lotsDeProduction(reste));
 
   out.lignes = panier.lines.map((l) => ({ defId: l.defId, nom: nom(l.defId), role: "production", demande: l.count, pose: poses.get(l.defId) ?? 0 }));
   if (sansPlace.size) {
