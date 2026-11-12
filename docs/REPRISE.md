@@ -235,7 +235,7 @@ Trois chantiers délégués à des agents, chacun mesuré avant d'agir, puis vé
 Feuille de route détaillée : `.claude/ROADMAP.md`.
 
 **Campagne d'amélioration, carte blanche de Rémi (12/11)** : première vague faite, résultats
-dans « Ce qui a été fait ». Mode de travail voulu par Rémi : Claude réfléchit et supervise, le
+dans « Ce qui a été fait ». Rémi l'a ARRÊTÉE là le 13/11 : rien de ce qui suit n'est lancé. Mode de travail voulu par Rémi : Claude réfléchit et supervise, le
 code est délégué à des agents Opus en effort élevé (chacun dans son worktree, sous
 `.claude/worktrees/`), chaque document se lit une seule fois ; un changement n'est gardé que
 si le panneau et les tests le confirment. L'essai d'un modèle entraîné en local est ABANDONNÉ
@@ -244,8 +244,8 @@ Suite possible, par gain attendu :
 - **Côte des îles principales** : les trois quarts des déficits du monde d'essai (42 sur
   56 u/min) viennent de la côte des îles de production, toute prise. Les bandes côtières vides
   des îles principales (5 à 6 % de leur terre, trop étroites pour une maison) pourraient
-  accueillir les côtiers qui manquent. À décider par Rémi : l'île principale ne porterait plus
-  seulement des maisons.
+  accueillir les côtiers qui manquent. Proposé à Rémi le 13/11, non retenu (« on s'arrête ») :
+  l'île principale ne porterait plus seulement des maisons.
 - **Anneaux de route des services** sur les îles moyennes et petites : 6 à 8 % de la terre.
   Les services calés sur la trame ne gagnent aujourd'hui que sur les grandes îles.
 - **Arbitrages ouverts, à Rémi** : sur medium_01, un plan à 568 maisons au palier et
