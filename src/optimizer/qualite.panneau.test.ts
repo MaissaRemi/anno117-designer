@@ -34,6 +34,9 @@ import { regroupement, type Regroupement } from "./planQuality";
  * 0,59 / 563 → 65 % / 0,53 / 516 ; medium_01 terre 86 % / 0,52 / 336 → 37 % / 0,69 / 337 ;
  * small_06 81 % / 0,49 / 217 → 64 % / 0,47 / 226 ; celtic_large_07 83 % / 0,55 / 888 → 40 % /
  * 0,42 / 1 013.
+ * 2026-11-12, « Remplir l'île » : la recette gagnante rejouée sous deux calages du peigne, gardés
+ * seulement sans recul d'aucune exigence (`DÉCALAGE DU PEIGNE`, `islandPlan.ts`). Pavée :
+ * medium_01 65 % / 0,53 / 516 → 41 % / 0,59 / 536 ; small_06 64 % / 0,47 / 226 → 54 % / 0,61 / 253.
  */
 const catalog = rawCatalog as unknown as BuildingDef[];
 const lookup = makeLookup(catalog);
@@ -51,13 +54,13 @@ interface Seuils {
 const ILES: { ile: string; region: string; palier: string; commandees: number; remplir: Seuils; terre?: Seuils; commande: Seuils }[] = [
   {
     ile: "roman_island_medium_01", region: "Roman", palier: "1498", commandees: 450,
-    remplir: { enPate: 65, espacement: 0.53, auPalier: 516 },
+    remplir: { enPate: 41, espacement: 0.59, auPalier: 536 },
     terre: { enPate: 37, espacement: 0.69, auPalier: 337 },
     commande: { enPate: 7, espacement: 0.37, auPalier: 450 },
   },
   {
     ile: "roman_island_small_06", region: "Roman", palier: "1498", commandees: 200,
-    remplir: { enPate: 64, espacement: 0.47, auPalier: 226 },
+    remplir: { enPate: 54, espacement: 0.61, auPalier: 253 },
     // espacement : 0,4 à l'origine, pour 91 maisons logées ; 0,38 pour 165 (deux Maisons de jeu de
     // part et d'autre de l'Amphithéâtre). Seul seuil relâché, de 0,02 : à confirmer par Rémi.
     commande: { enPate: 60, espacement: 0.38, auPalier: 165 },

@@ -62,6 +62,11 @@ export interface LatticeOpts {
   /** Emprise réservée à un bâtiment posé plus tard (le comptoir) : le réseau d'eau doit
    *  l'éviter, le masque de terre ne suffit pas à l'en protéger. */
   reserved?: { x: number; y: number; w: number; h: number };
+  /** Décalage du peigne de routes par rapport au coin de la terre, en cases. */
+  decalage?: { x: number; y: number };
+  /** Poser d'abord un service hors grappe contre une ligne du peigne (son anneau de route sur
+   *  la ligne) : pas de rangée de route en plus ni de bande trop étroite pour une maison. */
+  aligner?: boolean;
 }
 
 /**
@@ -239,8 +244,9 @@ export function planLattice(
   });
   const { reseau, fitsBld, fitsHouse, routesAuContact, touchesRoad, markAdj, layRoad, layRing, connectRing } = sg;
   const T = tailleReseau(reseau);
-  for (let y = y0; y <= y1; y += STEPH) for (let x = x0; x <= x1; x++) layRoad(x, y);
-  for (let x = x0; x <= x1; x += STEPV) for (let y = y0; y <= y1; y++) layRoad(x, y);
+  const cy0 = y0 + ((opts.decalage?.y ?? 0) % STEPH), cx0 = x0 + ((opts.decalage?.x ?? 0) % STEPV);
+  for (let y = cy0; y <= y1; y += STEPH) for (let x = x0; x <= x1; x++) layRoad(x, y);
+  for (let x = cx0; x <= x1; x += STEPV) for (let y = y0; y <= y1; y++) layRoad(x, y);
 
   // --- helpers ---
   const buildings: PlacedBuilding[] = [];
@@ -368,10 +374,13 @@ export function planLattice(
     let repli: { x: number; y: number } | null = null;
     const deja = placements.get(def.id) ?? [];
     const trop = effR(def) / 2;
-    for (let r = 0; r <= maxRad; r++) {
-      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    const surLigne = (y: number) => ((y - cy0) % STEPH + STEPH) % STEPH === 0;
+    const aligne = (y: number) => !!opts.aligner && (surLigne(y - 1) || surLigne(y + h));
+    for (const passe of opts.aligner ? [0, 1] : [1]) for (let r = 0; r <= maxRad; r++) {
+      // le seul pourtour de l'anneau r, dans l'ordre du balayage du carré
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx += Math.abs(dy) === r ? 1 : 2 * r) {
         const x = tx + dx, y = ty + dy;
+        if (aligne(y) !== (passe === 0)) continue;
         if (!fitsBld(w, h, x, y)) continue;
         // PAS DEUX COPIES D'UN MÊME SERVICE CÔTE À CÔTE (exigence E1) : à moins d'un quart de
         // l'espacement que sa portée permet, la position est écartée. Mesuré le 2026-11-10 en
@@ -587,7 +596,7 @@ export function planLattice(
     const rC = Math.min(...smallDefs.map((d) => effR(d)));
     const cstep = Math.max(4, Math.floor(rC / 2));
     // ancres : centroïde + grille fine SNAPPÉE aux lignes du peigne (flush)
-    const snapLine = (y: number) => Math.min(y0 + Math.round((y - y0) / STEPH) * STEPH, y1);
+    const snapLine = (y: number) => Math.min(cy0 + Math.max(0, Math.round((y - cy0) / STEPH)) * STEPH, y1);
     const anchors: { x: number; y: number }[] = [{ x: gx, y: snapLine(gy) }];
     for (let ly = y0; ly <= y1; ly += cstep) {
       const ay = snapLine(ly);

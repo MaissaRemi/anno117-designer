@@ -1,62 +1,62 @@
 {
   "recommande": {
     "palier": "1498",
-    "maisons": 463,
-    "habitants": 19362,
-    "maisonsAuPalier": 416,
+    "maisons": 506,
+    "habitants": 20974,
+    "maisonsAuPalier": 455,
     "paliers": {
       "1496": 12,
-      "1497": 27,
-      "1498": 416,
+      "1497": 31,
+      "1498": 455,
       "1499": 8
     },
-    "batiments": 600,
-    "routes": 3376,
-    "conduites": 451,
+    "batiments": 643,
+    "routes": 3443,
+    "conduites": 405,
     "champs": 0,
     "eau": {
-      "sources": 5,
-      "utilisee": 195
+      "sources": 3,
+      "utilisee": 170
     },
     "repere": "droit",
     "analyse": {
-      "reseauEnracine": 3376,
-      "batimentsCoupes": 0,
-      "casesCouvertes": 186462,
-      "hachageCouvertures": "fa38ebe0f47d28fc"
+      "reseauEnracine": 3440,
+      "batimentsCoupes": 2,
+      "casesCouvertes": 187462,
+      "hachageCouvertures": "eb54fbeb441380c2"
     },
-    "violations": 1,
-    "hachage": "6ad2e4fae5c2838e"
+    "violations": 2,
+    "hachage": "b4af89dec0e2e9f9"
   },
   "alternatives": [
     {
       "palier": "1498",
-      "maisons": 549,
-      "habitants": 20431,
-      "maisonsAuPalier": 421,
+      "maisons": 533,
+      "habitants": 21386,
+      "maisonsAuPalier": 475,
       "paliers": {
-        "1496": 71,
-        "1497": 45,
-        "1498": 421,
-        "1499": 12
+        "1496": 19,
+        "1497": 11,
+        "1498": 475,
+        "1499": 28
       },
-      "batiments": 677,
-      "routes": 3404,
-      "conduites": 271,
+      "batiments": 661,
+      "routes": 3276,
+      "conduites": 319,
       "champs": 0,
       "eau": {
-        "sources": 3,
-        "utilisee": 130
+        "sources": 5,
+        "utilisee": 155
       },
       "repere": "droit",
       "analyse": {
-        "reseauEnracine": 3404,
+        "reseauEnracine": 3276,
         "batimentsCoupes": 1,
-        "casesCouvertes": 170922,
-        "hachageCouvertures": "63c306b89476aad9"
+        "casesCouvertes": 154577,
+        "hachageCouvertures": "cc47855263d441ce"
       },
       "violations": 2,
-      "hachage": "2374840b6d6d60ff"
+      "hachage": "ad96e8d1828ac1a6"
     }
   ]
 }

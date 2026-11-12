@@ -27,6 +27,7 @@ import { choisirPlansContrastes, type Critere } from "./plansAuChoix";
 import { catalogueDiagonal, grilleDiagonale, hauteursDiagonales } from "./cadreDiagonal";
 import { pruneDeadEnds } from "./roadCleanup";
 import { PRIX_DU_BILAN } from "./prixDuBilan";
+import { regroupement } from "./planQuality";
 export { PRIX_DU_BILAN } from "./prixDuBilan";
 import type { RoadType } from "../engine/roads";
 
@@ -601,6 +602,8 @@ export function planIslandImport(
   let deityAttrs = attrsDuDieu(dieuSansAutel);
   // lu par `runLattice`, comme `patron` (cf. ANCRAGE plus bas)
   let ancrage: "centre" | "source" = "centre";
+  // lu par `runLattice`, comme `ancrage` (cf. DÉCALAGE DU PEIGNE plus bas) ; `a` : aligner
+  let decalage = { x: 0, y: 0, a: false };
   if (dieuImpose) {
     const siens = new Set([...(dieuImpose.shrines ?? []), ...(dieuImpose.shrineDefId ? [dieuImpose.shrineDefId] : [])]);
     instCands = instCands.filter((i) => i.uniqueType !== SHRINE_TYPE || siens.has(i.defId));
@@ -795,7 +798,7 @@ export function planIslandImport(
       planLattice(g, req.tierGuid, lookup, {
         coverageFloor: floor, serviceIds, water: true, heights: req.heights,
         institutions: patron ? [...institutions, patron] : institutions,
-        patronAttrs: deityAttrs, ancrage,
+        patronAttrs: deityAttrs, ancrage, decalage, aligner: decalage.a,
         permits: req.permits, reserved: kontorRect, tolerance: req.tolerance,
         viabilityGate: regle.strict, roadType: req.roadType,
       }),
@@ -997,6 +1000,44 @@ export function planIslandImport(
       patron = undefined; // l'autel ne paie pas son sol : on s'en passe
     }
     deityAttrs = attrsDuDieu(dieuImpose ?? (patron ? dieuDeLAutel(patron) : undefined) ?? dieuSansAutel);
+  }
+
+  // ═══ DÉCALAGE DU PEIGNE ══════════════════════════════════════════════════════════════
+  //
+  // Le peigne de routes part du coin de la terre et les services se posent à la première place
+  // libre : rien ne dit que ce calage est le bon. Le décaler de quelques cases change où tombent
+  // les bandes de maisons contre la côte et les emprises des services ; poser les services
+  // contre une ligne du peigne (`aligner`) évite une rangée de route et une bande trop étroite
+  // pour une maison. Les plans en diffèrent nettement plus que le bruit, dans un sens ou dans
+  // l'autre selon l'île : la recette gagnante est donc rejouée sous deux calages.
+  //
+  // Un calage n'est retenu que s'il bat le plan SANS faire reculer aucune exigence de Rémi
+  // (`.claude/exigences.md`) : maisons au palier, services en pâté, pire espacement.
+  // Mesuré le 2026-11-12, route pavée, plan livré : medium_01 516 → 536 maisons au palier
+  // (65 → 41 % en pâté), small_06 226 → 253 (64 → 54 %), large_01 1 450 → 1 510 (47 → 37 %) ;
+  // sur celtic_large_07, large_03, medium_05, small_01 et celtic_medium_04, et en chemin de
+  // terre, aucun calage ne bat le plan sans recul : inchangés. Sept décalages essayés, avec et
+  // sans alignement, sur huit îles : ces deux-là seuls ont gagné. Coût : deux passes du moteur.
+  if (pick) {
+    const qualite = (e: Evaluated) => regroupement(e, lookup, req.roadType);
+    const base = pick;
+    const q = qualite(base);
+    const palier = (e: Evaluated) => e.tierCounts[req.tierGuid] ?? 0;
+    let retenu = decalage;
+    total += 2;
+    for (const d of [{ x: 3, y: 1, a: false }, { x: 3, y: 1, a: true }]) {
+      decalage = d;
+      onProgress?.(trials.length + nVariantes, total);
+      const ev = runLattice(bestTrial, coverageFloor);
+      const qe = qualite(ev);
+      const ok = better(ev, base) && palier(ev) >= palier(base)
+        && qe.enPate <= q.enPate && qe.espacement >= q.espacement;
+      if (!ok) continue;
+      cands.push(ev);
+      if (bestTrial) recetteDe.set(ev, bestTrial);
+      if (better(ev, pick)) { pick = ev; retenu = d; }
+    }
+    decalage = retenu;
   }
 
   // RAFFINAGE : la recette gagnante rejouée à un seuil de densification plus exigeant.
