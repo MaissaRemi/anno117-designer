@@ -21,8 +21,19 @@ describe("searchBox — mode auto", () => {
     expect(r.unmet).toEqual([]);
   });
 
-  it("ne dépasse pas la référence mesurée du pain ×2 (23×23 = 529 cases)", () => {
-    expect(r.w * r.h).toBeLessThanOrEqual(529);
+  // 529 cases jusqu'au 2026-11-12, mais les deux champs y étaient en deux morceaux chacun
+  // (85 + 55 et 59 + 81 cases) : la règle du jeu veut un champ d'un seul tenant (GAME_MECHANICS §5)
+  it("ne dépasse pas la référence mesurée du pain ×2 (600 cases), champs d'un seul tenant", () => {
+    expect(r.w * r.h).toBeLessThanOrEqual(600);
+    for (const o of new Set(r.fields.map((f) => f.ownerUid))) {
+      const cases = new Set(r.fields.filter((f) => f.ownerUid === o).map((f) => f.y * r.w + f.x));
+      const pile = [cases.values().next().value!], vus = new Set(pile);
+      while (pile.length) {
+        const c = pile.pop()!;
+        for (const n of [c % r.w ? c - 1 : -1, (c + 1) % r.w ? c + 1 : -1, c - r.w, c + r.w]) if (cases.has(n) && !vus.has(n)) { vus.add(n); pile.push(n); }
+      }
+      expect(vus.size, `champ de ${o}`).toBe(cases.size);
+    }
   });
 
   it("est MINIMAL au pas de 1 — retirer une ligne ou une colonne casse le service", () => {

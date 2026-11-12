@@ -54,7 +54,9 @@ export function planifierMaximum(
     const p = planifierCommande(grid, c, catalog, lookup, opts);
     const t = tenue(p);
     dernier = p;
-    if (t >= TENU) { meilleur = p; bas = k; } else { haut = k; refus = p.manques; }
+    // tenu, et ce qui est posé a ses ouvriers (E3) : un plan qui en manque n'est pas un maximum
+    const loge = commande.mainOeuvre === "signaler" || !Object.keys(p.mainOeuvre.manque).length;
+    if (t >= TENU && loge) { meilleur = p; bas = k; } else { haut = k; refus = p.manques; }
     if (bas > 0 && haut / bas < PRECISION) break;
     // rien de tenu encore : on vise ce qui vient d'être posé ; tenu sans plafond connu : on monte
     // selon la terre restée libre (le devis peut être loin du compte) ; sinon on coupe en deux

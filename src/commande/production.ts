@@ -1,11 +1,12 @@
-import type { BuildingDef, FieldTile, GridShape, PlacedBuilding, RoadTile, Rotation } from "../model/types";
+import { AIRE_LIBRE, type BuildingDef, type FieldTile, type GridShape, type PlacedBuilding, type RoadTile, type Rotation } from "../model/types";
 import { terrainConvient, type DefLookup } from "../engine/rules";
 import { footprintSize, partieEauPosee, routeSeule } from "../engine/geometry";
 import { economy } from "../economy/economy";
 import { uid } from "../model/factories";
 import { planFromBasket, pickWarehouse, type BasketPlan } from "../prodlayout";
 import { normalizeBasket, type BasketLine } from "../prodlayout/basket";
-import { EXIT_SIDES } from "../prodlayout/exit";
+import { expandCopies, usefulArea } from "../prodlayout/pack";
+import { EXIT_SIDES, type ExitSide } from "../prodlayout/exit";
 import { direUnmet } from "../prodlayout/unmet";
 import { planSlots } from "../optimizer/slotPlan";
 import { estEntrepot } from "../optimizer/kontor";
@@ -37,6 +38,11 @@ const DECOUPE_MAX = 12;
 /** Au-delà de ce nombre de bâtiments, un lot n'est pas essayé dans la forme de la terre libre :
  *  chaque essai coûte une pose complète, et un grand lot se coupe de toute façon. */
 const FORME_MAX = 12;
+/** Un lot d'un ou deux bâtiments se pose d'abord un à un : en blueprint, il paierait un
+ *  entrepôt de plus pour lui seul (mesuré : medium_01 au maximum, 38,6 → 41,7 pains ; à 4, 40,1). */
+const SEUL_MAX = 2;
+/** Route neuve, en cases, qu'un bâtiment posé seul peut se faire tracer jusqu'au réseau. */
+const ACCES_MAX = 6;
 
 export interface PlanProduction {
   buildings: PlacedBuilding[];
@@ -56,6 +62,27 @@ export interface VilleExistante {
 }
 
 const estCotier = (d: BuildingDef) => d.placement === "water" || d.slotType === "coastal";
+
+/**
+ * Blueprint d'un lot hors de toute île (boîte `auto`) : il ne dépend que du lot, du bord de
+ * sortie et de la région. Le calculer coûtait 90 % du temps d'une île de production (mesuré le
+ * 2026-11-12 sur celtic_large_02 : 49 s sur 55), or les mêmes lots reviennent d'une moitié à
+ * l'autre et d'une pose à l'autre du maximum : on les garde.
+ */
+const blueprints = new WeakMap<BuildingDef[], Map<string, ReturnType<typeof planFromBasket>>>();
+function blueprintDe(catalog: BuildingDef[], lot: BasketLine[], side: ExitSide, region: string) {
+  let memo = blueprints.get(catalog);
+  if (!memo) blueprints.set(catalog, (memo = new Map()));
+  const panier = normalizeBasket(lot);
+  const cle = `${region}|${side}|${panier.lines.map((l) => `${l.defId}×${l.count}`).join(",")}`;
+  let r = memo.get(cle);
+  if (!r) {
+    if (memo.size >= 2000) memo.clear();
+    r = planFromBasket(catalog, panier, { exitSide: side, region });
+    memo.set(cle, r);
+  }
+  return r;
+}
 
 /** Lots de production : les lignes qui échangent des biens restent ensemble. */
 export function lotsDeProduction(lignes: BasketLine[]): BasketLine[][] {
@@ -179,6 +206,7 @@ export function disposerProduction(
       if (route[c]) continue;
       route[c] = 1; occ[c] = 1;
       out.roads.push(r);
+      echecsSeul.clear(); // une route nouvelle ouvre de nouvelles places à un bâtiment seul
     }
   };
 
@@ -221,8 +249,12 @@ export function disposerProduction(
     if (dist[s] < 0 || !(route[s] || franchissable(s))) return false;
     const chemin = relier(s);
     if (chemin === null) return false;
+    // les uid du placeur (b0, b1…) se répètent d'un blueprint à l'autre : sans ce renvoi, les
+    // champs pointaient un bâtiment absent du plan et l'éditeur voyait des fermes sans champ
+    const uids = new Map<string, string>();
     for (const b of p.layout.buildings) {
       const nb: PlacedBuilding = { ...b, uid: uid("prod"), x: b.x + x, y: b.y + y };
+      uids.set(b.uid, nb.uid);
       out.buildings.push(nb);
       marquer(nb);
       if (estEntrepot(lookup(b.defId))) out.entrepots++;
@@ -232,7 +264,7 @@ export function disposerProduction(
     // des ruchers (elles sortent du placeur comme des cases de champ), routes. Réserver toute la
     // boîte gardait hors d'atteinte les cases qu'elle laissait libres.
     for (const f of p.layout.fields) {
-      out.fields.push({ ...f, x: f.x + x, y: f.y + y });
+      out.fields.push({ ...f, ownerUid: uids.get(f.ownerUid) ?? f.ownerUid, x: f.x + x, y: f.y + y });
       occ[(f.y + y) * W + f.x + x] = 1;
     }
     poserRoutes(p.layout.roads.map((r) => ({ x: r.x + x, y: r.y + y })));
@@ -303,12 +335,173 @@ export function disposerProduction(
     return false;
   };
 
+  /**
+   * ═══ UN À UN, SUR LES ENTREPÔTS DÉJÀ POSÉS ══════════════════════════════════════════
+   *
+   * Mesuré le 2026-11-12 au débit maximal, hauteurs comprises : 25 à 33 % de la terre reste vide,
+   * presque toute en poches reliées à la route et assez grandes pour un atelier (medium_01 :
+   * 3 313 cases vides sur 3 781), mais trop petites ou trop biscornues pour un lot, qui demande
+   * une boîte ET son propre entrepôt. Un bâtiment seul n'en demande pas : il lui suffit d'une
+   * route à portée de charrette d'un entrepôt déjà posé (comme les demi-chaînes, qui s'échangent
+   * déjà leurs biens d'un entrepôt à l'autre). On le pose contre une route existante, ou au bout
+   * d'une route neuve de `ACCES_MAX` cases au plus, ses champs (ou son aire libre) d'un seul
+   * tenant contre lui, comme `validateFields` les exige.
+   */
+  const echecsSeul = new Set<string>();
+  const distanceEntrepot = (): Int32Array => {
+    const d = new Int32Array(N).fill(-1);
+    let front: number[] = [];
+    for (const b of [...ville.buildings, ...out.buildings]) {
+      const bd = lookup(b.defId);
+      if (!bd?.roadRoot) continue;
+      for (const [x, y] of perimetre(b.x, b.y, ...dims(bd, b.rotation), W, H)) {
+        const c = y * W + x;
+        if (route[c] && d[c] < 0) { d[c] = 0; front.push(c); }
+      }
+    }
+    for (let k = 1; front.length; k++) {
+      const next: number[] = [];
+      for (const c of front) {
+        const x = c % W;
+        for (const n of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, c >= W ? c - W : -1, c < N - W ? c + W : -1]) {
+          if (n >= 0 && route[n] && d[n] < 0) { d[n] = k; next.push(n); }
+        }
+      }
+      front = next;
+    }
+    return d;
+  };
+  /** `besoin` cases libres d'un seul tenant contre l'emprise, à `rayon` (L∞) au plus ; null sinon. */
+  const terreContre = (x: number, y: number, w: number, h: number, rayon: number, besoin: number): number[] | null => {
+    const dedans = (cx: number, cy: number) => cx >= x && cx < x + w && cy >= y && cy < y + h;
+    const pres = (cx: number, cy: number) => Math.max(x - cx, 0, cx - (x + w - 1), y - cy, 0, cy - (y + h - 1)) <= rayon;
+    // une graine à la fois : le champ ne se relie pas à travers le bâtiment (cf. `fillFields`)
+    const vu = new Set<number>();
+    for (const [px, py] of perimetre(x, y, w, h, W, H)) {
+      const g = py * W + px;
+      if (!libre(g) || vu.has(g)) continue;
+      vu.add(g);
+      const pris = [g];
+      for (let k = 0; k < pris.length && pris.length < besoin; k++) {
+        const c = pris[k], cx = c % W, cy = (c / W) | 0;
+        for (const [nx, ny] of [[cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]]) {
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H || dedans(nx, ny) || !pres(nx, ny)) continue;
+          const n = ny * W + nx;
+          if (!vu.has(n) && libre(n)) { vu.add(n); pris.push(n); }
+        }
+      }
+      if (pris.length >= besoin) return pris.slice(0, besoin);
+    }
+    return null;
+  };
+  const poserSeul = (d: BuildingDef): boolean => {
+    if (echecsSeul.has(d.id)) return false;
+    reintegrer();
+    const de = distanceEntrepot();
+    const portee = d.transporterRange ?? 30;
+    const besoin = d.field?.tiles ?? d.freeArea?.area ?? 0;
+    const rayon = d.field ? d.radius?.range ?? 22 : d.freeArea?.radius ?? 0;
+    // accès par une courte route neuve : `pas` cases libres jusqu'à une route à portée
+    const pas = new Int32Array(N).fill(-1), vers = new Int32Array(N).fill(-1), racine = new Int32Array(N).fill(-1);
+    let front: number[] = [];
+    for (let c = 0; c < N; c++) if (route[c] && de[c] >= 0 && de[c] <= portee) { pas[c] = 0; racine[c] = c; front.push(c); }
+    for (let k = 1; k <= ACCES_MAX && front.length; k++) {
+      const next: number[] = [];
+      for (const c of front) {
+        const x = c % W;
+        for (const n of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, c >= W ? c - W : -1, c < N - W ? c + W : -1]) {
+          if (n < 0 || pas[n] >= 0 || !libre(n)) continue;
+          // la portée se compte jusqu'au bâtiment, route neuve comprise
+          if (de[racine[c]] + k > portee) continue;
+          pas[n] = k; vers[n] = c; racine[n] = racine[c]; next.push(n);
+        }
+      }
+      front = next;
+    }
+    const cands: { x: number; y: number; rot: Rotation; d: number; cout: number; porte: number }[] = [];
+    for (const rot of (d.rotatable && d.size.w !== d.size.h ? [0, 90] : [0]) as Rotation[]) {
+      const [w, h] = dims(d, rot);
+      for (let y = 0; y + h <= H; y++) for (let x = 0; x + w <= W; x++) {
+        if (!boiteLibre(x, y, w, h) || dist[y * W + x] < 0) continue;
+        let cout = -1, porte = -1;
+        for (const [px, py] of perimetre(x, y, w, h, W, H)) {
+          const p = py * W + px;
+          if (pas[p] >= 0 && (cout < 0 || pas[p] < cout)) { cout = pas[p]; porte = p; }
+        }
+        if (cout >= 0) cands.push({ x, y, rot, d: dist[y * W + x], cout, porte });
+      }
+    }
+    cands.sort((a, b) => a.cout - b.cout || a.d - b.d || a.y - b.y || a.x - b.x);
+    for (const c of cands.slice(0, 300)) {
+      const [w, h] = dims(d, c.rot);
+      const acces: number[] = [];
+      for (let p = c.porte; p >= 0 && !route[p]; p = vers[p]) acces.push(p);
+      for (const p of acces) occ[p] = 1;
+      const cases = besoin ? terreContre(c.x, c.y, w, h, rayon, besoin) : [];
+      for (const p of acces) occ[p] = 0;
+      if (!cases) continue;
+      poserRoutes(acces.map((p) => ({ x: p % W, y: (p / W) | 0 })));
+      const b: PlacedBuilding = { uid: uid("prod"), defId: d.id, x: c.x, y: c.y, rotation: c.rot, locked: false };
+      out.buildings.push(b);
+      marquer(b);
+      compter(d.id);
+      for (const k of cases) {
+        out.fields.push({ x: k % W, y: (k / W) | 0, ownerUid: b.uid, fieldType: d.field?.fieldType ?? AIRE_LIBRE });
+        occ[k] = 1;
+      }
+      return true;
+    }
+    echecsSeul.add(d.id);
+    return false;
+  };
+  /** Pose un à un ce qu'un lot n'a pas pu poser en blueprint ; rend ce qui reste. */
+  const poserUnAUn = (lot: BasketLine[]): BasketLine[] =>
+    lot.map((l) => {
+      const d = lookup(l.defId);
+      let n = l.count;
+      while (d && n > 0 && poserSeul(d)) n--;
+      return { defId: l.defId, count: n };
+    }).filter((l) => l.count > 0);
+
+  const entrepot = pickWarehouse(catalog, opts.region);
+  const surfaceUtile = (lot: BasketLine[]) =>
+    usefulArea(expandCopies({ items: lot, warehouseDefId: entrepot.id, lookup }), entrepot);
+  /** Aire du plus grand rectangle de terre libre (histogramme par ligne, O(W·H)). */
+  const plusGrandRectangleLibre = (): number => {
+    const haut = new Int32Array(W);
+    let best = 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) haut[x] = libre(y * W + x) ? haut[x] + 1 : 0;
+      const pile: number[] = [];
+      for (let x = 0; x <= W; x++) {
+        const hx = x < W ? haut[x] : 0;
+        while (pile.length && haut[pile[pile.length - 1]] >= hx) {
+          const hh = haut[pile.pop()!];
+          const gauche = pile.length ? pile[pile.length - 1] + 1 : 0;
+          best = Math.max(best, hh * (x - gauche));
+        }
+        pile.push(x);
+      }
+    }
+    return best;
+  };
+
   /** Pose un lot ; rend les deux moitiés à reprendre s'il n'a pas tenu d'un bloc. */
   const traiterLot = (lot: BasketLine[], profondeur: number): BasketLine[][] => {
+    if (lot.reduce((n, l) => n + l.count, 0) <= SEUL_MAX) {
+      lot = poserUnAUn(lot);
+      if (!lot.length) return [];
+    }
+    // Un grand lot dont le seul contenu dépasse le plus grand rectangle libre ne tient pas en
+    // blueprint (et n'est pas essayé dans la forme) : on le coupe sans calculer sa boîte.
+    if (profondeur < DECOUPE_MAX && lot.reduce((n, l) => n + l.count, 0) > FORME_MAX && surfaceUtile(lot) > plusGrandRectangleLibre()) {
+      const m = couper(lot);
+      if (m) return m;
+    }
     const variantes: BasketPlan[] = [];
     let refus = "";
     for (const side of EXIT_SIDES) {
-      const r = planFromBasket(catalog, normalizeBasket(lot), { exitSide: side, region: opts.region });
+      const r = blueprintDe(catalog, lot, side, opts.region);
       if ("refuse" in r) refus = r.raison || r.nonServis.map((u) => direUnmet(u, nom)).join(" · ");
       else variantes.push(r);
     }
@@ -318,9 +511,10 @@ export function disposerProduction(
     // la terre libre d'une petite île. On coupe en deux : chaque moitié a son entrepôt.
     const moities = profondeur < DECOUPE_MAX ? couper(lot) : null;
     if (moities) return moities;
-    for (const l of lot) signales.add(l.defId);
-    if (variantes.length) for (const l of lot) sansPlace.set(l.defId, (sansPlace.get(l.defId) ?? 0) + l.count);
-    else out.manques.push(`Blueprint impossible (${lot.map((l) => nom(l.defId)).join(", ")}) : ${refus}`);
+    const restants = poserUnAUn(lot);
+    for (const l of restants) signales.add(l.defId);
+    if (variantes.length) for (const l of restants) sansPlace.set(l.defId, (sansPlace.get(l.defId) ?? 0) + l.count);
+    else if (restants.length) out.manques.push(`Blueprint impossible (${restants.map((l) => nom(l.defId)).join(", ")}) : ${refus}`);
     return [];
   };
   /**

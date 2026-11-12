@@ -236,8 +236,11 @@ export function tryBox(
   // 2. le squelette. L'épine longe l'entrepôt sans le couper, et suit le grand axe de la
   //    boîte : une bande haute et étroite veut une épine verticale, pas horizontale.
   const deepest = copies.reduce((m, c) => Math.max(m, c.def.size.w, c.def.size.h), 1);
+  // Un champ pousse d'un seul tenant et ne franchit pas une route : entre deux branches, il faut
+  // la place d'un champ carré, sans quoi une ferme de céréales n'en tenait que 45 cases sur 140.
+  const champ = copies.reduce((m, c) => Math.max(m, c.def.field?.tiles ?? 0), 0);
   const axis = w >= h ? "h" : "v";
-  paintSkeleton(occ, axis === "h" ? wy + wh.size.h : wx + wh.size.w, 2 * deepest + 1, axis);
+  paintSkeleton(occ, axis === "h" ? wy + wh.size.h : wx + wh.size.w, Math.max(2 * deepest + 1, 2 * Math.ceil(Math.sqrt(champ)) + 1), axis);
   // une branche coupée par l'entrepôt laisse un tronçon orphelin de l'autre côté : on le
   // raccorde tant que rien d'autre n'est encore posé et que le couloir a de la place.
   connectRoads(occ);

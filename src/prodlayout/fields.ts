@@ -7,8 +7,8 @@ import { at, FIELD, FREE, RESERVED, setAt, type Occ } from "./occupancy";
  * elle tourne à rendement partiel. `freeArea` : un bûcheron produit en proportion des cases
  * LIBRES autour de lui, donc le serrer l'étrangle. Ni l'un ni l'autre n'exige de route.
  *
- * La distance est L∞ depuis l'emprise (« à N cases du bâtiment »), et le remplissage se
- * fait en anneaux croissants pour que les cases proches partent en premier — deux fermes
+ * La distance est L∞ depuis l'emprise (« à N cases du bâtiment »), et le champ pousse en
+ * largeur depuis la ferme pour que les cases proches partent en premier — deux fermes
  * voisines se partagent alors le terrain au lieu que la première rafle tout au loin.
  */
 
@@ -34,23 +34,42 @@ export interface FieldCell {
 const distToRect = (cx: number, cy: number, x: number, y: number, w: number, h: number): number =>
   Math.max(Math.max(x - cx, 0, cx - (x + w - 1)), Math.max(y - cy, 0, cy - (y + h - 1)));
 
+/**
+ * Le champ pousse D'UN SEUL TENANT depuis la ferme, en largeur : chaque case touche une case du
+ * champ ou le bâtiment ([IN-GAME], `GAME_MECHANICS.md` §5, et `validateFields`). Le remplissage
+ * par anneaux sautait les cases prises : mesuré le 2026-11-12, 18 fermes sur 19 d'une île de
+ * production avaient un champ en morceaux, impossible à construire tel quel en jeu.
+ */
 export function fillFields(o: Occ, c: FarmClaim): FieldCell[] {
-  const out: FieldCell[] = [];
-  for (let ring = 1; ring <= c.radius && out.length < c.tiles; ring++) {
-    const x0 = c.x - ring;
-    const y0 = c.y - ring;
-    const x1 = c.x + c.w - 1 + ring;
-    const y1 = c.y + c.h - 1 + ring;
-    for (let cy = y0; cy <= y1 && out.length < c.tiles; cy++) {
-      for (let cx = x0; cx <= x1 && out.length < c.tiles; cx++) {
-        if (distToRect(cx, cy, c.x, c.y, c.w, c.h) !== ring) continue;
-        if (at(o, cx, cy) !== FREE) continue;
-        setAt(o, cx, cy, FIELD);
-        out.push({ x: cx, y: cy, ownerUid: c.ownerUid, fieldType: c.fieldType });
-      }
+  // Une graine par case libre contre la ferme : le champ ne se relie pas À TRAVERS le bâtiment.
+  // La première graine qui atteint le quota l'emporte ; sinon, la plus grande pousse.
+  const graines: [number, number][] = [];
+  for (let i = 0; i < c.w; i++) graines.push([c.x + i, c.y - 1], [c.x + i, c.y + c.h]);
+  for (let j = 0; j < c.h; j++) graines.push([c.x - 1, c.y + j], [c.x + c.w, c.y + j]);
+  let best: FieldCell[] = [];
+  for (const [gx, gy] of graines) {
+    if (at(o, gx, gy) !== FREE) continue;
+    const out: FieldCell[] = [];
+    const prendre = (cx: number, cy: number) => {
+      if (out.length >= c.tiles || at(o, cx, cy) !== FREE || distToRect(cx, cy, c.x, c.y, c.w, c.h) > c.radius) return;
+      setAt(o, cx, cy, FIELD);
+      out.push({ x: cx, y: cy, ownerUid: c.ownerUid, fieldType: c.fieldType });
+    };
+    prendre(gx, gy);
+    for (let k = 0; k < out.length && out.length < c.tiles; k++) {
+      const { x, y } = out[k];
+      prendre(x, y - 1); prendre(x - 1, y); prendre(x + 1, y); prendre(x, y + 1);
     }
+    if (out.length >= c.tiles) {
+      for (const f of best) setAt(o, f.x, f.y, FREE);
+      return out;
+    }
+    if (out.length > best.length) {
+      for (const f of best) setAt(o, f.x, f.y, FREE);
+      best = out;
+    } else for (const f of out) setAt(o, f.x, f.y, FREE);
   }
-  return out;
+  return best;
 }
 
 /**

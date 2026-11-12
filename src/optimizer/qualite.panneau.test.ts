@@ -133,10 +133,14 @@ describe("panneau de qualité : pâtés, espacement, maisons au palier", () => {
  * pose dans la forme de la terre libre quand aucun rectangle n'est libre. Avant → après :
  * medium_01 71 → 83 % de l'objectif posé (43 → 30 % de terre vide), small_06 40 → 100 %,
  * celtic_large_02 100 → 100 %.
+ *
+ * 2026-11-12 — champs d'un seul tenant (`prodlayout/fields.ts`), et ce qu'un lot ne pose pas posé
+ * un à un sur les entrepôts déjà là (`commande/production.ts`) : medium_01 83 → 100 % (30 → 22 %
+ * de terre vide, 78 → 72 cases par bâtiment de production).
  */
 const PAIN = "2137", TUNIQUES = "2141", SAUCISSES = "8405";
 const PRODUCTIONS: { ile: string; region: string; objectif: { good: string; parMinute: number }[]; pose: number }[] = [
-  { ile: "roman_island_medium_01", region: "Roman", objectif: [{ good: PAIN, parMinute: 40 }, { good: TUNIQUES, parMinute: 30 }], pose: 83 },
+  { ile: "roman_island_medium_01", region: "Roman", objectif: [{ good: PAIN, parMinute: 40 }, { good: TUNIQUES, parMinute: 30 }], pose: 100 },
   { ile: "roman_island_small_06", region: "Roman", objectif: [{ good: PAIN, parMinute: 15 }, { good: TUNIQUES, parMinute: 10 }], pose: 100 },
   { ile: "celtic_island_large_02", region: "Celtic", objectif: [{ good: PAIN, parMinute: 30 }, { good: SAUCISSES, parMinute: 15 }], pose: 100 },
 ];

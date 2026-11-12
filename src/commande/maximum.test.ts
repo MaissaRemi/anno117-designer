@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import rawCatalog from "../data/catalog.generated.json";
 import type { BuildingDef } from "../model/types";
-import { makeLookup } from "../engine/rules";
+import { makeLookup, validateFields } from "../engine/rules";
 import { hasHeights, heightsOf } from "../data/terrain";
 import { buildIslandGrid } from "../data/islandGrid";
 import { downscaleGrid } from "../optimizer/halfTileAdapter";
@@ -28,8 +28,10 @@ const pose = (p: { objectif: { good: string; pose: number }[] }, good: string) =
 
 describe("produire le maximum", () => {
   it.each([
-    { ile: "roman_island_small_06", pain: 14.9 },
-    { ile: "roman_island_medium_01", pain: 33.7 },
+    // 12/11 : 14,9 et 33,7 (champs en morceaux) ; champs d'un seul tenant et bâtiments posés un à
+    // un dans la terre restée libre → 18,6 et 43,1
+    { ile: "roman_island_small_06", pain: 18.6 },
+    { ile: "roman_island_medium_01", pain: 43.1 },
   ])("$ile : pain et tuniques à 3 pour 2, tout est posé, l'île est remplie", async ({ ile, pain }) => {
     const p = await maximum(ile, [{ good: PAIN, parMinute: 3 }, { good: TUNIQUES, parMinute: 2 }]);
     // rien de promis qui ne soit posé
@@ -37,6 +39,10 @@ describe("produire le maximum", () => {
     // les proportions saisies sont gardées
     expect(pose(p, PAIN) / pose(p, TUNIQUES)).toBeCloseTo(1.5, 1);
     expect(pose(p, PAIN), "pain posé par minute").toBeGreaterThanOrEqual(pain);
+    // la main-d'œuvre de ce qui est posé est logée, et chaque ferme a ses champs, d'un tenant
+    expect(p.mainOeuvre.manque).toEqual({});
+    const sansChamp = p.layout.buildings.filter((b) => validateFields(p.layout, lookup, b)?.ok === false);
+    expect(sansChamp.map((b) => lookup(b.defId)?.name)).toEqual([]);
     console.log(`${ile} | maximum | ${p.objectif.map((o) => `${o.nom} ${o.pose}/min`).join(", ")} | ${p.qualite.pct.free.toFixed(1)} % de terre vide`);
   });
 
